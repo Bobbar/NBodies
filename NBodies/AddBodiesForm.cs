@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace NBodies
 {
-    public partial class Form1 : Form
+    public partial class AddBodiesForm : Form
     {
-        public Form1()
+        public AddBodiesForm()
         {
             InitializeComponent();
         }
