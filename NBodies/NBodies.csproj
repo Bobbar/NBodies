@@ -65,6 +65,11 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rendering\BodyManager.cs" />
+    <Compile Include="Rendering\ColorHelper.cs" />
+    <Compile Include="Rendering\FrameManager.cs" />
+    <Compile Include="Rendering\PointHelpers.cs" />
+    <Compile Include="Rendering\Renderer.cs" />
     <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\ScaleHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />

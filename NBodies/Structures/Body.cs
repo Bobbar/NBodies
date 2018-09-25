@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
+using System.Drawing;
+
 
 namespace NBodies.Structures
 {
@@ -25,6 +27,11 @@ namespace NBodies.Structures
         public int Visible { get; set; }
         public int InRoche { get; set; }
         public int BlackHole { get; set; }
-        public long UID { get; set; }
+        public int UID { get; set; }
+
+      
+
+       
+
     }
 }

@@ -21,6 +21,8 @@ namespace NBodies.Rules
 
     public static class Matter
     {
+        public static double Density { get; set; } = 5.0;
+
         public static MatterType[] Types =
             {
             new MatterType(1,Color.Aqua), // gas

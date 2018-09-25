@@ -94,7 +94,9 @@
             this.RenderBox.Size = new System.Drawing.Size(1423, 751);
             this.RenderBox.TabIndex = 0;
             this.RenderBox.TabStop = false;
+            this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
+            this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             // 
             // tableLayoutPanel2
             // 
@@ -334,6 +336,9 @@
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "DisplayForm";
             this.Text = "NBodies";
+            this.Load += new System.EventHandler(this.DisplayForm_Load);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();

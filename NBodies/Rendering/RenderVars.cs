@@ -9,11 +9,12 @@ namespace NBodies.Rendering
 {
     public static class RenderVars
     {
-        public static float CurrentScale { get; set; }
+        public static float CurrentScale { get; set; } = 1F;
         public static PointF ScaleOffset { get; set; } = new PointF();
 
         public static PointF ViewportOffset { get; set; } = new PointF();
 
+        public static PointF ScreenCenter { get; set; }
 
     }
 }
