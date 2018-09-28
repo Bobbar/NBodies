@@ -44,6 +44,8 @@ namespace NBodies
 
             CUDAMain.InitGPU(2);
 
+            Renderer.Init(RenderBox);
+
             MainLoop.StartLoop();
 
             
@@ -67,8 +69,11 @@ namespace NBodies
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
         {
-            BodyManager.Bodies[_mouseId].Size = BodyManager.Bodies[_mouseId].Size + 0.5;
-            BodyManager.Bodies[_mouseId].Mass = BodyManager.CalcMass(BodyManager.Bodies[_mouseId].Size);
+            if (!MainLoop.Busy)
+            {
+                BodyManager.Bodies[_mouseId].Size = BodyManager.Bodies[_mouseId].Size + 0.5;
+                BodyManager.Bodies[_mouseId].Mass = BodyManager.CalcMass(BodyManager.Bodies[_mouseId].Size);
+            }
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
@@ -182,7 +187,7 @@ namespace NBodies
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
             _bodySizeTimer.Stop();
-
+            _mouseDown = false;
             _selectedId = -1;
             _bodyMovin = false;
 

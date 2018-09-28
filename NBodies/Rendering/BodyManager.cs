@@ -9,7 +9,7 @@ namespace NBodies.Rendering
 {
     public static class BodyManager
     {
-        public static Body[] Bodies = new Body[0];
+        public static CUDAMain.Body[] Bodies = new CUDAMain.Body[0];
 
         public static bool FollowSelected = false;
 
@@ -38,7 +38,7 @@ namespace NBodies.Rendering
         public static int FollowBodyUID = -1;
 
         private static int _followBodyIndex = -1;
-        private static List<Body> _bodyStore = new List<Body>();
+        private static List<CUDAMain.Body> _bodyStore = new List<CUDAMain.Body>();
         private static int _currentId = -1;
 
 
@@ -60,7 +60,7 @@ namespace NBodies.Rendering
             Bodies[index].LocY = location.Y;
         }
 
-        public static int Add(Body body)
+        public static int Add(CUDAMain.Body body)
         {
             _currentId++;
 
@@ -74,7 +74,7 @@ namespace NBodies.Rendering
 
         public static void Add(double locX, double locY, double size, double mass, Color color)
         {
-            var b = new Body();
+            var b = new CUDAMain.Body();
 
             b.LocX = locX;
             b.LocY = locY;
@@ -97,7 +97,7 @@ namespace NBodies.Rendering
 
         public static void Add(PointF loc, double size, double mass, Color color)
         {
-            var b = new Body();
+            var b = new CUDAMain.Body();
 
             b.LocX = loc.X;
             b.LocY = loc.Y;
@@ -120,7 +120,7 @@ namespace NBodies.Rendering
 
         public static int Add(PointF loc, double size, Color color)
         {
-            var b = new Body();
+            var b = new CUDAMain.Body();
 
             b.LocX = loc.X;
             b.LocY = loc.Y;

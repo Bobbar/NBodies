@@ -13,7 +13,8 @@ namespace NBodies.Rendering
     {
         public static bool FreezeTime = false;
         public static int TargetFPS = 40;
-        public static double TimeStep = 0.005f;
+        public static double TimeStep = 0.05f;
+        public static bool Busy = false;
 
         private static Task loopTask;
         private static CancellationTokenSource cancelTokenSource;
@@ -23,6 +24,9 @@ namespace NBodies.Rendering
         public static void StartLoop()
         {
             minFrameTime = 1000 / TargetFPS;
+
+            
+
 
             cancelTokenSource = new CancellationTokenSource();
 
@@ -40,9 +44,10 @@ namespace NBodies.Rendering
         {
             while (!cancelTokenSource.IsCancellationRequested)
             {
-
+                
                 if (!FreezeTime && BodyManager.Bodies.Length > 2)
                 {
+                    Busy = true;
                     // CUDA calc.
                     var bds = CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
 
@@ -60,7 +65,7 @@ namespace NBodies.Rendering
 
                 // Process UI.
 
-
+                Busy = false;
 
                 DelayFrame();
             }

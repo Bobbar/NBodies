@@ -12,7 +12,30 @@ namespace NBodies.CUDA
 {
     public static class CUDAMain
     {
-      //  public static Body[] Bodies { get; set; }
+        [Cudafy]
+        public struct Body
+        {
+            public double LocX;
+            public double LocY;
+            public double Mass;
+            public double SpeedX;
+            public double SpeedY;
+            public double ForceX;
+            public double ForceY;
+            public double ForceTot;
+            public int Color;
+            public double Size;
+            public int Visible;
+            public int InRoche;
+            public int BlackHole;
+            public int UID;
+
+
+
+
+
+        }
+        //  public static Body[] Bodies { get; set; }
 
         private static int gpuIndex = 0;
         private static int threadsPerBlock = 256;
@@ -41,7 +64,7 @@ namespace NBodies.CUDA
         {
             var blocks = ((bodies.Length - 1) + threadsPerBlock - 1) / threadsPerBlock;
             var gpuInBodies = gpu.Allocate(bodies);
-            var outBodies = new Body[bodies.Length - 1];
+            var outBodies = new Body[bodies.Length];
             var gpuOutBodies = gpu.Allocate(outBodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
@@ -50,13 +73,30 @@ namespace NBodies.CUDA
 
             gpu.Synchronize();
 
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+            gpu.CopyFromDevice(gpuOutBodies, bodies);
+
+            gpu.FreeAll();
+
+            gpuInBodies = gpu.Allocate(bodies);
+            outBodies = new Body[bodies.Length];
+            gpuOutBodies = gpu.Allocate(outBodies);
+
+            gpu.CopyToDevice(bodies, gpuInBodies);
+
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
 
             gpu.Synchronize();
 
-            gpu.CopyFromDevice(gpuInBodies, bodies);
-
+            gpu.CopyFromDevice(gpuOutBodies, bodies);
             gpu.FreeAll();
+    
+            //gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+
+            //gpu.Synchronize();
+
+            //gpu.CopyFromDevice(gpuInBodies, bodies);
+
+            //gpu.FreeAll();
 
             //TODO: Roche fractures.
 
@@ -308,29 +348,7 @@ namespace NBodies.CUDA
             gpThread.SyncThreads();
         }
 
-        //[Cudafy]
-        //public struct Body
-        //{
-        //    public double LocX { get; set; }
-        //    public double LocY { get; set; }
-        //    public double Mass { get; set; }
-        //    public double SpeedX { get; set; }
-        //    public double SpeedY { get; set; }
-        //    public double ForceX { get; set; }
-        //    public double ForceY { get; set; }
-        //    public double ForceTot { get; set; }
-        //    public int Color { get; set; }
-        //    public double Size { get; set; }
-        //    public int Visible { get; set; }
-        //    public int InRoche { get; set; }
-        //    public int BlackHole { get; set; }
-        //    public int UID { get; set; }
-
-
-
-
-
-        //}
+        
     }
 
   

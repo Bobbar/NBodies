@@ -20,22 +20,28 @@ namespace NBodies.Rendering
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Color _spaceColor = Color.Black;
 
-        public static void Init(Size viewSize, PictureBox imageControl)
+        private static Size imgSize = new Size();
+
+        public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
 
-            InitGfx(imageControl.Size);
+            //  InitGfx(imageControl.Size);
         }
 
         private static void InitGfx(Size viewSize)
         {
             _view = new Bitmap(viewSize.Width, viewSize.Height, PixelFormat.Format32bppPArgb);
+            imgSize = _view.Size;
+
             _gfx = Graphics.FromImage(_view);
         }
 
         public static void UpdateScale()
         {
-            if (_imageControl.Size != _view.Size)
+
+            //if (_view == null || _imageControl.Size != _view.Size)
+            if (_view == null || _imageControl.Size != imgSize)
             {
                 InitGfx(_imageControl.Size);
             }
@@ -48,7 +54,7 @@ namespace NBodies.Rendering
             }
         }
 
-        public static void DrawBodies(Body[] bodies)
+        public static void DrawBodies(CUDAMain.Body[] bodies)
         {
             PointF viewOffset = new PointF();
 
@@ -105,7 +111,10 @@ namespace NBodies.Rendering
         {
             if (_imageControl.InvokeRequired)
             {
-             _imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
+                //_imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
+
+                _imageControl.Invoke(new Action(() => SetControlImage(image)));
+
 
             }
             else
