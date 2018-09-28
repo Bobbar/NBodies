@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
 using NBodies.Structures;
+using NBodies.CUDA;
 
 
 namespace NBodies
@@ -40,6 +41,12 @@ namespace NBodies
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             RenderVars.ScaleOffset = ScaleHelpers.ScaleMousePosExact(RenderVars.ScreenCenter);
+
+            CUDAMain.InitGPU(2);
+
+            MainLoop.StartLoop();
+
+            
         }
 
         private int MouseOverID(PointF mouseLoc)
@@ -61,6 +68,7 @@ namespace NBodies
         private void BodySizeTimer_Tick(object sender, EventArgs e)
         {
             BodyManager.Bodies[_mouseId].Size = BodyManager.Bodies[_mouseId].Size + 0.5;
+            BodyManager.Bodies[_mouseId].Mass = BodyManager.CalcMass(BodyManager.Bodies[_mouseId].Size);
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)

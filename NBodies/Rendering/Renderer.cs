@@ -3,7 +3,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
-
+using System;
+using NBodies.CUDA;
 namespace NBodies.Rendering
 {
     public static class Renderer
@@ -14,7 +15,7 @@ namespace NBodies.Rendering
         private static Bitmap _view;
         private static Graphics _gfx;
         private static PictureBox _imageControl;
-        private static float _prevScale;
+        private static float _prevScale = 0;
 
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Color _spaceColor = Color.Black;
@@ -43,6 +44,7 @@ namespace NBodies.Rendering
             {
                 _gfx.ResetTransform();
                 _gfx.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
+                _prevScale = RenderVars.CurrentScale;
             }
         }
 
@@ -96,8 +98,21 @@ namespace NBodies.Rendering
                 }
             }
 
-            _imageControl.Image = _view;
-            _imageControl.Invalidate();
+            SetControlImage(_view);
+        }
+
+        private static void SetControlImage(Bitmap image)
+        {
+            if (_imageControl.InvokeRequired)
+            {
+             _imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
+
+            }
+            else
+            {
+                _imageControl.Image = image;
+                _imageControl.Invalidate();
+            }
         }
 
         private static PointF FinalOffset()

@@ -68,6 +68,7 @@
     <Compile Include="Rendering\BodyManager.cs" />
     <Compile Include="Rendering\ColorHelper.cs" />
     <Compile Include="Rendering\FrameManager.cs" />
+    <Compile Include="Rendering\MainLoop.cs" />
     <Compile Include="Rendering\PointHelpers.cs" />
     <Compile Include="Rendering\Renderer.cs" />
     <Compile Include="Rendering\RenderVars.cs" />

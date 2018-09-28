@@ -16,5 +16,7 @@ namespace NBodies.Rendering
 
         public static PointF ScreenCenter { get; set; }
 
+        
+
     }
 }

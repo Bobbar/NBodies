@@ -29,9 +29,9 @@ namespace NBodies.Structures
         public int BlackHole { get; set; }
         public int UID { get; set; }
 
-      
 
-       
+
+
 
     }
 }

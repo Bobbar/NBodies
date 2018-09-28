@@ -29,8 +29,6 @@
         private void InitializeComponent()
         {
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.RenderBox = new System.Windows.Forms.PictureBox();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -52,51 +50,31 @@
             this.FlagsTextBox = new System.Windows.Forms.TextBox();
             this.UpdateButton = new System.Windows.Forms.Button();
             this.TotalMassButton = new System.Windows.Forms.Button();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.RenderBox = new System.Windows.Forms.PictureBox();
             this.tableLayoutPanel1.SuspendLayout();
-            this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).BeginInit();
+            this.panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.ColumnCount = 1;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel1.Controls.Add(this.panel1, 0, 1);
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.Controls.Add(this.tableLayoutPanel2, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.panel1, 0, 1);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 2;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7.692307F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 92.30769F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(1429, 819);
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(1359, 706);
             this.tableLayoutPanel1.TabIndex = 0;
-            // 
-            // panel1
-            // 
-            this.panel1.Controls.Add(this.RenderBox);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Location = new System.Drawing.Point(3, 65);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1423, 751);
-            this.panel1.TabIndex = 0;
-            // 
-            // RenderBox
-            // 
-            this.RenderBox.BackColor = System.Drawing.Color.Black;
-            this.RenderBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.RenderBox.Location = new System.Drawing.Point(0, 0);
-            this.RenderBox.Name = "RenderBox";
-            this.RenderBox.Size = new System.Drawing.Size(1423, 751);
-            this.RenderBox.TabIndex = 0;
-            this.RenderBox.TabStop = false;
-            this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
-            this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
-            this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             // 
             // tableLayoutPanel2
             // 
@@ -111,7 +89,7 @@
             this.tableLayoutPanel2.RowCount = 2;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 39.43662F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 60.56338F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(1423, 56);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(1353, 57);
             this.tableLayoutPanel2.TabIndex = 1;
             // 
             // menuStrip1
@@ -121,7 +99,7 @@
             this.toolsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1423, 22);
+            this.menuStrip1.Size = new System.Drawing.Size(1353, 22);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -155,7 +133,7 @@
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 72F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 84F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 177F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 266F));
             this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 15, 0);
             this.tableLayoutPanel3.Controls.Add(this.RecordButton, 14, 0);
             this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 13, 0);
@@ -177,7 +155,7 @@
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
             this.tableLayoutPanel3.RowCount = 1;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(1417, 28);
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(1347, 29);
             this.tableLayoutPanel3.TabIndex = 1;
             // 
             // LoadRecordingButton
@@ -185,7 +163,7 @@
             this.LoadRecordingButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.LoadRecordingButton.Location = new System.Drawing.Point(1243, 3);
             this.LoadRecordingButton.Name = "LoadRecordingButton";
-            this.LoadRecordingButton.Size = new System.Drawing.Size(171, 22);
+            this.LoadRecordingButton.Size = new System.Drawing.Size(260, 23);
             this.LoadRecordingButton.TabIndex = 15;
             this.LoadRecordingButton.Text = "Load Recording";
             this.LoadRecordingButton.UseVisualStyleBackColor = true;
@@ -195,7 +173,7 @@
             this.RecordButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.RecordButton.Location = new System.Drawing.Point(1147, 3);
             this.RecordButton.Name = "RecordButton";
-            this.RecordButton.Size = new System.Drawing.Size(90, 22);
+            this.RecordButton.Size = new System.Drawing.Size(90, 23);
             this.RecordButton.TabIndex = 14;
             this.RecordButton.Text = "Record";
             this.RecordButton.UseVisualStyleBackColor = true;
@@ -205,7 +183,7 @@
             this.ScreenShotButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ScreenShotButton.Location = new System.Drawing.Point(1063, 3);
             this.ScreenShotButton.Name = "ScreenShotButton";
-            this.ScreenShotButton.Size = new System.Drawing.Size(78, 22);
+            this.ScreenShotButton.Size = new System.Drawing.Size(78, 23);
             this.ScreenShotButton.TabIndex = 13;
             this.ScreenShotButton.Text = "Screenshot";
             this.ScreenShotButton.UseVisualStyleBackColor = true;
@@ -215,7 +193,7 @@
             this.TrailsButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.TrailsButton.Location = new System.Drawing.Point(991, 3);
             this.TrailsButton.Name = "TrailsButton";
-            this.TrailsButton.Size = new System.Drawing.Size(66, 22);
+            this.TrailsButton.Size = new System.Drawing.Size(66, 23);
             this.TrailsButton.TabIndex = 12;
             this.TrailsButton.Text = "Trails";
             this.TrailsButton.UseVisualStyleBackColor = true;
@@ -249,7 +227,7 @@
             this.AddBodiesButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.AddBodiesButton.Location = new System.Drawing.Point(3, 3);
             this.AddBodiesButton.Name = "AddBodiesButton";
-            this.AddBodiesButton.Size = new System.Drawing.Size(89, 22);
+            this.AddBodiesButton.Size = new System.Drawing.Size(89, 23);
             this.AddBodiesButton.TabIndex = 0;
             this.AddBodiesButton.Text = "Add Bodies";
             this.AddBodiesButton.UseVisualStyleBackColor = true;
@@ -259,7 +237,7 @@
             this.RemoveAllButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.RemoveAllButton.Location = new System.Drawing.Point(98, 3);
             this.RemoveAllButton.Name = "RemoveAllButton";
-            this.RemoveAllButton.Size = new System.Drawing.Size(103, 22);
+            this.RemoveAllButton.Size = new System.Drawing.Size(103, 23);
             this.RemoveAllButton.TabIndex = 1;
             this.RemoveAllButton.Text = "Remove All";
             this.RemoveAllButton.UseVisualStyleBackColor = true;
@@ -269,7 +247,7 @@
             this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.PauseButton.Location = new System.Drawing.Point(207, 3);
             this.PauseButton.Name = "PauseButton";
-            this.PauseButton.Size = new System.Drawing.Size(91, 22);
+            this.PauseButton.Size = new System.Drawing.Size(91, 23);
             this.PauseButton.TabIndex = 2;
             this.PauseButton.Text = "Pause";
             this.PauseButton.UseVisualStyleBackColor = true;
@@ -311,7 +289,7 @@
             this.UpdateButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.UpdateButton.Location = new System.Drawing.Point(839, 3);
             this.UpdateButton.Name = "UpdateButton";
-            this.UpdateButton.Size = new System.Drawing.Size(72, 22);
+            this.UpdateButton.Size = new System.Drawing.Size(72, 23);
             this.UpdateButton.TabIndex = 10;
             this.UpdateButton.Text = "Update";
             this.UpdateButton.UseVisualStyleBackColor = true;
@@ -321,16 +299,41 @@
             this.TotalMassButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.TotalMassButton.Location = new System.Drawing.Point(917, 3);
             this.TotalMassButton.Name = "TotalMassButton";
-            this.TotalMassButton.Size = new System.Drawing.Size(68, 22);
+            this.TotalMassButton.Size = new System.Drawing.Size(68, 23);
             this.TotalMassButton.TabIndex = 11;
             this.TotalMassButton.Text = "Tot. Mass";
             this.TotalMassButton.UseVisualStyleBackColor = true;
+            // 
+            // panel1
+            // 
+            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.RenderBox);
+            this.panel1.Location = new System.Drawing.Point(3, 66);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(1353, 637);
+            this.panel1.TabIndex = 0;
+            // 
+            // RenderBox
+            // 
+            this.RenderBox.BackColor = System.Drawing.Color.Black;
+            this.RenderBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.RenderBox.Location = new System.Drawing.Point(0, 0);
+            this.RenderBox.Name = "RenderBox";
+            this.RenderBox.Size = new System.Drawing.Size(1351, 635);
+            this.RenderBox.TabIndex = 0;
+            this.RenderBox.TabStop = false;
+            this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
+            this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
+            this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1429, 819);
+            this.ClientSize = new System.Drawing.Size(1359, 706);
             this.Controls.Add(this.tableLayoutPanel1);
             this.DoubleBuffered = true;
             this.MainMenuStrip = this.menuStrip1;
@@ -340,8 +343,6 @@
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
             this.tableLayoutPanel1.ResumeLayout(false);
-            this.panel1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
             this.menuStrip1.ResumeLayout(false);
@@ -349,6 +350,8 @@
             this.tableLayoutPanel3.ResumeLayout(false);
             this.tableLayoutPanel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).EndInit();
+            this.panel1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
             this.ResumeLayout(false);
 
         }

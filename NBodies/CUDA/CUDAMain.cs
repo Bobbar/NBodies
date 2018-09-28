@@ -12,7 +12,7 @@ namespace NBodies.CUDA
 {
     public static class CUDAMain
     {
-        public static Body[] Bodies { get; set; }
+      //  public static Body[] Bodies { get; set; }
 
         private static int gpuIndex = 0;
         private static int threadsPerBlock = 256;
@@ -24,7 +24,7 @@ namespace NBodies.CUDA
 
             var cudaModule = CudafyModule.TryDeserialize();
 
-            if (cudaModule != null || !cudaModule.TryVerifyChecksums())
+            if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
                 cudaModule = CudafyTranslator.Cudafy();
@@ -37,21 +37,34 @@ namespace NBodies.CUDA
             Console.WriteLine(gpu.GetDeviceProperties().ToString());
         }
 
-        //public static Body[] CalcFrame()
-        //{
-        //    var blocks = ((Bodies.Length - 1) + threadsPerBlock  - 1) / threadsPerBlock;
-        //    var gpuInBodies = gpu.Allocate(Bodies);
-        //    var outBodies = new Body[Bodies.Length - 1];
-        //    var gpuOutBodies = gpu.Allocate(outBodies);
+        public static Body[] CalcFrame(Body[] bodies, double timestep)
+        {
+            var blocks = ((bodies.Length - 1) + threadsPerBlock - 1) / threadsPerBlock;
+            var gpuInBodies = gpu.Allocate(bodies);
+            var outBodies = new Body[bodies.Length - 1];
+            var gpuOutBodies = gpu.Allocate(outBodies);
 
-        //    gpu.CopyToDevice(Bodies, gpuInBodies);
+            gpu.CopyToDevice(bodies, gpuInBodies);
 
-            
+            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
 
-        //}
+            gpu.Synchronize();
+
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+
+            gpu.Synchronize();
+
+            gpu.CopyFromDevice(gpuInBodies, bodies);
+
+            gpu.FreeAll();
+
+            //TODO: Roche fractures.
+
+            return bodies;
+        }
 
         [Cudafy]
-        private static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, double dt)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, double dt)
         {
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
@@ -111,7 +124,8 @@ namespace NBodies.CUDA
             }
         }
 
-        private static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, double dt)
+        [Cudafy]
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, double dt)
         {
             double VeKY;
             double VekX;
@@ -293,5 +307,31 @@ namespace NBodies.CUDA
 
             gpThread.SyncThreads();
         }
+
+        //[Cudafy]
+        //public struct Body
+        //{
+        //    public double LocX { get; set; }
+        //    public double LocY { get; set; }
+        //    public double Mass { get; set; }
+        //    public double SpeedX { get; set; }
+        //    public double SpeedY { get; set; }
+        //    public double ForceX { get; set; }
+        //    public double ForceY { get; set; }
+        //    public double ForceTot { get; set; }
+        //    public int Color { get; set; }
+        //    public double Size { get; set; }
+        //    public int Visible { get; set; }
+        //    public int InRoche { get; set; }
+        //    public int BlackHole { get; set; }
+        //    public int UID { get; set; }
+
+
+
+
+
+        //}
     }
+
+  
 }

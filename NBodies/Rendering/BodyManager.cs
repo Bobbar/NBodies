@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-
+using NBodies.CUDA;
 namespace NBodies.Rendering
 {
     public static class BodyManager

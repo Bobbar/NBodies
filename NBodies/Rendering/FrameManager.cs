@@ -7,22 +7,22 @@ using NBodies.Structures;
 
 namespace NBodies.Rendering
 {
-    public static class FrameManager
-    {
-        public static List<Body> Current;
+    //public static class FrameManager
+    //{
+    //    public static List<Body> Current;
 
-        //public static Body[] Current;
+    //    //public static Body[] Current;
 
-        //private static Queue<Body[]> frameQueue = new Queue<Body[]>();
+    //    //private static Queue<Body[]> frameQueue = new Queue<Body[]>();
 
-        //public static void Next()
-        //{
-        //    Current = frameQueue.Dequeue();
-        //}
+    //    //public static void Next()
+    //    //{
+    //    //    Current = frameQueue.Dequeue();
+    //    //}
 
-        //public static void Add(Body[] frame)
-        //{
-        //    frameQueue.Enqueue(frame);
-        //}
-    }
+    //    //public static void Add(Body[] frame)
+    //    //{
+    //    //    frameQueue.Enqueue(frame);
+    //    //}
+    //}
 }
