@@ -26,6 +26,7 @@ namespace NBodies
 
         private Timer _bodySizeTimer = new Timer();
 
+
         public DisplayForm()
         {
             InitializeComponent();
@@ -35,7 +36,7 @@ namespace NBodies
             RenderBox.MouseWheel += RenderBox_MouseWheel;
         }
 
-     
+
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
@@ -48,7 +49,7 @@ namespace NBodies
 
             MainLoop.StartLoop();
 
-            
+
         }
 
         private int MouseOverID(PointF mouseLoc)
@@ -152,9 +153,12 @@ namespace NBodies
             {
                 if (!_mouseDown)
                 {
-                    _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
-                    _mouseDown = true;
-                    _bodySizeTimer.Start();
+                    if (MainLoop.UIWindowOpen.WaitOne(50))
+                    {
+                        _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
+                        _mouseDown = true;
+                        _bodySizeTimer.Start();
+                    }
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -198,6 +202,9 @@ namespace NBodies
 
         }
 
-
+        private void DisplayForm_Resize(object sender, EventArgs e)
+        {
+            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
+        }
     }
 }

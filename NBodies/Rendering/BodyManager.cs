@@ -72,7 +72,7 @@ namespace NBodies.Rendering
             return _currentId;
         }
 
-        public static void Add(double locX, double locY, double size, double mass, Color color)
+        public static void Add(double locX, double locY, double size, double mass, Color color, int blackhole = 0)
         {
             var b = new CUDAMain.Body();
 
@@ -89,13 +89,36 @@ namespace NBodies.Rendering
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
+            b.BlackHole = blackhole;
+            b.UID = -1;
+
+            Add(b);
+        }
+
+        public static void Add(double locX, double locY, double velX, double velY, double size, double mass, Color color)
+        {
+            var b = new CUDAMain.Body();
+
+            b.LocX = locX;
+            b.LocY = locY;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = velX;
+            b.SpeedY = velY;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = 0;
             b.BlackHole = 0;
             b.UID = -1;
 
             Add(b);
         }
 
-        public static void Add(PointF loc, double size, double mass, Color color)
+        public static void Add(PointF loc, double size, double mass, Color color, int blackhole = 0)
         {
             var b = new CUDAMain.Body();
 
@@ -112,7 +135,7 @@ namespace NBodies.Rendering
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
-            b.BlackHole = 0;
+            b.BlackHole = blackhole;
             b.UID = -1;
 
             Add(b);

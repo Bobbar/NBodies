@@ -9,14 +9,31 @@ namespace NBodies.Rendering
 {
     public static class RenderVars
     {
-        public static float CurrentScale { get; set; } = 1F;
+        private static float _currentScale = 1f;
+
+        public static float CurrentScale
+        {
+            get
+            {
+                return _currentScale;
+            }
+
+            set
+            {
+                if (_currentScale != value)
+                {
+                    _currentScale = value;
+                    ScaleOffset = ScaleHelpers.ScaleMousePosExact(ScreenCenter);
+                }
+            }
+        }
         public static PointF ScaleOffset { get; set; } = new PointF();
 
         public static PointF ViewportOffset { get; set; } = new PointF();
 
         public static PointF ScreenCenter { get; set; }
 
-        
+
 
     }
 }

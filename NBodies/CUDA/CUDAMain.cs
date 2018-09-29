@@ -62,7 +62,7 @@ namespace NBodies.CUDA
 
         public static Body[] CalcFrame(Body[] bodies, double timestep)
         {
-            var blocks = ((bodies.Length - 1) + threadsPerBlock - 1) / threadsPerBlock;
+            var blocks = (bodies.Length + threadsPerBlock - 1) / threadsPerBlock;
             var gpuInBodies = gpu.Allocate(bodies);
             var outBodies = new Body[bodies.Length];
             var gpuOutBodies = gpu.Allocate(outBodies);

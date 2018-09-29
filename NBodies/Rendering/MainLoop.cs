@@ -16,6 +16,8 @@ namespace NBodies.Rendering
         public static double TimeStep = 0.05f;
         public static bool Busy = false;
 
+        public static ManualResetEvent UIWindowOpen = new ManualResetEvent(false);
+
         private static Task loopTask;
         private static CancellationTokenSource cancelTokenSource;
         private static Stopwatch fpsTimer = new Stopwatch();
@@ -48,6 +50,7 @@ namespace NBodies.Rendering
                 if (!FreezeTime && BodyManager.Bodies.Length > 2)
                 {
                     Busy = true;
+                    UIWindowOpen.Reset();
                     // CUDA calc.
                     var bds = CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
 
@@ -66,6 +69,7 @@ namespace NBodies.Rendering
                 // Process UI.
 
                 Busy = false;
+                UIWindowOpen.Set();
 
                 DelayFrame();
             }
