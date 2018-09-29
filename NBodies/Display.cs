@@ -206,5 +206,10 @@ namespace NBodies
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
         }
+
+        private void AddBodiesButton_Click(object sender, EventArgs e)
+        {
+            new AddBodiesForm().Show();
+        }
     }
 }

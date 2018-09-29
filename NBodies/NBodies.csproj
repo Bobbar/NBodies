@@ -31,6 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cudafy.NET, Version=1.29.5576.13786, Culture=neutral, PublicKeyToken=63a4c9931616906b, processorArchitecture=MSIL">

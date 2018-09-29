@@ -12,11 +12,12 @@ namespace NBodies.Rendering
     public static class MainLoop
     {
         public static bool FreezeTime = false;
-        public static int TargetFPS = 40;
-        public static double TimeStep = 0.05f;
+        public static int TargetFPS = 100;
+        public static double TimeStep = 0.03f;
         public static bool Busy = false;
 
         public static ManualResetEvent UIWindowOpen = new ManualResetEvent(false);
+        public static ManualResetEvent PausePhysics = new ManualResetEvent(false);
 
         private static Task loopTask;
         private static CancellationTokenSource cancelTokenSource;
@@ -42,10 +43,23 @@ namespace NBodies.Rendering
 
         }
 
+        public static void Pause()
+        {
+            PausePhysics.Set();
+            PausePhysics.WaitOne(500);
+        }
+
+        public static void Resume()
+        {
+            PausePhysics.Reset();
+            FreezeTime = false;
+        }
+
         private static void DoLoop()
         {
             while (!cancelTokenSource.IsCancellationRequested)
             {
+             
                 
                 if (!FreezeTime && BodyManager.Bodies.Length > 2)
                 {
@@ -61,6 +75,11 @@ namespace NBodies.Rendering
                     BodyManager.Bodies = bds;
                 }
 
+                if (PausePhysics.WaitOne(0))
+                {
+                    FreezeTime = true;
+                    PausePhysics.Set();
+                }
 
                 // Render bodies.
                 Renderer.DrawBodies(BodyManager.Bodies);

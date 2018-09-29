@@ -19,6 +19,7 @@ namespace NBodies
         public AddBodiesForm()
         {
             InitializeComponent();
+            DensityTextBox.Text = Rules.Matter.Density.ToString();
         }
 
         private double CircleV(double rx, double ry, double centerMass)
@@ -38,12 +39,16 @@ namespace NBodies
 
         private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, double centerMass)
         {
+            MainLoop.Pause();
+
             double px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = double.Parse(DensityTextBox.Text);
-            centerMass *= Rules.Matter.Density;
+            centerMass *= Rules.Matter.Density * 2;
 
             var ellipse = new Ellipse(ScaleHelpers.ScaleMousePosRelative(RenderVars.ScreenCenter), radius);
+            ellipse.Location.X += 1;
+            ellipse.Location.Y += 1;
 
             for (int i = 0; i < count; i++)
             {
@@ -75,12 +80,21 @@ namespace NBodies
                 }
 
                 BodyManager.Add(px, py, vx, vy, bodySize, newMass, ColorHelper.RandomColor());
-
-                if (includeCenterMass)
-                {
-                    BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
-                }
             }
+
+            if (includeCenterMass)
+            {
+                BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
+
+                // TODO: Figure out why the last body in the array doesn't react with anything.
+                // This is a bandaid for now...
+                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
+                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
+                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
+
+            }
+
+            MainLoop.Resume();
         }
 
         private struct Ellipse
@@ -93,6 +107,11 @@ namespace NBodies
                 Location = location;
                 Size = size;
             }
+        }
+
+        private void AddOrbitButton_Click(object sender, EventArgs e)
+        {
+            AddBodiesToOrbit(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()), CenterMassCheckBox.Checked, double.Parse(CenterMassTextBox.Text.Trim()));
         }
     }
 }

@@ -231,6 +231,7 @@
             this.AddBodiesButton.TabIndex = 0;
             this.AddBodiesButton.Text = "Add Bodies";
             this.AddBodiesButton.UseVisualStyleBackColor = true;
+            this.AddBodiesButton.Click += new System.EventHandler(this.AddBodiesButton_Click);
             // 
             // RemoveAllButton
             // 

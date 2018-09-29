@@ -62,34 +62,41 @@ namespace NBodies.CUDA
 
         public static Body[] CalcFrame(Body[] bodies, double timestep)
         {
-            var blocks = (bodies.Length + threadsPerBlock - 1) / threadsPerBlock;
+            bool altCalcPath = true;
+
+            var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
             var gpuInBodies = gpu.Allocate(bodies);
             var outBodies = new Body[bodies.Length];
             var gpuOutBodies = gpu.Allocate(outBodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
-
             gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-
             gpu.Synchronize();
 
-            gpu.CopyFromDevice(gpuOutBodies, bodies);
+            // The alternate path skips a bunch of reallocations and memory dumps
+            // and just flip-flops the In and Out pointers and launches the collision kernel.
+            // I'm not sure if the alt. path is completely stable, but it's definitely faster...
+            if (!altCalcPath)
+            {
+                gpu.CopyFromDevice(gpuOutBodies, bodies);
+                gpu.FreeAll();
+                gpuInBodies = gpu.Allocate(bodies);
+                outBodies = new Body[bodies.Length];
+                gpuOutBodies = gpu.Allocate(outBodies);
+                gpu.CopyToDevice(bodies, gpuInBodies);
+                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
+                gpu.Synchronize();
+                gpu.CopyFromDevice(gpuOutBodies, bodies);
+            }
+            else
+            {
+                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+                gpu.Synchronize();
+                gpu.CopyFromDevice(gpuInBodies, bodies);
+            }
 
             gpu.FreeAll();
 
-            gpuInBodies = gpu.Allocate(bodies);
-            outBodies = new Body[bodies.Length];
-            gpuOutBodies = gpu.Allocate(outBodies);
-
-            gpu.CopyToDevice(bodies, gpuInBodies);
-
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
-
-            gpu.Synchronize();
-
-            gpu.CopyFromDevice(gpuOutBodies, bodies);
-            gpu.FreeAll();
-    
             //gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
 
             //gpu.Synchronize();
@@ -207,7 +214,7 @@ namespace NBodies.CUDA
 
                         if (DistSqrt <= (outBodies[Master].Size / (double)2) + (inBodies[Slave].Size / (double)2))
                         {
-                           
+
                             if (DistSqrt > 0)
                             {
                                 V1x = outBodies[Master].SpeedX;
@@ -348,8 +355,8 @@ namespace NBodies.CUDA
             gpThread.SyncThreads();
         }
 
-        
+
     }
 
-  
+
 }
