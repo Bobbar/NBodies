@@ -11,116 +11,107 @@ namespace NBodies.Rendering
 {
     public static class MainLoop
     {
-        public static bool FreezeTime = false;
-        public static int TargetFPS = 100;
+        public static int TargetFPS = 60;
         public static double TimeStep = 0.03f;
-        public static bool Busy = false;
+        public static int MinFrameTime = 0;
 
-        public static ManualResetEvent UIWindowOpen = new ManualResetEvent(false);
-        public static ManualResetEvent PausePhysics = new ManualResetEvent(false);
-
-        private static Task loopTask;
-        private static CancellationTokenSource cancelTokenSource;
-        private static Stopwatch fpsTimer = new Stopwatch();
-        private static int minFrameTime = 0;
+        private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
+        private static bool _skipPhysics = false;
+        private static Task _loopTask;
+        private static CancellationTokenSource _cancelTokenSource;
+        private static Stopwatch _fpsTimer = new Stopwatch();
 
         public static void StartLoop()
         {
-            minFrameTime = 1000 / TargetFPS;
+            MinFrameTime = 1000 / TargetFPS;
 
-            
+            _cancelTokenSource = new CancellationTokenSource();
 
-
-            cancelTokenSource = new CancellationTokenSource();
-
-            loopTask = new Task(DoLoop, cancelTokenSource.Token, TaskCreationOptions.LongRunning);
-            loopTask.Start();
+            _loopTask = new Task(DoLoop, _cancelTokenSource.Token, TaskCreationOptions.LongRunning);
+            _loopTask.Start();
         }
 
         public static void Stop()
         {
-            cancelTokenSource.Cancel();
-
+            _cancelTokenSource.Cancel();
         }
 
+        /// <summary>
+        /// Pause physics calculations. Blocks calling thread until any current physics operation is complete.
+        /// </summary>
         public static void Pause()
         {
-            PausePhysics.Set();
-            PausePhysics.WaitOne(500);
+            // Reset the wait handle.
+            _pausePhysics.Reset();
+
+            // Wait until the handle is signaled after the GPU calcs complete.
+            _pausePhysics.WaitOne(2000);
         }
 
+        /// <summary>
+        /// Resume physics calulations.
+        /// </summary>
         public static void Resume()
         {
-            PausePhysics.Reset();
-            FreezeTime = false;
+            // Make sure the wait handle has been set 
+            // and set the skip bool to false to allow physics to be calculated again.
+            _pausePhysics.Set();
+            _skipPhysics = false;
         }
 
         private static void DoLoop()
         {
-            while (!cancelTokenSource.IsCancellationRequested)
+            while (!_cancelTokenSource.IsCancellationRequested)
             {
-             
-                
-                if (!FreezeTime && BodyManager.Bodies.Length > 2)
+                if (!_skipPhysics)
                 {
-                    Busy = true;
-                    UIWindowOpen.Reset();
-                    // CUDA calc.
-                    var bds = CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
-
-
-                    // Process addition bodies. (Roche fracturing)
-
-
-                    BodyManager.Bodies = bds;
+                    if (BodyManager.Bodies.Length > 2)
+                    {
+                        // CUDA calc.
+                        CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
+                    }
                 }
 
-                if (PausePhysics.WaitOne(0))
+                // If the wait handle is nonsignaled, a pause has been requested.
+                if (!_pausePhysics.WaitOne(0))
                 {
-                    FreezeTime = true;
-                    PausePhysics.Set();
+                    // Set the skip flag then set the wait handle.
+                    // This allows the thread which originally called the pause to continue.
+                    _skipPhysics = true;
+                    _pausePhysics.Set();
                 }
 
-                // Render bodies.
+                // Draw all the bodies.
                 Renderer.DrawBodies(BodyManager.Bodies);
 
-
-                // Process UI.
-
-                Busy = false;
-                UIWindowOpen.Set();
-
+                // FPS Limiter
                 DelayFrame();
             }
         }
 
-
         private static void DelayFrame()
         {
-            if (fpsTimer.IsRunning)
+            if (_fpsTimer.IsRunning)
             {
-                long elapTime = fpsTimer.ElapsedMilliseconds;
-                fpsTimer.Reset();
+                long elapTime = _fpsTimer.ElapsedMilliseconds;
+                _fpsTimer.Reset();
 
-                if (elapTime >= minFrameTime)
+                if (elapTime >= MinFrameTime)
                 {
                     return;
                 }
                 else
                 {
-                    var waitTime = (int)(minFrameTime - elapTime);
+                    var waitTime = (int)(MinFrameTime - elapTime);
                     Thread.Sleep(waitTime);
                     return;
                 }
             }
             else
             {
-                fpsTimer.Start();
+                _fpsTimer.Start();
                 return;
             }
         }
-
-
-
     }
 }

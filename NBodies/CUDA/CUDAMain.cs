@@ -29,13 +29,8 @@ namespace NBodies.CUDA
             public int InRoche;
             public int BlackHole;
             public int UID;
-
-
-
-
-
+            public int threadID;
         }
-        //  public static Body[] Bodies { get; set; }
 
         private static int gpuIndex = 0;
         private static int threadsPerBlock = 256;
@@ -60,7 +55,7 @@ namespace NBodies.CUDA
             Console.WriteLine(gpu.GetDeviceProperties().ToString());
         }
 
-        public static Body[] CalcFrame(Body[] bodies, double timestep)
+        public static void CalcFrame(Body[] bodies, double timestep)
         {
             bool altCalcPath = true;
 
@@ -107,7 +102,7 @@ namespace NBodies.CUDA
 
             //TODO: Roche fractures.
 
-            return bodies;
+            //  return bodies;
         }
 
         [Cudafy]
@@ -129,12 +124,13 @@ namespace NBodies.CUDA
             if (a <= inBodies.Length - 1)
             {
                 outBodies[a] = inBodies[a];
+                outBodies[a].threadID = gpThread.threadIdx.x;
 
                 outBodies[a].ForceX = 0;
                 outBodies[a].ForceY = 0;
                 outBodies[a].ForceTot = 0;
 
-                for (int b = 0; b < inBodies.Length - 1; b++)
+                for (int b = 0; b < inBodies.Length; b++)
                 {
                     if (a != b && inBodies[b].Visible == 1)
                     {
@@ -142,7 +138,7 @@ namespace NBodies.CUDA
                         distY = inBodies[b].LocY - outBodies[a].LocY;
                         distSqrt = Math.Sqrt(((distX * distX) + (distY * distY)));
 
-                        if (distSqrt > 0)
+                        if (distSqrt > 0f)
                         {
                             totMass = inBodies[b].Mass * outBodies[a].Mass;
                             force = totMass / (distSqrt * distSqrt + epsilon * epsilon);

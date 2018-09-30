@@ -5,12 +5,13 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using NBodies.CUDA;
+using System.Runtime.InteropServices;
+
 namespace NBodies.Rendering
 {
     public static class BodyManager
     {
         public static CUDAMain.Body[] Bodies = new CUDAMain.Body[0];
-
         public static bool FollowSelected = false;
 
         public static int FollowBodyIndex
@@ -37,10 +38,11 @@ namespace NBodies.Rendering
 
         public static int FollowBodyUID = -1;
 
+        private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static int _followBodyIndex = -1;
         private static List<CUDAMain.Body> _bodyStore = new List<CUDAMain.Body>();
         private static int _currentId = -1;
-
+        private static object lockObject = new object();
 
         public static PointF FollowBodyLoc()
         {
@@ -54,6 +56,11 @@ namespace NBodies.Rendering
             return new PointF();
         }
 
+        public static int UIDToIndex(int uid)
+        {
+            return UIDIndex[uid];
+        }
+
         public static void Move(int index, PointF location)
         {
             Bodies[index].LocX = location.X;
@@ -65,9 +72,13 @@ namespace NBodies.Rendering
             _currentId++;
 
             _bodyStore = Bodies.ToList();
+
             body.UID = _currentId;
+
             _bodyStore.Add(body);
             Bodies = _bodyStore.ToArray();
+
+            UIDIndex.Add(_currentId, Bodies.Length - 1);
 
             return _currentId;
         }

@@ -37,7 +37,6 @@
             this.LoadRecordingButton = new System.Windows.Forms.Button();
             this.RecordButton = new System.Windows.Forms.Button();
             this.ScreenShotButton = new System.Windows.Forms.Button();
-            this.TrailsButton = new System.Windows.Forms.Button();
             this.RadiusTextBox = new System.Windows.Forms.TextBox();
             this.VeloYTextBox = new System.Windows.Forms.TextBox();
             this.VeloXTextBox = new System.Windows.Forms.TextBox();
@@ -52,6 +51,7 @@
             this.TotalMassButton = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -137,7 +137,6 @@
             this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 15, 0);
             this.tableLayoutPanel3.Controls.Add(this.RecordButton, 14, 0);
             this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 13, 0);
-            this.tableLayoutPanel3.Controls.Add(this.TrailsButton, 12, 0);
             this.tableLayoutPanel3.Controls.Add(this.RadiusTextBox, 7, 0);
             this.tableLayoutPanel3.Controls.Add(this.VeloYTextBox, 6, 0);
             this.tableLayoutPanel3.Controls.Add(this.VeloXTextBox, 5, 0);
@@ -150,6 +149,7 @@
             this.tableLayoutPanel3.Controls.Add(this.FlagsTextBox, 9, 0);
             this.tableLayoutPanel3.Controls.Add(this.UpdateButton, 10, 0);
             this.tableLayoutPanel3.Controls.Add(this.TotalMassButton, 11, 0);
+            this.tableLayoutPanel3.Controls.Add(this.TrailsCheckBox, 12, 0);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel3.Location = new System.Drawing.Point(3, 25);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
@@ -187,16 +187,6 @@
             this.ScreenShotButton.TabIndex = 13;
             this.ScreenShotButton.Text = "Screenshot";
             this.ScreenShotButton.UseVisualStyleBackColor = true;
-            // 
-            // TrailsButton
-            // 
-            this.TrailsButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.TrailsButton.Location = new System.Drawing.Point(991, 3);
-            this.TrailsButton.Name = "TrailsButton";
-            this.TrailsButton.Size = new System.Drawing.Size(66, 23);
-            this.TrailsButton.TabIndex = 12;
-            this.TrailsButton.Text = "Trails";
-            this.TrailsButton.UseVisualStyleBackColor = true;
             // 
             // RadiusTextBox
             // 
@@ -330,6 +320,20 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             // 
+            // TrailsCheckBox
+            // 
+            this.TrailsCheckBox.Appearance = System.Windows.Forms.Appearance.Button;
+            this.TrailsCheckBox.AutoSize = true;
+            this.TrailsCheckBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.TrailsCheckBox.Location = new System.Drawing.Point(991, 3);
+            this.TrailsCheckBox.Name = "TrailsCheckBox";
+            this.TrailsCheckBox.Size = new System.Drawing.Size(66, 23);
+            this.TrailsCheckBox.TabIndex = 16;
+            this.TrailsCheckBox.Text = "Trails";
+            this.TrailsCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.TrailsCheckBox.UseVisualStyleBackColor = true;
+            this.TrailsCheckBox.CheckedChanged += new System.EventHandler(this.TrailsCheckBox_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -383,7 +387,7 @@
         private System.Windows.Forms.Button LoadRecordingButton;
         private System.Windows.Forms.Button RecordButton;
         private System.Windows.Forms.Button ScreenShotButton;
-        private System.Windows.Forms.Button TrailsButton;
+        private System.Windows.Forms.CheckBox TrailsCheckBox;
     }
 }
 

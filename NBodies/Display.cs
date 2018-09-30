@@ -23,9 +23,7 @@ namespace NBodies
         private bool _mouseDown = false;
         private bool _bodyMovin = false;
         private PointF _mouseMoveDown = new PointF();
-
         private Timer _bodySizeTimer = new Timer();
-
 
         public DisplayForm()
         {
@@ -34,9 +32,9 @@ namespace NBodies
             _bodySizeTimer.Interval = 10;
             _bodySizeTimer.Tick += BodySizeTimer_Tick;
             RenderBox.MouseWheel += RenderBox_MouseWheel;
+
+            RenderBox.DoubleBuffered(true);
         }
-
-
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
@@ -48,8 +46,6 @@ namespace NBodies
             Renderer.Init(RenderBox);
 
             MainLoop.StartLoop();
-
-
         }
 
         private int MouseOverID(PointF mouseLoc)
@@ -70,11 +66,8 @@ namespace NBodies
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
         {
-            if (!MainLoop.Busy)
-            {
-                BodyManager.Bodies[_mouseId].Size = BodyManager.Bodies[_mouseId].Size + 0.5;
-                BodyManager.Bodies[_mouseId].Mass = BodyManager.CalcMass(BodyManager.Bodies[_mouseId].Size);
-            }
+            BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size = BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size + 0.5;
+            BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
@@ -153,12 +146,11 @@ namespace NBodies
             {
                 if (!_mouseDown)
                 {
-                    if (MainLoop.UIWindowOpen.WaitOne(50))
-                    {
-                        _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
-                        _mouseDown = true;
-                        _bodySizeTimer.Start();
-                    }
+                    MainLoop.Pause();
+
+                    _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
+                    _mouseDown = true;
+                    _bodySizeTimer.Start();
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -195,6 +187,8 @@ namespace NBodies
             _selectedId = -1;
             _bodyMovin = false;
 
+            MainLoop.Resume();
+
             if (_ctrlDown && BodyManager.FollowBodyIndex != -1)
             {
                 BodyManager.FollowSelected = true;
@@ -210,6 +204,11 @@ namespace NBodies
         private void AddBodiesButton_Click(object sender, EventArgs e)
         {
             new AddBodiesForm().Show();
+        }
+
+        private void TrailsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.Trails = TrailsCheckBox.Checked;
         }
     }
 }

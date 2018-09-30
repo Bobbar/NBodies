@@ -111,11 +111,9 @@ namespace NBodies.Rendering
         {
             if (_imageControl.InvokeRequired)
             {
-                //_imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
-
-                _imageControl.Invoke(new Action(() => SetControlImage(image)));
-
-
+                var asyncResult = _imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
+                asyncResult.AsyncWaitHandle.WaitOne(MainLoop.MinFrameTime);
+                // _imageControl.Invoke(new Action(() => SetControlImage(image)));
             }
             else
             {

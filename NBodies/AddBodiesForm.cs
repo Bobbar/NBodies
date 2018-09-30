@@ -85,13 +85,6 @@ namespace NBodies
             if (includeCenterMass)
             {
                 BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
-
-                // TODO: Figure out why the last body in the array doesn't react with anything.
-                // This is a bandaid for now...
-                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
-                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
-                BodyManager.Add(ellipse.Location, 0, 0, Color.Black);
-
             }
 
             MainLoop.Resume();
