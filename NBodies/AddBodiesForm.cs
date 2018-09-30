@@ -39,7 +39,7 @@ namespace NBodies
             Rules.Matter.Density = double.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            var ellipse = new Ellipse(ScaleHelpers.ScaleMousePosRelative(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
 
 
             for (int i = 0; i < count; i++)
@@ -87,7 +87,7 @@ namespace NBodies
             double px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = double.Parse(DensityTextBox.Text);
-            var ellipse = new Ellipse(ScaleHelpers.ScaleMousePosRelative(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
 
             int nGas = (count / 8) * 7;
             int nMinerals = (count / 8);

@@ -25,8 +25,6 @@ namespace NBodies.Rendering
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
-
-            //  InitGfx(imageControl.Size);
         }
 
         private static void InitGfx(Size viewSize)
@@ -37,28 +35,34 @@ namespace NBodies.Rendering
             _gfx = Graphics.FromImage(_view);
         }
 
-        public static void UpdateScale()
+        public static void CheckScale()
         {
-
-            //if (_view == null || _imageControl.Size != _view.Size)
             if (_view == null || _imageControl.Size != imgSize)
             {
                 InitGfx(_imageControl.Size);
+
+                UpdateGraphicsScale();
             }
 
             if (_prevScale != RenderVars.CurrentScale)
             {
-                _gfx.ResetTransform();
-                _gfx.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
-                _prevScale = RenderVars.CurrentScale;
+                UpdateGraphicsScale();
             }
+        }
+
+        private static void UpdateGraphicsScale()
+        {
+            _gfx.ResetTransform();
+            _gfx.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
+            _prevScale = RenderVars.CurrentScale;
         }
 
         public static void DrawBodies(CUDAMain.Body[] bodies)
         {
+            var finalOffset = new PointF(RenderVars.ViewportOffset.X + RenderVars.ScaleOffset.X, RenderVars.ViewportOffset.Y + RenderVars.ScaleOffset.Y);
             PointF viewOffset = new PointF();
 
-            UpdateScale();
+            CheckScale();
 
             if (!Trails) _gfx.Clear(_spaceColor);
 
@@ -74,7 +78,6 @@ namespace NBodies.Rendering
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
-                var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + FinalOffset().X), (float)(body.LocY - body.Size * 0.5f + FinalOffset().Y));
                 var bodySize = (float)body.Size;
 
                 if (body.Visible == 1)
@@ -84,15 +87,16 @@ namespace NBodies.Rendering
                         if (BodyManager.FollowSelected)
                         {
                             var followOffset = BodyManager.FollowBodyLoc();
-                            viewOffset.X = -followOffset.X;
-                            viewOffset.Y = -followOffset.Y;
+                            RenderVars.ViewportOffset.X = -followOffset.X;
+                            RenderVars.ViewportOffset.Y = -followOffset.Y;
                         }
-                        else
-                        {
-                            viewOffset = RenderVars.ViewportOffset;
-                        }
+                        //else
+                        //{
+                        //    //viewOffset = RenderVars.ViewportOffset;
+                        //}
 
                         //Draw body.
+                        var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
                         _gfx.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
 
                         // If blackhole, stroke with red circle.

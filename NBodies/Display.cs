@@ -39,7 +39,7 @@ namespace NBodies
         private void DisplayForm_Load(object sender, EventArgs e)
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
-            RenderVars.ScaleOffset = ScaleHelpers.ScaleMousePosExact(RenderVars.ScreenCenter);
+            RenderVars.ScaleOffset = ScaleHelpers.ScalePointExact(RenderVars.ScreenCenter);
 
             CUDAMain.InitGPU(2);
 
@@ -53,7 +53,7 @@ namespace NBodies
             for (int i = 0; i < BodyManager.Bodies.Length; i++)
             {
                 var body = BodyManager.Bodies[i];
-                var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScaleMousePosRelative(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScaleMousePosRelative(mouseLoc).Y - body.LocY, 2));
+                var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).Y - body.LocY, 2));
 
                 if (dist < body.Size * 0.5f)
                 {
@@ -101,12 +101,12 @@ namespace NBodies
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(_selectedId, ScaleHelpers.ScaleMousePosRelative(e.Location));
+                    BodyManager.Move(_selectedId, ScaleHelpers.ScalePointRelative(e.Location));
                 }
                 else
                 {
                     var moveDiff = e.Location.Subtract(_mouseMoveDown);
-                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScaleMousePosExact(moveDiff));
+                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScalePointExact(moveDiff));
                     _mouseMoveDown = e.Location;
                 }
             }
@@ -148,7 +148,7 @@ namespace NBodies
                 {
                     MainLoop.WaitForPause();
 
-                    _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
+                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
                     _mouseDown = true;
                     _bodySizeTimer.Start();
                 }
@@ -200,9 +200,9 @@ namespace NBodies
 
         }
 
-        private void DisplayForm_Resize(object sender, EventArgs e)
+        private void RenderBox_Resize(object sender, EventArgs e)
         {
-            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
+            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width * 0.5f, this.RenderBox.Height * 0.5f);
         }
 
         private void AddBodiesButton_Click(object sender, EventArgs e)

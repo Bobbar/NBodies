@@ -49,9 +49,9 @@
             this.UpdateButton = new System.Windows.Forms.Button();
             this.TotalMassButton = new System.Windows.Forms.Button();
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
+            this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.PauseButton = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -299,6 +299,20 @@
             this.TrailsCheckBox.UseVisualStyleBackColor = true;
             this.TrailsCheckBox.CheckedChanged += new System.EventHandler(this.TrailsCheckBox_CheckedChanged);
             // 
+            // PauseButton
+            // 
+            this.PauseButton.Appearance = System.Windows.Forms.Appearance.Button;
+            this.PauseButton.AutoSize = true;
+            this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PauseButton.Location = new System.Drawing.Point(207, 3);
+            this.PauseButton.Name = "PauseButton";
+            this.PauseButton.Size = new System.Drawing.Size(91, 23);
+            this.PauseButton.TabIndex = 17;
+            this.PauseButton.Text = "Pause Physics";
+            this.PauseButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.PauseButton.UseVisualStyleBackColor = true;
+            this.PauseButton.CheckedChanged += new System.EventHandler(this.PauseButton_CheckedChanged);
+            // 
             // panel1
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -323,20 +337,7 @@
             this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
-            // 
-            // PauseButton
-            // 
-            this.PauseButton.Appearance = System.Windows.Forms.Appearance.Button;
-            this.PauseButton.AutoSize = true;
-            this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.PauseButton.Location = new System.Drawing.Point(207, 3);
-            this.PauseButton.Name = "PauseButton";
-            this.PauseButton.Size = new System.Drawing.Size(91, 23);
-            this.PauseButton.TabIndex = 17;
-            this.PauseButton.Text = "Pause Physics";
-            this.PauseButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.PauseButton.UseVisualStyleBackColor = true;
-            this.PauseButton.CheckedChanged += new System.EventHandler(this.PauseButton_CheckedChanged);
+            this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
             // DisplayForm
             // 
@@ -351,7 +352,6 @@
             this.Load += new System.EventHandler(this.DisplayForm_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
-            this.Resize += new System.EventHandler(this.DisplayForm_Resize);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
