@@ -8,13 +8,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
+using NBodies.Rules;
 
 namespace NBodies
 {
     public partial class AddBodiesForm : Form
     {
         private double _solarMass = 30000;
-        private Random _rnd = new Random((int)(DateTime.Now.Ticks % Int32.MaxValue));
 
         public AddBodiesForm()
         {
@@ -29,17 +29,10 @@ namespace NBodies
             return Math.Sqrt(numerator / r2);
         }
 
-        private double GetRandomValue(double min, double max)
-        {
-            double range = max - min;
-            double sample = _rnd.NextDouble();
-            double scaled = (sample * range) + min;
-            return scaled;
-        }
 
         private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, double centerMass)
         {
-            MainLoop.Pause();
+            MainLoop.WaitForPause();
 
             double px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
@@ -47,18 +40,17 @@ namespace NBodies
             centerMass *= Rules.Matter.Density * 2;
 
             var ellipse = new Ellipse(ScaleHelpers.ScaleMousePosRelative(RenderVars.ScreenCenter), radius);
-            ellipse.Location.X += 1;
-            ellipse.Location.Y += 1;
+
 
             for (int i = 0; i < count; i++)
             {
-                px = GetRandomValue(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                py = GetRandomValue(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
                 while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF().FromDouble(px, py)))
                 {
-                    px = GetRandomValue(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                    py = GetRandomValue(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                    px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                    py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
                 }
 
                 double magV = CircleV(px, py, centerMass);
@@ -67,7 +59,7 @@ namespace NBodies
                 double vx = -1 * Math.Sign(py) * Math.Cos(thetaV) * magV;
                 double vy = Math.Sign(px) * Math.Sin(thetaV) * magV;
 
-                var bodySize = GetRandomValue(minSize, maxSize);
+                var bodySize = Numbers.GetRandomDouble(minSize, maxSize);
                 double newMass;
 
                 if (bodyMass > 0)
@@ -90,6 +82,62 @@ namespace NBodies
             MainLoop.Resume();
         }
 
+        private void AddBodiesToDisc(int count, int maxSize, int minSize, int bodyMass)
+        {
+            double px, py;
+            float radius = float.Parse(OrbitRadiusTextBox.Text);
+            Rules.Matter.Density = double.Parse(DensityTextBox.Text);
+            var ellipse = new Ellipse(ScaleHelpers.ScaleMousePosRelative(RenderVars.ScreenCenter), radius);
+
+            int nGas = (count / 8) * 7;
+            int nMinerals = (count / 8);
+            int bodyCount = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                MatterType matter = Matter.Types[0];
+
+                if (bodyCount <= nGas)
+                {
+                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
+                }
+                else if (bodyCount >= nMinerals)
+                {
+                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
+                }
+
+
+                bodyCount++;
+
+                px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF().FromDouble(px, py)))
+                {
+                    px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                    py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                }
+
+
+                var bodySize = Numbers.GetRandomDouble(minSize, maxSize);
+                double newMass;
+
+                if (bodyMass > 0)
+                {
+                    newMass = bodyMass;
+                }
+                else
+                {
+                    newMass = BodyManager.CalcMass(bodySize, matter.Density);
+                }
+
+                BodyManager.Add(px, py, bodySize, newMass, matter.Color);
+            }
+
+        }
+
+
+
         private struct Ellipse
         {
             public PointF Location;
@@ -105,6 +153,11 @@ namespace NBodies
         private void AddOrbitButton_Click(object sender, EventArgs e)
         {
             AddBodiesToOrbit(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()), CenterMassCheckBox.Checked, double.Parse(CenterMassTextBox.Text.Trim()));
+        }
+
+        private void AddStationaryButton_Click(object sender, EventArgs e)
+        {
+            AddBodiesToDisc(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()));
         }
     }
 }

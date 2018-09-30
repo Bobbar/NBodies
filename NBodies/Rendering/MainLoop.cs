@@ -6,14 +6,28 @@ using System.Threading.Tasks;
 using NBodies.CUDA;
 using System.Threading;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace NBodies.Rendering
 {
     public static class MainLoop
     {
         public static int TargetFPS = 60;
-        public static double TimeStep = 0.03f;
+        public static double TimeStep = 0.008f;
         public static int MinFrameTime = 0;
+
+        public static bool PausePhysics
+        {
+            get
+            {
+                return _skipPhysics;
+            }
+
+            set
+            {
+                _skipPhysics = value;
+            }
+        }
 
         private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
         private static bool _skipPhysics = false;
@@ -37,9 +51,9 @@ namespace NBodies.Rendering
         }
 
         /// <summary>
-        /// Pause physics calculations. Blocks calling thread until any current physics operation is complete.
+        /// Pause physics calculations and blocks calling thread until any current physics operation is complete.
         /// </summary>
-        public static void Pause()
+        public static void WaitForPause()
         {
             // Reset the wait handle.
             _pausePhysics.Reset();
@@ -69,6 +83,8 @@ namespace NBodies.Rendering
                     {
                         // CUDA calc.
                         CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
+
+                        ProcessRoche(ref BodyManager.Bodies);
                     }
                 }
 
@@ -112,6 +128,62 @@ namespace NBodies.Rendering
                 _fpsTimer.Start();
                 return;
             }
+        }
+
+        private static void ProcessRoche(ref CUDAMain.Body[] bodies)
+        {
+            int len = bodies.Length;
+            for (int b = 0; b < len; b++)
+            {
+                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1)
+                {
+                    if (bodies[b].Size > 1)
+                    {
+                        bodies[b].Visible = 0;
+                        FractureBody(bodies[b]);
+                    }
+                }
+            }
+        }
+
+        public static void FractureBody(CUDAMain.Body body)
+        {
+            double newSize;
+            double newMass;
+            int divisor;
+            double prevMass;
+            double area;
+
+            //if (body.Visible == 1 && body.Size > 1)
+            //{
+            area = Math.PI * Math.Pow(body.Size / 2f, 2);
+            divisor = (int)area;
+
+            if (divisor <= 1) divisor = 2;
+            prevMass = body.Mass;
+            area = area / (float)divisor;
+            newSize = BodyManager.CalcRadius(area);
+            newMass = prevMass / (float)divisor;
+
+            for (int f = 0; f < divisor; f++)
+            {
+
+                double fLocX = Numbers.GetRandomDouble(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
+                double fLocY = Numbers.GetRandomDouble(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
+
+                while (!PointHelper.PointInsideCircle(new PointF().FromDouble(body.LocX, body.LocY), (float)body.Size, new PointF().FromDouble(fLocX, fLocY)))
+                {
+
+                    fLocX = Numbers.GetRandomDouble(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
+                    fLocY = Numbers.GetRandomDouble(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
+
+                }
+
+                BodyManager.Add(fLocX, fLocY, body.SpeedX, body.SpeedY, newSize, newMass, Color.FromArgb(body.Color), 1);
+
+            }
+            //}
+
         }
     }
 }

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
-using NBodies.Structures;
 
 namespace NBodies.CUDA
 {
@@ -92,17 +91,6 @@ namespace NBodies.CUDA
 
             gpu.FreeAll();
 
-            //gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
-
-            //gpu.Synchronize();
-
-            //gpu.CopyFromDevice(gpuInBodies, bodies);
-
-            //gpu.FreeAll();
-
-            //TODO: Roche fractures.
-
-            //  return bodies;
         }
 
         [Cudafy]
@@ -351,8 +339,6 @@ namespace NBodies.CUDA
             gpThread.SyncThreads();
         }
 
-
     }
-
 
 }

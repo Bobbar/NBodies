@@ -89,6 +89,7 @@
             this.AddStationaryButton.TabIndex = 9;
             this.AddStationaryButton.Text = "Add Stationary";
             this.AddStationaryButton.UseVisualStyleBackColor = true;
+            this.AddStationaryButton.Click += new System.EventHandler(this.AddStationaryButton_Click);
             // 
             // CirOrbitGroup
             // 

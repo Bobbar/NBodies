@@ -146,7 +146,7 @@ namespace NBodies
             {
                 if (!_mouseDown)
                 {
-                    MainLoop.Pause();
+                    MainLoop.WaitForPause();
 
                     _mouseId = BodyManager.Add(ScaleHelpers.ScaleMousePosRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
                     _mouseDown = true;
@@ -187,7 +187,11 @@ namespace NBodies
             _selectedId = -1;
             _bodyMovin = false;
 
-            MainLoop.Resume();
+            if (_mouseId != -1)
+            {
+                _mouseId = -1;
+                MainLoop.Resume();
+            }
 
             if (_ctrlDown && BodyManager.FollowBodyIndex != -1)
             {
@@ -209,6 +213,11 @@ namespace NBodies
         private void TrailsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.Trails = TrailsCheckBox.Checked;
+        }
+
+        private void PauseButton_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.PausePhysics = PauseButton.Checked;
         }
     }
 }

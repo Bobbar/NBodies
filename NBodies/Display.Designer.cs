@@ -42,16 +42,16 @@
             this.VeloXTextBox = new System.Windows.Forms.TextBox();
             this.AddBodiesButton = new System.Windows.Forms.Button();
             this.RemoveAllButton = new System.Windows.Forms.Button();
-            this.PauseButton = new System.Windows.Forms.Button();
             this.TimeStepUpDown = new System.Windows.Forms.NumericUpDown();
             this.FpsLimitTextBox = new System.Windows.Forms.TextBox();
             this.MassTextBox = new System.Windows.Forms.TextBox();
             this.FlagsTextBox = new System.Windows.Forms.TextBox();
             this.UpdateButton = new System.Windows.Forms.Button();
             this.TotalMassButton = new System.Windows.Forms.Button();
+            this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
+            this.PauseButton = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -142,7 +142,6 @@
             this.tableLayoutPanel3.Controls.Add(this.VeloXTextBox, 5, 0);
             this.tableLayoutPanel3.Controls.Add(this.AddBodiesButton, 0, 0);
             this.tableLayoutPanel3.Controls.Add(this.RemoveAllButton, 1, 0);
-            this.tableLayoutPanel3.Controls.Add(this.PauseButton, 2, 0);
             this.tableLayoutPanel3.Controls.Add(this.TimeStepUpDown, 3, 0);
             this.tableLayoutPanel3.Controls.Add(this.FpsLimitTextBox, 4, 0);
             this.tableLayoutPanel3.Controls.Add(this.MassTextBox, 8, 0);
@@ -150,6 +149,7 @@
             this.tableLayoutPanel3.Controls.Add(this.UpdateButton, 10, 0);
             this.tableLayoutPanel3.Controls.Add(this.TotalMassButton, 11, 0);
             this.tableLayoutPanel3.Controls.Add(this.TrailsCheckBox, 12, 0);
+            this.tableLayoutPanel3.Controls.Add(this.PauseButton, 2, 0);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel3.Location = new System.Drawing.Point(3, 25);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
@@ -233,16 +233,6 @@
             this.RemoveAllButton.Text = "Remove All";
             this.RemoveAllButton.UseVisualStyleBackColor = true;
             // 
-            // PauseButton
-            // 
-            this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.PauseButton.Location = new System.Drawing.Point(207, 3);
-            this.PauseButton.Name = "PauseButton";
-            this.PauseButton.Size = new System.Drawing.Size(91, 23);
-            this.PauseButton.TabIndex = 2;
-            this.PauseButton.Text = "Pause";
-            this.PauseButton.UseVisualStyleBackColor = true;
-            // 
             // TimeStepUpDown
             // 
             this.TimeStepUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -295,6 +285,20 @@
             this.TotalMassButton.Text = "Tot. Mass";
             this.TotalMassButton.UseVisualStyleBackColor = true;
             // 
+            // TrailsCheckBox
+            // 
+            this.TrailsCheckBox.Appearance = System.Windows.Forms.Appearance.Button;
+            this.TrailsCheckBox.AutoSize = true;
+            this.TrailsCheckBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.TrailsCheckBox.Location = new System.Drawing.Point(991, 3);
+            this.TrailsCheckBox.Name = "TrailsCheckBox";
+            this.TrailsCheckBox.Size = new System.Drawing.Size(66, 23);
+            this.TrailsCheckBox.TabIndex = 16;
+            this.TrailsCheckBox.Text = "Trails";
+            this.TrailsCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.TrailsCheckBox.UseVisualStyleBackColor = true;
+            this.TrailsCheckBox.CheckedChanged += new System.EventHandler(this.TrailsCheckBox_CheckedChanged);
+            // 
             // panel1
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -320,19 +324,19 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             // 
-            // TrailsCheckBox
+            // PauseButton
             // 
-            this.TrailsCheckBox.Appearance = System.Windows.Forms.Appearance.Button;
-            this.TrailsCheckBox.AutoSize = true;
-            this.TrailsCheckBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.TrailsCheckBox.Location = new System.Drawing.Point(991, 3);
-            this.TrailsCheckBox.Name = "TrailsCheckBox";
-            this.TrailsCheckBox.Size = new System.Drawing.Size(66, 23);
-            this.TrailsCheckBox.TabIndex = 16;
-            this.TrailsCheckBox.Text = "Trails";
-            this.TrailsCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.TrailsCheckBox.UseVisualStyleBackColor = true;
-            this.TrailsCheckBox.CheckedChanged += new System.EventHandler(this.TrailsCheckBox_CheckedChanged);
+            this.PauseButton.Appearance = System.Windows.Forms.Appearance.Button;
+            this.PauseButton.AutoSize = true;
+            this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PauseButton.Location = new System.Drawing.Point(207, 3);
+            this.PauseButton.Name = "PauseButton";
+            this.PauseButton.Size = new System.Drawing.Size(91, 23);
+            this.PauseButton.TabIndex = 17;
+            this.PauseButton.Text = "Pause Physics";
+            this.PauseButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.PauseButton.UseVisualStyleBackColor = true;
+            this.PauseButton.CheckedChanged += new System.EventHandler(this.PauseButton_CheckedChanged);
             // 
             // DisplayForm
             // 
@@ -377,7 +381,6 @@
         private System.Windows.Forms.TextBox VeloXTextBox;
         private System.Windows.Forms.Button AddBodiesButton;
         private System.Windows.Forms.Button RemoveAllButton;
-        private System.Windows.Forms.Button PauseButton;
         private System.Windows.Forms.NumericUpDown TimeStepUpDown;
         private System.Windows.Forms.TextBox FpsLimitTextBox;
         private System.Windows.Forms.TextBox MassTextBox;
@@ -388,6 +391,7 @@
         private System.Windows.Forms.Button RecordButton;
         private System.Windows.Forms.Button ScreenShotButton;
         private System.Windows.Forms.CheckBox TrailsCheckBox;
+        private System.Windows.Forms.CheckBox PauseButton;
     }
 }
 
