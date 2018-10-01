@@ -224,5 +224,16 @@ namespace NBodies
         {
             MainLoop.PausePhysics = PauseButton.Checked;
         }
+
+        private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            NBodies.IO.Serializer.SaveState();
+        }
+
+        private void loadStateToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            NBodies.IO.Serializer.LoadState();
+
+        }
     }
 }

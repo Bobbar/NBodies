@@ -6,29 +6,59 @@ using System.Threading.Tasks;
 using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
+using ProtoBuf;
 
 namespace NBodies.CUDA
 {
     public static class CUDAMain
     {
         [Cudafy]
+        [ProtoContract]
         public struct Body
         {
+            [ProtoMember(1)]
             public double LocX;
+
+            [ProtoMember(2)]
             public double LocY;
+
+            [ProtoMember(3)]
             public double Mass;
+
+            [ProtoMember(4)]
             public double SpeedX;
+
+            [ProtoMember(5)]
             public double SpeedY;
+
+            [ProtoMember(6)]
             public double ForceX;
+
+            [ProtoMember(7)]
             public double ForceY;
+
+            [ProtoMember(8)]
             public double ForceTot;
+
+            [ProtoMember(9)]
             public int Color;
+
+            [ProtoMember(10)]
             public double Size;
+
+            [ProtoMember(11)]
             public int Visible;
+
+            [ProtoMember(12)]
             public int InRoche;
+
+            [ProtoMember(13)]
             public int BlackHole;
+
+            [ProtoMember(14)]
             public int UID;
-            public int threadID;
+
+
         }
 
         private static int gpuIndex = 0;
@@ -37,6 +67,7 @@ namespace NBodies.CUDA
 
         public static void InitGPU(int gpuIdx)
         {
+
             gpuIndex = gpuIdx;
 
             var cudaModule = CudafyModule.TryDeserialize();
@@ -112,7 +143,6 @@ namespace NBodies.CUDA
             if (a <= inBodies.Length - 1)
             {
                 outBodies[a] = inBodies[a];
-                outBodies[a].threadID = gpThread.threadIdx.x;
 
                 outBodies[a].ForceX = 0;
                 outBodies[a].ForceY = 0;

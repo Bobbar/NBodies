@@ -75,35 +75,43 @@ namespace NBodies.Rendering
 
         private static void DoLoop()
         {
-            while (!_cancelTokenSource.IsCancellationRequested)
+            try
             {
-
-                if (!_skipPhysics)
+                while (!_cancelTokenSource.IsCancellationRequested)
                 {
-                    if (BodyManager.Bodies.Length > 2)
+
+                    if (!_skipPhysics)
                     {
-                        // CUDA calc.
-                        CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
+                        if (BodyManager.Bodies.Length > 2)
+                        {
+                            // CUDA calc.
+                            CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
 
-                        ProcessRoche(ref BodyManager.Bodies);
+                            ProcessRoche(ref BodyManager.Bodies);
+                        }
                     }
+
+                    // If the wait handle is nonsignaled, a pause has been requested.
+                    if (!_pausePhysics.WaitOne(0))
+                    {
+                        // Set the skip flag then set the wait handle.
+                        // This allows the thread which originally called the pause to continue.
+                        _skipPhysics = true;
+                        _pausePhysics.Set();
+                    }
+
+                    // Draw all the bodies.
+                    Renderer.DrawBodies(BodyManager.Bodies);
+
+                    // FPS Limiter
+                    DelayFrame();
                 }
-
-                // If the wait handle is nonsignaled, a pause has been requested.
-                if (!_pausePhysics.WaitOne(0))
-                {
-                    // Set the skip flag then set the wait handle.
-                    // This allows the thread which originally called the pause to continue.
-                    _skipPhysics = true;
-                    _pausePhysics.Set();
-                }
-
-                // Draw all the bodies.
-                Renderer.DrawBodies(BodyManager.Bodies);
-
-                // FPS Limiter
-                DelayFrame();
             }
+            catch (OperationCanceledException)
+            {
+                // Fail silently
+            }
+          
         }
 
         private static void DelayFrame()

@@ -1,11 +1,9 @@
-﻿using NBodies.Rules;
-using NBodies.Structures;
+﻿using NBodies.CUDA;
+using NBodies.Rules;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using NBodies.CUDA;
-using System.Runtime.InteropServices;
 
 namespace NBodies.Rendering
 {
@@ -42,7 +40,37 @@ namespace NBodies.Rendering
         private static int _followBodyIndex = -1;
         private static List<CUDAMain.Body> _bodyStore = new List<CUDAMain.Body>();
         private static int _currentId = -1;
-        private static object lockObject = new object();
+
+        public static void ClearBodies()
+        {
+            FollowSelected = false;
+            FollowBodyId = -1;
+            Bodies = new CUDAMain.Body[0];
+            UIDIndex.Clear();
+            _bodyStore.Clear();
+            _currentId = -1;
+        }
+
+        public static void ReplaceBodies(CUDAMain.Body[] bodies)
+        {
+            ClearBodies();
+
+            _currentId = bodies.Max((b) => b.UID);
+
+            Bodies = bodies;
+
+            RebuildUIDIndex();
+        }
+
+        public static void RebuildUIDIndex()
+        {
+            UIDIndex.Clear();
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                UIDIndex.Add(Bodies[i].UID, i);
+            }
+        }
 
         public static PointF FollowBodyLoc()
         {
