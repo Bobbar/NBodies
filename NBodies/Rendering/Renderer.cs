@@ -1,10 +1,8 @@
-﻿using NBodies.Structures;
+﻿using NBodies.CUDA;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Windows.Forms;
-using System;
-using NBodies.CUDA;
+
 namespace NBodies.Rendering
 {
     public static class Renderer
@@ -12,34 +10,57 @@ namespace NBodies.Rendering
         public static bool AntiAliasing = true;
         public static bool Trails = false;
 
-        private static Bitmap _view;
-        private static Graphics _gfx;
+        public static bool HighContrast
+        {
+            get
+            {
+                return _highContrast;
+            }
+
+            set
+            {
+                _highContrast = value;
+
+                if (_highContrast)
+                {
+                    _spaceColor = Color.White;
+                }
+                else
+                {
+                    _spaceColor = Color.Black;
+                }
+            }
+        }
+
+        private static BufferedGraphicsContext _currentContext;
+        private static BufferedGraphics _buffer;
+
+        private static bool _highContrast = false;
         private static PictureBox _imageControl;
         private static float _prevScale = 0;
 
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Color _spaceColor = Color.Black;
 
-        private static Size imgSize = new Size();
+        private static Size _prevSize = new Size();
 
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
         }
 
-        private static void InitGfx(Size viewSize)
+        private static void InitGfx()
         {
-            _view = new Bitmap(viewSize.Width, viewSize.Height, PixelFormat.Format32bppPArgb);
-            imgSize = _view.Size;
-
-            _gfx = Graphics.FromImage(_view);
+            _currentContext = BufferedGraphicsManager.Current;
+            _buffer = _currentContext.Allocate(_imageControl.CreateGraphics(), _imageControl.DisplayRectangle);
+            _prevSize = _imageControl.Size;
         }
 
         public static void CheckScale()
         {
-            if (_view == null || _imageControl.Size != imgSize)
+            if (_imageControl.Size != _prevSize)
             {
-                InitGfx(_imageControl.Size);
+                InitGfx();
 
                 UpdateGraphicsScale();
             }
@@ -52,8 +73,8 @@ namespace NBodies.Rendering
 
         private static void UpdateGraphicsScale()
         {
-            _gfx.ResetTransform();
-            _gfx.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
+            _buffer.Graphics.ResetTransform();
+            _buffer.Graphics.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
             _prevScale = RenderVars.CurrentScale;
         }
 
@@ -63,15 +84,15 @@ namespace NBodies.Rendering
 
             CheckScale();
 
-            if (!Trails) _gfx.Clear(_spaceColor);
+            if (!Trails) _buffer.Graphics.Clear(_spaceColor);
 
             if (AntiAliasing)
             {
-                _gfx.SmoothingMode = SmoothingMode.HighQuality;
+                _buffer.Graphics.SmoothingMode = SmoothingMode.HighQuality;
             }
             else
             {
-                _gfx.SmoothingMode = SmoothingMode.None;
+                _buffer.Graphics.SmoothingMode = SmoothingMode.None;
             }
 
             for (int i = 0; i < bodies.Length; i++)
@@ -81,7 +102,7 @@ namespace NBodies.Rendering
 
                 if (body.Visible == 1)
                 {
-                    using (var bodyBrush = new SolidBrush(Color.FromArgb(body.Color)))
+                    using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
                     {
                         if (BodyManager.FollowSelected)
                         {
@@ -89,36 +110,21 @@ namespace NBodies.Rendering
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
                         }
-                       
+
                         //Draw body.
                         var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
-                        _gfx.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
+                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
 
                         // If blackhole, stroke with red circle.
                         if (body.BlackHole == 1)
                         {
-                            _gfx.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
+                            _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
                         }
                     }
                 }
             }
 
-            SetControlImage(_view);
-        }
-
-        private static void SetControlImage(Bitmap image)
-        {
-            if (_imageControl.InvokeRequired)
-            {
-                var asyncResult = _imageControl.BeginInvoke(new Action(() => SetControlImage(image)));
-                asyncResult.AsyncWaitHandle.WaitOne(MainLoop.MinFrameTime);
-                // _imageControl.Invoke(new Action(() => SetControlImage(image)));
-            }
-            else
-            {
-                _imageControl.Image = image;
-                _imageControl.Invalidate();
-            }
+            _buffer.Render();
         }
     }
 }

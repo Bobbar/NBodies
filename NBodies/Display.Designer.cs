@@ -32,7 +32,11 @@
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highContrastToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.LoadRecordingButton = new System.Windows.Forms.Button();
             this.RecordButton = new System.Windows.Forms.Button();
@@ -52,8 +56,6 @@
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -107,9 +109,30 @@
             // 
             // optionsToolStripMenuItem
             // 
+            this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.antiAliasingToolStripMenuItem,
+            this.highContrastToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
+            // 
+            // antiAliasingToolStripMenuItem
+            // 
+            this.antiAliasingToolStripMenuItem.Checked = true;
+            this.antiAliasingToolStripMenuItem.CheckOnClick = true;
+            this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
+            this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
+            // 
+            // highContrastToolStripMenuItem
+            // 
+            this.highContrastToolStripMenuItem.CheckOnClick = true;
+            this.highContrastToolStripMenuItem.Name = "highContrastToolStripMenuItem";
+            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.highContrastToolStripMenuItem.Text = "High Contrast";
+            this.highContrastToolStripMenuItem.CheckedChanged += new System.EventHandler(this.highContrastToolStripMenuItem_CheckedChanged);
             // 
             // toolsToolStripMenuItem
             // 
@@ -119,6 +142,20 @@
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 18);
             this.toolsToolStripMenuItem.Text = "Tools";
+            // 
+            // saveStateToolStripMenuItem
+            // 
+            this.saveStateToolStripMenuItem.Name = "saveStateToolStripMenuItem";
+            this.saveStateToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.saveStateToolStripMenuItem.Text = "Save State";
+            this.saveStateToolStripMenuItem.Click += new System.EventHandler(this.saveStateToolStripMenuItem_Click);
+            // 
+            // loadStateToolStripMenuItem
+            // 
+            this.loadStateToolStripMenuItem.Name = "loadStateToolStripMenuItem";
+            this.loadStateToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.loadStateToolStripMenuItem.Text = "Load State";
+            this.loadStateToolStripMenuItem.Click += new System.EventHandler(this.loadStateToolStripMenuItem_Click);
             // 
             // tableLayoutPanel3
             // 
@@ -344,20 +381,6 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // saveStateToolStripMenuItem
-            // 
-            this.saveStateToolStripMenuItem.Name = "saveStateToolStripMenuItem";
-            this.saveStateToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.saveStateToolStripMenuItem.Text = "Save State";
-            this.saveStateToolStripMenuItem.Click += new System.EventHandler(this.saveStateToolStripMenuItem_Click);
-            // 
-            // loadStateToolStripMenuItem
-            // 
-            this.loadStateToolStripMenuItem.Name = "loadStateToolStripMenuItem";
-            this.loadStateToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.loadStateToolStripMenuItem.Text = "Load State";
-            this.loadStateToolStripMenuItem.Click += new System.EventHandler(this.loadStateToolStripMenuItem_Click);
-            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -414,6 +437,8 @@
         private System.Windows.Forms.CheckBox PauseButton;
         private System.Windows.Forms.ToolStripMenuItem saveStateToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadStateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antiAliasingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
     }
 }
 

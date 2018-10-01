@@ -124,7 +124,7 @@ namespace NBodies
 
                     MainLoop.WaitForPause();
                     _ctrlDown = true;
-                   
+
                     break;
             }
         }
@@ -234,6 +234,16 @@ namespace NBodies
         {
             NBodies.IO.Serializer.LoadState();
 
+        }
+
+        private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.AntiAliasing = antiAliasingToolStripMenuItem.Checked;
+        }
+
+        private void highContrastToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.HighContrast = highContrastToolStripMenuItem.Checked;
         }
     }
 }
