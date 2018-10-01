@@ -346,6 +346,7 @@
             this.ClientSize = new System.Drawing.Size(1359, 706);
             this.Controls.Add(this.tableLayoutPanel1);
             this.DoubleBuffered = true;
+            this.KeyPreview = true;
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "DisplayForm";
             this.Text = "NBodies";

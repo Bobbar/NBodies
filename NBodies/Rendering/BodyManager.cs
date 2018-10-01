@@ -14,7 +14,7 @@ namespace NBodies.Rendering
         public static CUDAMain.Body[] Bodies = new CUDAMain.Body[0];
         public static bool FollowSelected = false;
 
-        public static int FollowBodyIndex
+        public static int FollowBodyId
         {
             get
             {
@@ -46,13 +46,8 @@ namespace NBodies.Rendering
 
         public static PointF FollowBodyLoc()
         {
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                if (Bodies[i].UID == FollowBodyUID)
-                {
-                    return new PointF((float)Bodies[i].LocX, (float)Bodies[i].LocY);
-                }
-            }
+            if (UIDIndex.ContainsKey(FollowBodyUID))
+                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].LocX, (float)Bodies[UIDToIndex(FollowBodyUID)].LocY);
             return new PointF();
         }
 
@@ -105,7 +100,7 @@ namespace NBodies.Rendering
 
             Add(b);
         }
-      
+
         public static void Add(double locX, double locY, double velX, double velY, double size, double mass, Color color)
         {
             var b = new CUDAMain.Body();

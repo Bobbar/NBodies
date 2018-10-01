@@ -59,8 +59,7 @@ namespace NBodies.Rendering
 
         public static void DrawBodies(CUDAMain.Body[] bodies)
         {
-            var finalOffset = new PointF(RenderVars.ViewportOffset.X + RenderVars.ScaleOffset.X, RenderVars.ViewportOffset.Y + RenderVars.ScaleOffset.Y);
-            PointF viewOffset = new PointF();
+            var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
 
             CheckScale();
 
@@ -90,11 +89,7 @@ namespace NBodies.Rendering
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
                         }
-                        //else
-                        //{
-                        //    //viewOffset = RenderVars.ViewportOffset;
-                        //}
-
+                       
                         //Draw body.
                         var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
                         _gfx.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
@@ -124,11 +119,6 @@ namespace NBodies.Rendering
                 _imageControl.Image = image;
                 _imageControl.Invalidate();
             }
-        }
-
-        private static PointF FinalOffset()
-        {
-            return new PointF(RenderVars.ViewportOffset.X + RenderVars.ScaleOffset.X, RenderVars.ViewportOffset.Y + RenderVars.ScaleOffset.Y);
         }
     }
 }

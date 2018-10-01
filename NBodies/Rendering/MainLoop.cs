@@ -77,6 +77,7 @@ namespace NBodies.Rendering
         {
             while (!_cancelTokenSource.IsCancellationRequested)
             {
+
                 if (!_skipPhysics)
                 {
                     if (BodyManager.Bodies.Length > 2)
@@ -107,6 +108,8 @@ namespace NBodies.Rendering
 
         private static void DelayFrame()
         {
+            MinFrameTime = 1000 / TargetFPS;
+
             if (_fpsTimer.IsRunning)
             {
                 long elapTime = _fpsTimer.ElapsedMilliseconds;

@@ -57,7 +57,7 @@ namespace NBodies
 
                 if (dist < body.Size * 0.5f)
                 {
-                    return i;
+                    return body.UID;
                 }
             }
 
@@ -120,8 +120,11 @@ namespace NBodies
                     _shiftDown = true;
                     break;
 
-                case Keys.Control:
+                case Keys.ControlKey:
+
+                    MainLoop.WaitForPause();
                     _ctrlDown = true;
+                   
                     break;
             }
         }
@@ -134,10 +137,12 @@ namespace NBodies
                     _shiftDown = false;
                     break;
 
-                case Keys.Control:
+                case Keys.ControlKey:
                     _ctrlDown = false;
                     break;
             }
+
+            MainLoop.Resume();
         }
 
         private void RenderBox_MouseDown(object sender, MouseEventArgs e)
@@ -160,7 +165,7 @@ namespace NBodies
                 if (_ctrlDown)
                 {
                     BodyManager.FollowSelected = false;
-                    BodyManager.FollowBodyIndex = -1;
+                    BodyManager.FollowBodyId = -1;
                 }
 
                 if (_selectedId == -1)
@@ -173,7 +178,7 @@ namespace NBodies
 
                         if (_ctrlDown)
                         {
-                            BodyManager.FollowBodyIndex = _selectedId;
+                            BodyManager.FollowBodyId = _selectedId;
                         }
                     }
                 }
@@ -193,7 +198,7 @@ namespace NBodies
                 MainLoop.Resume();
             }
 
-            if (_ctrlDown && BodyManager.FollowBodyIndex != -1)
+            if (_ctrlDown && BodyManager.FollowBodyId != -1)
             {
                 BodyManager.FollowSelected = true;
             }
