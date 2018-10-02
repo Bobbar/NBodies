@@ -55,8 +55,9 @@
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.RenderBox = new System.Windows.Forms.PictureBox();
             this.FPSLabel = new System.Windows.Forms.Label();
+            this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.BodyCountLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -362,12 +363,24 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.BodyCountLabel);
             this.panel1.Controls.Add(this.FPSLabel);
             this.panel1.Controls.Add(this.RenderBox);
             this.panel1.Location = new System.Drawing.Point(3, 66);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1353, 637);
             this.panel1.TabIndex = 0;
+            // 
+            // FPSLabel
+            // 
+            this.FPSLabel.AutoSize = true;
+            this.FPSLabel.BackColor = System.Drawing.Color.Black;
+            this.FPSLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.FPSLabel.Location = new System.Drawing.Point(3, 14);
+            this.FPSLabel.Name = "FPSLabel";
+            this.FPSLabel.Size = new System.Drawing.Size(30, 13);
+            this.FPSLabel.TabIndex = 1;
+            this.FPSLabel.Text = "FPS:";
             // 
             // RenderBox
             // 
@@ -383,16 +396,16 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // FPSLabel
+            // BodyCountLabel
             // 
-            this.FPSLabel.AutoSize = true;
-            this.FPSLabel.BackColor = System.Drawing.Color.Black;
-            this.FPSLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.FPSLabel.Location = new System.Drawing.Point(3, 14);
-            this.FPSLabel.Name = "FPSLabel";
-            this.FPSLabel.Size = new System.Drawing.Size(30, 13);
-            this.FPSLabel.TabIndex = 1;
-            this.FPSLabel.Text = "FPS:";
+            this.BodyCountLabel.AutoSize = true;
+            this.BodyCountLabel.BackColor = System.Drawing.Color.Black;
+            this.BodyCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.BodyCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.BodyCountLabel.Name = "BodyCountLabel";
+            this.BodyCountLabel.Size = new System.Drawing.Size(42, 13);
+            this.BodyCountLabel.TabIndex = 2;
+            this.BodyCountLabel.Text = "Bodies:";
             // 
             // DisplayForm
             // 
@@ -454,6 +467,7 @@
         private System.Windows.Forms.ToolStripMenuItem antiAliasingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
         private System.Windows.Forms.Label FPSLabel;
+        private System.Windows.Forms.Label BodyCountLabel;
     }
 }
 

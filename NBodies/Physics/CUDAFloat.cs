@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Cudafy;
+﻿using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
-using ProtoBuf;
-
+using System;
 
 namespace NBodies.Physics
 {
@@ -75,7 +69,6 @@ namespace NBodies.Physics
             }
 
             gpu.FreeAll();
-
         }
 
         [Cudafy]
@@ -138,20 +131,18 @@ namespace NBodies.Physics
         [Cudafy]
         public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
         {
-            float VeKY;
-            float VekX;
+            float vecY;
+            float vecX;
             float V1x;
             float V2x;
             float M1;
             float M2;
             float V1y;
             float V2y;
-
             float V1;
             float V2;
-            float U2;
             float U1;
-            float PrevSpdX, PrevSpdY;
+            float dV;
             float Area1;
             float Area2;
             float TotMass;
@@ -178,7 +169,6 @@ namespace NBodies.Physics
 
                         if (DistSqrt <= (outBodies[Master].Size * 0.5f) + (inBodies[Slave].Size * 0.5f))
                         {
-
                             if (DistSqrt > 0)
                             {
                                 V1x = outBodies[Master].SpeedX;
@@ -187,108 +177,81 @@ namespace NBodies.Physics
                                 V2y = inBodies[Slave].SpeedY;
                                 M1 = outBodies[Master].Mass;
                                 M2 = inBodies[Slave].Mass;
-                                VekX = DistX * 0.5f; 
-                                VeKY = DistY * 0.5f; 
-                                VekX = VekX / (DistSqrt * 0.5f); // LenG
-                                VeKY = VeKY / (DistSqrt * 0.5f); // LenG
-                                V1 = VekX * V1x + VeKY * V1y;
-                                V2 = VekX * V2x + VeKY * V2y;
+                                vecX = DistX * 0.5f;
+                                vecY = DistY * 0.5f;
+                                vecX = vecX / (DistSqrt * 0.5f); // LenG
+                                vecY = vecY / (DistSqrt * 0.5f); // LenG
+                                V1 = vecX * V1x + vecY * V1y;
+                                V2 = vecX * V2x + vecY * V2y;
                                 U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
-                                U2 = (M1 * V1 + M2 * V2 - M1 * (V2 - V1)) / (M1 + M2);
+                                dV = U1 - V1;
+
                                 if (outBodies[Master].InRoche == 0 & inBodies[Slave].InRoche == 1)
                                 {
                                     if (outBodies[Master].Mass > inBodies[Slave].Mass)
                                     {
-                                        PrevSpdX = outBodies[Master].SpeedX;
-                                        PrevSpdY = outBodies[Master].SpeedY;
-                                        outBodies[Master].SpeedX = outBodies[Master].SpeedX + (U1 - V1) * VekX;
-                                        outBodies[Master].SpeedY = outBodies[Master].SpeedY + (U1 - V1) * VeKY;
-                                        // inBodies(Slave).Visible = 0
-                                        Area1 = (float)Math.PI * (float)(Math.Pow(outBodies[Master].Size, 2));
-                                        Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
-                                        Area1 = Area1 + Area2;
-                                        outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                        outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass; // Sqr(Ball(B).Mass)
+                                        CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
                                     }
                                     else if (outBodies[Master].Mass == inBodies[Slave].Mass)
                                     {
                                         if (outBodies[Master].UID > inBodies[Slave].UID)
                                         {
-                                            PrevSpdX = outBodies[Master].SpeedX;
-                                            PrevSpdY = outBodies[Master].SpeedY;
-                                            outBodies[Master].SpeedX = outBodies[Master].SpeedX + (U1 - V1) * VekX;
-                                            outBodies[Master].SpeedY = outBodies[Master].SpeedY + (U1 - V1) * VeKY;
-                                            // inBodies(Slave).Visible = 0
-                                            Area1 = (float)Math.PI * (float)(Math.Pow(outBodies[Master].Size, 2));
-                                            Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
-                                            Area1 = Area1 + Area2;
-                                            outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                            outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass; // Sqr(Ball(B).Mass)
+                                            CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
                                         }
                                         else
+                                        {
                                             outBodies[Master].Visible = 0;
+                                        }
                                     }
                                     else
+                                    {
                                         outBodies[Master].Visible = 0;
+                                    }
                                 }
                                 else if (outBodies[Master].InRoche == 0 & inBodies[Slave].InRoche == 0)
                                 {
                                     if (outBodies[Master].Mass > inBodies[Slave].Mass)
                                     {
-                                        PrevSpdX = outBodies[Master].SpeedX;
-                                        PrevSpdY = outBodies[Master].SpeedY;
-                                        outBodies[Master].SpeedX = outBodies[Master].SpeedX + (U1 - V1) * VekX;
-                                        outBodies[Master].SpeedY = outBodies[Master].SpeedY + (U1 - V1) * VeKY;
-                                        // inBodies(Slave).Visible = 0
-                                        Area1 = (float)Math.PI * (float)(Math.Pow(outBodies[Master].Size, 2));
-                                        Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
-                                        Area1 = Area1 + Area2;
-                                        outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                        outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass; // Sqr(Ball(B).Mass)
+                                        CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
                                     }
                                     else if (outBodies[Master].Mass == inBodies[Slave].Mass)
                                     {
                                         if (outBodies[Master].UID > inBodies[Slave].UID)
                                         {
-                                            PrevSpdX = outBodies[Master].SpeedX;
-                                            PrevSpdY = outBodies[Master].SpeedY;
-                                            outBodies[Master].SpeedX = outBodies[Master].SpeedX + (U1 - V1) * VekX;
-                                            outBodies[Master].SpeedY = outBodies[Master].SpeedY + (U1 - V1) * VeKY;
-                                            // inBodies(Slave).Visible = 0
-                                            Area1 = (float)Math.PI * (float)(Math.Pow(outBodies[Master].Size, 2));
-                                            Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
-                                            Area1 = Area1 + Area2;
-                                            outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                            outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass; // Sqr(Ball(B).Mass)
+                                            CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
                                         }
                                         else
+                                        {
                                             outBodies[Master].Visible = 0;
+                                        }
                                     }
                                     else
+                                    {
                                         outBodies[Master].Visible = 0;
+                                    }
                                 }
                                 else if (outBodies[Master].InRoche == 1 & inBodies[Slave].InRoche == 1)
                                 {
-
                                     // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
-                                    M1 = outBodies[Master].Mass;
-                                    M2 = inBodies[Slave].Mass;
+                                    float eps = 1.02f;
+                                    int multi = 40;
+                                    float friction = 0.2f;
+
                                     TotMass = M1 * M2;
-                                    // TotMass = 100
-                                    float EPS = 1.02f;
-                                    Force = TotMass / (DistSqrt * DistSqrt + EPS * EPS);
+                                    Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
                                     ForceX = Force * DistX / DistSqrt;
                                     ForceY = Force * DistY / DistSqrt;
-                                    int multi = 40;
+
                                     outBodies[Master].ForceX -= ForceX * multi;
                                     outBodies[Master].ForceY -= ForceY * multi;
 
-                                    float Friction = 0.2f;
-                                    outBodies[Master].SpeedX += (U1 - V1) * VekX * Friction;
-                                    outBodies[Master].SpeedY += (U1 - V1) * VeKY * Friction;
+                                    outBodies[Master].SpeedX += dV * vecX * friction;
+                                    outBodies[Master].SpeedY += dV * vecY * friction;
                                 }
                                 else if (outBodies[Master].InRoche == 1 & inBodies[Slave].InRoche == 0)
+                                {
                                     outBodies[Master].Visible = 0;
+                                }
                             }
                             else if (outBodies[Master].Mass > inBodies[Slave].Mass)
                             {
@@ -296,15 +259,12 @@ namespace NBodies.Physics
                                 Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
                                 Area1 = Area1 + Area2;
                                 outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass; // Sqr(Ball(B).Mass)
+                                outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass;
                             }
                             else
-                                // Area1 = PI * (outBodies(Master).Size ^ 2)
-                                // Area2 = PI * (inBodies(Slave).Size ^ 2)
-                                // Area1 = Area1 + Area2
-                                // inBodies(Slave).Size = Sqrt(Area1 / PI)
-                                // inBodies(Slave).Mass = inBodies(Slave).Mass + outBodies(Master).Mass 'Sqr(Ball(B).Mass)
+                            {
                                 outBodies[Master].Visible = 0;
+                            }
                         }
                     }
                 }
@@ -316,8 +276,19 @@ namespace NBodies.Physics
                 outBodies[Master].LocY += dt * outBodies[Master].SpeedY;
             }
 
-
             gpThread.SyncThreads();
+        }
+
+        [Cudafy]
+        public static void CollideBodies(Body master, Body slave, float dV, float vecX, float vecY)
+        {
+            master.SpeedX += dV * vecX;
+            master.SpeedY += dV * vecY;
+            float a1 = (float)Math.PI * (float)(Math.Pow(master.Size, 2));
+            float a2 = (float)Math.PI * (float)(Math.Pow(slave.Size, 2));
+            float a = a1 + a2;
+            master.Size = (float)Math.Sqrt(a / Math.PI);
+            master.Mass += slave.Mass;
         }
     }
 }

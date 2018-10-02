@@ -12,6 +12,17 @@ namespace NBodies.Rendering
         public static Body[] Bodies = new Body[0];
         public static bool FollowSelected = false;
 
+        public static int BodyCount
+        {
+            get
+            {
+                if (Bodies != null)
+                    return Bodies.Length;
+
+                return 0;
+            }
+        }
+
         public static int FollowBodyId
         {
             get
