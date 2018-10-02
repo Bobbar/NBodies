@@ -10,7 +10,7 @@ using ProtoBuf;
 
 namespace NBodies.CUDA
 {
-    public static class CUDAMain
+    public static class CUDAMain 
     {
         [Cudafy]
         [ProtoContract]

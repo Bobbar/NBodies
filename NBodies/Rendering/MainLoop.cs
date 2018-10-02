@@ -8,6 +8,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Drawing;
 
+
 namespace NBodies.Rendering
 {
     public static class MainLoop
@@ -28,6 +29,9 @@ namespace NBodies.Rendering
                 _skipPhysics = value;
             }
         }
+
+        public static float CurrentFPS = 0;
+
 
         private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
         private static bool _skipPhysics = false;
@@ -111,28 +115,28 @@ namespace NBodies.Rendering
             {
                 // Fail silently
             }
-          
+
         }
 
         private static void DelayFrame()
         {
+            int waitTime = 0;
+
             MinFrameTime = 1000 / TargetFPS;
 
             if (_fpsTimer.IsRunning)
             {
                 long elapTime = _fpsTimer.ElapsedMilliseconds;
+
                 _fpsTimer.Reset();
 
-                if (elapTime >= MinFrameTime)
+                if (elapTime <= MinFrameTime)
                 {
-                    return;
-                }
-                else
-                {
-                    var waitTime = (int)(MinFrameTime - elapTime);
+                    waitTime = (int)(MinFrameTime - elapTime);
                     Thread.Sleep(waitTime);
-                    return;
                 }
+
+                CurrentFPS = 1000 / (float)(elapTime + waitTime);
             }
             else
             {

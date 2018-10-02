@@ -2,11 +2,13 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace NBodies.Rendering
 {
     public static class Renderer
     {
+        public static List<OverlayGraphic> OverLays = new List<OverlayGraphic>();
         public static bool AntiAliasing = true;
         public static bool Trails = false;
 
@@ -43,6 +45,8 @@ namespace NBodies.Rendering
         private static Color _spaceColor = Color.Black;
 
         private static Size _prevSize = new Size();
+
+        private static Font infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
 
         public static void Init(PictureBox imageControl)
         {
@@ -104,15 +108,21 @@ namespace NBodies.Rendering
                 {
                     using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
                     {
-                        if (BodyManager.FollowSelected)
+                        var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
+
+                        if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
                         {
                             var followOffset = BodyManager.FollowBodyLoc();
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
+
+                            //var textLoc = new PointF((float)(body.LocX - followOffset.X), (float)(body.LocY - followOffset.Y));
+                            //// var textLoc = new PointF((float)(body.LocX + RenderVars.ScaleOffset.X + (body.Size * 0.5f)), (float)(body.LocY + RenderVars.ScaleOffset.Y - (body.Size * 0.5f)));
+
+                            //OverLays.Add(new OverlayGraphic(OverlayGraphicType.Text, textLoc, string.Format("SpeedX: {0}", body.SpeedX)));
                         }
 
                         //Draw body.
-                        var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
                         _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
 
                         // If blackhole, stroke with red circle.
@@ -124,7 +134,35 @@ namespace NBodies.Rendering
                 }
             }
 
+        //    DrawOverlays();
+
             _buffer.Render();
         }
+
+        private static void DrawOverlays()
+        {
+            var ogSt = _buffer.Graphics.Save();
+
+            foreach (var overlay in OverLays)
+            {
+                switch (overlay.Type)
+                {
+                    case OverlayGraphicType.Text:
+                        _buffer.Graphics.ResetTransform();
+                        _buffer.Graphics.DrawString(overlay.Value, infoTextFont, Brushes.White, overlay.Location);
+                        break;
+                }
+            }
+
+            _buffer.Graphics.Restore(ogSt);
+            OverLays.Clear();
+        }
+
+        //private static void DrawInfoText(PointF bodyLoc, CUDAMain.Body body)
+        //{
+        //    var textLoc = new PointF((float)(bodyLoc.X + (body.Size * 0.5f)), (float)(bodyLoc.Y - (body.Size * 0.5f)));
+        //    _buffer.Graphics.ResetTransform();
+        //    _buffer.Graphics.DrawString(string.Format("SpeedX: {0}", body.SpeedX), infoTextFont, Brushes.White, textLoc);
+        //}
     }
 }

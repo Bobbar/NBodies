@@ -74,6 +74,7 @@
       <DependentUpon>Display.cs</DependentUpon>
     </Compile>
     <Compile Include="IO\Serializer.cs" />
+    <Compile Include="IPhysicsCalc.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Numbers.cs" />
     <Compile Include="Program.cs" />
@@ -82,6 +83,7 @@
     <Compile Include="Rendering\ColorHelper.cs" />
     <Compile Include="Rendering\FrameManager.cs" />
     <Compile Include="Rendering\MainLoop.cs" />
+    <Compile Include="Rendering\OverlayGraphic.cs" />
     <Compile Include="Rendering\PointHelpers.cs" />
     <Compile Include="Rendering\Renderer.cs" />
     <Compile Include="Rendering\RenderVars.cs" />

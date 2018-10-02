@@ -24,6 +24,7 @@ namespace NBodies
         private bool _bodyMovin = false;
         private PointF _mouseMoveDown = new PointF();
         private Timer _bodySizeTimer = new Timer();
+        private Timer _UIUpdateTimer = new Timer();
 
         public DisplayForm()
         {
@@ -31,10 +32,17 @@ namespace NBodies
 
             _bodySizeTimer.Interval = 10;
             _bodySizeTimer.Tick += BodySizeTimer_Tick;
+
+            _UIUpdateTimer.Interval = 100;
+            _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
+            _UIUpdateTimer.Start();
+
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
             RenderBox.DoubleBuffered(true);
         }
+
+     
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
@@ -62,6 +70,11 @@ namespace NBodies
             }
 
             return -1;
+        }
+
+        private void _UIUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            FPSLabel.Text = string.Format("FPS: {0}", MainLoop.CurrentFPS);
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
