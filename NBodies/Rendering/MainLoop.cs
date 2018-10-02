@@ -89,7 +89,6 @@ namespace NBodies.Rendering
                         if (BodyManager.Bodies.Length > 2)
                         {
                             // CUDA calc.
-                            // CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
                             PhysicsProvider.PhysicsCalc.CalcMovement(BodyManager.Bodies, TimeStep);
 
                             ProcessRoche(ref BodyManager.Bodies);
@@ -107,6 +106,8 @@ namespace NBodies.Rendering
 
                     // Draw all the bodies.
                     Renderer.DrawBodies(BodyManager.Bodies);
+
+                  //  BodyManager.CullInvisible();
 
                     // FPS Limiter
                     DelayFrame();

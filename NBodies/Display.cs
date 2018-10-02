@@ -70,7 +70,7 @@ namespace NBodies
 
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
-            FPSLabel.Text = string.Format("FPS: {0}", MainLoop.CurrentFPS);
+            FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS,2));
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
         }
 

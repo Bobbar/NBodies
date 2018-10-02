@@ -52,6 +52,21 @@ namespace NBodies.Rendering
         private static List<Body> _bodyStore = new List<Body>();
         private static int _currentId = -1;
 
+        public static void CullInvisible()
+        {
+            _bodyStore.Clear();
+            _bodyStore = Bodies.ToList();
+
+            for (int i = 0; i < _bodyStore.Count - 1; i++)
+            {
+                if (_bodyStore[i].Visible == 0) _bodyStore.RemoveAt(i);
+            }
+
+            Bodies = _bodyStore.ToArray();
+
+            RebuildUIDIndex();
+        }
+
         public static void ClearBodies()
         {
             FollowSelected = false;

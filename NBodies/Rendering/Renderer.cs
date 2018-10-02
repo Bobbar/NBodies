@@ -1,8 +1,8 @@
-﻿using System.Drawing;
+﻿using NBodies.Physics;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using System.Collections.Generic;
-using NBodies.Physics;
 
 namespace NBodies.Rendering
 {
@@ -108,19 +108,18 @@ namespace NBodies.Rendering
                 {
                     using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
                     {
-                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
-
                         if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
                         {
                             var followOffset = BodyManager.FollowBodyLoc();
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
-
                             //var textLoc = new PointF((float)(body.LocX - followOffset.X), (float)(body.LocY - followOffset.Y));
                             //// var textLoc = new PointF((float)(body.LocX + RenderVars.ScaleOffset.X + (body.Size * 0.5f)), (float)(body.LocY + RenderVars.ScaleOffset.Y - (body.Size * 0.5f)));
 
                             //OverLays.Add(new OverlayGraphic(OverlayGraphicType.Text, textLoc, string.Format("SpeedX: {0}", body.SpeedX)));
                         }
+
+                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                         //Draw body.
                         _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
@@ -134,9 +133,9 @@ namespace NBodies.Rendering
                 }
             }
 
-        //    DrawOverlays();
-
-            _buffer.Render();
+            //    DrawOverlays();
+            if (!_imageControl.IsDisposed && !_imageControl.Disposing)
+                _buffer.Render();
         }
 
         private static void DrawOverlays()
