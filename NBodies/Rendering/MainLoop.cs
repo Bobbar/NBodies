@@ -14,7 +14,18 @@ namespace NBodies.Rendering
     public static class MainLoop
     {
         public static int TargetFPS = 60;
-        public static float TimeStep = 0.008f;
+        public static float TimeStep
+        {
+            get
+            {
+                return _timeStep;
+            }
+
+            set
+            {
+                _timeStep = value;
+            }
+        }
         public static int MinFrameTime = 0;
 
         public static bool PausePhysics
@@ -32,7 +43,7 @@ namespace NBodies.Rendering
 
         public static float CurrentFPS = 0;
 
-
+        private static float _timeStep = 0.008f;
         private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
         private static bool _skipPhysics = false;
         private static Task _loopTask;
@@ -88,6 +99,8 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
+                            BodyManager.CullInvisible();
+
                             // CUDA calc.
                             PhysicsProvider.PhysicsCalc.CalcMovement(BodyManager.Bodies, TimeStep);
 
@@ -107,7 +120,6 @@ namespace NBodies.Rendering
                     // Draw all the bodies.
                     Renderer.DrawBodies(BodyManager.Bodies);
 
-                  //  BodyManager.CullInvisible();
 
                     // FPS Limiter
                     DelayFrame();

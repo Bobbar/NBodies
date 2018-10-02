@@ -16,7 +16,7 @@ namespace NBodies
     {
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
-        private int _selectedId = -1;
+        private int _selectedUid = -1;
         private int _mouseId = -1;
         private bool _mouseDown = false;
         private bool _bodyMovin = false;
@@ -37,6 +37,8 @@ namespace NBodies
 
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
+            TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
+
             RenderBox.DoubleBuffered(true);
         }
 
@@ -52,7 +54,7 @@ namespace NBodies
             MainLoop.StartLoop();
         }
 
-        private int MouseOverID(PointF mouseLoc)
+        private int MouseOverUID(PointF mouseLoc)
         {
             for (int i = 0; i < BodyManager.Bodies.Length; i++)
             {
@@ -99,19 +101,19 @@ namespace NBodies
         {
             if (e.Button == MouseButtons.Left)
             {
-                if (_selectedId == -1 && _shiftDown)
+                if (_selectedUid == -1 && _shiftDown)
                 {
-                    var mId = MouseOverID(e.Location);
+                    var mId = MouseOverUID(e.Location);
                     if (mId != -1)
                     {
                         _bodyMovin = true;
-                        _selectedId = mId;
+                        _selectedUid = mId;
                     }
                 }
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(_selectedId, ScaleHelpers.ScalePointRelative(e.Location));
+                    BodyManager.Move(_selectedUid, ScaleHelpers.ScalePointRelative(e.Location));
                 }
                 else
                 {
@@ -175,20 +177,20 @@ namespace NBodies
                 if (_ctrlDown)
                 {
                     BodyManager.FollowSelected = false;
-                    BodyManager.FollowBodyId = -1;
+                    BodyManager.FollowBodyUID = -1;
                 }
 
-                if (_selectedId == -1)
+                if (_selectedUid == -1)
                 {
-                    var mId = MouseOverID(e.Location);
-                    if (mId != -1)
+                    var mUid = MouseOverUID(e.Location);
+                    if (mUid != -1)
                     {
                         if (!_ctrlDown && _shiftDown) _bodyMovin = true;
-                        _selectedId = mId;
+                        _selectedUid = mUid;
 
                         if (_ctrlDown)
                         {
-                            BodyManager.FollowBodyId = _selectedId;
+                            BodyManager.FollowBodyUID = _selectedUid;
                         }
                     }
                 }
@@ -199,7 +201,7 @@ namespace NBodies
         {
             _bodySizeTimer.Stop();
             _mouseDown = false;
-            _selectedId = -1;
+            _selectedUid = -1;
             _bodyMovin = false;
 
             if (_mouseId != -1)
@@ -208,7 +210,7 @@ namespace NBodies
                 MainLoop.Resume();
             }
 
-            if (_ctrlDown && BodyManager.FollowBodyId != -1)
+            if (_ctrlDown && BodyManager.FollowBodyUID != -1)
             {
                 BodyManager.FollowSelected = true;
             }
@@ -254,6 +256,11 @@ namespace NBodies
         private void highContrastToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.HighContrast = highContrastToolStripMenuItem.Checked;
+        }
+
+        private void TimeStepUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            MainLoop.TimeStep = (float)TimeStepUpDown.Value;
         }
     }
 }

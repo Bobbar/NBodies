@@ -55,9 +55,9 @@
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.BodyCountLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -279,11 +279,33 @@
             // 
             // TimeStepUpDown
             // 
+            this.TimeStepUpDown.DecimalPlaces = 4;
             this.TimeStepUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.TimeStepUpDown.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            262144});
             this.TimeStepUpDown.Location = new System.Drawing.Point(304, 3);
+            this.TimeStepUpDown.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            196608});
+            this.TimeStepUpDown.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            262144});
             this.TimeStepUpDown.Name = "TimeStepUpDown";
             this.TimeStepUpDown.Size = new System.Drawing.Size(62, 20);
             this.TimeStepUpDown.TabIndex = 3;
+            this.TimeStepUpDown.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            262144});
+            this.TimeStepUpDown.ValueChanged += new System.EventHandler(this.TimeStepUpDown_ValueChanged);
             // 
             // FpsLimitTextBox
             // 
@@ -371,6 +393,17 @@
             this.panel1.Size = new System.Drawing.Size(1353, 637);
             this.panel1.TabIndex = 0;
             // 
+            // BodyCountLabel
+            // 
+            this.BodyCountLabel.AutoSize = true;
+            this.BodyCountLabel.BackColor = System.Drawing.Color.Black;
+            this.BodyCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.BodyCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.BodyCountLabel.Name = "BodyCountLabel";
+            this.BodyCountLabel.Size = new System.Drawing.Size(42, 13);
+            this.BodyCountLabel.TabIndex = 2;
+            this.BodyCountLabel.Text = "Bodies:";
+            // 
             // FPSLabel
             // 
             this.FPSLabel.AutoSize = true;
@@ -395,17 +428,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // BodyCountLabel
-            // 
-            this.BodyCountLabel.AutoSize = true;
-            this.BodyCountLabel.BackColor = System.Drawing.Color.Black;
-            this.BodyCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.BodyCountLabel.Location = new System.Drawing.Point(3, 27);
-            this.BodyCountLabel.Name = "BodyCountLabel";
-            this.BodyCountLabel.Size = new System.Drawing.Size(42, 13);
-            this.BodyCountLabel.TabIndex = 2;
-            this.BodyCountLabel.Text = "Bodies:";
             // 
             // DisplayForm
             // 

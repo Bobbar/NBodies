@@ -11,6 +11,7 @@ namespace NBodies.Rendering
     {
         public static Body[] Bodies = new Body[0];
         public static bool FollowSelected = false;
+        public static int FollowBodyUID = -1;
 
         public static int BodyCount
         {
@@ -23,43 +24,22 @@ namespace NBodies.Rendering
             }
         }
 
-        public static int FollowBodyId
-        {
-            get
-            {
-                return _followBodyIndex;
-            }
-
-            set
-            {
-                _followBodyIndex = value;
-
-                if (value != -1)
-                {
-                    FollowBodyUID = Bodies[value].UID;
-                }
-                else
-                {
-                    FollowBodyUID = -1;
-                }
-            }
-        }
-
-        public static int FollowBodyUID = -1;
 
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
-        private static int _followBodyIndex = -1;
         private static List<Body> _bodyStore = new List<Body>();
         private static int _currentId = -1;
 
         public static void CullInvisible()
         {
+            if (Bodies.Length < 1) return;
+
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
 
             for (int i = 0; i < _bodyStore.Count - 1; i++)
             {
-                if (_bodyStore[i].Visible == 0) _bodyStore.RemoveAt(i);
+                if (_bodyStore[i].Visible == 0)
+                    _bodyStore.RemoveAt(i);
             }
 
             Bodies = _bodyStore.ToArray();
@@ -70,7 +50,7 @@ namespace NBodies.Rendering
         public static void ClearBodies()
         {
             FollowSelected = false;
-            FollowBodyId = -1;
+            FollowBodyUID = -1;
             Bodies = new Body[0];
             UIDIndex.Clear();
             _bodyStore.Clear();

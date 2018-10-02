@@ -20,7 +20,7 @@ namespace NBodies.IO
 
                 if (!string.IsNullOrEmpty(saveDialog.FileName))
                 {
-                    using (var fStream = new FileStream(saveDialog.FileName, FileMode.OpenOrCreate))
+                    using (var fStream = new FileStream(saveDialog.FileName, FileMode.Create))
                     {
                         ProtoBuf.Serializer.Serialize(fStream, BodyManager.Bodies);
                     }
