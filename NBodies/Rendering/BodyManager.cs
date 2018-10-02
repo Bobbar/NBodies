@@ -1,5 +1,4 @@
-﻿//using NBodies.CUDA;
-using NBodies.Rules;
+﻿using NBodies.Rules;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -76,7 +75,7 @@ namespace NBodies.Rendering
         public static PointF FollowBodyLoc()
         {
             if (UIDIndex.ContainsKey(FollowBodyUID))
-                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].LocX, (float)Bodies[UIDToIndex(FollowBodyUID)].LocY);
+                return new PointF(Bodies[UIDToIndex(FollowBodyUID)].LocX, Bodies[UIDToIndex(FollowBodyUID)].LocY);
             return new PointF();
         }
 

@@ -55,9 +55,9 @@ namespace NBodies
 
                 float magV = CircleV(px, py, centerMass);
                 float absAngle = (float)Math.Atan(Math.Abs(py / px));
-                float thetaV = (float)Math.PI / 2 - absAngle;
-                float vx = -1 * (float)Math.Sign(py) * (float)Math.Cos(thetaV) * magV;
-                float vy = (float)Math.Sign(px) * (float)Math.Sin(thetaV) * magV;
+                float thetaV = (float)Math.PI * 0.5f - absAngle;
+                float vx = -1 * (float)(Math.Sign(py) * Math.Cos(thetaV) * magV);
+                float vy = (float)(Math.Sign(px) * Math.Sin(thetaV) * magV);
 
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 float newMass;

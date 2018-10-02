@@ -85,13 +85,9 @@ namespace NBodies.Physics
 
             float totMass;
             float force;
-            float forceX;
-            float forceY;
             float distX;
             float distY;
-            float dist;
             float distSqrt;
-            float m1, m2;
             float epsilon = 2;
 
             if (a <= inBodies.Length - 1)
@@ -180,7 +176,7 @@ namespace NBodies.Physics
                         Dist = (DistX * DistX) + (DistY * DistY);
                         DistSqrt = (float)Math.Sqrt(Dist);
 
-                        if (DistSqrt <= (outBodies[Master].Size / (float)2) + (inBodies[Slave].Size / (float)2))
+                        if (DistSqrt <= (outBodies[Master].Size * 0.5f) + (inBodies[Slave].Size * 0.5f))
                         {
 
                             if (DistSqrt > 0)
@@ -191,10 +187,10 @@ namespace NBodies.Physics
                                 V2y = inBodies[Slave].SpeedY;
                                 M1 = outBodies[Master].Mass;
                                 M2 = inBodies[Slave].Mass;
-                                VekX = DistX / 2; // (Ball(A).LocX - Ball(B).LocX) / 2
-                                VeKY = DistY / 2; // (Ball(A).LocY - Ball(B).LocY) / 2
-                                VekX = VekX / (DistSqrt / 2); // LenG
-                                VeKY = VeKY / (DistSqrt / 2); // LenG
+                                VekX = DistX * 0.5f; 
+                                VeKY = DistY * 0.5f; 
+                                VekX = VekX / (DistSqrt * 0.5f); // LenG
+                                VeKY = VeKY / (DistSqrt * 0.5f); // LenG
                                 V1 = VekX * V1x + VeKY * V1y;
                                 V2 = VekX * V2x + VeKY * V2y;
                                 U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
@@ -313,8 +309,9 @@ namespace NBodies.Physics
                     }
                 }
 
-                outBodies[Master].SpeedX += dt * outBodies[Master].ForceX / (float)outBodies[Master].Mass;
-                outBodies[Master].SpeedY += dt * outBodies[Master].ForceY / (float)outBodies[Master].Mass;
+                // Integrate forces and speeds.
+                outBodies[Master].SpeedX += dt * outBodies[Master].ForceX / outBodies[Master].Mass;
+                outBodies[Master].SpeedY += dt * outBodies[Master].ForceY / outBodies[Master].Mass;
                 outBodies[Master].LocX += dt * outBodies[Master].SpeedX;
                 outBodies[Master].LocY += dt * outBodies[Master].SpeedY;
             }

@@ -1,5 +1,4 @@
-﻿//using NBodies.CUDA;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Collections.Generic;
@@ -109,7 +108,7 @@ namespace NBodies.Rendering
                 {
                     using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
                     {
-                        var bodyLoc = new PointF((float)(body.LocX - body.Size * 0.5f + finalOffset.X), (float)(body.LocY - body.Size * 0.5f + finalOffset.Y));
+                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                         if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
                         {

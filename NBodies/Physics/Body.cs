@@ -57,56 +57,6 @@ namespace NBodies.Physics
         [ProtoMember(14)]
         public int UID;
 
-
     }
-
-
-    //[Cudafy]
-    //[ProtoContract]
-    //public struct Body
-    //{
-    //    [ProtoMember(1)]
-    //    public double LocX;
-
-    //    [ProtoMember(2)]
-    //    public double LocY;
-
-    //    [ProtoMember(3)]
-    //    public double Mass;
-
-    //    [ProtoMember(4)]
-    //    public double SpeedX;
-
-    //    [ProtoMember(5)]
-    //    public double SpeedY;
-
-    //    [ProtoMember(6)]
-    //    public double ForceX;
-
-    //    [ProtoMember(7)]
-    //    public double ForceY;
-
-    //    [ProtoMember(8)]
-    //    public double ForceTot;
-
-    //    [ProtoMember(9)]
-    //    public int Color;
-
-    //    [ProtoMember(10)]
-    //    public double Size;
-
-    //    [ProtoMember(11)]
-    //    public int Visible;
-
-    //    [ProtoMember(12)]
-    //    public int InRoche;
-
-    //    [ProtoMember(13)]
-    //    public int BlackHole;
-
-    //    [ProtoMember(14)]
-    //    public int UID;
-
-
-    //}
+   
 }

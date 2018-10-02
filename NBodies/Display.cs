@@ -8,8 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
-using NBodies.Structures;
-//using NBodies.CUDA;
 using NBodies.Physics;
 
 namespace NBodies
@@ -42,14 +40,10 @@ namespace NBodies
             RenderBox.DoubleBuffered(true);
         }
 
-     
-
         private void DisplayForm_Load(object sender, EventArgs e)
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             RenderVars.ScaleOffset = ScaleHelpers.ScalePointExact(RenderVars.ScreenCenter);
-
-            //  CUDAMain.InitGPU(2);
 
             PhysicsProvider.InitPhysics();
 

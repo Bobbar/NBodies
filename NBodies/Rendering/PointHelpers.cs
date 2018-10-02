@@ -38,14 +38,9 @@ namespace NBodies.Rendering
             return new PointF(pointA.X + pointB.X, pointA.Y + pointB.Y);
         }
 
-        public static PointF FromDouble(this PointF d, double X, double Y)
+        public static float Distance(this PointF pointA, PointF pointB)
         {
-            return new PointF((float)X, (float)Y);
-        }
-
-        public static double Distance(this PointF pointA, PointF pointB)
-        {
-            return Math.Sqrt(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));
+            return (float)Math.Sqrt(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));
         }
 
         public static bool PointInsideCircle(PointF circleLoc, float circleRadius, PointF testPoint)

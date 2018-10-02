@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-//using NBodies.CUDA;
 using System.Threading;
 using System.Diagnostics;
 using System.Drawing;
@@ -188,7 +187,7 @@ namespace NBodies.Rendering
                 float fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
                 float fLocY = Numbers.GetRandomFloat(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
 
-                while (!PointHelper.PointInsideCircle(new PointF().FromDouble(body.LocX, body.LocY), body.Size, new PointF().FromDouble(fLocX, fLocY)))
+                while (!PointHelper.PointInsideCircle(new PointF(body.LocX, body.LocY), body.Size, new PointF(fLocX, fLocY)))
                 {
 
                     fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);

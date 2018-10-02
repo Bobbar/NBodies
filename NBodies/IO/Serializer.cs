@@ -1,5 +1,4 @@
-﻿//using NBodies.CUDA;
-using NBodies.Rendering;
+﻿using NBodies.Rendering;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
