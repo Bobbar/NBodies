@@ -74,9 +74,13 @@
       <DependentUpon>Display.cs</DependentUpon>
     </Compile>
     <Compile Include="IO\Serializer.cs" />
-    <Compile Include="IPhysicsCalc.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Numbers.cs" />
+    <Compile Include="Physics\Body.cs" />
+    <Compile Include="Physics\CUDAFloat.cs" />
+    <Compile Include="Physics\CUDADouble.cs" />
+    <Compile Include="Physics\IPhysicsCalc.cs" />
+    <Compile Include="Physics\PhysicsProvider.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rendering\BodyManager.cs" />

@@ -1,15 +1,16 @@
-﻿using NBodies.CUDA;
+﻿//using NBodies.CUDA;
 using NBodies.Rules;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using NBodies.Physics;
 
 namespace NBodies.Rendering
 {
     public static class BodyManager
     {
-        public static CUDAMain.Body[] Bodies = new CUDAMain.Body[0];
+        public static Body[] Bodies = new Body[0];
         public static bool FollowSelected = false;
 
         public static int FollowBodyId
@@ -38,20 +39,20 @@ namespace NBodies.Rendering
 
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static int _followBodyIndex = -1;
-        private static List<CUDAMain.Body> _bodyStore = new List<CUDAMain.Body>();
+        private static List<Body> _bodyStore = new List<Body>();
         private static int _currentId = -1;
 
         public static void ClearBodies()
         {
             FollowSelected = false;
             FollowBodyId = -1;
-            Bodies = new CUDAMain.Body[0];
+            Bodies = new Body[0];
             UIDIndex.Clear();
             _bodyStore.Clear();
             _currentId = -1;
         }
 
-        public static void ReplaceBodies(CUDAMain.Body[] bodies)
+        public static void ReplaceBodies(Body[] bodies)
         {
             ClearBodies();
 
@@ -90,7 +91,7 @@ namespace NBodies.Rendering
             Bodies[index].LocY = location.Y;
         }
 
-        public static int Add(CUDAMain.Body body)
+        public static int Add(Body body)
         {
             _currentId++;
 
@@ -106,9 +107,9 @@ namespace NBodies.Rendering
             return _currentId;
         }
 
-        public static void Add(double locX, double locY, double size, double mass, Color color, int blackhole = 0)
+        public static void Add(float locX, float locY, float size, float mass, Color color, int blackhole = 0)
         {
-            var b = new CUDAMain.Body();
+            var b = new Body();
 
             b.LocX = locX;
             b.LocY = locY;
@@ -129,9 +130,9 @@ namespace NBodies.Rendering
             Add(b);
         }
 
-        public static void Add(double locX, double locY, double velX, double velY, double size, double mass, Color color)
+        public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color)
         {
-            var b = new CUDAMain.Body();
+            var b = new Body();
 
             b.LocX = locX;
             b.LocY = locY;
@@ -152,9 +153,9 @@ namespace NBodies.Rendering
             Add(b);
         }
 
-        public static void Add(double locX, double locY, double velX, double velY, double size, double mass, Color color, int inRoche)
+        public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color, int inRoche)
         {
-            var b = new CUDAMain.Body();
+            var b = new Body();
 
             b.LocX = locX;
             b.LocY = locY;
@@ -175,9 +176,9 @@ namespace NBodies.Rendering
             Add(b);
         }
 
-        public static void Add(PointF loc, double size, double mass, Color color, int blackhole = 0)
+        public static void Add(PointF loc, float size, float mass, Color color, int blackhole = 0)
         {
-            var b = new CUDAMain.Body();
+            var b = new Body();
 
             b.LocX = loc.X;
             b.LocY = loc.Y;
@@ -198,9 +199,9 @@ namespace NBodies.Rendering
             Add(b);
         }
 
-        public static int Add(PointF loc, double size, Color color)
+        public static int Add(PointF loc, float size, Color color)
         {
-            var b = new CUDAMain.Body();
+            var b = new Body();
 
             b.LocX = loc.X;
             b.LocY = loc.Y;
@@ -221,19 +222,19 @@ namespace NBodies.Rendering
             return Add(b);
         }
 
-        public static double CalcMass(double size)
+        public static float CalcMass(float size)
         {
-            return Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * Matter.Density;
+            return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
         }
 
-        public static double CalcMass(double size, double density)
+        public static float CalcMass(float size, float density)
         {
-            return Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * density;
+            return (float)Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * density;
         }
 
-        public static double CalcRadius(double area)
+        public static float CalcRadius(float area)
         {
-            return Math.Sqrt(area / Math.PI);
+            return (float)Math.Sqrt(area / Math.PI);
         }
     }
 }

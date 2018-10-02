@@ -1,8 +1,9 @@
-﻿using NBodies.CUDA;
+﻿//using NBodies.CUDA;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Collections.Generic;
+using NBodies.Physics;
 
 namespace NBodies.Rendering
 {
@@ -82,7 +83,7 @@ namespace NBodies.Rendering
             _prevScale = RenderVars.CurrentScale;
         }
 
-        public static void DrawBodies(CUDAMain.Body[] bodies)
+        public static void DrawBodies(Body[] bodies)
         {
             var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
 

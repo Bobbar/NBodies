@@ -1,8 +1,9 @@
-﻿using NBodies.CUDA;
+﻿//using NBodies.CUDA;
 using NBodies.Rendering;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+using NBodies.Physics;
 
 namespace NBodies.IO
 {
@@ -46,7 +47,7 @@ namespace NBodies.IO
                     {
                         MainLoop.Stop();
                         Thread.Sleep(200);
-                        BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<CUDAMain.Body[]>(fStream));
+                        BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<Body[]>(fStream));
                         MainLoop.StartLoop();
                     }
                 }

@@ -21,7 +21,7 @@ namespace NBodies.Rules
 
     public static class Matter
     {
-        public static double Density { get; set; } = 5.0;
+        public static float Density { get; set; } = 5.0f;
 
         public static MatterType[] Types =
             {

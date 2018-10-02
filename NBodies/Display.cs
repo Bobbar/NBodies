@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
 using NBodies.Structures;
-using NBodies.CUDA;
-
+//using NBodies.CUDA;
+using NBodies.Physics;
 
 namespace NBodies
 {
@@ -49,7 +49,9 @@ namespace NBodies
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             RenderVars.ScaleOffset = ScaleHelpers.ScalePointExact(RenderVars.ScreenCenter);
 
-            CUDAMain.InitGPU(2);
+            //  CUDAMain.InitGPU(2);
+
+            PhysicsProvider.InitPhysics();
 
             Renderer.Init(RenderBox);
 
@@ -79,7 +81,7 @@ namespace NBodies
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
         {
-            BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size = BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size + 0.5;
+            BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size = BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size + 0.5f;
             BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
         }
 
@@ -166,7 +168,7 @@ namespace NBodies
                 {
                     MainLoop.WaitForPause();
 
-                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 0.5, ColorHelper.RandomColor());
+                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 0.5f, ColorHelper.RandomColor());
                     _mouseDown = true;
                     _bodySizeTimer.Start();
                 }

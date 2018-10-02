@@ -8,74 +8,28 @@
 //using Cudafy.Translator;
 //using ProtoBuf;
 
-//namespace NBodies.CUDA
+
+//namespace NBodies.Physics
 //{
-//    public static class CUDAMain 
+//    public class CUDADouble : IPhysicsCalc
 //    {
-//        [Cudafy]
-//        [ProtoContract]
-//        public struct Body
+//        private int gpuIndex = 0;
+//        private int threadsPerBlock = 256;
+//        private GPGPU gpu;
+
+//        public CUDADouble(int gpuIdx)
 //        {
-//            [ProtoMember(1)]
-//            public double LocX;
-
-//            [ProtoMember(2)]
-//            public double LocY;
-
-//            [ProtoMember(3)]
-//            public double Mass;
-
-//            [ProtoMember(4)]
-//            public double SpeedX;
-
-//            [ProtoMember(5)]
-//            public double SpeedY;
-
-//            [ProtoMember(6)]
-//            public double ForceX;
-
-//            [ProtoMember(7)]
-//            public double ForceY;
-
-//            [ProtoMember(8)]
-//            public double ForceTot;
-
-//            [ProtoMember(9)]
-//            public int Color;
-
-//            [ProtoMember(10)]
-//            public double Size;
-
-//            [ProtoMember(11)]
-//            public int Visible;
-
-//            [ProtoMember(12)]
-//            public int InRoche;
-
-//            [ProtoMember(13)]
-//            public int BlackHole;
-
-//            [ProtoMember(14)]
-//            public int UID;
-
-
+//            gpuIndex = gpuIdx;
 //        }
 
-//        private static int gpuIndex = 0;
-//        private static int threadsPerBlock = 256;
-//        private static GPGPU gpu;
-
-//        public static void InitGPU(int gpuIdx)
+//        public void Init()
 //        {
-
-//            gpuIndex = gpuIdx;
-
 //            var cudaModule = CudafyModule.TryDeserialize();
 
 //            if (cudaModule == null || !cudaModule.TryVerifyChecksums())
 //            {
 //                CudafyTranslator.Language = eLanguage.OpenCL;
-//                cudaModule = CudafyTranslator.Cudafy();
+//                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDADouble) });
 //                cudaModule.Serialize();
 //            }
 
@@ -85,7 +39,7 @@
 //            Console.WriteLine(gpu.GetDeviceProperties().ToString());
 //        }
 
-//        public static void CalcFrame(Body[] bodies, double timestep)
+//        public void CalcMovement(Body[] bodies, double timestep)
 //        {
 //            bool altCalcPath = true;
 
@@ -368,7 +322,5 @@
 
 //            gpThread.SyncThreads();
 //        }
-
 //    }
-
 //}

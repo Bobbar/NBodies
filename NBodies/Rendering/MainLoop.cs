@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using NBodies.CUDA;
+//using NBodies.CUDA;
 using System.Threading;
 using System.Diagnostics;
 using System.Drawing;
+using NBodies.Physics;
 
 
 namespace NBodies.Rendering
@@ -14,7 +15,7 @@ namespace NBodies.Rendering
     public static class MainLoop
     {
         public static int TargetFPS = 60;
-        public static double TimeStep = 0.008f;
+        public static float TimeStep = 0.008f;
         public static int MinFrameTime = 0;
 
         public static bool PausePhysics
@@ -89,7 +90,8 @@ namespace NBodies.Rendering
                         if (BodyManager.Bodies.Length > 2)
                         {
                             // CUDA calc.
-                            CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
+                            // CUDAMain.CalcFrame(BodyManager.Bodies, TimeStep);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(BodyManager.Bodies, TimeStep);
 
                             ProcessRoche(ref BodyManager.Bodies);
                         }
@@ -145,7 +147,7 @@ namespace NBodies.Rendering
             }
         }
 
-        private static void ProcessRoche(ref CUDAMain.Body[] bodies)
+        private static void ProcessRoche(ref Body[] bodies)
         {
             int len = bodies.Length;
             for (int b = 0; b < len; b++)
@@ -161,36 +163,36 @@ namespace NBodies.Rendering
             }
         }
 
-        public static void FractureBody(CUDAMain.Body body)
+        public static void FractureBody(Body body)
         {
-            double newSize;
-            double newMass;
+            float newSize;
+            float newMass;
             int divisor;
-            double prevMass;
-            double area;
+            float prevMass;
+            float area;
 
             //if (body.Visible == 1 && body.Size > 1)
             //{
-            area = Math.PI * Math.Pow(body.Size / 2f, 2);
+            area = (float)(Math.PI * Math.Pow(body.Size / 2f, 2));
             divisor = (int)area;
 
             if (divisor <= 1) divisor = 2;
             prevMass = body.Mass;
-            area = area / (float)divisor;
+            area = area / divisor;
             newSize = BodyManager.CalcRadius(area);
-            newMass = prevMass / (float)divisor;
+            newMass = prevMass / divisor;
 
             for (int f = 0; f < divisor; f++)
             {
 
-                double fLocX = Numbers.GetRandomDouble(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
-                double fLocY = Numbers.GetRandomDouble(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
+                float fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
+                float fLocY = Numbers.GetRandomFloat(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
 
-                while (!PointHelper.PointInsideCircle(new PointF().FromDouble(body.LocX, body.LocY), (float)body.Size, new PointF().FromDouble(fLocX, fLocY)))
+                while (!PointHelper.PointInsideCircle(new PointF().FromDouble(body.LocX, body.LocY), body.Size, new PointF().FromDouble(fLocX, fLocY)))
                 {
 
-                    fLocX = Numbers.GetRandomDouble(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
-                    fLocY = Numbers.GetRandomDouble(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
+                    fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
+                    fLocY = Numbers.GetRandomFloat(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
 
                 }
 

@@ -14,7 +14,7 @@ namespace NBodies
 {
     public partial class AddBodiesForm : Form
     {
-        private double _solarMass = 30000;
+        private float _solarMass = 30000;
 
         public AddBodiesForm()
         {
@@ -22,21 +22,21 @@ namespace NBodies
             DensityTextBox.Text = Rules.Matter.Density.ToString();
         }
 
-        private double CircleV(double rx, double ry, double centerMass)
+        private float CircleV(float rx, float ry, float centerMass)
         {
-            double r2 = Math.Sqrt(rx * rx + ry * ry);
-            double numerator = 0.000000977 * 1000000.0 * centerMass;
-            return Math.Sqrt(numerator / r2);
+            float r2 = (float)Math.Sqrt(rx * rx + ry * ry);
+            float numerator = (float)(0.000000977 * 1000000.0 * centerMass);
+            return (float)Math.Sqrt(numerator / r2);
         }
 
 
-        private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, double centerMass)
+        private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, float centerMass)
         {
             MainLoop.WaitForPause();
 
-            double px, py;
+            float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
-            Rules.Matter.Density = double.Parse(DensityTextBox.Text);
+            Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
             var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
@@ -44,23 +44,23 @@ namespace NBodies
 
             for (int i = 0; i < count; i++)
             {
-                px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF().FromDouble(px, py)))
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)))
                 {
-                    px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                    py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                    px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                    py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
                 }
 
-                double magV = CircleV(px, py, centerMass);
-                double absAngle = Math.Atan(Math.Abs(py / px));
-                double thetaV = Math.PI / 2 - absAngle;
-                double vx = -1 * Math.Sign(py) * Math.Cos(thetaV) * magV;
-                double vy = Math.Sign(px) * Math.Sin(thetaV) * magV;
+                float magV = CircleV(px, py, centerMass);
+                float absAngle = (float)Math.Atan(Math.Abs(py / px));
+                float thetaV = (float)Math.PI / 2 - absAngle;
+                float vx = -1 * (float)Math.Sign(py) * (float)Math.Cos(thetaV) * magV;
+                float vy = (float)Math.Sign(px) * (float)Math.Sin(thetaV) * magV;
 
-                var bodySize = Numbers.GetRandomDouble(minSize, maxSize);
-                double newMass;
+                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
+                float newMass;
 
                 if (bodyMass > 0)
                 {
@@ -84,9 +84,9 @@ namespace NBodies
 
         private void AddBodiesToDisc(int count, int maxSize, int minSize, int bodyMass)
         {
-            double px, py;
+            float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
-            Rules.Matter.Density = double.Parse(DensityTextBox.Text);
+            Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
 
             int nGas = (count / 8) * 7;
@@ -109,18 +109,18 @@ namespace NBodies
 
                 bodyCount++;
 
-                px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF().FromDouble(px, py)))
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)))
                 {
-                    px = Numbers.GetRandomDouble(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                    py = Numbers.GetRandomDouble(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                    px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                    py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
                 }
 
 
-                var bodySize = Numbers.GetRandomDouble(minSize, maxSize);
-                double newMass;
+                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
+                float newMass;
 
                 if (bodyMass > 0)
                 {
@@ -152,7 +152,7 @@ namespace NBodies
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
         {
-            AddBodiesToOrbit(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()), CenterMassCheckBox.Checked, double.Parse(CenterMassTextBox.Text.Trim()));
+            AddBodiesToOrbit(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()), CenterMassCheckBox.Checked, float.Parse(CenterMassTextBox.Text.Trim()));
         }
 
         private void AddStationaryButton_Click(object sender, EventArgs e)
