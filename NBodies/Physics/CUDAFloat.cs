@@ -2,6 +2,7 @@
 using Cudafy.Host;
 using Cudafy.Translator;
 using System;
+using System.Diagnostics;
 
 namespace NBodies.Physics
 {
@@ -18,13 +19,16 @@ namespace NBodies.Physics
 
         public void Init()
         {
-            var cudaModule = CudafyModule.TryDeserialize();
+            var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
+            var cudaModule = CudafyModule.TryDeserialize(modulePath);
 
-            if (cudaModule == null || !cudaModule.TryVerifyChecksums())
+            if (cudaModule == null)// || !cudaModule.TryVerifyChecksums())
             {
-                CudafyTranslator.Language = eLanguage.OpenCL;
-                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
-                cudaModule.Serialize();
+                throw new Exception("Module file not found!  Path: " + modulePath);
+
+                //CudafyTranslator.Language = eLanguage.OpenCL;
+                //cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
+                //cudaModule.Serialize();
             }
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
@@ -83,46 +87,52 @@ namespace NBodies.Physics
             float distSqrt;
             float epsilon = 2;
 
+            Body outBody = inBodies[a];
+
             if (a <= inBodies.Length - 1)
             {
-                outBodies[a] = inBodies[a];
+                outBody = inBodies[a];
 
-                outBodies[a].ForceX = 0;
-                outBodies[a].ForceY = 0;
-                outBodies[a].ForceTot = 0;
+                outBody.ForceX = 0;
+                outBody.ForceY = 0;
+                outBody.ForceTot = 0;
 
                 for (int b = 0; b < inBodies.Length; b++)
                 {
-                    if (a != b && inBodies[b].Visible == 1)
+                    Body inBody = inBodies[b];
+
+                    if (a != b && inBody.Visible == 1)
                     {
-                        distX = inBodies[b].LocX - outBodies[a].LocX;
-                        distY = inBodies[b].LocY - outBodies[a].LocY;
+                        distX = inBody.LocX - outBody.LocX;
+                        distY = inBody.LocY - outBody.LocY;
                         distSqrt = (float)Math.Sqrt(((distX * distX) + (distY * distY)));
 
                         if (distSqrt > 0f)
                         {
-                            totMass = inBodies[b].Mass * outBodies[a].Mass;
+                            totMass = inBody.Mass * outBody.Mass;
                             force = totMass / (distSqrt * distSqrt + epsilon * epsilon);
 
-                            outBodies[a].ForceTot += force;
-                            outBodies[a].ForceX += force * distX / distSqrt;
-                            outBodies[a].ForceY += force * distY / distSqrt;
+                            outBody.ForceTot += force;
+                            outBody.ForceX += force * distX / distSqrt;
+                            outBody.ForceY += force * distY / distSqrt;
                         }
                     }
                 }
 
-                if (outBodies[a].ForceTot > outBodies[a].Mass * 4 & outBodies[a].BlackHole == 0)
+                if (outBody.ForceTot > outBody.Mass * 4 & outBody.BlackHole == 0)
                 {
-                    outBodies[a].InRoche = 1;
+                    outBody.InRoche = 1;
                 }
-                else if (outBodies[a].ForceTot * 2 < outBodies[a].Mass * 4)
+                else if (outBody.ForceTot * 2 < outBody.Mass * 4)
                 {
-                    outBodies[a].InRoche = 0;
+                    outBody.InRoche = 0;
                 }
-                else if (outBodies[a].BlackHole == 2)
+                else if (outBody.BlackHole == 2)
                 {
-                    outBodies[a].InRoche = 1;
+                    outBody.InRoche = 1;
                 }
+
+                outBodies[a] = outBody;
 
                 gpThread.SyncThreads();
             }
@@ -155,126 +165,130 @@ namespace NBodies.Physics
             float DistSqrt;
 
             int Master = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
-            if (Master <= inBodies.Length - 1 & inBodies[Master].Visible == 1)
+
+            Body outBody = inBodies[Master];
+
+            for (int Slave = 0; Slave <= inBodies.Length - 1; Slave++)
             {
-                outBodies[Master] = inBodies[Master];
-                for (int Slave = 0; Slave <= inBodies.Length - 1; Slave++)
+
+                Body inBody = inBodies[Slave];
+
+                if (Master != Slave & inBody.Visible == 1)
                 {
-                    if (Master != Slave & inBodies[Slave].Visible == 1)
+                    DistX = inBody.LocX - outBody.LocX;
+                    DistY = inBody.LocY - outBody.LocY;
+                    Dist = (DistX * DistX) + (DistY * DistY);
+                    DistSqrt = (float)Math.Sqrt(Dist);
+
+                    if (DistSqrt <= (outBody.Size * 0.5f) + (inBody.Size * 0.5f))
                     {
-                        DistX = inBodies[Slave].LocX - outBodies[Master].LocX;
-                        DistY = inBodies[Slave].LocY - outBodies[Master].LocY;
-                        Dist = (DistX * DistX) + (DistY * DistY);
-                        DistSqrt = (float)Math.Sqrt(Dist);
-
-                        if (DistSqrt <= (outBodies[Master].Size * 0.5f) + (inBodies[Slave].Size * 0.5f))
+                        if (DistSqrt > 0)
                         {
-                            if (DistSqrt > 0)
-                            {
-                                V1x = outBodies[Master].SpeedX;
-                                V1y = outBodies[Master].SpeedY;
-                                V2x = inBodies[Slave].SpeedX;
-                                V2y = inBodies[Slave].SpeedY;
-                                M1 = outBodies[Master].Mass;
-                                M2 = inBodies[Slave].Mass;
-                                vecX = DistX * 0.5f;
-                                vecY = DistY * 0.5f;
-                                vecX = vecX / (DistSqrt * 0.5f); // LenG
-                                vecY = vecY / (DistSqrt * 0.5f); // LenG
-                                V1 = vecX * V1x + vecY * V1y;
-                                V2 = vecX * V2x + vecY * V2y;
-                                U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
-                                dV = U1 - V1;
+                            V1x = outBody.SpeedX;
+                            V1y = outBody.SpeedY;
+                            V2x = inBody.SpeedX;
+                            V2y = inBody.SpeedY;
+                            M1 = outBody.Mass;
+                            M2 = inBody.Mass;
+                            vecX = DistX * 0.5f;
+                            vecY = DistY * 0.5f;
+                            vecX = vecX / (DistSqrt * 0.5f); // LenG
+                            vecY = vecY / (DistSqrt * 0.5f); // LenG
+                            V1 = vecX * V1x + vecY * V1y;
+                            V2 = vecX * V2x + vecY * V2y;
+                            U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
+                            dV = U1 - V1;
 
-                                if (outBodies[Master].InRoche == 0 & inBodies[Slave].InRoche == 1)
+                            if (outBody.InRoche == 0 & inBody.InRoche == 1)
+                            {
+                                if (outBody.Mass > inBody.Mass)
                                 {
-                                    if (outBodies[Master].Mass > inBodies[Slave].Mass)
+                                    CollideBodies(outBody, inBody, dV, vecX, vecY);
+                                }
+                                else if (outBody.Mass == inBody.Mass)
+                                {
+                                    if (outBody.UID > inBody.UID)
                                     {
-                                        CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
-                                    }
-                                    else if (outBodies[Master].Mass == inBodies[Slave].Mass)
-                                    {
-                                        if (outBodies[Master].UID > inBodies[Slave].UID)
-                                        {
-                                            CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
-                                        }
-                                        else
-                                        {
-                                            outBodies[Master].Visible = 0;
-                                        }
+                                        CollideBodies(outBody, inBody, dV, vecX, vecY);
                                     }
                                     else
                                     {
-                                        outBodies[Master].Visible = 0;
+                                        outBody.Visible = 0;
                                     }
                                 }
-                                else if (outBodies[Master].InRoche == 0 & inBodies[Slave].InRoche == 0)
+                                else
                                 {
-                                    if (outBodies[Master].Mass > inBodies[Slave].Mass)
+                                    outBody.Visible = 0;
+                                }
+                            }
+                            else if (outBody.InRoche == 0 & inBody.InRoche == 0)
+                            {
+                                if (outBody.Mass > inBody.Mass)
+                                {
+                                    CollideBodies(outBody, inBody, dV, vecX, vecY);
+                                }
+                                else if (outBody.Mass == inBody.Mass)
+                                {
+                                    if (outBody.UID > inBody.UID)
                                     {
-                                        CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
-                                    }
-                                    else if (outBodies[Master].Mass == inBodies[Slave].Mass)
-                                    {
-                                        if (outBodies[Master].UID > inBodies[Slave].UID)
-                                        {
-                                            CollideBodies(outBodies[Master], inBodies[Slave], dV, vecX, vecY);
-                                        }
-                                        else
-                                        {
-                                            outBodies[Master].Visible = 0;
-                                        }
+                                        CollideBodies(outBody, inBody, dV, vecX, vecY);
                                     }
                                     else
                                     {
-                                        outBodies[Master].Visible = 0;
+                                        outBody.Visible = 0;
                                     }
                                 }
-                                else if (outBodies[Master].InRoche == 1 & inBodies[Slave].InRoche == 1)
+                                else
                                 {
-                                    // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
-                                    float eps = 1.02f;
-                                    int multi = 40;
-                                    float friction = 0.2f;
-
-                                    TotMass = M1 * M2;
-                                    Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
-                                    ForceX = Force * DistX / DistSqrt;
-                                    ForceY = Force * DistY / DistSqrt;
-
-                                    outBodies[Master].ForceX -= ForceX * multi;
-                                    outBodies[Master].ForceY -= ForceY * multi;
-
-                                    outBodies[Master].SpeedX += dV * vecX * friction;
-                                    outBodies[Master].SpeedY += dV * vecY * friction;
-                                }
-                                else if (outBodies[Master].InRoche == 1 & inBodies[Slave].InRoche == 0)
-                                {
-                                    outBodies[Master].Visible = 0;
+                                    outBody.Visible = 0;
                                 }
                             }
-                            else if (outBodies[Master].Mass > inBodies[Slave].Mass)
+                            else if (outBody.InRoche == 1 & inBody.InRoche == 1)
                             {
-                                Area1 = (float)Math.PI * (float)(Math.Pow(outBodies[Master].Size, 2));
-                                Area2 = (float)Math.PI * (float)(Math.Pow(inBodies[Slave].Size, 2));
-                                Area1 = Area1 + Area2;
-                                outBodies[Master].Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                outBodies[Master].Mass = outBodies[Master].Mass + inBodies[Slave].Mass;
+                                // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
+                                float eps = 1.02f;
+                                int multi = 40;
+                                float friction = 0.2f;
+
+                                TotMass = M1 * M2;
+                                Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
+                                ForceX = Force * DistX / DistSqrt;
+                                ForceY = Force * DistY / DistSqrt;
+
+                                outBody.ForceX -= ForceX * multi;
+                                outBody.ForceY -= ForceY * multi;
+
+                                outBody.SpeedX += dV * vecX * friction;
+                                outBody.SpeedY += dV * vecY * friction;
                             }
-                            else
+                            else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                             {
-                                outBodies[Master].Visible = 0;
+                                outBody.Visible = 0;
                             }
+                        }
+                        else if (outBody.Mass > inBody.Mass)
+                        {
+                            Area1 = (float)Math.PI * (float)(Math.Pow(outBody.Size, 2));
+                            Area2 = (float)Math.PI * (float)(Math.Pow(inBody.Size, 2));
+                            Area1 = Area1 + Area2;
+                            outBody.Size = (float)Math.Sqrt(Area1 / Math.PI);
+                            outBody.Mass = outBody.Mass + inBody.Mass;
+                        }
+                        else
+                        {
+                            outBody.Visible = 0;
                         }
                     }
                 }
-
-                // Integrate forces and speeds.
-                outBodies[Master].SpeedX += dt * outBodies[Master].ForceX / outBodies[Master].Mass;
-                outBodies[Master].SpeedY += dt * outBodies[Master].ForceY / outBodies[Master].Mass;
-                outBodies[Master].LocX += dt * outBodies[Master].SpeedX;
-                outBodies[Master].LocY += dt * outBodies[Master].SpeedY;
             }
+
+            // Integrate forces and speeds.
+            outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
+            outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
+            outBody.LocX += dt * outBody.SpeedX;
+            outBody.LocY += dt * outBody.SpeedY;
+
+            outBodies[Master] = outBody;
 
             gpThread.SyncThreads();
         }
