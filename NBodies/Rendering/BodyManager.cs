@@ -17,17 +17,14 @@ namespace NBodies.Rendering
         {
             get
             {
-                if (Bodies != null)
-                    return Bodies.Length;
-
-                return 0;
+                return _bodyCount;
             }
         }
-
 
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static List<Body> _bodyStore = new List<Body>();
         private static int _currentId = -1;
+        private static int _bodyCount = 0;
 
         public static void CullInvisible()
         {
@@ -35,14 +32,11 @@ namespace NBodies.Rendering
 
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
-
-            for (int i = 0; i < _bodyStore.Count - 1; i++)
-            {
-                if (_bodyStore[i].Visible == 0)
-                    _bodyStore.RemoveAt(i);
-            }
+            _bodyStore.RemoveAll((b) => b.Visible == 0);
 
             Bodies = _bodyStore.ToArray();
+
+            _bodyCount = Bodies.Length;
 
             RebuildUIDIndex();
         }

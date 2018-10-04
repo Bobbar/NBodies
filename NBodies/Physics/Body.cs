@@ -11,7 +11,7 @@ using ProtoBuf;
 namespace NBodies.Physics
 {
 
-    [Cudafy]
+    [Cudafy(eCudafyType.Struct)]
     [ProtoContract]
     public struct Body
     {

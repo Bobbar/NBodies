@@ -99,10 +99,12 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
-                            BodyManager.CullInvisible();
+                            // BodyManager.CullInvisible();
 
                             // CUDA calc.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(BodyManager.Bodies, TimeStep);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
+
+                            BodyManager.CullInvisible();
 
                             ProcessRoche(ref BodyManager.Bodies);
                         }

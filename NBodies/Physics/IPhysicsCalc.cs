@@ -10,6 +10,6 @@ namespace NBodies.Physics
     {
         void Init();
 
-        void CalcMovement(Body[] bodies, float timestep);
+        void CalcMovement(ref Body[] bodies, float timestep);
     }
 }
