@@ -20,18 +20,16 @@ namespace NBodies.Physics
         public void Init()
         {
             var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
-            //var cudaModule = CudafyModule.TryDeserialize(modulePath);
-            var cudaModule = CudafyModule.TryDeserialize();
+            var cudaModule = CudafyModule.TryDeserialize(modulePath);
 
             if (cudaModule == null)// || !cudaModule.TryVerifyChecksums())
             {
-                //  throw new Exception("Module file not found!  Path: " + modulePath);
+                throw new Exception("Module file not found!  Path: " + modulePath);
 
-                CudafyTranslator.Language = eLanguage.OpenCL;
-                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
-                cudaModule.Serialize();
-
+                //CudafyTranslator.Language = eLanguage.OpenCL;
+                //cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
                 //cudaModule.Serialize(modulePath);
+
             }
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
