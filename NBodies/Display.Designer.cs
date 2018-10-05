@@ -276,6 +276,7 @@
             this.RemoveAllButton.TabIndex = 1;
             this.RemoveAllButton.Text = "Remove All";
             this.RemoveAllButton.UseVisualStyleBackColor = true;
+            this.RemoveAllButton.Click += new System.EventHandler(this.RemoveAllButton_Click);
             // 
             // TimeStepUpDown
             // 

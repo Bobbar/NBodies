@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
 using NBodies.Rules;
+using NBodies.Shapes;
 
 namespace NBodies
 {
@@ -39,11 +40,27 @@ namespace NBodies
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
+            int nGas = (count / 8) * 7;
+            int nMinerals = (count / 8);
+            int bodyCount = 0;
 
+            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
 
             for (int i = 0; i < count; i++)
             {
+                MatterType matter = Matter.Types[0];
+
+                if (bodyCount <= nGas)
+                {
+                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
+                }
+                else if (bodyCount >= nMinerals)
+                {
+                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
+                }
+
+                bodyCount++;
+
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
@@ -60,18 +77,25 @@ namespace NBodies
                 float vy = (float)(Math.Sign(px) * Math.Sin(thetaV) * magV);
 
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
-                float newMass;
+                float newMass = 1;
 
-                if (bodyMass > 0)
+                if (StaticDensityCheckBox.Checked)
                 {
-                    newMass = bodyMass;
+                    if (bodyMass > 0)
+                    {
+                        newMass = bodyMass;
+                    }
+                    else
+                    {
+                        newMass = BodyManager.CalcMass(bodySize);
+                    }
                 }
                 else
                 {
-                    newMass = BodyManager.CalcMass(bodySize);
+                    newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, vx, vy, bodySize, newMass, ColorHelper.RandomColor());
+                BodyManager.Add(px, py, vx, vy, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
             if (includeCenterMass)
@@ -138,17 +162,7 @@ namespace NBodies
 
 
 
-        private struct Ellipse
-        {
-            public PointF Location;
-            public float Size;
-
-            public Ellipse(PointF location, float size)
-            {
-                Location = location;
-                Size = size;
-            }
-        }
+        
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
         {

@@ -90,6 +90,7 @@
     <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\ScaleHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />
+    <Compile Include="Shapes\Ellipse.cs" />
     <EmbeddedResource Include="AddBodiesForm.resx">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </EmbeddedResource>

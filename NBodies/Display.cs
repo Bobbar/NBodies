@@ -262,5 +262,14 @@ namespace NBodies
         {
             MainLoop.TimeStep = (float)TimeStepUpDown.Value;
         }
+
+        private void RemoveAllButton_Click(object sender, EventArgs e)
+        {
+            MainLoop.WaitForPause();
+
+            BodyManager.ClearBodies();
+
+            MainLoop.Resume();
+        }
     }
 }

@@ -49,6 +49,7 @@ namespace NBodies.Rendering
             UIDIndex.Clear();
             _bodyStore.Clear();
             _currentId = -1;
+            _bodyCount = 0;
         }
 
         public static void ReplaceBodies(Body[] bodies)

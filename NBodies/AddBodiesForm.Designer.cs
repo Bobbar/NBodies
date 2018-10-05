@@ -50,6 +50,7 @@
             this.MinSizeTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
+            this.StaticDensityCheckBox = new System.Windows.Forms.CheckBox();
             this.BodyParamsGroup.SuspendLayout();
             this.StationaryGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
@@ -164,6 +165,7 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.StaticDensityCheckBox);
             this.panel1.Controls.Add(this.label6);
             this.panel1.Controls.Add(this.DensityTextBox);
             this.panel1.Controls.Add(this.label5);
@@ -275,6 +277,18 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "500";
             // 
+            // StaticDensityCheckBox
+            // 
+            this.StaticDensityCheckBox.AutoSize = true;
+            this.StaticDensityCheckBox.Checked = true;
+            this.StaticDensityCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.StaticDensityCheckBox.Location = new System.Drawing.Point(277, 51);
+            this.StaticDensityCheckBox.Name = "StaticDensityCheckBox";
+            this.StaticDensityCheckBox.Size = new System.Drawing.Size(53, 17);
+            this.StaticDensityCheckBox.TabIndex = 11;
+            this.StaticDensityCheckBox.Text = "Static";
+            this.StaticDensityCheckBox.UseVisualStyleBackColor = true;
+            // 
             // AddBodiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -317,5 +331,6 @@
         private System.Windows.Forms.TextBox MinSizeTextBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox NumToAddTextBox;
+        private System.Windows.Forms.CheckBox StaticDensityCheckBox;
     }
 }

@@ -7,7 +7,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Drawing;
 using NBodies.Physics;
-
+using NBodies.Shapes;
 
 namespace NBodies.Rendering
 {
@@ -185,8 +185,6 @@ namespace NBodies.Rendering
             float prevMass;
             float area;
 
-            //if (body.Visible == 1 && body.Size > 1)
-            //{
             area = (float)(Math.PI * Math.Pow(body.Size / 2f, 2));
             divisor = (int)area;
 
@@ -196,25 +194,22 @@ namespace NBodies.Rendering
             newSize = BodyManager.CalcRadius(area);
             newMass = prevMass / divisor;
 
+            var ellipse = new Ellipse(new PointF(body.LocX, body.LocY), body.Size * 0.5f);
+
             for (int f = 0; f < divisor; f++)
             {
+                float fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                float fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
-                float fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
-                float fLocY = Numbers.GetRandomFloat(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
-
-                while (!PointHelper.PointInsideCircle(new PointF(body.LocX, body.LocY), body.Size, new PointF(fLocX, fLocY)))
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(fLocX, fLocY)))
                 {
-
-                    fLocX = Numbers.GetRandomFloat(body.LocX - body.Size * 0.5f, body.LocX + body.Size * 0.5f);
-                    fLocY = Numbers.GetRandomFloat(body.LocY - body.Size * 0.5f, body.LocY + body.Size * 0.5f);
-
+                    fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
+                    fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
                 }
 
                 BodyManager.Add(fLocX, fLocY, body.SpeedX, body.SpeedY, newSize, newMass, Color.FromArgb(body.Color), 1);
 
             }
-            //}
-
         }
     }
 }
