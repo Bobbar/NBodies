@@ -74,6 +74,7 @@ namespace NBodies
         {
             FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS,2));
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
+            TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)

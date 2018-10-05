@@ -20,14 +20,17 @@ namespace NBodies.Physics
         public void Init()
         {
             var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
-            var cudaModule = CudafyModule.TryDeserialize(modulePath);
+            //var cudaModule = CudafyModule.TryDeserialize(modulePath);
+            var cudaModule = CudafyModule.TryDeserialize();
 
             if (cudaModule == null)// || !cudaModule.TryVerifyChecksums())
             {
-                throw new Exception("Module file not found!  Path: " + modulePath);
+                //  throw new Exception("Module file not found!  Path: " + modulePath);
 
-                //CudafyTranslator.Language = eLanguage.OpenCL;
-                //cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
+                CudafyTranslator.Language = eLanguage.OpenCL;
+                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
+                cudaModule.Serialize();
+
                 //cudaModule.Serialize(modulePath);
             }
 
@@ -58,27 +61,34 @@ namespace NBodies.Physics
             gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
             gpu.Synchronize();
 
-            // The alternate path skips a bunch of reallocations and memory dumps
-            // and just flip-flops the In and Out pointers and launches the collision kernel.
-            // I'm not sure if the alt. path is completely stable, but it's definitely faster...
-            if (!altCalcPath)
-            {
-                gpu.CopyFromDevice(gpuOutBodies, bodies);
-                gpu.FreeAll();
-                gpuInBodies = gpu.Allocate(bodies);
-                outBodies = new Body[bodies.Length];
-                gpuOutBodies = gpu.Allocate(outBodies);
-                gpu.CopyToDevice(bodies, gpuInBodies);
-                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
-                gpu.Synchronize();
-                gpu.CopyFromDevice(gpuOutBodies, bodies);
-            }
-            else
-            {
-                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
-                gpu.Synchronize();
-                gpu.CopyFromDevice(gpuInBodies, bodies);
-            }
+            //  gpu.CopyFromDevice(gpuOutBodies, bodies);
+
+            //// The alternate path skips a bunch of reallocations and memory dumps
+            //// and just flip-flops the In and Out pointers and launches the collision kernel.
+            //// I'm not sure if the alt. path is completely stable, but it's definitely faster...
+            //if (!altCalcPath)
+            //{
+            //    gpu.CopyFromDevice(gpuOutBodies, bodies);
+            //    gpu.FreeAll();
+            //    gpuInBodies = gpu.Allocate(bodies);
+            //    outBodies = new Body[bodies.Length];
+            //    gpuOutBodies = gpu.Allocate(outBodies);
+            //    gpu.CopyToDevice(bodies, gpuInBodies);
+            //    gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
+            //    gpu.Synchronize();
+            //    gpu.CopyFromDevice(gpuOutBodies, bodies);
+            //}
+            //else
+            //{
+            //    gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+            //    gpu.Synchronize();
+            //    gpu.CopyFromDevice(gpuInBodies, bodies);
+            //}
+
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+            gpu.Synchronize();
+            gpu.CopyFromDevice(gpuInBodies, bodies);
+
 
             gpu.FreeAll();
         }
@@ -86,7 +96,7 @@ namespace NBodies.Physics
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
         {
-            int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+            // int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
             float totMass;
             float force;
@@ -95,58 +105,79 @@ namespace NBodies.Physics
             float distSqrt;
             float epsilon = 2;
 
-            Body outBody = inBodies[a];
+            int gti = gpThread.get_global_id(0);
+            int ti = gpThread.get_local_id(0);
 
-            if (outBody.Visible == 1)
+            int n = gpThread.get_global_size(0);
+            int nt = gpThread.get_local_size(0);
+            int nb = n / nt;
+
+            Body body = inBodies[gti];
+            body.ForceTot = 0;
+            body.ForceX = 0;
+            body.ForceY = 0;
+            body.blocks = nb;
+
+            var bodyCache = gpThread.AllocateShared<Body>("bodyCache", 512);
+
+            for (int jb = 0; jb < nb; jb++)
             {
+                bodyCache[ti] = inBodies[jb * nt + ti];
 
-                outBody.ForceX = 0;
-                outBody.ForceY = 0;
-                outBody.ForceTot = 0;
+                gpThread.SyncThreads();
 
-                for (int b = 0; b < inBodies.Length; b++)
+                for (int j = 0; j < nt; j++)
                 {
-                    Body inBody = inBodies[b];
+                    Body iBody = bodyCache[j];
 
-                    if (a != b)
+                    if (iBody.UID != body.UID)
                     {
-                        if (inBody.Visible == 1)
+                        distX = iBody.LocX - body.LocX;
+                        distY = iBody.LocY - body.LocY;
+                        distSqrt = (float)Math.Sqrt(((distX * distX) + (distY * distY)));
+
+                        if (distSqrt > 0f)
                         {
-                            distX = inBody.LocX - outBody.LocX;
-                            distY = inBody.LocY - outBody.LocY;
-                            distSqrt = (float)Math.Sqrt(((distX * distX) + (distY * distY)));
+                            //totMass = inBodies[b].Mass * outBodies[a].Mass;
+                            totMass = iBody.Mass * body.Mass;
 
-                            if (distSqrt > 0f)
-                            {
-                                totMass = inBody.Mass * outBody.Mass;
-                                force = totMass / (distSqrt * distSqrt + epsilon * epsilon);
+                            force = totMass / (distSqrt * distSqrt + epsilon * epsilon);
 
-                                outBody.ForceTot += force;
-                                outBody.ForceX += force * distX / distSqrt;
-                                outBody.ForceY += force * distY / distSqrt;
-                            }
+                            body.ForceTot += force;
+                            body.ForceX += force * distX / distSqrt;
+                            body.ForceY += force * distY / distSqrt;
                         }
                     }
                 }
-
-                if (outBody.ForceTot > outBody.Mass * 4 & outBody.BlackHole == 0)
-                {
-                    outBody.InRoche = 1;
-                }
-                else if (outBody.ForceTot * 2 < outBody.Mass * 4)
-                {
-                    outBody.InRoche = 0;
-                }
-                else if (outBody.BlackHole == 2)
-                {
-                    outBody.InRoche = 1;
-                }
+                gpThread.SyncThreads();
 
             }
 
-            gpThread.SyncThreads();
+            if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
+            {
+                body.InRoche = 1;
+            }
+            else if (body.ForceTot * 2 < body.Mass * 4)
+            {
+                body.InRoche = 0;
+            }
+            else if (body.BlackHole == 2)
+            {
+                body.InRoche = 1;
+            }
 
-            outBodies[a] = outBody;
+            ////Integrate forces and speeds.
+            //body.SpeedX += dt * body.ForceX / body.Mass;
+            //body.SpeedY += dt * body.ForceY / body.Mass;
+            //body.LocX += dt * body.SpeedX;
+            //body.LocY += dt * body.SpeedY;
+
+
+            outBodies[gti] = body;
+
+            //   gpThread.SyncThreads();
+
+            //outBodies[a] = outBody;
 
         }
 
@@ -176,21 +207,45 @@ namespace NBodies.Physics
             float Dist;
             float DistSqrt;
 
-            int Master = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+            int gti = gpThread.get_global_id(0);
+            int ti = gpThread.get_local_id(0);
 
-            Body outBody = inBodies[Master];
+            int n = gpThread.get_global_size(0);
+            int nt = gpThread.get_local_size(0);
+            int nb = n / nt;
 
-            if (outBody.Visible == 1)
+            Body outBody = inBodies[gti];
+
+
+            var bodyCacheCol = gpThread.AllocateShared<Body>("bodyCacheCol", 512);
+
+
+            //int Master = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+
+            //Body outBody = inBodies[Master];
+
+
+            for (int jb = 0; jb < nb; jb++)
             {
-                for (int Slave = 0; Slave < inBodies.Length; Slave++)
+                bodyCacheCol[ti] = inBodies[jb * nt + ti];
+
+                gpThread.SyncThreads();
+
+
+                if (outBody.Visible == 1)
                 {
-                    Body inBody = inBodies[Slave];
 
-                    if (Master != Slave)
+                    for (int j = 0; j < nt; j++)
                     {
-                        if (inBody.Visible == 1)
-                        {
+                        Body inBody = bodyCacheCol[j];
 
+                        //if (Master != Slave)
+                        //{
+                        //if (inBody.Visible == 1)
+                        //{
+
+                        if (inBody.UID != outBody.UID && inBody.Visible == 1)
+                        {
                             DistX = inBody.LocX - outBody.LocX;
                             DistY = inBody.LocY - outBody.LocY;
                             Dist = (DistX * DistX) + (DistY * DistY);
@@ -296,21 +351,29 @@ namespace NBodies.Physics
                                 }
                             }
                         }
+
+                        //}
+                        // }
                     }
                 }
-
-                // Integrate forces and speeds.
-                outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
-                outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-                outBody.LocX += dt * outBody.SpeedX;
-                outBody.LocY += dt * outBody.SpeedY;
+                gpThread.SyncThreads();
 
             }
 
+            // Integrate forces and speeds.
+            outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
+            outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
+            outBody.LocX += dt * outBody.SpeedX;
+            outBody.LocY += dt * outBody.SpeedY;
 
-            gpThread.SyncThreads();
+            //}
 
-            outBodies[Master] = outBody;
+            outBodies[gti] = outBody;
+
+
+            //gpThread.SyncThreads();
+
+            //outBodies[Master] = outBody;
         }
 
         [Cudafy]

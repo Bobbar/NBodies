@@ -21,10 +21,20 @@ namespace NBodies.Rendering
             }
         }
 
+        public static float TotalMass
+        {
+            get
+            {
+                return _totalMass;
+            }
+        }
+
+
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static List<Body> _bodyStore = new List<Body>();
         private static int _currentId = -1;
         private static int _bodyCount = 0;
+        private static float _totalMass = 0;
 
         public static void CullInvisible()
         {
@@ -37,6 +47,9 @@ namespace NBodies.Rendering
             Bodies = _bodyStore.ToArray();
 
             _bodyCount = Bodies.Length;
+
+            _totalMass = 0;
+            _bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
         }

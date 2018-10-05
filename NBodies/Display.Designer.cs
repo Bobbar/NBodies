@@ -58,6 +58,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.TotalMassLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -386,6 +387,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.TotalMassLabel);
             this.panel1.Controls.Add(this.BodyCountLabel);
             this.panel1.Controls.Add(this.FPSLabel);
             this.panel1.Controls.Add(this.RenderBox);
@@ -429,6 +431,17 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
+            // 
+            // TotalMassLabel
+            // 
+            this.TotalMassLabel.AutoSize = true;
+            this.TotalMassLabel.BackColor = System.Drawing.Color.Black;
+            this.TotalMassLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.TotalMassLabel.Location = new System.Drawing.Point(3, 40);
+            this.TotalMassLabel.Name = "TotalMassLabel";
+            this.TotalMassLabel.Size = new System.Drawing.Size(54, 13);
+            this.TotalMassLabel.TabIndex = 3;
+            this.TotalMassLabel.Text = "Tot Mass:";
             // 
             // DisplayForm
             // 
@@ -491,6 +504,7 @@
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
         private System.Windows.Forms.Label FPSLabel;
         private System.Windows.Forms.Label BodyCountLabel;
+        private System.Windows.Forms.Label TotalMassLabel;
     }
 }
 
