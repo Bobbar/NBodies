@@ -47,8 +47,8 @@ namespace NBodies.Physics
             // This makes sure that the dataset fills each block completely,
             // otherwise we run into problems when a block encounters a dataset
             // that doesn't have a work item for each thread.
-            int padding = (blocks * threadsPerBlock) - bodies.Length;
-            Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
+            if (bodies.Length <= blocks * threadsPerBlock)
+                Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
 
             var gpuInBodies = gpu.Allocate(bodies);
             var outBodies = new Body[bodies.Length];
