@@ -24,11 +24,11 @@ namespace NBodies.Physics
 
             if (cudaModule == null)// || !cudaModule.TryVerifyChecksums())
             {
-                throw new Exception("Module file not found!  Path: " + modulePath);
+                // throw new Exception("Module file not found!  Path: " + modulePath);
 
-                //CudafyTranslator.Language = eLanguage.OpenCL;
-                //cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
-                //cudaModule.Serialize(modulePath);
+                CudafyTranslator.Language = eLanguage.OpenCL;
+                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
+                cudaModule.Serialize(modulePath);
 
             }
 
@@ -114,7 +114,6 @@ namespace NBodies.Physics
             body.ForceTot = 0;
             body.ForceX = 0;
             body.ForceY = 0;
-            body.blocks = nb;
 
             var bodyCache = gpThread.AllocateShared<Body>("bodyCache", 512);
 
@@ -315,20 +314,41 @@ namespace NBodies.Physics
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 1)
                                     {
                                         // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
-                                        float eps = 1.02f;
+                                        float eps = 0.1f;
                                         int multi = 40;
-                                        float friction = 0.2f;
+                                        float friction = 0.5f;
+
+                                        float diff = (outBody.Size - Dist);
+                                        float factor = (diff * diff) / Dist;
+
+                                        float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
+                                        float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
+                                        float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
+
 
                                         TotMass = M1 * M2;
-                                        Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
+                                        // Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
+                                        Force = TotMass / (Dist + eps);
                                         ForceX = Force * DistX / DistSqrt;
                                         ForceY = Force * DistY / DistSqrt;
 
-                                        outBody.ForceX -= ForceX * multi;
-                                        outBody.ForceY -= ForceY * multi;
+                                        outBody.ForceX -= ForceX * factor;
+                                        outBody.ForceY -= ForceY * factor;
 
-                                        outBody.SpeedX += dV * vecX * friction;
-                                        outBody.SpeedY += dV * vecY * friction;
+                                        float visc_scalar = outBody.Mass * visc_Laplace * 0.01f * 1 / 40;
+                                        float velo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                        float velo_diffY = inBody.SpeedY - outBody.SpeedY;
+
+                                        velo_diffX *= visc_scalar;
+                                        velo_diffY *= visc_scalar;
+
+                                        outBody.ForceX += velo_diffX;
+                                        outBody.ForceY += velo_diffY;
+                                        //outBody.ForceX -= ForceX * multi;
+                                        //outBody.ForceY -= ForceY * multi;
+
+                                        //outBody.SpeedX += dV * vecX * friction;
+                                        //outBody.SpeedY += dV * vecY * friction;
                                     }
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                                     {

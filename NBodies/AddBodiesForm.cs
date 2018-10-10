@@ -108,6 +108,9 @@ namespace NBodies
 
         private void AddBodiesToDisc(int count, int maxSize, int minSize, int bodyMass)
         {
+            MainLoop.WaitForPause();
+
+
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
@@ -158,11 +161,14 @@ namespace NBodies
                 BodyManager.Add(px, py, bodySize, newMass, matter.Color);
             }
 
+            MainLoop.Resume();
+
+
         }
 
 
 
-        
+
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
         {

@@ -57,7 +57,6 @@ namespace NBodies.Physics
         [ProtoMember(14)]
         public int UID;
 
-        public int blocks;
 
     }
    
