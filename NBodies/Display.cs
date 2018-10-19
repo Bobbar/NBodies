@@ -72,9 +72,14 @@ namespace NBodies
 
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
-            FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS,2));
+            FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
+            FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
+
+            DensityLabel.Text = string.Format("Density: {0}", BodyManager.FollowBody().Density);
+            PressureLabel.Text = string.Format("Press: {0}", BodyManager.FollowBody().Pressure);
+
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)

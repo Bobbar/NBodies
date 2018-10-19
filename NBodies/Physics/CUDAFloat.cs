@@ -42,7 +42,7 @@ namespace NBodies.Physics
         {
             bool altCalcPath = true;
 
-            var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
+            var blocks = (bodies.Length / threadsPerBlock) + 1;//(bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
 
             // Zero pad the body array to fit the calculated number of blocks:
             // This makes sure that the dataset fills each block completely,
@@ -318,24 +318,56 @@ namespace NBodies.Physics
                                         int multi = 40;
                                         float friction = 0.5f;
 
+                                        float m_kernelSize = outBody.Size;
+                                        float m_kernelSize3 = m_kernelSize * m_kernelSize * m_kernelSize;
+                                        //float DistSq = (float)Math.Sqrt(Dist);
+
                                         float diff = (outBody.Size - Dist);
                                         float factor = (diff * diff) / Dist;
+
+
+
+                                        double kernelRad6 = Math.Pow((m_kernelSize / 3.0f), 6);
+                                        float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
+                                        float m_kernelSizeSq = m_kernelSize * m_kernelSize;
+
+                                        float scalar = inBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * inBody.Density);
+
+                                        float gradFactor = -m_factorPress * 3.0f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
+
+                                        float gradX = (DistX * gradFactor);
+                                        float gradY = (DistY * gradFactor);
+
+                                        gradX = gradX * scalar;
+                                        gradY = gradY * scalar;
+
+                                        outBody.ForceX += gradX;
+                                        outBody.ForceY += gradY;
+
+
+
+
+
+
+
+
 
                                         float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
                                         float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
                                         float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
 
 
-                                        TotMass = M1 * M2;
-                                        // Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
-                                        Force = TotMass / (Dist + eps);
-                                        ForceX = Force * DistX / DistSqrt;
-                                        ForceY = Force * DistY / DistSqrt;
+                                        //TotMass = M1 * M2;
+                                        //// Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
+                                        //Force = TotMass / (Dist + eps);
+                                        //ForceX = Force * DistX / DistSqrt;
+                                        //ForceY = Force * DistY / DistSqrt;
 
-                                        outBody.ForceX -= ForceX * factor;
-                                        outBody.ForceY -= ForceY * factor;
+                                        //outBody.ForceX -= ForceX * factor;
+                                        //outBody.ForceY -= ForceY * factor;
 
-                                        float visc_scalar = outBody.Mass * visc_Laplace * 0.01f * 1 / 40;
+
+                                        float visc_scalar = outBody.Mass * visc_Laplace * 0.8f * 1 / 40;
                                         float velo_diffX = inBody.SpeedX - outBody.SpeedX;
                                         float velo_diffY = inBody.SpeedY - outBody.SpeedY;
 

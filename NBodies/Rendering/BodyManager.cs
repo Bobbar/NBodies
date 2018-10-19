@@ -49,7 +49,7 @@ namespace NBodies.Rendering
             _bodyCount = Bodies.Length;
 
             _totalMass = 0;
-            _bodyStore.ForEach(b => _totalMass += b.Mass);
+            //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
         }
@@ -93,10 +93,115 @@ namespace NBodies.Rendering
             return new PointF();
         }
 
+        public static Body FollowBody()
+        {
+            if (FollowSelected)
+            {
+                if (UIDIndex.ContainsKey(FollowBodyUID))
+                {
+                    return Bodies[UIDIndex[FollowBodyUID]];
+                }
+            }
+
+            return new Body();
+        }
         public static int UIDToIndex(int uid)
         {
             return UIDIndex[uid];
         }
+
+        public static void CalcDensityAndPressure()
+        {
+            //float kSize = 0.8f;
+            //float kSizeSq = kSize * kSize;
+            //double kernRad9 = Math.Pow((double)kSize, 9);
+            //double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+            float GAS_K = 0.1f;
+            float FLOAT_EPSILON = 1.192092896e-07f;
+            float DENSITY_OFFSET = 100f;
+            //float DENSITY_OFFSET = 100f;
+
+            for (int a = 0; a < Bodies.Length; a++)
+            {
+                var bodyA = Bodies[a];
+
+                bodyA.Density = 0;
+                bodyA.Pressure = 0;
+               // bodyA.Neighbors = 0;
+
+               
+
+                if (bodyA.InRoche == 1)
+                {
+                    for (int b = 0; b < Bodies.Length; b++)
+                    {
+                        var bodyB = Bodies[b];
+
+                        if (bodyB.InRoche == 1)
+                        {
+                            float DistX = bodyB.LocX - bodyA.LocX;
+                            float DistY = bodyB.LocY - bodyA.LocY;
+                            float Dist = (DistX * DistX) + (DistY * DistY);
+                            float DistSq = (float)Math.Sqrt(Dist);//Dist * Dist;
+
+                            //if (DistSq > 0)
+                            //{
+
+
+                                float testKsize = bodyA.Size;
+                                float testKsizeSq = testKsize * testKsize;
+                                // is this distance close enough for kernal/neighbor calcs?
+                                if (Dist < testKsize)
+                                {
+
+                                    //bodyA.Neighbors++;
+
+                                    
+                                    if (Dist < FLOAT_EPSILON)
+                                    {
+                                        Dist = FLOAT_EPSILON;
+                                    }
+
+                                    // It's a neighbor; accumulate density.
+                                    float diff = testKsizeSq - Dist;
+                                    double kernRad9 = Math.Pow((double)testKsize, 9.0);
+                                    double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+
+                                    double fac = factor * diff * diff * diff;
+                                    bodyA.Density += (float)(bodyA.Mass * fac);
+                                }
+
+
+                                //if (DistSq < kSizeSq)
+                                //{
+                                //    if (DistSq < FLOAT_EPSILON)
+                                //    {
+                                //        DistSq = FLOAT_EPSILON;
+                                //    }
+
+                                //    // It's a neighbor; accumulate density.
+                                //    float diff = kSizeSq - DistSq;
+                                //    double fac = factor * diff * diff * diff;
+                                //    bodyA.Density += (float)(bodyA.Mass * fac);
+                                //}
+                            //}
+                        }
+                    }
+
+                    if (bodyA.Density > 0)
+                    {
+                        bodyA.Pressure = GAS_K * (bodyA.Density);// - DENSITY_OFFSET);
+                    }
+
+                    Bodies[a] = bodyA;
+                }
+            }
+
+
+        }
+
+
+
 
         public static void Move(int index, PointF location)
         {

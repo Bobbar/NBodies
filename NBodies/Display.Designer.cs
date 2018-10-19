@@ -55,10 +55,13 @@
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.PressureLabel = new System.Windows.Forms.Label();
+            this.DensityLabel = new System.Windows.Forms.Label();
+            this.TotalMassLabel = new System.Windows.Forms.Label();
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.TotalMassLabel = new System.Windows.Forms.Label();
+            this.FrameCountLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -387,6 +390,9 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.FrameCountLabel);
+            this.panel1.Controls.Add(this.PressureLabel);
+            this.panel1.Controls.Add(this.DensityLabel);
             this.panel1.Controls.Add(this.TotalMassLabel);
             this.panel1.Controls.Add(this.BodyCountLabel);
             this.panel1.Controls.Add(this.FPSLabel);
@@ -396,12 +402,45 @@
             this.panel1.Size = new System.Drawing.Size(1353, 637);
             this.panel1.TabIndex = 0;
             // 
+            // PressureLabel
+            // 
+            this.PressureLabel.AutoSize = true;
+            this.PressureLabel.BackColor = System.Drawing.Color.Black;
+            this.PressureLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.PressureLabel.Location = new System.Drawing.Point(3, 122);
+            this.PressureLabel.Name = "PressureLabel";
+            this.PressureLabel.Size = new System.Drawing.Size(36, 13);
+            this.PressureLabel.TabIndex = 5;
+            this.PressureLabel.Text = "Press:";
+            // 
+            // DensityLabel
+            // 
+            this.DensityLabel.AutoSize = true;
+            this.DensityLabel.BackColor = System.Drawing.Color.Black;
+            this.DensityLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.DensityLabel.Location = new System.Drawing.Point(2, 109);
+            this.DensityLabel.Name = "DensityLabel";
+            this.DensityLabel.Size = new System.Drawing.Size(45, 13);
+            this.DensityLabel.TabIndex = 4;
+            this.DensityLabel.Text = "Density:";
+            // 
+            // TotalMassLabel
+            // 
+            this.TotalMassLabel.AutoSize = true;
+            this.TotalMassLabel.BackColor = System.Drawing.Color.Black;
+            this.TotalMassLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.TotalMassLabel.Location = new System.Drawing.Point(3, 61);
+            this.TotalMassLabel.Name = "TotalMassLabel";
+            this.TotalMassLabel.Size = new System.Drawing.Size(54, 13);
+            this.TotalMassLabel.TabIndex = 3;
+            this.TotalMassLabel.Text = "Tot Mass:";
+            // 
             // BodyCountLabel
             // 
             this.BodyCountLabel.AutoSize = true;
             this.BodyCountLabel.BackColor = System.Drawing.Color.Black;
             this.BodyCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.BodyCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.BodyCountLabel.Location = new System.Drawing.Point(3, 48);
             this.BodyCountLabel.Name = "BodyCountLabel";
             this.BodyCountLabel.Size = new System.Drawing.Size(42, 13);
             this.BodyCountLabel.TabIndex = 2;
@@ -432,16 +471,16 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // TotalMassLabel
+            // FrameCountLabel
             // 
-            this.TotalMassLabel.AutoSize = true;
-            this.TotalMassLabel.BackColor = System.Drawing.Color.Black;
-            this.TotalMassLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.TotalMassLabel.Location = new System.Drawing.Point(3, 40);
-            this.TotalMassLabel.Name = "TotalMassLabel";
-            this.TotalMassLabel.Size = new System.Drawing.Size(54, 13);
-            this.TotalMassLabel.TabIndex = 3;
-            this.TotalMassLabel.Text = "Tot Mass:";
+            this.FrameCountLabel.AutoSize = true;
+            this.FrameCountLabel.BackColor = System.Drawing.Color.Black;
+            this.FrameCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.FrameCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.FrameCountLabel.Name = "FrameCountLabel";
+            this.FrameCountLabel.Size = new System.Drawing.Size(38, 13);
+            this.FrameCountLabel.TabIndex = 6;
+            this.FrameCountLabel.Text = "Count:";
             // 
             // DisplayForm
             // 
@@ -505,6 +544,9 @@
         private System.Windows.Forms.Label FPSLabel;
         private System.Windows.Forms.Label BodyCountLabel;
         private System.Windows.Forms.Label TotalMassLabel;
+        private System.Windows.Forms.Label PressureLabel;
+        private System.Windows.Forms.Label DensityLabel;
+        private System.Windows.Forms.Label FrameCountLabel;
     }
 }
 

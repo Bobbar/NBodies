@@ -41,8 +41,17 @@ namespace NBodies.Rendering
             }
         }
 
+        public static Int64 FrameCount
+        {
+            get
+            {
+                return _frameCount;
+            }
+        }
+
         public static float CurrentFPS = 0;
 
+        private static Int64 _frameCount = 0;
         private static float _timeStep = 0.008f;
         private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
         private static bool _skipPhysics = false;
@@ -101,12 +110,16 @@ namespace NBodies.Rendering
                         {
                             // BodyManager.CullInvisible();
 
+                            BodyManager.CalcDensityAndPressure();
                             // CUDA calc.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
 
                             BodyManager.CullInvisible();
 
                             ProcessRoche(ref BodyManager.Bodies);
+
+                            _frameCount++;
+
                         }
                     }
 
@@ -125,6 +138,7 @@ namespace NBodies.Rendering
 
                     // FPS Limiter
                     DelayFrame();
+
                 }
             }
             catch (OperationCanceledException)
@@ -191,7 +205,7 @@ namespace NBodies.Rendering
             if (divisor <= 1) divisor = 2;
             prevMass = body.Mass;
             area = area / divisor;
-            newSize = BodyManager.CalcRadius(area);
+            newSize = 1;//BodyManager.CalcRadius(area);
             newMass = prevMass / divisor;
 
             var ellipse = new Ellipse(new PointF(body.LocX, body.LocY), body.Size * 0.5f);

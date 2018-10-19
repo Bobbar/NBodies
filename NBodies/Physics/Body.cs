@@ -57,7 +57,9 @@ namespace NBodies.Physics
         [ProtoMember(14)]
         public int UID;
 
+        public float Density;
 
+        public float Pressure;
     }
    
 }
