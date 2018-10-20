@@ -80,6 +80,28 @@ namespace NBodies
 
             DensityLabel.Text = string.Format("Density: {0}", BodyManager.FollowBody().Density);
             PressureLabel.Text = string.Format("Press: {0}", BodyManager.FollowBody().Pressure);
+
+
+            if (_selectedUid != -1 && !MainLoop.PausePhysics)
+            {
+                SetSelectedInfo();
+            }
+
+        }
+
+        private void SetSelectedInfo()
+        {
+            if (_selectedUid != -1)
+            {
+                var selectBody = BodyManager.BodyFromUID(_selectedUid);
+
+                VeloXTextBox.Text = selectBody.SpeedX.ToString();
+                VeloYTextBox.Text = selectBody.SpeedY.ToString();
+                RadiusTextBox.Text = selectBody.Size.ToString();
+                MassTextBox.Text = selectBody.Mass.ToString();
+                FlagsTextBox.Text = selectBody.BlackHole.ToString();
+
+            }
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
@@ -118,7 +140,7 @@ namespace NBodies
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(_selectedUid, ScaleHelpers.ScalePointRelative(e.Location));
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScalePointRelative(e.Location));
                 }
                 else
                 {
@@ -152,14 +174,16 @@ namespace NBodies
             {
                 case Keys.ShiftKey:
                     _shiftDown = false;
+                    MainLoop.Resume();
                     break;
 
                 case Keys.ControlKey:
                     _ctrlDown = false;
+                    MainLoop.Resume();
                     break;
             }
 
-            MainLoop.Resume();
+            
         }
 
         private void RenderBox_MouseDown(object sender, MouseEventArgs e)
@@ -185,19 +209,24 @@ namespace NBodies
                     BodyManager.FollowBodyUID = -1;
                 }
 
-                if (_selectedUid == -1)
+
+                var mUid = MouseOverUID(e.Location);
+
+                if (_selectedUid == -1 && mUid != -1)
                 {
-                    var mUid = MouseOverUID(e.Location);
-                    if (mUid != -1)
-                    {
                         if (!_ctrlDown && _shiftDown) _bodyMovin = true;
                         _selectedUid = mUid;
 
+                        SetSelectedInfo();
+                        
                         if (_ctrlDown)
                         {
                             BodyManager.FollowBodyUID = _selectedUid;
                         }
-                    }
+                }
+                else if (_selectedUid != -1 && mUid == -1)
+                {
+                    _selectedUid = -1;
                 }
             }
         }
@@ -206,7 +235,7 @@ namespace NBodies
         {
             _bodySizeTimer.Stop();
             _mouseDown = false;
-            _selectedUid = -1;
+          //  _selectedUid = -1;
             _bodyMovin = false;
 
             if (_mouseId != -1)
@@ -305,6 +334,18 @@ namespace NBodies
         private void showFollowBodyForceToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.ShowForce = showFollowBodyForceToolStripMenuItem.Checked;
+        }
+
+        private void UpdateButton_Click(object sender, EventArgs e)
+        {
+            if (_selectedUid != -1)
+            {
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedX = Convert.ToSingle(VeloXTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedY = Convert.ToSingle(VeloYTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Size = Convert.ToSingle(RadiusTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Mass = Convert.ToSingle(MassTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = Convert.ToInt32(FlagsTextBox.Text.Trim());
+            }
         }
     }
 }

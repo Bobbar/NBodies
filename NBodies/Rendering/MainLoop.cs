@@ -181,7 +181,7 @@ namespace NBodies.Rendering
             for (int b = 0; b < len; b++)
             {
                 var body = bodies[b];
-                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1)
+                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2)
                 {
                     if (bodies[b].Size > 1)
                     {

@@ -118,13 +118,29 @@ namespace NBodies.Rendering
 
         public static int UIDToIndex(int uid)
         {
-            return UIDIndex[uid];
+            if (UIDIndex.ContainsKey(uid))
+                return UIDIndex[uid];
+
+            return -1;
+        }
+
+        public static Body BodyFromUID(int uid)
+        {
+            if (UIDIndex.ContainsKey(uid))
+            {
+                return Bodies[UIDIndex[uid]];
+            }
+
+            return new Body();
         }
 
         public static void Move(int index, PointF location)
         {
-            Bodies[index].LocX = location.X;
-            Bodies[index].LocY = location.Y;
+            if (index >= 0)
+            {
+                Bodies[index].LocX = location.X;
+                Bodies[index].LocY = location.Y;
+            }
         }
 
         public static int Add(Body body)
