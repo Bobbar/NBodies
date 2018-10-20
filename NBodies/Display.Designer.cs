@@ -66,6 +66,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.showFollowBodyForceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -122,7 +123,8 @@
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
-            this.displayToolStripMenuItem});
+            this.displayToolStripMenuItem,
+            this.showFollowBodyForceToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -525,6 +527,14 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // showFollowBodyForceToolStripMenuItem
+            // 
+            this.showFollowBodyForceToolStripMenuItem.CheckOnClick = true;
+            this.showFollowBodyForceToolStripMenuItem.Name = "showFollowBodyForceToolStripMenuItem";
+            this.showFollowBodyForceToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.showFollowBodyForceToolStripMenuItem.Text = "Show Follow Body Force";
+            this.showFollowBodyForceToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showFollowBodyForceToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -594,6 +604,7 @@
         private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showFollowBodyForceToolStripMenuItem;
     }
 }
 

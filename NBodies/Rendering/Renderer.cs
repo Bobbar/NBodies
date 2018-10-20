@@ -14,6 +14,7 @@ namespace NBodies.Rendering
         public static bool AntiAliasing = true;
         public static bool Trails = false;
         public static bool ClipView = true;
+        public static bool ShowForce = false;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
@@ -24,6 +25,7 @@ namespace NBodies.Rendering
         private static float _prevScale = 0;
 
         private static Pen _blackHoleStroke = new Pen(Color.Red);
+        private static Pen _forcePen = new Pen(Color.White, 0.5f);
         private static Color _spaceColor = Color.Black;
 
         private static Size _prevSize = new Size();
@@ -123,18 +125,30 @@ namespace NBodies.Rendering
                     // var pressCol = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
                     using (var bodyBrush = new SolidBrush(bodyColor))
                     {
+                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
+
+                        //Draw body.
+                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
+
+
                         if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
                         {
                             var followOffset = BodyManager.FollowBodyLoc();
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
 
+
+                            if (ShowForce)
+                            {
+                                var f = new PointF(body.ForceX, body.ForceY);
+                                //  var f = new PointF(body.SpeedX, body.SpeedY);
+                                var bloc = new PointF(body.LocX, body.LocY);
+                                //  f = f.Multi(0.1f);
+                                var floc = bloc.Add(f);
+                                _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                            }
+
                         }
-
-                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
-
-                        //Draw body.
-                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
 
                         // If blackhole, stroke with red circle.
                         if (body.BlackHole == 1)

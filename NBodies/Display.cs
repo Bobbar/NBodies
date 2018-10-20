@@ -302,8 +302,9 @@ namespace NBodies
             highContrastToolStripMenuItem1.Checked = true;
         }
 
-        private void clipToViewportToolStripMenuItem_Click(object sender, EventArgs e)
+        private void showFollowBodyForceToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
+            Renderer.ShowForce = showFollowBodyForceToolStripMenuItem.Checked;
         }
     }
 }

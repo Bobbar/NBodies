@@ -38,6 +38,11 @@ namespace NBodies.Rendering
             return new PointF(pointA.X + pointB.X, pointA.Y + pointB.Y);
         }
 
+        public static PointF Multi(this PointF pointA, float value)
+        {
+            return new PointF(pointA.X * value, pointA.Y + value);
+        }
+
         public static float Distance(this PointF pointA, PointF pointB)
         {
             return (float)Math.Sqrt(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));
