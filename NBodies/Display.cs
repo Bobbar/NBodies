@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using NBodies.Physics;
 using NBodies.Rendering;
-using NBodies.Physics;
+using System;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace NBodies
 {
@@ -86,7 +80,6 @@ namespace NBodies
 
             DensityLabel.Text = string.Format("Density: {0}", BodyManager.FollowBody().Density);
             PressureLabel.Text = string.Format("Press: {0}", BodyManager.FollowBody().Pressure);
-
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
@@ -107,7 +100,6 @@ namespace NBodies
             {
                 RenderVars.CurrentScale -= scaleChange;
             }
-
         }
 
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
@@ -227,7 +219,6 @@ namespace NBodies
             {
                 BodyManager.FollowSelected = true;
             }
-
         }
 
         private void RenderBox_Resize(object sender, EventArgs e)
@@ -258,12 +249,16 @@ namespace NBodies
         private void loadStateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadState();
-
         }
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.AntiAliasing = antiAliasingToolStripMenuItem.Checked;
+        }
+
+        private void clipToViewportToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.ClipView = clipToViewportToolStripMenuItem.Checked;
         }
 
         private void TimeStepUpDown_ValueChanged(object sender, EventArgs e)
@@ -305,6 +300,10 @@ namespace NBodies
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = false;
             highContrastToolStripMenuItem1.Checked = true;
+        }
+
+        private void clipToViewportToolStripMenuItem_Click(object sender, EventArgs e)
+        {
         }
     }
 }

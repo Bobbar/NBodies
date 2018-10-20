@@ -97,16 +97,25 @@ namespace NBodies.Rendering
 
         public static Body FollowBody()
         {
-            if (FollowSelected)
+            try
             {
-                if (UIDIndex.ContainsKey(FollowBodyUID))
+                if (FollowSelected)
                 {
-                    return Bodies[UIDIndex[FollowBodyUID]];
+                    if (UIDIndex.ContainsKey(FollowBodyUID))
+                    {
+                        return Bodies[UIDIndex[FollowBodyUID]];
+                    }
                 }
+            }
+            catch
+            {
+                // Sometimes a race condition occurs, and the key won't be found even though we passed the condition.
+                // Fail silently and try again on the next frame.
             }
 
             return new Body();
         }
+
         public static int UIDToIndex(int uid)
         {
             return UIDIndex[uid];

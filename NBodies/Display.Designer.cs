@@ -33,6 +33,11 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -61,10 +66,6 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -120,6 +121,7 @@
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.antiAliasingToolStripMenuItem,
+            this.clipToViewportToolStripMenuItem,
             this.displayToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
@@ -131,9 +133,55 @@
             this.antiAliasingToolStripMenuItem.CheckOnClick = true;
             this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
             this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
             this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
+            // 
+            // clipToViewportToolStripMenuItem
+            // 
+            this.clipToViewportToolStripMenuItem.Checked = true;
+            this.clipToViewportToolStripMenuItem.CheckOnClick = true;
+            this.clipToViewportToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.clipToViewportToolStripMenuItem.Name = "clipToViewportToolStripMenuItem";
+            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
+            this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
+            // 
+            // displayToolStripMenuItem
+            // 
+            this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.normalToolStripMenuItem,
+            this.pressuresToolStripMenuItem,
+            this.highContrastToolStripMenuItem1});
+            this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
+            this.displayToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.displayToolStripMenuItem.Text = "Display";
+            // 
+            // normalToolStripMenuItem
+            // 
+            this.normalToolStripMenuItem.Checked = true;
+            this.normalToolStripMenuItem.CheckOnClick = true;
+            this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.normalToolStripMenuItem.Text = "Normal";
+            this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
+            // 
+            // pressuresToolStripMenuItem
+            // 
+            this.pressuresToolStripMenuItem.CheckOnClick = true;
+            this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.pressuresToolStripMenuItem.Text = "Pressures";
+            this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
+            // 
+            // highContrastToolStripMenuItem1
+            // 
+            this.highContrastToolStripMenuItem1.CheckOnClick = true;
+            this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem1.Text = "High Contrast";
+            this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
             // toolsToolStripMenuItem
             // 
@@ -477,42 +525,6 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // displayToolStripMenuItem
-            // 
-            this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.normalToolStripMenuItem,
-            this.pressuresToolStripMenuItem,
-            this.highContrastToolStripMenuItem1});
-            this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
-            this.displayToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.displayToolStripMenuItem.Text = "Display";
-            // 
-            // normalToolStripMenuItem
-            // 
-            this.normalToolStripMenuItem.Checked = true;
-            this.normalToolStripMenuItem.CheckOnClick = true;
-            this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.normalToolStripMenuItem.Text = "Normal";
-            this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
-            // 
-            // pressuresToolStripMenuItem
-            // 
-            this.pressuresToolStripMenuItem.CheckOnClick = true;
-            this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.pressuresToolStripMenuItem.Text = "Pressures";
-            this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
-            // 
-            // highContrastToolStripMenuItem1
-            // 
-            this.highContrastToolStripMenuItem1.CheckOnClick = true;
-            this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
-            this.highContrastToolStripMenuItem1.Text = "High Contrast";
-            this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
-            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -581,6 +593,7 @@
         private System.Windows.Forms.ToolStripMenuItem normalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
     }
 }
 

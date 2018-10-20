@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Diagnostics;
+using System;
 
 namespace NBodies.Rendering
 {
@@ -11,35 +13,13 @@ namespace NBodies.Rendering
         public static List<OverlayGraphic> OverLays = new List<OverlayGraphic>();
         public static bool AntiAliasing = true;
         public static bool Trails = false;
+        public static bool ClipView = true;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
-
-        //public static bool HighContrast
-        //{
-        //    get
-        //    {
-        //        return _highContrast;
-        //    }
-
-        //    set
-        //    {
-        //        _highContrast = value;
-
-        //        if (_highContrast)
-        //        {
-        //            _spaceColor = Color.White;
-        //        }
-        //        else
-        //        {
-        //            _spaceColor = Color.Black;
-        //        }
-        //    }
-        //}
 
         private static BufferedGraphicsContext _currentContext;
         private static BufferedGraphics _buffer;
 
-        //private static bool _highContrast = false;
         private static PictureBox _imageControl;
         private static float _prevScale = 0;
 
@@ -48,7 +28,9 @@ namespace NBodies.Rendering
 
         private static Size _prevSize = new Size();
 
-        private static Font infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
+        private static Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
+
+        private static RectangleF _cullTangle;
 
         public static void Init(PictureBox imageControl)
         {
@@ -103,11 +85,18 @@ namespace NBodies.Rendering
 
             for (int i = 0; i < bodies.Length; i++)
             {
+
                 var body = bodies[i];
                 var bodySize = (float)body.Size;
 
                 if (body.Visible == 1)
                 {
+                    if (ClipView)
+                    {
+                        _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _imageControl.Size.Width / RenderVars.CurrentScale, _imageControl.Size.Height / RenderVars.CurrentScale);
+                        if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
+                    }
+
                     Color bodyColor = new Color();
 
                     switch (DisplayStyle)
@@ -131,7 +120,7 @@ namespace NBodies.Rendering
                     }
 
                     //using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
-                   // var pressCol = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
+                    // var pressCol = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
                     using (var bodyBrush = new SolidBrush(bodyColor))
                     {
                         if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
@@ -211,7 +200,7 @@ namespace NBodies.Rendering
                 {
                     case OverlayGraphicType.Text:
                         _buffer.Graphics.ResetTransform();
-                        _buffer.Graphics.DrawString(overlay.Value, infoTextFont, Brushes.White, overlay.Location);
+                        _buffer.Graphics.DrawString(overlay.Value, _infoTextFont, Brushes.White, overlay.Location);
                         break;
                 }
             }
