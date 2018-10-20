@@ -9,7 +9,7 @@ namespace NBodies.Physics
     public class CUDAFloat : IPhysicsCalc
     {
         private int gpuIndex = 0;
-        private int threadsPerBlock = 256;
+        private const int threadsPerBlock = 256;
         private GPGPU gpu;
 
         public CUDAFloat(int gpuIdx)
@@ -42,13 +42,13 @@ namespace NBodies.Physics
         {
             bool altCalcPath = true;
 
-            var blocks = (bodies.Length / threadsPerBlock) + 1;//(bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
+            var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
 
             // Zero pad the body array to fit the calculated number of blocks:
             // This makes sure that the dataset fills each block completely,
             // otherwise we run into problems when a block encounters a dataset
             // that doesn't have a work item for each thread.
-            if (bodies.Length <= blocks * threadsPerBlock)
+            if (bodies.Length < blocks * threadsPerBlock)
                 Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
 
             var gpuInBodies = gpu.Allocate(bodies);
@@ -115,7 +115,7 @@ namespace NBodies.Physics
             body.ForceX = 0;
             body.ForceY = 0;
 
-            var bodyCache = gpThread.AllocateShared<Body>("bodyCache", 512);
+            var bodyCache = gpThread.AllocateShared<Body>("bodyCache", threadsPerBlock);
 
             for (int jb = 0; jb < nb; jb++)
             {
@@ -214,7 +214,7 @@ namespace NBodies.Physics
             Body outBody = inBodies[gti];
 
 
-            var bodyCacheCol = gpThread.AllocateShared<Body>("bodyCacheCol", 512);
+            var bodyCacheCol = gpThread.AllocateShared<Body>("bodyCacheCol", threadsPerBlock);
 
 
             //int Master = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
@@ -313,74 +313,76 @@ namespace NBodies.Physics
                                     }
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 1)
                                     {
-                                        // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
-                                        float eps = 0.1f;
-                                        int multi = 40;
-                                        float friction = 0.5f;
+                                        if (outBody.Density > 0 && inBody.Density > 0)
+                                        {
+                                            // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
+                                            float eps = 0.1f;
+                                            int multi = 40;
+                                            float friction = 0.5f;
 
-                                        float m_kernelSize = outBody.Size;
-                                        float m_kernelSize3 = m_kernelSize * m_kernelSize * m_kernelSize;
-                                        //float DistSq = (float)Math.Sqrt(Dist);
+                                            float m_kernelSize = outBody.Size;
+                                            float m_kernelSize3 = m_kernelSize * m_kernelSize * m_kernelSize;
+                                            //float DistSq = (float)Math.Sqrt(Dist);
 
-                                        float diff = (outBody.Size - Dist);
-                                        float factor = (diff * diff) / Dist;
+                                            if (Dist < 0.002f)
+                                                Dist = 0.002f;
 
 
-
-                                        double kernelRad6 = Math.Pow((m_kernelSize / 3.0f), 6);
-                                        float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
-                                        float m_kernelSizeSq = m_kernelSize * m_kernelSize;
-
-                                        float scalar = inBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * inBody.Density);
-
-                                        float gradFactor = -m_factorPress * 3.0f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
-
-                                        float gradX = (DistX * gradFactor);
-                                        float gradY = (DistY * gradFactor);
-
-                                        gradX = gradX * scalar;
-                                        gradY = gradY * scalar;
-
-                                        outBody.ForceX += gradX;
-                                        outBody.ForceY += gradY;
+                                            float diff = (outBody.Size - Dist);
+                                            float factor = (diff * diff) / Dist;
 
 
 
+                                            double kernelRad6 = Math.Pow((m_kernelSize / 3.0f), 6);
+                                            float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
+                                            float m_kernelSizeSq = m_kernelSize * m_kernelSize;
+
+                                            float scalar = inBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * inBody.Density);
+
+                                            float gradFactor = -m_factorPress * 3.0f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
+
+                                            float gradX = (DistX * gradFactor);
+                                            float gradY = (DistY * gradFactor);
+
+                                            gradX = gradX * scalar;
+                                            gradY = gradY * scalar;
+
+                                            outBody.ForceX += gradX;
+                                            outBody.ForceY += gradY;
 
 
+                                            float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
+                                            float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
+                                            float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
 
 
+                                            //TotMass = M1 * M2;
+                                            //// Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
+                                            //Force = TotMass / (Dist + eps);
+                                            //ForceX = Force * DistX / DistSqrt;
+                                            //ForceY = Force * DistY / DistSqrt;
+
+                                            //outBody.ForceX -= ForceX * factor;
+                                            //outBody.ForceY -= ForceY * factor;
 
 
-                                        float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
-                                        float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
-                                        float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
+                                            float visc_scalar = outBody.Mass * visc_Laplace * 1.5f * 1 / 40;
+                                            float velo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                            float velo_diffY = inBody.SpeedY - outBody.SpeedY;
+
+                                            velo_diffX *= visc_scalar;
+                                            velo_diffY *= visc_scalar;
+
+                                            outBody.ForceX += velo_diffX;
+                                            outBody.ForceY += velo_diffY;
+                                            //outBody.ForceX -= ForceX * multi;
+                                            //outBody.ForceY -= ForceY * multi;
+
+                                            //outBody.SpeedX += dV * vecX * friction;
+                                            //outBody.SpeedY += dV * vecY * friction;
+                                        }
 
 
-                                        //TotMass = M1 * M2;
-                                        //// Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
-                                        //Force = TotMass / (Dist + eps);
-                                        //ForceX = Force * DistX / DistSqrt;
-                                        //ForceY = Force * DistY / DistSqrt;
-
-                                        //outBody.ForceX -= ForceX * factor;
-                                        //outBody.ForceY -= ForceY * factor;
-
-
-                                        float visc_scalar = outBody.Mass * visc_Laplace * 0.8f * 1 / 40;
-                                        float velo_diffX = inBody.SpeedX - outBody.SpeedX;
-                                        float velo_diffY = inBody.SpeedY - outBody.SpeedY;
-
-                                        velo_diffX *= visc_scalar;
-                                        velo_diffY *= visc_scalar;
-
-                                        outBody.ForceX += velo_diffX;
-                                        outBody.ForceY += velo_diffY;
-                                        //outBody.ForceX -= ForceX * multi;
-                                        //outBody.ForceY -= ForceY * multi;
-
-                                        //outBody.SpeedX += dV * vecX * friction;
-                                        //outBody.SpeedY += dV * vecY * friction;
                                     }
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                                     {

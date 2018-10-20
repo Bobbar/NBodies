@@ -33,7 +33,6 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.highContrastToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -55,13 +54,17 @@
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.FrameCountLabel = new System.Windows.Forms.Label();
             this.PressureLabel = new System.Windows.Forms.Label();
             this.DensityLabel = new System.Windows.Forms.Label();
             this.TotalMassLabel = new System.Windows.Forms.Label();
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.FrameCountLabel = new System.Windows.Forms.Label();
+            this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -117,7 +120,7 @@
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.antiAliasingToolStripMenuItem,
-            this.highContrastToolStripMenuItem});
+            this.displayToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -128,17 +131,9 @@
             this.antiAliasingToolStripMenuItem.CheckOnClick = true;
             this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
             this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
-            // 
-            // highContrastToolStripMenuItem
-            // 
-            this.highContrastToolStripMenuItem.CheckOnClick = true;
-            this.highContrastToolStripMenuItem.Name = "highContrastToolStripMenuItem";
-            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.highContrastToolStripMenuItem.Text = "High Contrast";
-            this.highContrastToolStripMenuItem.CheckedChanged += new System.EventHandler(this.highContrastToolStripMenuItem_CheckedChanged);
             // 
             // toolsToolStripMenuItem
             // 
@@ -402,6 +397,17 @@
             this.panel1.Size = new System.Drawing.Size(1353, 637);
             this.panel1.TabIndex = 0;
             // 
+            // FrameCountLabel
+            // 
+            this.FrameCountLabel.AutoSize = true;
+            this.FrameCountLabel.BackColor = System.Drawing.Color.Black;
+            this.FrameCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.FrameCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.FrameCountLabel.Name = "FrameCountLabel";
+            this.FrameCountLabel.Size = new System.Drawing.Size(38, 13);
+            this.FrameCountLabel.TabIndex = 6;
+            this.FrameCountLabel.Text = "Count:";
+            // 
             // PressureLabel
             // 
             this.PressureLabel.AutoSize = true;
@@ -471,16 +477,41 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // FrameCountLabel
+            // displayToolStripMenuItem
             // 
-            this.FrameCountLabel.AutoSize = true;
-            this.FrameCountLabel.BackColor = System.Drawing.Color.Black;
-            this.FrameCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.FrameCountLabel.Location = new System.Drawing.Point(3, 27);
-            this.FrameCountLabel.Name = "FrameCountLabel";
-            this.FrameCountLabel.Size = new System.Drawing.Size(38, 13);
-            this.FrameCountLabel.TabIndex = 6;
-            this.FrameCountLabel.Text = "Count:";
+            this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.normalToolStripMenuItem,
+            this.pressuresToolStripMenuItem,
+            this.highContrastToolStripMenuItem1});
+            this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
+            this.displayToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.displayToolStripMenuItem.Text = "Display";
+            // 
+            // normalToolStripMenuItem
+            // 
+            this.normalToolStripMenuItem.Checked = true;
+            this.normalToolStripMenuItem.CheckOnClick = true;
+            this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.normalToolStripMenuItem.Text = "Normal";
+            this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
+            // 
+            // pressuresToolStripMenuItem
+            // 
+            this.pressuresToolStripMenuItem.CheckOnClick = true;
+            this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.pressuresToolStripMenuItem.Text = "Pressures";
+            this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
+            // 
+            // highContrastToolStripMenuItem1
+            // 
+            this.highContrastToolStripMenuItem1.CheckOnClick = true;
+            this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.highContrastToolStripMenuItem1.Text = "High Contrast";
+            this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
             // DisplayForm
             // 
@@ -540,13 +571,16 @@
         private System.Windows.Forms.ToolStripMenuItem saveStateToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadStateToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem antiAliasingToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
         private System.Windows.Forms.Label FPSLabel;
         private System.Windows.Forms.Label BodyCountLabel;
         private System.Windows.Forms.Label TotalMassLabel;
         private System.Windows.Forms.Label PressureLabel;
         private System.Windows.Forms.Label DensityLabel;
         private System.Windows.Forms.Label FrameCountLabel;
+        private System.Windows.Forms.ToolStripMenuItem displayToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem normalToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
     }
 }
 

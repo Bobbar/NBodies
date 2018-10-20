@@ -56,15 +56,22 @@ namespace NBodies
 
         private int MouseOverUID(PointF mouseLoc)
         {
-            for (int i = 0; i < BodyManager.Bodies.Length; i++)
+            try
             {
-                var body = BodyManager.Bodies[i];
-                var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).Y - body.LocY, 2));
-
-                if (dist < body.Size * 0.5f)
+                for (int i = 0; i < BodyManager.Bodies.Length; i++)
                 {
-                    return body.UID;
+                    var body = BodyManager.Bodies[i];
+                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).Y - body.LocY, 2));
+
+                    if (dist < body.Size * 0.5f)
+                    {
+                        return body.UID;
+                    }
                 }
+            }
+            catch (IndexOutOfRangeException)
+            {
+                // Fail silently
             }
 
             return -1;
@@ -259,11 +266,6 @@ namespace NBodies
             Renderer.AntiAliasing = antiAliasingToolStripMenuItem.Checked;
         }
 
-        private void highContrastToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
-        {
-            Renderer.HighContrast = highContrastToolStripMenuItem.Checked;
-        }
-
         private void TimeStepUpDown_ValueChanged(object sender, EventArgs e)
         {
             MainLoop.TimeStep = (float)TimeStepUpDown.Value;
@@ -276,6 +278,33 @@ namespace NBodies
             BodyManager.ClearBodies();
 
             MainLoop.Resume();
+        }
+
+        private void normalToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Renderer.DisplayStyle = DisplayStyle.Normal;
+
+            normalToolStripMenuItem.Checked = true;
+            pressuresToolStripMenuItem.Checked = false;
+            highContrastToolStripMenuItem1.Checked = false;
+        }
+
+        private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Renderer.DisplayStyle = DisplayStyle.Pressures;
+
+            normalToolStripMenuItem.Checked = false;
+            pressuresToolStripMenuItem.Checked = true;
+            highContrastToolStripMenuItem1.Checked = false;
+        }
+
+        private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            Renderer.DisplayStyle = DisplayStyle.HighContrast;
+
+            normalToolStripMenuItem.Checked = false;
+            pressuresToolStripMenuItem.Checked = false;
+            highContrastToolStripMenuItem1.Checked = true;
         }
     }
 }

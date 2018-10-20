@@ -114,9 +114,9 @@ namespace NBodies.Rendering
                             // CUDA calc.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
 
-                            BodyManager.CullInvisible();
-
                             ProcessRoche(ref BodyManager.Bodies);
+
+                            BodyManager.CullInvisible();
 
                             _frameCount++;
 
@@ -180,11 +180,16 @@ namespace NBodies.Rendering
             int len = bodies.Length;
             for (int b = 0; b < len; b++)
             {
+                var body = bodies[b];
                 if (bodies[b].Visible == 1 && bodies[b].InRoche == 1)
                 {
                     if (bodies[b].Size > 1)
                     {
                         bodies[b].Visible = 0;
+
+                        if (float.IsNaN(bodies[b].LocX))
+                            Debugger.Break();
+
                         FractureBody(bodies[b]);
                     }
                 }
@@ -215,10 +220,20 @@ namespace NBodies.Rendering
                 float fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 float fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
+                int its = 0;
+
                 while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(fLocX, fLocY)))
                 {
+                    if (its > 100)
+                    {
+                        ellipse.Size += 0.5f;
+                        its = 0;
+                    }
+
                     fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+
+                    its++;
                 }
 
                 BodyManager.Add(fLocX, fLocY, body.SpeedX, body.SpeedY, newSize, newMass, Color.FromArgb(body.Color), 1);

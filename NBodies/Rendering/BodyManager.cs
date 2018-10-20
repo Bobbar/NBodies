@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using NBodies.Physics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -112,24 +114,17 @@ namespace NBodies.Rendering
 
         public static void CalcDensityAndPressure()
         {
-            //float kSize = 0.8f;
-            //float kSizeSq = kSize * kSize;
-            //double kernRad9 = Math.Pow((double)kSize, 9);
-            //double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
             float GAS_K = 0.1f;
             float FLOAT_EPSILON = 1.192092896e-07f;
-            float DENSITY_OFFSET = 100f;
-            //float DENSITY_OFFSET = 100f;
 
-            for (int a = 0; a < Bodies.Length; a++)
+            Parallel.For(0, Bodies.Length, a =>
             {
+
                 var bodyA = Bodies[a];
 
                 bodyA.Density = 0;
                 bodyA.Pressure = 0;
-               // bodyA.Neighbors = 0;
-
-               
+                // bodyA.Neighbors = 0;
 
                 if (bodyA.InRoche == 1)
                 {
@@ -142,49 +137,27 @@ namespace NBodies.Rendering
                             float DistX = bodyB.LocX - bodyA.LocX;
                             float DistY = bodyB.LocY - bodyA.LocY;
                             float Dist = (DistX * DistX) + (DistY * DistY);
-                            float DistSq = (float)Math.Sqrt(Dist);//Dist * Dist;
+                            float DistSq = (float)Math.Sqrt(Dist);
 
-                            //if (DistSq > 0)
-                            //{
+                            float ksize = bodyA.Size;
+                            float ksizeSq = ksize * ksize;
+                            // is this distance close enough for kernal/neighbor calcs?
+                            if (Dist < ksize)
+                            {
 
-
-                                float testKsize = bodyA.Size;
-                                float testKsizeSq = testKsize * testKsize;
-                                // is this distance close enough for kernal/neighbor calcs?
-                                if (Dist < testKsize)
+                                if (Dist < FLOAT_EPSILON)
                                 {
-
-                                    //bodyA.Neighbors++;
-
-                                    
-                                    if (Dist < FLOAT_EPSILON)
-                                    {
-                                        Dist = FLOAT_EPSILON;
-                                    }
-
-                                    // It's a neighbor; accumulate density.
-                                    float diff = testKsizeSq - Dist;
-                                    double kernRad9 = Math.Pow((double)testKsize, 9.0);
-                                    double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
-
-                                    double fac = factor * diff * diff * diff;
-                                    bodyA.Density += (float)(bodyA.Mass * fac);
+                                    Dist = FLOAT_EPSILON;
                                 }
 
+                                // It's a neighbor; accumulate density.
+                                float diff = ksizeSq - Dist;
+                                double kernRad9 = Math.Pow((double)ksize, 9.0);
+                                double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
 
-                                //if (DistSq < kSizeSq)
-                                //{
-                                //    if (DistSq < FLOAT_EPSILON)
-                                //    {
-                                //        DistSq = FLOAT_EPSILON;
-                                //    }
-
-                                //    // It's a neighbor; accumulate density.
-                                //    float diff = kSizeSq - DistSq;
-                                //    double fac = factor * diff * diff * diff;
-                                //    bodyA.Density += (float)(bodyA.Mass * fac);
-                                //}
-                            //}
+                                double fac = factor * diff * diff * diff;
+                                bodyA.Density += (float)(bodyA.Mass * fac);
+                            }
                         }
                     }
 
@@ -195,9 +168,7 @@ namespace NBodies.Rendering
 
                     Bodies[a] = bodyA;
                 }
-            }
-
-
+            });
         }
 
 

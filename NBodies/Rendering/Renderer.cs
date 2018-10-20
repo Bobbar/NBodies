@@ -12,32 +12,34 @@ namespace NBodies.Rendering
         public static bool AntiAliasing = true;
         public static bool Trails = false;
 
-        public static bool HighContrast
-        {
-            get
-            {
-                return _highContrast;
-            }
+        public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
-            set
-            {
-                _highContrast = value;
+        //public static bool HighContrast
+        //{
+        //    get
+        //    {
+        //        return _highContrast;
+        //    }
 
-                if (_highContrast)
-                {
-                    _spaceColor = Color.White;
-                }
-                else
-                {
-                    _spaceColor = Color.Black;
-                }
-            }
-        }
+        //    set
+        //    {
+        //        _highContrast = value;
+
+        //        if (_highContrast)
+        //        {
+        //            _spaceColor = Color.White;
+        //        }
+        //        else
+        //        {
+        //            _spaceColor = Color.Black;
+        //        }
+        //    }
+        //}
 
         private static BufferedGraphicsContext _currentContext;
         private static BufferedGraphics _buffer;
 
-        private static bool _highContrast = false;
+        //private static bool _highContrast = false;
         private static PictureBox _imageControl;
         private static float _prevScale = 0;
 
@@ -106,17 +108,38 @@ namespace NBodies.Rendering
 
                 if (body.Visible == 1)
                 {
-                    using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
+                    Color bodyColor = new Color();
+
+                    switch (DisplayStyle)
+                    {
+                        case DisplayStyle.Normal:
+                            bodyColor = Color.FromArgb(body.Color);
+                            _spaceColor = Color.Black;
+                            break;
+
+                        case DisplayStyle.Pressures:
+                            //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
+                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 30, (int)body.Pressure);
+
+                            _spaceColor = Color.Black;
+                            break;
+
+                        case DisplayStyle.HighContrast:
+                            bodyColor = Color.Black;
+                            _spaceColor = Color.White;
+                            break;
+                    }
+
+                    //using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
+                   // var pressCol = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
+                    using (var bodyBrush = new SolidBrush(bodyColor))
                     {
                         if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
                         {
                             var followOffset = BodyManager.FollowBodyLoc();
                             RenderVars.ViewportOffset.X = -followOffset.X;
                             RenderVars.ViewportOffset.Y = -followOffset.Y;
-                            //var textLoc = new PointF((float)(body.LocX - followOffset.X), (float)(body.LocY - followOffset.Y));
-                            //// var textLoc = new PointF((float)(body.LocX + RenderVars.ScaleOffset.X + (body.Size * 0.5f)), (float)(body.LocY + RenderVars.ScaleOffset.Y - (body.Size * 0.5f)));
 
-                            //OverLays.Add(new OverlayGraphic(OverlayGraphicType.Text, textLoc, string.Format("SpeedX: {0}", body.SpeedX)));
                         }
 
                         var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
@@ -137,6 +160,46 @@ namespace NBodies.Rendering
             if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                 _buffer.Render();
         }
+
+        private static Color GetVariableColor(Color startColor, Color endColor, int maxValue, long currentValue, bool translucent = false)
+        {
+            const int maxIntensity = 255;
+            int intensity = 0;
+            long r1, g1, b1, r2, g2, b2;
+
+            r1 = startColor.R;
+            g1 = startColor.G;
+            b1 = startColor.B;
+
+            r2 = endColor.R;
+            g2 = endColor.G;
+            b2 = endColor.B;
+
+            if (currentValue > 0)
+            {
+                // Compute the intensity of the end color.
+                intensity = (int)(maxIntensity / (maxValue / (float)currentValue));
+            }
+
+            // Clamp the intensity within the max.
+            if (intensity > maxIntensity) intensity = maxIntensity;
+
+            // Calculate the new RGB values from the intensity.
+            int newR, newG, newB;
+            newR = (int)(r1 + (r2 - r1) / (float)maxIntensity * intensity);
+            newG = (int)(g1 + (g2 - g1) / (float)maxIntensity * intensity);
+            newB = (int)(b1 + (b2 - b1) / (float)maxIntensity * intensity);
+
+            if (translucent)
+            {
+                return Color.FromArgb(220, newR, newG, newB);
+            }
+            else
+            {
+                return Color.FromArgb(newR, newG, newB);
+            }
+        }
+
 
         private static void DrawOverlays()
         {
