@@ -112,68 +112,6 @@ namespace NBodies.Rendering
             return UIDIndex[uid];
         }
 
-        public static void CalcDensityAndPressure()
-        {
-            float GAS_K = 0.1f;
-            float FLOAT_EPSILON = 1.192092896e-07f;
-
-            Parallel.For(0, Bodies.Length, a =>
-            {
-
-                var bodyA = Bodies[a];
-
-                bodyA.Density = 0;
-                bodyA.Pressure = 0;
-                // bodyA.Neighbors = 0;
-
-                if (bodyA.InRoche == 1)
-                {
-                    for (int b = 0; b < Bodies.Length; b++)
-                    {
-                        var bodyB = Bodies[b];
-
-                        if (bodyB.InRoche == 1)
-                        {
-                            float DistX = bodyB.LocX - bodyA.LocX;
-                            float DistY = bodyB.LocY - bodyA.LocY;
-                            float Dist = (DistX * DistX) + (DistY * DistY);
-                            float DistSq = (float)Math.Sqrt(Dist);
-
-                            float ksize = bodyA.Size;
-                            float ksizeSq = ksize * ksize;
-                            // is this distance close enough for kernal/neighbor calcs?
-                            if (Dist < ksize)
-                            {
-
-                                if (Dist < FLOAT_EPSILON)
-                                {
-                                    Dist = FLOAT_EPSILON;
-                                }
-
-                                // It's a neighbor; accumulate density.
-                                float diff = ksizeSq - Dist;
-                                double kernRad9 = Math.Pow((double)ksize, 9.0);
-                                double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
-
-                                double fac = factor * diff * diff * diff;
-                                bodyA.Density += (float)(bodyA.Mass * fac);
-                            }
-                        }
-                    }
-
-                    if (bodyA.Density > 0)
-                    {
-                        bodyA.Pressure = GAS_K * (bodyA.Density);// - DENSITY_OFFSET);
-                    }
-
-                    Bodies[a] = bodyA;
-                }
-            });
-        }
-
-
-
-
         public static void Move(int index, PointF location)
         {
             Bodies[index].LocX = location.X;

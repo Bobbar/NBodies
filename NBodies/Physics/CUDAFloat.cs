@@ -55,41 +55,90 @@ namespace NBodies.Physics
             var outBodies = new Body[bodies.Length];
             var gpuOutBodies = gpu.Allocate(outBodies);
 
+
             gpu.CopyToDevice(bodies, gpuInBodies);
-            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+            gpu.Launch(blocks, threadsPerBlock).CalcPressureAndDensity(gpuInBodies, gpuOutBodies);
             gpu.Synchronize();
 
-            //  gpu.CopyFromDevice(gpuOutBodies, bodies);
-
-            //// The alternate path skips a bunch of reallocations and memory dumps
-            //// and just flip-flops the In and Out pointers and launches the collision kernel.
-            //// I'm not sure if the alt. path is completely stable, but it's definitely faster...
-            //if (!altCalcPath)
-            //{
-            //    gpu.CopyFromDevice(gpuOutBodies, bodies);
-            //    gpu.FreeAll();
-            //    gpuInBodies = gpu.Allocate(bodies);
-            //    outBodies = new Body[bodies.Length];
-            //    gpuOutBodies = gpu.Allocate(outBodies);
-            //    gpu.CopyToDevice(bodies, gpuInBodies);
-            //    gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
-            //    gpu.Synchronize();
-            //    gpu.CopyFromDevice(gpuOutBodies, bodies);
-            //}
-            //else
-            //{
-            //    gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
-            //    gpu.Synchronize();
-            //    gpu.CopyFromDevice(gpuInBodies, bodies);
-            //}
-
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuOutBodies, gpuInBodies, timestep);
             gpu.Synchronize();
-            gpu.CopyFromDevice(gpuInBodies, bodies);
+ 
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
+            gpu.Synchronize();
+            gpu.CopyFromDevice(gpuOutBodies, bodies);
+
+            //gpu.CopyToDevice(bodies, gpuInBodies);
+            //gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+            //gpu.Synchronize();
+
+
+            //gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
+            //gpu.Synchronize();
+            //gpu.CopyFromDevice(gpuInBodies, bodies);
 
 
             gpu.FreeAll();
         }
+
+        [Cudafy]
+        public static void CalcPressureAndDensity(GThread gpThread, Body[] inBodies, Body[] outBodies)
+        {
+            float GAS_K = 0.1f;
+            float FLOAT_EPSILON = 1.192092896e-07f;
+
+            int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+
+            var bodyA = inBodies[a];
+
+            bodyA.Density = 0;
+            bodyA.Pressure = 0;
+            // bodyA.Neighbors = 0;
+
+            if (bodyA.InRoche == 1)
+            {
+                for (int b = 0; b < inBodies.Length; b++)
+                {
+                    var bodyB = inBodies[b];
+
+                    if (bodyB.InRoche == 1)
+                    {
+                        float DistX = bodyB.LocX - bodyA.LocX;
+                        float DistY = bodyB.LocY - bodyA.LocY;
+                        float Dist = (DistX * DistX) + (DistY * DistY);
+                        float DistSq = (float)Math.Sqrt(Dist);
+
+                        float ksize = bodyA.Size;
+                        float ksizeSq = ksize * ksize;
+                        // is this distance close enough for kernal/neighbor calcs?
+                        if (Dist < ksize)
+                        {
+
+                            if (Dist < FLOAT_EPSILON)
+                            {
+                                Dist = FLOAT_EPSILON;
+                            }
+
+                            // It's a neighbor; accumulate density.
+                            float diff = ksizeSq - Dist;
+                            double kernRad9 = Math.Pow((double)ksize, 9.0);
+                            double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+
+                            double fac = factor * diff * diff * diff;
+                            bodyA.Density += (float)(bodyA.Mass * fac);
+                        }
+                    }
+                }
+
+                if (bodyA.Density > 0)
+                {
+                    bodyA.Pressure = GAS_K * (bodyA.Density);// - DENSITY_OFFSET);
+                }
+            }
+
+            outBodies[a] = bodyA;
+
+        }
+
 
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
@@ -315,24 +364,13 @@ namespace NBodies.Physics
                                     {
                                         if (outBody.Density > 0 && inBody.Density > 0)
                                         {
-                                            // Lame Spring force attempt. It's literally a reversed gravity force that's increased with a multiplier.
-                                            float eps = 0.1f;
-                                            int multi = 40;
-                                            float friction = 0.5f;
-
+                                            float viscosity = 1.5f;
                                             float m_kernelSize = outBody.Size;
-                                            float m_kernelSize3 = m_kernelSize * m_kernelSize * m_kernelSize;
-                                            //float DistSq = (float)Math.Sqrt(Dist);
 
                                             if (Dist < 0.002f)
                                                 Dist = 0.002f;
 
-
-                                            float diff = (outBody.Size - Dist);
-                                            float factor = (diff * diff) / Dist;
-
-
-
+                                            // Pressure and density force.
                                             double kernelRad6 = Math.Pow((m_kernelSize / 3.0f), 6);
                                             float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
                                             float m_kernelSizeSq = m_kernelSize * m_kernelSize;
@@ -350,23 +388,12 @@ namespace NBodies.Physics
                                             outBody.ForceX += gradX;
                                             outBody.ForceY += gradY;
 
-
+                                            // Viscosity
                                             float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
                                             float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
                                             float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
+                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1 / 40;
 
-
-                                            //TotMass = M1 * M2;
-                                            //// Force = TotMass / (DistSqrt * DistSqrt + eps * eps);
-                                            //Force = TotMass / (Dist + eps);
-                                            //ForceX = Force * DistX / DistSqrt;
-                                            //ForceY = Force * DistY / DistSqrt;
-
-                                            //outBody.ForceX -= ForceX * factor;
-                                            //outBody.ForceY -= ForceY * factor;
-
-
-                                            float visc_scalar = outBody.Mass * visc_Laplace * 1.5f * 1 / 40;
                                             float velo_diffX = inBody.SpeedX - outBody.SpeedX;
                                             float velo_diffY = inBody.SpeedY - outBody.SpeedY;
 
@@ -375,14 +402,7 @@ namespace NBodies.Physics
 
                                             outBody.ForceX += velo_diffX;
                                             outBody.ForceY += velo_diffY;
-                                            //outBody.ForceX -= ForceX * multi;
-                                            //outBody.ForceY -= ForceY * multi;
-
-                                            //outBody.SpeedX += dV * vecX * friction;
-                                            //outBody.SpeedY += dV * vecY * friction;
                                         }
-
-
                                     }
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                                     {

@@ -110,7 +110,7 @@ namespace NBodies.Rendering
                         {
                             // BodyManager.CullInvisible();
 
-                            BodyManager.CalcDensityAndPressure();
+                           // BodyManager.CalcDensityAndPressure();
                             // CUDA calc.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
 

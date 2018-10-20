@@ -119,7 +119,7 @@ namespace NBodies.Rendering
 
                         case DisplayStyle.Pressures:
                             //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
-                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 30, (int)body.Pressure);
+                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 10, (int)body.Pressure, true);
 
                             _spaceColor = Color.Black;
                             break;
@@ -192,7 +192,7 @@ namespace NBodies.Rendering
 
             if (translucent)
             {
-                return Color.FromArgb(220, newR, newG, newB);
+                return Color.FromArgb(150, newR, newG, newB);
             }
             else
             {
