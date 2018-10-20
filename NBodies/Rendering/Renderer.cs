@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System;
+using System.Linq;
 
 namespace NBodies.Rendering
 {
@@ -71,7 +72,7 @@ namespace NBodies.Rendering
         public static void DrawBodies(Body[] bodies)
         {
             var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
-
+            float maxPressure = 0.0f;
             CheckScale();
 
             if (!Trails) _buffer.Graphics.Clear(_spaceColor);
@@ -84,6 +85,9 @@ namespace NBodies.Rendering
             {
                 _buffer.Graphics.SmoothingMode = SmoothingMode.None;
             }
+
+            if (DisplayStyle == DisplayStyle.Pressures)
+                maxPressure = GetMaxPressure(bodies);
 
             for (int i = 0; i < bodies.Length; i++)
             {
@@ -110,7 +114,7 @@ namespace NBodies.Rendering
 
                         case DisplayStyle.Pressures:
                             //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
-                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 10, (int)body.Pressure, true);
+                            bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
 
                             _spaceColor = Color.Black;
                             break;
@@ -164,10 +168,10 @@ namespace NBodies.Rendering
                 _buffer.Render();
         }
 
-        private static Color GetVariableColor(Color startColor, Color endColor, int maxValue, long currentValue, bool translucent = false)
+        private static Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
         {
             const int maxIntensity = 255;
-            int intensity = 0;
+            float intensity = 0;
             long r1, g1, b1, r2, g2, b2;
 
             r1 = startColor.R;
@@ -181,7 +185,7 @@ namespace NBodies.Rendering
             if (currentValue > 0)
             {
                 // Compute the intensity of the end color.
-                intensity = (int)(maxIntensity / (maxValue / (float)currentValue));
+                intensity = (maxIntensity / (maxValue / currentValue));
             }
 
             // Clamp the intensity within the max.
@@ -201,6 +205,20 @@ namespace NBodies.Rendering
             {
                 return Color.FromArgb(newR, newG, newB);
             }
+        }
+
+        private static float GetMaxPressure(Body[] bodies)
+        {
+            var blist = bodies.ToList();
+            float maxPress = 0.0f;
+
+            blist.ForEach(b =>
+            {
+                if (b.Pressure > maxPress)
+                    maxPress = b.Pressure;
+            });
+
+            return maxPress;
         }
 
 

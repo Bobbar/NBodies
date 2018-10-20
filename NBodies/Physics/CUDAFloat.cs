@@ -58,7 +58,8 @@ namespace NBodies.Physics
             gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuOutBodies, gpuInBodies, timestep);
             gpu.Synchronize();
 
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep);
+            float viscosity = 1.5f;
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep, viscosity);
             gpu.Synchronize();
             gpu.CopyFromDevice(gpuOutBodies, bodies);
 
@@ -202,7 +203,7 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt, float viscosity)
         {
             float vecY;
             float vecX;
@@ -239,7 +240,6 @@ namespace NBodies.Physics
             float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
             float m_kernelSizeSq = m_kernelSize * m_kernelSize;
 
-            float viscosity = 1.5f;
             float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
             float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
 
