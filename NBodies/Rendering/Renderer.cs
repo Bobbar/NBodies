@@ -26,7 +26,7 @@ namespace NBodies.Rendering
         private static float _prevScale = 0;
 
         private static Pen _blackHoleStroke = new Pen(Color.Red);
-        private static Pen _forcePen = new Pen(Color.White, 0.5f);
+        private static Pen _forcePen = new Pen(Color.White, 0.2f);
         private static Color _spaceColor = Color.Black;
 
         private static Size _prevSize = new Size();
@@ -38,6 +38,7 @@ namespace NBodies.Rendering
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
+            _forcePen.EndCap = LineCap.ArrowAnchor;
         }
 
         private static void InitGfx()
@@ -93,7 +94,6 @@ namespace NBodies.Rendering
             {
 
                 var body = bodies[i];
-                var bodySize = (float)body.Size;
 
                 if (body.Visible == 1)
                 {
@@ -114,7 +114,8 @@ namespace NBodies.Rendering
 
                         case DisplayStyle.Pressures:
                             //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
-                            bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
+                            //bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
+                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 10, body.Pressure, true);
 
                             _spaceColor = Color.Black;
                             break;
@@ -125,43 +126,42 @@ namespace NBodies.Rendering
                             break;
                     }
 
-                    //using (var bodyBrush = new SolidBrush(_highContrast ? Color.Black : Color.FromArgb(body.Color)))
-                    // var pressCol = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
                     using (var bodyBrush = new SolidBrush(bodyColor))
                     {
                         var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                         //Draw body.
-                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
-
-
-                        if (BodyManager.FollowSelected && body.UID == BodyManager.FollowBodyUID)
-                        {
-                            var followOffset = BodyManager.FollowBodyLoc();
-                            RenderVars.ViewportOffset.X = -followOffset.X;
-                            RenderVars.ViewportOffset.Y = -followOffset.Y;
-
-
-                            if (ShowForce)
-                            {
-                                var f = new PointF(body.ForceX, body.ForceY);
-                                //  var f = new PointF(body.SpeedX, body.SpeedY);
-                                var bloc = new PointF(body.LocX, body.LocY);
-                                //  f = f.Multi(0.1f);
-                                var floc = bloc.Add(f);
-                                _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
-                            }
-
-                        }
+                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
 
                         // If blackhole, stroke with red circle.
                         if (body.BlackHole == 1)
                         {
-                            _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, bodySize, bodySize);
+                            _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
                         }
                     }
                 }
             }
+
+            if (BodyManager.FollowSelected)
+            {
+                var body = BodyManager.FollowBody();
+                var followOffset = BodyManager.FollowBodyLoc();
+                RenderVars.ViewportOffset.X = -followOffset.X;
+                RenderVars.ViewportOffset.Y = -followOffset.Y;
+
+
+                if (ShowForce)
+                {
+                    var f = new PointF(body.ForceX, body.ForceY);
+                    //  var f = new PointF(body.SpeedX, body.SpeedY);
+                    var bloc = new PointF(body.LocX, body.LocY);
+                    f = f.Multi(0.1f);
+                    var floc = bloc.Add(f);
+                    _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                }
+
+            }
+
 
             //    DrawOverlays();
             if (!_imageControl.IsDisposed && !_imageControl.Disposing)
@@ -199,7 +199,7 @@ namespace NBodies.Rendering
 
             if (translucent)
             {
-                return Color.FromArgb(150, newR, newG, newB);
+                return Color.FromArgb(200, newR, newG, newB);
             }
             else
             {

@@ -40,7 +40,7 @@ namespace NBodies.Rendering
 
         public static PointF Multi(this PointF pointA, float value)
         {
-            return new PointF(pointA.X * value, pointA.Y + value);
+            return new PointF(pointA.X * value, pointA.Y * value);
         }
 
         public static float Distance(this PointF pointA, PointF pointB)

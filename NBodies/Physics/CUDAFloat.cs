@@ -58,7 +58,7 @@ namespace NBodies.Physics
             gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuOutBodies, gpuInBodies, timestep);
             gpu.Synchronize();
 
-            float viscosity = 1.5f;
+            float viscosity = 5.5f;
             gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep, viscosity);
             gpu.Synchronize();
             gpu.CopyFromDevice(gpuOutBodies, bodies);
