@@ -21,7 +21,7 @@ namespace NBodies.Physics
             var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
             var cudaModule = CudafyModule.TryDeserialize(modulePath);
 
-            if (cudaModule == null)// || !cudaModule.TryVerifyChecksums())
+            if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 // throw new Exception("Module file not found!  Path: " + modulePath);
 
@@ -29,11 +29,49 @@ namespace NBodies.Physics
                 cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
                 cudaModule.Serialize(modulePath);
             }
+            
+            // Add missing 'struct' strings to generated code.
+            cudaModule.SourceCode = FixCode(cudaModule.SourceCode);
+            cudaModule.Serialize(modulePath);
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
 
             Console.WriteLine(gpu.GetDeviceProperties().ToString());
+        }
+
+        /// <summary>
+        /// Fixes missing 'struct' strings for each Body function and variable declaration.
+        /// </summary>
+        private string FixCode(string code)
+        {
+            string newcode = string.Copy(code);
+
+            bool missingDec = true;
+
+            int lastIdx = 0;
+
+            while (missingDec)
+            {
+                int idx = newcode.IndexOf("Body", lastIdx);
+
+                if (idx == -1)
+                {
+                    missingDec = false;
+                    continue;
+                }
+
+                lastIdx = idx + 1;
+
+                string sub = newcode.Substring(idx - 7, 7);
+
+                if (!sub.Contains("struct"))
+                {
+                    newcode = newcode.Insert(idx, "struct ");
+                }
+            }
+
+            return newcode;
         }
 
         public void CalcMovement(ref Body[] bodies, float timestep)
@@ -103,7 +141,7 @@ namespace NBodies.Physics
                         float DistX = bodyB.LocX - bodyA.LocX;
                         float DistY = bodyB.LocY - bodyA.LocY;
                         float Dist = (DistX * DistX) + (DistY * DistY);
-                      
+
                         // is this distance close enough for kernal/neighbor calcs?
                         if (Dist <= ksize)
                         {
