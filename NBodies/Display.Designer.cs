@@ -38,6 +38,7 @@
             this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.showFollowBodyForceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -51,7 +52,6 @@
             this.AddBodiesButton = new System.Windows.Forms.Button();
             this.RemoveAllButton = new System.Windows.Forms.Button();
             this.TimeStepUpDown = new System.Windows.Forms.NumericUpDown();
-            this.FpsLimitTextBox = new System.Windows.Forms.TextBox();
             this.MassTextBox = new System.Windows.Forms.TextBox();
             this.FlagsTextBox = new System.Windows.Forms.TextBox();
             this.UpdateButton = new System.Windows.Forms.Button();
@@ -66,7 +66,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.showFollowBodyForceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -74,6 +74,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
@@ -135,7 +136,7 @@
             this.antiAliasingToolStripMenuItem.CheckOnClick = true;
             this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
             this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
             this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
             // 
@@ -145,7 +146,7 @@
             this.clipToViewportToolStripMenuItem.CheckOnClick = true;
             this.clipToViewportToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.clipToViewportToolStripMenuItem.Name = "clipToViewportToolStripMenuItem";
-            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
             // 
@@ -156,7 +157,7 @@
             this.pressuresToolStripMenuItem,
             this.highContrastToolStripMenuItem1});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
-            this.displayToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.displayToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
             this.displayToolStripMenuItem.Text = "Display";
             // 
             // normalToolStripMenuItem
@@ -184,6 +185,14 @@
             this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
+            // 
+            // showFollowBodyForceToolStripMenuItem
+            // 
+            this.showFollowBodyForceToolStripMenuItem.CheckOnClick = true;
+            this.showFollowBodyForceToolStripMenuItem.Name = "showFollowBodyForceToolStripMenuItem";
+            this.showFollowBodyForceToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.showFollowBodyForceToolStripMenuItem.Text = "Show Follow Body Force";
+            this.showFollowBodyForceToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showFollowBodyForceToolStripMenuItem_CheckedChanged);
             // 
             // toolsToolStripMenuItem
             // 
@@ -215,8 +224,8 @@
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 109F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 97F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 68F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 98F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 48F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 90F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 89F));
@@ -236,13 +245,13 @@
             this.tableLayoutPanel3.Controls.Add(this.AddBodiesButton, 0, 0);
             this.tableLayoutPanel3.Controls.Add(this.RemoveAllButton, 1, 0);
             this.tableLayoutPanel3.Controls.Add(this.TimeStepUpDown, 3, 0);
-            this.tableLayoutPanel3.Controls.Add(this.FpsLimitTextBox, 4, 0);
             this.tableLayoutPanel3.Controls.Add(this.MassTextBox, 8, 0);
             this.tableLayoutPanel3.Controls.Add(this.FlagsTextBox, 9, 0);
             this.tableLayoutPanel3.Controls.Add(this.UpdateButton, 10, 0);
             this.tableLayoutPanel3.Controls.Add(this.TotalMassButton, 11, 0);
             this.tableLayoutPanel3.Controls.Add(this.TrailsCheckBox, 12, 0);
             this.tableLayoutPanel3.Controls.Add(this.PauseButton, 2, 0);
+            this.tableLayoutPanel3.Controls.Add(this.PressureScaleUpDown, 4, 0);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel3.Location = new System.Drawing.Point(3, 25);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
@@ -300,9 +309,9 @@
             // VeloXTextBox
             // 
             this.VeloXTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.VeloXTextBox.Location = new System.Drawing.Point(412, 3);
+            this.VeloXTextBox.Location = new System.Drawing.Point(420, 3);
             this.VeloXTextBox.Name = "VeloXTextBox";
-            this.VeloXTextBox.Size = new System.Drawing.Size(92, 20);
+            this.VeloXTextBox.Size = new System.Drawing.Size(84, 20);
             this.VeloXTextBox.TabIndex = 5;
             // 
             // AddBodiesButton
@@ -356,14 +365,6 @@
             0,
             262144});
             this.TimeStepUpDown.ValueChanged += new System.EventHandler(this.TimeStepUpDown_ValueChanged);
-            // 
-            // FpsLimitTextBox
-            // 
-            this.FpsLimitTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.FpsLimitTextBox.Location = new System.Drawing.Point(372, 3);
-            this.FpsLimitTextBox.Name = "FpsLimitTextBox";
-            this.FpsLimitTextBox.Size = new System.Drawing.Size(34, 20);
-            this.FpsLimitTextBox.TabIndex = 4;
             // 
             // MassTextBox
             // 
@@ -528,13 +529,29 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // showFollowBodyForceToolStripMenuItem
+            // PressureScaleUpDown
             // 
-            this.showFollowBodyForceToolStripMenuItem.CheckOnClick = true;
-            this.showFollowBodyForceToolStripMenuItem.Name = "showFollowBodyForceToolStripMenuItem";
-            this.showFollowBodyForceToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
-            this.showFollowBodyForceToolStripMenuItem.Text = "Show Follow Body Force";
-            this.showFollowBodyForceToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showFollowBodyForceToolStripMenuItem_CheckedChanged);
+            this.PressureScaleUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PressureScaleUpDown.Location = new System.Drawing.Point(372, 3);
+            this.PressureScaleUpDown.Maximum = new decimal(new int[] {
+            2000,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.Name = "PressureScaleUpDown";
+            this.PressureScaleUpDown.Size = new System.Drawing.Size(42, 20);
+            this.PressureScaleUpDown.TabIndex = 18;
+            this.PressureScaleUpDown.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.ValueChanged += new System.EventHandler(this.PressureScaleUpDown_ValueChanged);
             // 
             // DisplayForm
             // 
@@ -561,6 +578,7 @@
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -581,7 +599,6 @@
         private System.Windows.Forms.Button AddBodiesButton;
         private System.Windows.Forms.Button RemoveAllButton;
         private System.Windows.Forms.NumericUpDown TimeStepUpDown;
-        private System.Windows.Forms.TextBox FpsLimitTextBox;
         private System.Windows.Forms.TextBox MassTextBox;
         private System.Windows.Forms.TextBox FlagsTextBox;
         private System.Windows.Forms.Button UpdateButton;
@@ -606,6 +623,7 @@
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showFollowBodyForceToolStripMenuItem;
+        private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
     }
 }
 

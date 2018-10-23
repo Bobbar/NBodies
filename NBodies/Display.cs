@@ -32,6 +32,7 @@ namespace NBodies
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
+            PressureScaleUpDown.Value = (decimal)Renderer.PressureScaleMax;
 
             RenderBox.DoubleBuffered(true);
         }
@@ -212,9 +213,10 @@ namespace NBodies
 
                 var mUid = MouseOverUID(e.Location);
 
-                if (_selectedUid == -1 && mUid != -1)
+                //if (_selectedUid == -1 && mUid != -1)
+                if (mUid != -1)
                 {
-                        if (!_ctrlDown && _shiftDown) _bodyMovin = true;
+                    if (!_ctrlDown && _shiftDown) _bodyMovin = true;
                         _selectedUid = mUid;
 
                         SetSelectedInfo();
@@ -346,6 +348,11 @@ namespace NBodies
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Mass = Convert.ToSingle(MassTextBox.Text.Trim());
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = Convert.ToInt32(FlagsTextBox.Text.Trim());
             }
+        }
+
+        private void PressureScaleUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            Renderer.PressureScaleMax = (float)PressureScaleUpDown.Value;
         }
     }
 }

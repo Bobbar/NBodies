@@ -149,16 +149,24 @@ namespace NBodies
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 float newMass;
 
-                if (bodyMass > 0)
+
+                if (StaticDensityCheckBox.Checked)
                 {
-                    newMass = bodyMass;
+                    if (bodyMass > 0)
+                    {
+                        newMass = bodyMass;
+                    }
+                    else
+                    {
+                        newMass = BodyManager.CalcMass(bodySize);
+                    }
                 }
                 else
                 {
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
-
-                BodyManager.Add(px, py, bodySize, newMass, matter.Color);
+              
+                BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
             MainLoop.Resume();

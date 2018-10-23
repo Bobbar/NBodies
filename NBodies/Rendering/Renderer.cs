@@ -16,6 +16,7 @@ namespace NBodies.Rendering
         public static bool Trails = false;
         public static bool ClipView = true;
         public static bool ShowForce = false;
+        public static float PressureScaleMax = 200;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
@@ -114,8 +115,8 @@ namespace NBodies.Rendering
 
                         case DisplayStyle.Pressures:
                             //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
-                            //bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
-                            bodyColor = GetVariableColor(Color.Blue, Color.Red, 10, body.Pressure, true);
+                           // bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
+                           bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.Pressure, true);
 
                             _spaceColor = Color.Black;
                             break;
