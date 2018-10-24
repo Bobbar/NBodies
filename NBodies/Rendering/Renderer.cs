@@ -74,7 +74,6 @@ namespace NBodies.Rendering
         public static void DrawBodies(Body[] bodies)
         {
             var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
-            float maxPressure = 0.0f;
             CheckScale();
 
             if (!Trails) _buffer.Graphics.Clear(_spaceColor);
@@ -88,9 +87,7 @@ namespace NBodies.Rendering
                 _buffer.Graphics.SmoothingMode = SmoothingMode.None;
             }
 
-            if (DisplayStyle == DisplayStyle.Pressures)
-                maxPressure = GetMaxPressure(bodies);
-
+           
             for (int i = 0; i < bodies.Length; i++)
             {
 

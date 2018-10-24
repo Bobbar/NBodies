@@ -82,6 +82,7 @@ namespace NBodies.Physics
             // This makes sure that the dataset fills each block completely,
             // otherwise we run into problems when a block encounters a dataset
             // that doesn't have a work item for each thread.
+
             if (bodies.Length < blocks * threadsPerBlock)
                 Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
 
@@ -90,95 +91,35 @@ namespace NBodies.Physics
             var gpuOutBodies = gpu.Allocate(outBodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
-            gpu.Launch(blocks, threadsPerBlock).CalcPressureAndDensity(gpuInBodies, gpuOutBodies);
-            gpu.Synchronize();
-
-            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuOutBodies, gpuInBodies, timestep);
-            gpu.Synchronize();
+            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+            // gpu.Synchronize();
 
             float viscosity = 7.5f;
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuInBodies, gpuOutBodies, timestep, viscosity);
-            gpu.Synchronize();
-            gpu.CopyFromDevice(gpuOutBodies, bodies);
-
-            //gpu.CopyToDevice(bodies, gpuInBodies);
-            //gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-            //gpu.Synchronize();
-
-            //gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep);
-            //gpu.Synchronize();
-            //gpu.CopyFromDevice(gpuInBodies, bodies);
+            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity);
+            // gpu.Synchronize();
+            gpu.CopyFromDevice(gpuInBodies, bodies);
 
             gpu.FreeAll();
         }
 
-        [Cudafy]
-        public static void CalcPressureAndDensity(GThread gpThread, Body[] inBodies, Body[] outBodies)
-        {
-            float GAS_K = 0.8f;// 0.1f
-            float FLOAT_EPSILON = 1.192092896e-07f;
-
-            int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
-
-            var bodyA = inBodies[a];
-
-            bodyA.Density = 0;
-            bodyA.Pressure = 0;
-
-            float ksize = bodyA.Size;
-            float ksizeSq = ksize * ksize;
-            double kernRad9 = Math.Pow((double)ksize, 9.0);
-            double factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
-
-            if (bodyA.InRoche == 1 && bodyA.BlackHole != 1)
-            {
-                for (int b = 0; b < inBodies.Length; b++)
-                {
-                    var bodyB = inBodies[b];
-
-                    if (bodyB.InRoche == 1 && bodyB.BlackHole != 1)
-                    {
-                        float DistX = bodyB.LocX - bodyA.LocX;
-                        float DistY = bodyB.LocY - bodyA.LocY;
-                        float Dist = (DistX * DistX) + (DistY * DistY);
-                        //float DistSq = (float)Math.Sqrt(Dist);
-
-                        // is this distance close enough for kernal/neighbor calcs?
-                        if (Dist <= ksize)
-                        {
-                            if (Dist < FLOAT_EPSILON)
-                            {
-                                Dist = FLOAT_EPSILON;
-                            }
-
-                            // It's a neighbor; accumulate density.
-                            float diff = ksizeSq - Dist;
-                            double fac = factor * diff * diff * diff;
-                            bodyA.Density += (float)(bodyA.Mass * fac);
-                        }
-                    }
-                }
-
-                if (bodyA.Density > 0)
-                {
-                    bodyA.Pressure = GAS_K * (bodyA.Density);// - DENSITY_OFFSET);
-                }
-            }
-
-            outBodies[a] = bodyA;
-        }
 
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
         {
-            // int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+            float GAS_K = 0.8f;// 0.1f
+            float FLOAT_EPSILON = 1.192092896e-07f;
+
+            float ksize = 0;
+            float ksizeSq = 0;
+            double kernRad9 = 0;
+            double factor = 0;
 
             float totMass;
             float force;
             float distX;
             float distY;
+            float dist;
             float distSqrt;
-            float epsilon = 1.2f;
 
             int gti = gpThread.get_global_id(0);
             int ti = gpThread.get_local_id(0);
@@ -192,6 +133,9 @@ namespace NBodies.Physics
             body.ForceX = 0;
             body.ForceY = 0;
 
+            body.Density = 0;
+            body.Pressure = 0;
+
             var bodyCache = gpThread.AllocateShared<Body>("bodyCache", threadsPerBlock);
 
             for (int jb = 0; jb < nb; jb++)
@@ -204,39 +148,57 @@ namespace NBodies.Physics
                 {
                     Body iBody = bodyCache[j];
 
+                    distX = iBody.LocX - body.LocX;
+                    distY = iBody.LocY - body.LocY;
+                    dist = (distX * distX) + (distY * distY);
+                    distSqrt = (float)Math.Sqrt(dist);
+
                     if (iBody.UID != body.UID)
                     {
-                        distX = iBody.LocX - body.LocX;
-                        distY = iBody.LocY - body.LocY;
-                        distSqrt = (float)Math.Sqrt(((distX * distX) + (distY * distY)));
-
-                        //if (distSqrt > 0f)
-                        //{
-                        //float touchDist = (iBody.Size * 0.5f) + (body.Size + 0.5f);
-                        //if (distSqrt < 0.2f)
-                        //    distSqrt = 0.2f;
-                        //if (distSqrt < touchDist)
-                        //{
-                        //    distSqrt = touchDist;
-                        //}
-
                         if (distSqrt > 0f)
                         {
                             totMass = iBody.Mass * body.Mass;
                             force = totMass / (distSqrt * distSqrt + 0.2f);
 
-                            //force = totMass / (distSqrt * distSqrt + epsilon * epsilon);
-
                             body.ForceTot += force;
                             body.ForceX += force * distX / distSqrt;
                             body.ForceY += force * distY / distSqrt;
+                        }
+                    }
 
+                    if (iBody.InRoche == 1 && iBody.BlackHole != 1)
+                    {
+                        // Only calc kernel sizes and factor when we have too.
+                        if (ksize != body.Size)
+                        {
+                            ksize = body.Size;
+                            ksizeSq = ksize * ksize;
+                            kernRad9 = Math.Pow((double)ksize, 9.0);
+                            factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+                        }
 
+                        // is this distance close enough for kernal / neighbor calcs ?
+                        if (dist <= ksize)
+                        {
+                            if (dist < FLOAT_EPSILON)
+                            {
+                                dist = FLOAT_EPSILON;
+                            }
+
+                            //  It's a neighbor; accumulate density.
+                            float diff = ksizeSq - dist;
+                            double fac = factor * diff * diff * diff;
+                            body.Density += (float)(body.Mass * fac);
                         }
                     }
                 }
 
                 gpThread.SyncThreads();
+            }
+
+            if (body.Density > 0)
+            {
+                body.Pressure = GAS_K * (body.Density);// - DENSITY_OFFSET);
             }
 
             if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
@@ -294,7 +256,7 @@ namespace NBodies.Physics
             float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
             float m_kernelSizeSq = m_kernelSize * m_kernelSize;
 
-            float visc_kSize3 = (float)Math.Pow(outBody.Size, 3);
+            float visc_kSize3 = (float)Math.Pow(m_kernelSize, 3);
             float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
 
             for (int jb = 0; jb < nb; jb++)
@@ -335,51 +297,7 @@ namespace NBodies.Physics
                                     U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
                                     dV = U1 - V1;
 
-                                    if (outBody.InRoche == 0 & inBody.InRoche == 1)
-                                    {
-                                        if (outBody.Mass > inBody.Mass)
-                                        {
-                                            outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                        }
-                                        else if (outBody.Mass == inBody.Mass)
-                                        {
-                                            if (outBody.UID > inBody.UID)
-                                            {
-                                                outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                            }
-                                            else
-                                            {
-                                                outBody.Visible = 0;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            outBody.Visible = 0;
-                                        }
-                                    }
-                                    else if (outBody.InRoche == 0 & inBody.InRoche == 0)
-                                    {
-                                        if (outBody.Mass > inBody.Mass)
-                                        {
-                                            outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                        }
-                                        else if (outBody.Mass == inBody.Mass)
-                                        {
-                                            if (outBody.UID > inBody.UID)
-                                            {
-                                                outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                            }
-                                            else
-                                            {
-                                                outBody.Visible = 0;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            outBody.Visible = 0;
-                                        }
-                                    }
-                                    else if (outBody.InRoche == 1 & inBody.InRoche == 1)
+                                    if (outBody.InRoche == 1 & inBody.InRoche == 1)
                                     {
                                         if (outBody.Density > 0 && inBody.Density > 0)
                                         {
@@ -388,10 +306,6 @@ namespace NBodies.Physics
                                                 Dist = FLOAT_EPSILON;
                                                 DistSqrt = (float)Math.Sqrt(Dist);
                                             }
-
-
-                                            //if (DistSqrt < 0.002f)
-                                            //    DistSqrt = 0.002f;
 
                                             // Pressure and density force.
                                             float scalar = inBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * inBody.Density);
@@ -408,15 +322,10 @@ namespace NBodies.Physics
 
                                             // Viscosity
                                             float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
-
-                                            //float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (outBody.Size - Dist);
                                             float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 2.0f / 40.0f;
-
 
                                             float velo_diffX = outBody.SpeedX - inBody.SpeedX;
                                             float velo_diffY = outBody.SpeedY - inBody.SpeedY;
-                                            //float velo_diffX = inBody.SpeedX - outBody.SpeedX;
-                                            //float velo_diffY = inBody.SpeedY - outBody.SpeedY;
 
                                             velo_diffX *= visc_scalar;
                                             velo_diffY *= visc_scalar;
@@ -428,6 +337,28 @@ namespace NBodies.Physics
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                                     {
                                         outBody.Visible = 0;
+                                    }
+                                    else
+                                    {
+                                        if (outBody.Mass > inBody.Mass)
+                                        {
+                                            outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
+                                        }
+                                        else if (outBody.Mass == inBody.Mass)
+                                        {
+                                            if (outBody.UID > inBody.UID)
+                                            {
+                                                outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
+                                            }
+                                            else
+                                            {
+                                                outBody.Visible = 0;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            outBody.Visible = 0;
+                                        }
                                     }
                                 }
                                 else if (outBody.Mass > inBody.Mass)
@@ -446,6 +377,7 @@ namespace NBodies.Physics
                         }
                     }
                 }
+
                 gpThread.SyncThreads();
             }
 

@@ -13,6 +13,8 @@ namespace NBodies.Rendering
 {
     public static class MainLoop
     {
+        public static bool DrawBodies = true;
+
         public static int TargetFPS = 60;
         public static float TimeStep
         {
@@ -110,7 +112,7 @@ namespace NBodies.Rendering
                         {
                             // BodyManager.CullInvisible();
 
-                           // BodyManager.CalcDensityAndPressure();
+                            // BodyManager.CalcDensityAndPressure();
                             // CUDA calc.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
 
@@ -133,7 +135,8 @@ namespace NBodies.Rendering
                     }
 
                     // Draw all the bodies.
-                    Renderer.DrawBodies(BodyManager.Bodies);
+                    if (DrawBodies)
+                        Renderer.DrawBodies(BodyManager.Bodies);
 
 
                     // FPS Limiter
