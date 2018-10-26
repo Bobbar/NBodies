@@ -17,6 +17,7 @@ namespace NBodies
         private PointF _mouseMoveDown = new PointF();
         private Timer _bodySizeTimer = new Timer();
         private Timer _UIUpdateTimer = new Timer();
+        private bool _paused = false;
 
         public DisplayForm()
         {
@@ -74,6 +75,17 @@ namespace NBodies
 
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
+            PauseButton.Checked = MainLoop.PausePhysics;
+
+            if (PauseButton.Checked)
+            {
+                PauseButton.BackColor = Color.DarkRed;
+            }
+            else
+            {
+                PauseButton.BackColor = Color.DarkGreen;
+            }
+
             FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
             FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
@@ -175,16 +187,16 @@ namespace NBodies
             {
                 case Keys.ShiftKey:
                     _shiftDown = false;
-                    MainLoop.Resume();
+                    if (!_paused) MainLoop.Resume();
                     break;
 
                 case Keys.ControlKey:
                     _ctrlDown = false;
-                    MainLoop.Resume();
+                    if (!_paused) MainLoop.Resume();
                     break;
             }
 
-            
+
         }
 
         private void RenderBox_MouseDown(object sender, MouseEventArgs e)
@@ -217,14 +229,14 @@ namespace NBodies
                 if (mUid != -1)
                 {
                     if (!_ctrlDown && _shiftDown) _bodyMovin = true;
-                        _selectedUid = mUid;
+                    _selectedUid = mUid;
 
-                        SetSelectedInfo();
-                        
-                        if (_ctrlDown)
-                        {
-                            BodyManager.FollowBodyUID = _selectedUid;
-                        }
+                    SetSelectedInfo();
+
+                    if (_ctrlDown)
+                    {
+                        BodyManager.FollowBodyUID = _selectedUid;
+                    }
                 }
                 else if (_selectedUid != -1 && mUid == -1)
                 {
@@ -237,13 +249,13 @@ namespace NBodies
         {
             _bodySizeTimer.Stop();
             _mouseDown = false;
-          //  _selectedUid = -1;
+            //  _selectedUid = -1;
             _bodyMovin = false;
 
             if (_mouseId != -1)
             {
                 _mouseId = -1;
-                MainLoop.Resume();
+                if (!_paused) MainLoop.Resume();
             }
 
             if (_ctrlDown && BodyManager.FollowBodyUID != -1)
@@ -270,6 +282,7 @@ namespace NBodies
         private void PauseButton_CheckedChanged(object sender, EventArgs e)
         {
             MainLoop.PausePhysics = PauseButton.Checked;
+            _paused = MainLoop.PausePhysics;
         }
 
         private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
@@ -303,7 +316,7 @@ namespace NBodies
 
             BodyManager.ClearBodies();
 
-            MainLoop.Resume();
+            if (!_paused) MainLoop.Resume();
         }
 
         private void normalToolStripMenuItem_Click(object sender, EventArgs e)

@@ -58,6 +58,7 @@
             this.TotalMassButton = new System.Windows.Forms.Button();
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
+            this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
             this.FrameCountLabel = new System.Windows.Forms.Label();
             this.PressureLabel = new System.Windows.Forms.Label();
@@ -66,15 +67,14 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
@@ -422,6 +422,7 @@
             this.PauseButton.Appearance = System.Windows.Forms.Appearance.Button;
             this.PauseButton.AutoSize = true;
             this.PauseButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PauseButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.PauseButton.Location = new System.Drawing.Point(207, 3);
             this.PauseButton.Name = "PauseButton";
             this.PauseButton.Size = new System.Drawing.Size(91, 23);
@@ -430,6 +431,30 @@
             this.PauseButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.PauseButton.UseVisualStyleBackColor = true;
             this.PauseButton.CheckedChanged += new System.EventHandler(this.PauseButton_CheckedChanged);
+            // 
+            // PressureScaleUpDown
+            // 
+            this.PressureScaleUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PressureScaleUpDown.Location = new System.Drawing.Point(372, 3);
+            this.PressureScaleUpDown.Maximum = new decimal(new int[] {
+            2000,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.Name = "PressureScaleUpDown";
+            this.PressureScaleUpDown.Size = new System.Drawing.Size(42, 20);
+            this.PressureScaleUpDown.TabIndex = 18;
+            this.PressureScaleUpDown.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.PressureScaleUpDown.ValueChanged += new System.EventHandler(this.PressureScaleUpDown_ValueChanged);
             // 
             // panel1
             // 
@@ -529,30 +554,6 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // PressureScaleUpDown
-            // 
-            this.PressureScaleUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.PressureScaleUpDown.Location = new System.Drawing.Point(372, 3);
-            this.PressureScaleUpDown.Maximum = new decimal(new int[] {
-            2000,
-            0,
-            0,
-            0});
-            this.PressureScaleUpDown.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.PressureScaleUpDown.Name = "PressureScaleUpDown";
-            this.PressureScaleUpDown.Size = new System.Drawing.Size(42, 20);
-            this.PressureScaleUpDown.TabIndex = 18;
-            this.PressureScaleUpDown.Value = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.PressureScaleUpDown.ValueChanged += new System.EventHandler(this.PressureScaleUpDown_ValueChanged);
-            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -575,10 +576,10 @@
             this.tableLayoutPanel3.ResumeLayout(false);
             this.tableLayoutPanel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).EndInit();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).EndInit();
             this.ResumeLayout(false);
 
         }

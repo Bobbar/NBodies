@@ -76,6 +76,8 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
+            float viscosity = 7.5f;
+
             var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
 
             // Zero pad the body array to fit the calculated number of blocks:
@@ -87,16 +89,13 @@ namespace NBodies.Physics
                 Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
 
             var gpuInBodies = gpu.Allocate(bodies);
-            var outBodies = new Body[bodies.Length];
-            var gpuOutBodies = gpu.Allocate(outBodies);
+            var gpuOutBodies = gpu.Allocate(bodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
-            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-            // gpu.Synchronize();
 
-            float viscosity = 7.5f;
+            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
             gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity);
-            // gpu.Synchronize();
+
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
             gpu.FreeAll();

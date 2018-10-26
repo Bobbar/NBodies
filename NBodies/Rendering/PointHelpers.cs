@@ -43,14 +43,29 @@ namespace NBodies.Rendering
             return new PointF(pointA.X * value, pointA.Y * value);
         }
 
-        public static float Distance(this PointF pointA, PointF pointB)
+        public static float DistanceSqrt(this PointF pointA, PointF pointB)
         {
             return (float)Math.Sqrt(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));
         }
 
+        public static float Distance(this PointF pointA, PointF pointB)
+        {
+            return (float)(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));
+        }
+
+        public static float Length(this PointF pointA)
+        {
+            return (float)(Math.Pow(pointA.X, 2) + Math.Pow(pointA.Y, 2));
+        }
+
+        public static float LengthSqrt(this PointF pointA)
+        {
+            return (float)Math.Sqrt((Math.Pow(pointA.X, 2) + Math.Pow(pointA.Y, 2)));
+        }
+
         public static bool PointInsideCircle(PointF circleLoc, float circleRadius, PointF testPoint)
         {
-            var dist = testPoint.Distance(circleLoc);
+            var dist = testPoint.DistanceSqrt(circleLoc);
 
             if (dist <= circleRadius)
                 return true;

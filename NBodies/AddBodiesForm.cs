@@ -26,10 +26,9 @@ namespace NBodies
         private float CircleV(float rx, float ry, float centerMass)
         {
             float r2 = (float)Math.Sqrt(rx * rx + ry * ry);
-            float numerator = (float)(0.000000977 * 1000000.0 * centerMass);
+            float numerator = (float)(0.977 * centerMass);
             return (float)Math.Sqrt(numerator / r2);
         }
-
 
         private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, float centerMass)
         {
@@ -70,11 +69,15 @@ namespace NBodies
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
                 }
 
-                float magV = CircleV(px, py, centerMass);
-                float absAngle = (float)Math.Atan(Math.Abs(py / px));
+
+                var offsetP = new PointF(px, py);
+                offsetP = offsetP.Subtract(ellipse.Location);
+
+                float magV = CircleV(offsetP.X, offsetP.Y, centerMass);
+                float absAngle = (float)Math.Atan(Math.Abs(offsetP.Y / offsetP.X));
                 float thetaV = (float)Math.PI * 0.5f - absAngle;
-                float vx = -1 * (float)(Math.Sign(py) * Math.Cos(thetaV) * magV);
-                float vy = (float)(Math.Sign(px) * Math.Sin(thetaV) * magV);
+                float vx = -1 * (float)(Math.Sign(offsetP.Y) * Math.Cos(thetaV) * magV);
+                float vy = (float)(Math.Sign(offsetP.X) * Math.Sin(thetaV) * magV);
 
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 float newMass = 1;
@@ -165,7 +168,7 @@ namespace NBodies
                 {
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
-              
+
                 BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
