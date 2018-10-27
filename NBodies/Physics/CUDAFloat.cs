@@ -198,6 +198,7 @@ namespace NBodies.Physics
             if (body.Density > 0)
             {
                 body.Pressure = GAS_K * (body.Density);// - DENSITY_OFFSET);
+
             }
 
             if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
@@ -306,8 +307,7 @@ namespace NBodies.Physics
                                                 DistSqrt = (float)Math.Sqrt(Dist);
                                             }
 
-                                            // Pressure and density force.
-                                            float scalar = inBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * inBody.Density);
+                                            float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
                                             float gradFactor = -m_factorPress * 3.0f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
 
                                             float gradX = (DistX * gradFactor);
@@ -321,16 +321,34 @@ namespace NBodies.Physics
 
                                             // Viscosity
                                             float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
-                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 2.0f / 40.0f;
+                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
 
-                                            float velo_diffX = outBody.SpeedX - inBody.SpeedX;
-                                            float velo_diffY = outBody.SpeedY - inBody.SpeedY;
+                                            // TODO: Share this with shear.      vvv
+                                            float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
+                                            float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
 
-                                            velo_diffX *= visc_scalar;
-                                            velo_diffY *= visc_scalar;
+                                            viscVelo_diffX *= visc_scalar;
+                                            viscVelo_diffY *= visc_scalar;
 
-                                            outBody.ForceX -= velo_diffX;
-                                            outBody.ForceY -= velo_diffY;
+                                            outBody.ForceX -= viscVelo_diffX;
+                                            outBody.ForceY -= viscVelo_diffY;
+
+
+                                            //Shear
+                                            float shear = 0.9f;//0.1f;
+                                            float normX = DistX / DistSqrt;
+                                            float normY = DistY / DistSqrt;
+
+                                            // TODO: Share this with viscosity.  ^^^
+                                            float velo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                            float velo_diffY = inBody.SpeedY - outBody.SpeedY;
+
+                                            float tanVelx = velo_diffX - (((velo_diffX - normX) + (velo_diffY * normY)) * normX);
+                                            float tanVely = velo_diffY - (((velo_diffX - normX) + (velo_diffY * normY)) * normY);
+
+                                            outBody.ForceX += shear * tanVelx;
+                                            outBody.ForceY += shear * tanVely;
+
                                         }
                                     }
                                     else if (outBody.InRoche == 1 & inBody.InRoche == 0)
