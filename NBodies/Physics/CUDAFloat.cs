@@ -334,20 +334,20 @@ namespace NBodies.Physics
                                             outBody.ForceY -= viscVelo_diffY;
 
 
-                                            //Shear
-                                            float shear = 0.9f;//0.1f;
-                                            float normX = DistX / DistSqrt;
-                                            float normY = DistY / DistSqrt;
+                                            ////Shear
+                                            //float shear = 0.1f;//0.1f;
+                                            //float normX = DistX / DistSqrt;
+                                            //float normY = DistY / DistSqrt;
 
-                                            // TODO: Share this with viscosity.  ^^^
-                                            float velo_diffX = inBody.SpeedX - outBody.SpeedX;
-                                            float velo_diffY = inBody.SpeedY - outBody.SpeedY;
+                                            //// TODO: Share this with viscosity.  ^^^
+                                            //float velo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                            //float velo_diffY = inBody.SpeedY - outBody.SpeedY;
 
-                                            float tanVelx = velo_diffX - (((velo_diffX - normX) + (velo_diffY * normY)) * normX);
-                                            float tanVely = velo_diffY - (((velo_diffX - normX) + (velo_diffY * normY)) * normY);
+                                            //float tanVelx = velo_diffX - (((velo_diffX - normX) + (velo_diffY * normY)) * normX);
+                                            //float tanVely = velo_diffY - (((velo_diffX - normX) + (velo_diffY * normY)) * normY);
 
-                                            outBody.ForceX += shear * tanVelx;
-                                            outBody.ForceY += shear * tanVely;
+                                            //outBody.ForceX += shear * tanVelx;
+                                            //outBody.ForceY += shear * tanVely;
 
                                         }
                                     }
@@ -415,10 +415,10 @@ namespace NBodies.Physics
 
             bodyA.SpeedX += dV * vecX;
             bodyA.SpeedY += dV * vecY;
-            float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size, 2));
-            float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size, 2));
+            float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size * 0.5f, 2));
+            float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size * 0.5f, 2));
             float a = a1 + a2;
-            bodyA.Size = (float)Math.Sqrt(a / Math.PI);
+            bodyA.Size = (float)Math.Sqrt(a / Math.PI) * 2;
             bodyA.Mass += bodyB.Mass;
 
             return bodyA;

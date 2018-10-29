@@ -274,14 +274,22 @@ namespace NBodies.Rendering
             return Add(b);
         }
 
+        public static float AggregateSpeed(this Body body)
+        {
+            return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
+        }
+
         public static float CalcMass(float size)
         {
-            return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
+            //return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
+            return (float)(Math.PI * (float)(Math.Pow(size / 2.0f, 2))) * Matter.Density;
+
         }
 
         public static float CalcMass(float size, float density)
         {
-            return (float)Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * density;
+            //return (float)Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * density;
+            return (float)(Math.PI * (Math.Pow(size / 2.0f, 2))) * density;
         }
 
         public static float CalcRadius(float area)

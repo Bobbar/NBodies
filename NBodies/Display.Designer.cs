@@ -67,6 +67,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.SpeedLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -462,6 +463,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.SpeedLabel);
             this.panel1.Controls.Add(this.FrameCountLabel);
             this.panel1.Controls.Add(this.PressureLabel);
             this.panel1.Controls.Add(this.DensityLabel);
@@ -554,6 +556,17 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // SpeedLabel
+            // 
+            this.SpeedLabel.AutoSize = true;
+            this.SpeedLabel.BackColor = System.Drawing.Color.Black;
+            this.SpeedLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.SpeedLabel.Location = new System.Drawing.Point(2, 146);
+            this.SpeedLabel.Name = "SpeedLabel";
+            this.SpeedLabel.Size = new System.Drawing.Size(44, 13);
+            this.SpeedLabel.TabIndex = 7;
+            this.SpeedLabel.Text = "Speed: ";
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -625,6 +638,7 @@
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showFollowBodyForceToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
+        private System.Windows.Forms.Label SpeedLabel;
     }
 }
 

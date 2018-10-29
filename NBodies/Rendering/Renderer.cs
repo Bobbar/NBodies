@@ -16,7 +16,7 @@ namespace NBodies.Rendering
         public static bool Trails = false;
         public static bool ClipView = true;
         public static bool ShowForce = false;
-        public static float PressureScaleMax = 200;
+        public static float PressureScaleMax = 150;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 

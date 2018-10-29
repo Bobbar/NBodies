@@ -94,6 +94,8 @@ namespace NBodies
             DensityLabel.Text = string.Format("Density: {0}", BodyManager.FollowBody().Density);
             PressureLabel.Text = string.Format("Press: {0}", BodyManager.FollowBody().Pressure);
 
+            SpeedLabel.Text = string.Format("Agg. Speed: {0}", BodyManager.FollowBody().AggregateSpeed());
+
 
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {

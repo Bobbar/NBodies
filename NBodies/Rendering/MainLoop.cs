@@ -1,13 +1,11 @@
-﻿using System;
+﻿using NBodies.Physics;
+using NBodies.Shapes;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Diagnostics;
 using System.Drawing;
-using NBodies.Physics;
-using NBodies.Shapes;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -16,6 +14,7 @@ namespace NBodies.Rendering
         public static bool DrawBodies = true;
 
         public static int TargetFPS = 60;
+
         public static float TimeStep
         {
             get
@@ -28,6 +27,7 @@ namespace NBodies.Rendering
                 _timeStep = value;
             }
         }
+
         public static int MinFrameTime = 0;
 
         public static bool PausePhysics
@@ -93,7 +93,7 @@ namespace NBodies.Rendering
         /// </summary>
         public static void Resume()
         {
-            // Make sure the wait handle has been set 
+            // Make sure the wait handle has been set
             // and set the skip bool to false to allow physics to be calculated again.
             _pausePhysics.Set();
             _skipPhysics = false;
@@ -105,7 +105,6 @@ namespace NBodies.Rendering
             {
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
-
                     if (!_skipPhysics)
                     {
                         if (BodyManager.Bodies.Length > 2)
@@ -121,7 +120,6 @@ namespace NBodies.Rendering
                             BodyManager.CullInvisible();
 
                             _frameCount++;
-
                         }
                     }
 
@@ -138,17 +136,14 @@ namespace NBodies.Rendering
                     if (DrawBodies)
                         Renderer.DrawBodies(BodyManager.Bodies);
 
-
                     // FPS Limiter
                     DelayFrame();
-
                 }
             }
             catch (OperationCanceledException)
             {
                 // Fail silently
             }
-
         }
 
         private static void DelayFrame()
@@ -201,46 +196,76 @@ namespace NBodies.Rendering
 
         public static void FractureBody(Body body)
         {
-            float newSize;
+            float minSize = 1.0f;
             float newMass;
-            int divisor;
             float prevMass;
-            float area;
 
-            area = (float)(Math.PI * Math.Pow(body.Size / 2f, 2));
-            divisor = (int)area;
+            bool flipflop = true;
 
-            if (divisor <= 1) divisor = 2;
+            float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
+
+            newMass = BodyManager.CalcMass(1, density);
+
+            //int num = (int)(body.Mass / nMass);
+
             prevMass = body.Mass;
-            area = area / divisor;
-            newSize = 1;//BodyManager.CalcRadius(area);
-            newMass = prevMass / divisor;
 
             var ellipse = new Ellipse(new PointF(body.LocX, body.LocY), body.Size * 0.5f);
 
-            for (int f = 0; f < divisor; f++)
+            bool done = false;
+            float stepSize = minSize;
+
+            //float startXpos = ellipse.Location.X - (ellipse.Size / 2) + stepSize;
+            //float startYpos = ellipse.Location.Y - (ellipse.Size / 2) + stepSize;
+
+            float startXpos = ellipse.Location.X - ellipse.Size;
+            float startYpos = ellipse.Location.Y - ellipse.Size;
+
+            float Xpos = startXpos;
+            float Ypos = startYpos;
+
+            List<PointF> newPoints = new List<PointF>();
+
+            while (!done)
             {
-                float fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                float fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                var testPoint = new PointF(Xpos, Ypos);
 
-                int its = 0;
-
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(fLocX, fLocY)))
+                if (PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
-                    if (its > 100)
-                    {
-                        ellipse.Size += 0.5f;
-                        its = 0;
-                    }
-
-                    fLocX = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
-                    fLocY = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-
-                    its++;
+                    newPoints.Add(testPoint);
                 }
 
-                BodyManager.Add(fLocX, fLocY, body.SpeedX, body.SpeedY, newSize, newMass, Color.FromArgb(body.Color), 1);
+                Xpos += stepSize;
 
+                if (Xpos > ellipse.Location.X + (ellipse.Size + minSize))
+                {
+                    if (flipflop)
+                    {
+                        Xpos = startXpos + (minSize / 2);
+                        flipflop = false;
+                    }
+                    else
+                    {
+                        Xpos = startXpos;
+                        flipflop = true;
+                    }
+
+                    Ypos += stepSize - 0.15f;
+                }
+
+                if (Ypos > ellipse.Location.Y + (ellipse.Size) + minSize)
+                {
+                    done = true;
+                }
+            }
+
+            // newMass = prevMass / newPoints.Count;
+
+            //  float postMass = newMass * newPoints.Count;
+
+            foreach (var pnt in newPoints)
+            {
+                BodyManager.Add(pnt.X, pnt.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1);
             }
         }
     }
