@@ -60,6 +60,8 @@ namespace NBodies.Physics
         public float Density;
 
         public float Pressure;
+
+        public int HasCollision;
     }
    
 }

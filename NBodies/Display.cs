@@ -91,10 +91,12 @@ namespace NBodies
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
 
-            DensityLabel.Text = string.Format("Density: {0}", BodyManager.FollowBody().Density);
-            PressureLabel.Text = string.Format("Press: {0}", BodyManager.FollowBody().Pressure);
 
-            SpeedLabel.Text = string.Format("Agg. Speed: {0}", BodyManager.FollowBody().AggregateSpeed());
+            var fBody = BodyManager.FollowBody();
+
+            DensityLabel.Text = string.Format("Density: {0}", fBody.Density);
+            PressureLabel.Text = string.Format("Press: {0}", fBody.Pressure);
+            SpeedLabel.Text = string.Format("Agg. Speed: {0}", fBody.AggregateSpeed());
 
 
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
