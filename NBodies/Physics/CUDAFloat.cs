@@ -2,6 +2,7 @@
 using Cudafy.Host;
 using Cudafy.Translator;
 using System;
+using System.Diagnostics;
 
 namespace NBodies.Physics
 {
@@ -111,6 +112,8 @@ namespace NBodies.Physics
             float ksizeSq = 0;
             double kernRad9 = 0;
             double factor = 0;
+            float diff = 0;
+            double fac = 0;
 
             float totMass;
             float force;
@@ -129,6 +132,16 @@ namespace NBodies.Physics
 
             body.Density = 0;
             body.Pressure = 0;
+
+            ksize = body.Size;
+            ksizeSq = ksize * ksize;
+            kernRad9 = Math.Pow((double)ksize, 9.0);
+            factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+
+            // Calculate initial body density.
+            diff = ksizeSq - FLOAT_EPSILON;
+            fac = factor * diff * diff * diff;
+            body.Density = (float)(body.Mass * fac);
 
             int len = inBodies.Length;
 
@@ -154,47 +167,38 @@ namespace NBodies.Physics
 
                             body.ForceX += (force * distX / distSqrt);
                             body.ForceY += (force * distY / distSqrt);
-
-                            // Check if the body is within collision distance and set a flag.
-                            // This is checked in the collision kernel, and bodies that don't have
-                            // the flag set are skipped. This give a huge performance boost in most situations.
-                            if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
-                            {
-                                body.HasCollision = 1;
-                            }
-                        }
-                    }
-
-                    if (body.InRoche == 1 && iBody.InRoche == 1 && iBody.BlackHole != 1)
-                    {
-                        // Only calc kernel sizes and factor when we have too.
-                        if (ksize != body.Size)
-                        {
-                            ksize = body.Size;
-                            ksizeSq = ksize * ksize;
-                            kernRad9 = Math.Pow((double)ksize, 9.0);
-                            factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
                         }
 
-                        // is this distance close enough for kernal / neighbor calcs ?
-                        if (dist <= ksize)
+                        // Check if the body is within collision distance and set a flag.
+                        // This is checked in the collision kernel, and bodies that don't have
+                        // the flag set are skipped. This give a huge performance boost in most situations.
+                        if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
                         {
-                            if (dist < FLOAT_EPSILON)
-                            {
-                                dist = FLOAT_EPSILON;
-                            }
+                            body.HasCollision = 1;
+                        }
 
-                            //  It's a neighbor; accumulate density.
-                            float diff = ksizeSq - dist;
-                            double fac = factor * diff * diff * diff;
-                            body.Density += (float)(body.Mass * fac);
+                        // SPH Density Kernel
+                        if (body.InRoche == 1 && iBody.InRoche == 1 && iBody.BlackHole != 1)
+                        {
+                            // is this distance close enough for kernal / neighbor calcs ?
+                            if (dist <= ksize)
+                            {
+                                if (dist < FLOAT_EPSILON)
+                                {
+                                    dist = FLOAT_EPSILON;
+                                }
+
+                                //  It's a neighbor; accumulate density.
+                                diff = ksizeSq - dist;
+                                fac = factor * diff * diff * diff;
+                                body.Density += (float)(body.Mass * fac);
+                            }
                         }
                     }
                 }
             }
 
             gpThread.SyncThreads();
-
 
             if (body.Density > 0)
             {
