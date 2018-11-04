@@ -77,7 +77,7 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
-            float viscosity = 7.5f;
+            float viscosity = 5.0f;//7.5f;
 
             var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
 
@@ -105,7 +105,7 @@ namespace NBodies.Physics
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
         {
-            float GAS_K = 0.8f;// 0.1f
+            float GAS_K = 0.3f;//0.8f;// 0.1f
             float FLOAT_EPSILON = 1.192092896e-07f;
 
             float ksize = 0;
@@ -413,10 +413,15 @@ namespace NBodies.Physics
 
             bodyA.SpeedX += dV * vecX;
             bodyA.SpeedY += dV * vecY;
-            float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size * 0.5f, 2));
-            float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size * 0.5f, 2));
-            float a = a1 + a2;
-            bodyA.Size = (float)Math.Sqrt(a / Math.PI) * 2;
+
+            if (bodyA.BlackHole != 1)
+            {
+                float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size * 0.5f, 2));
+                float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size * 0.5f, 2));
+                float a = a1 + a2;
+                bodyA.Size = (float)Math.Sqrt(a / Math.PI) * 2;
+            }
+
             bodyA.Mass += bodyB.Mass;
 
             return bodyA;

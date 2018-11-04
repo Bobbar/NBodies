@@ -1,13 +1,15 @@
-﻿using NBodies.Rendering;
+﻿using NBodies.Physics;
+using NBodies.Rendering;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using NBodies.Physics;
 
 namespace NBodies.IO
 {
     public static class Serializer
     {
+        private static Stream _previousStream = new MemoryStream();
+
         public static void SaveState()
         {
             MainLoop.WaitForPause();
@@ -44,15 +46,33 @@ namespace NBodies.IO
                 {
                     using (var fStream = new FileStream(openDialog.FileName, FileMode.Open))
                     {
-                        MainLoop.Stop();
-                        Thread.Sleep(200);
-                        BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<Body[]>(fStream));
-                        MainLoop.StartLoop();
+                        _previousStream = new MemoryStream();
+
+                        fStream.CopyTo(_previousStream);
+
+                        LoadStateStream(fStream);
                     }
                 }
             }
 
             MainLoop.Resume();
+        }
+
+        public static void LoadPreviousState()
+        {
+            if (_previousStream != null && _previousStream.Length > 0)
+            {
+                LoadStateStream(_previousStream);
+            }
+        }
+
+        private static void LoadStateStream(Stream stateStream)
+        {
+            stateStream.Position = 0;
+            MainLoop.Stop();
+            Thread.Sleep(200);
+            BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<Body[]>(stateStream));
+            MainLoop.StartLoop();
         }
     }
 }

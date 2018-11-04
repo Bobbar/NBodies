@@ -118,6 +118,8 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
+                selectBody.PrintInfo();
+
             }
         }
 
@@ -297,6 +299,11 @@ namespace NBodies
         private void loadStateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadState();
+        }
+
+        private void reloadPreviousToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            NBodies.IO.Serializer.LoadPreviousState();
         }
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)

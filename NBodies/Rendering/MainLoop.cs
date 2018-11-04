@@ -109,16 +109,16 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
-                            // BodyManager.CullInvisible();
-
-                            // BodyManager.CalcDensityAndPressure();
-                            // CUDA calc.
+                            // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
 
+                            // Process and fracture new roche bodies.
                             ProcessRoche(ref BodyManager.Bodies);
 
+                            // Remove invisible bodies.
                             BodyManager.CullInvisible();
 
+                            // Increment physics frame count.
                             _frameCount++;
                         }
                     }

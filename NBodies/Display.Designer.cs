@@ -60,6 +60,7 @@
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.SpeedLabel = new System.Windows.Forms.Label();
             this.FrameCountLabel = new System.Windows.Forms.Label();
             this.PressureLabel = new System.Windows.Forms.Label();
             this.DensityLabel = new System.Windows.Forms.Label();
@@ -67,7 +68,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.SpeedLabel = new System.Windows.Forms.Label();
+            this.reloadPreviousToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -199,7 +200,8 @@
             // 
             this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.saveStateToolStripMenuItem,
-            this.loadStateToolStripMenuItem});
+            this.loadStateToolStripMenuItem,
+            this.reloadPreviousToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 18);
             this.toolsToolStripMenuItem.Text = "Tools";
@@ -207,14 +209,14 @@
             // saveStateToolStripMenuItem
             // 
             this.saveStateToolStripMenuItem.Name = "saveStateToolStripMenuItem";
-            this.saveStateToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.saveStateToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
             this.saveStateToolStripMenuItem.Text = "Save State";
             this.saveStateToolStripMenuItem.Click += new System.EventHandler(this.saveStateToolStripMenuItem_Click);
             // 
             // loadStateToolStripMenuItem
             // 
             this.loadStateToolStripMenuItem.Name = "loadStateToolStripMenuItem";
-            this.loadStateToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.loadStateToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
             this.loadStateToolStripMenuItem.Text = "Load State";
             this.loadStateToolStripMenuItem.Click += new System.EventHandler(this.loadStateToolStripMenuItem_Click);
             // 
@@ -476,6 +478,17 @@
             this.panel1.Size = new System.Drawing.Size(1353, 637);
             this.panel1.TabIndex = 0;
             // 
+            // SpeedLabel
+            // 
+            this.SpeedLabel.AutoSize = true;
+            this.SpeedLabel.BackColor = System.Drawing.Color.Black;
+            this.SpeedLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.SpeedLabel.Location = new System.Drawing.Point(2, 146);
+            this.SpeedLabel.Name = "SpeedLabel";
+            this.SpeedLabel.Size = new System.Drawing.Size(44, 13);
+            this.SpeedLabel.TabIndex = 7;
+            this.SpeedLabel.Text = "Speed: ";
+            // 
             // FrameCountLabel
             // 
             this.FrameCountLabel.AutoSize = true;
@@ -556,16 +569,12 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // SpeedLabel
+            // reloadPreviousToolStripMenuItem
             // 
-            this.SpeedLabel.AutoSize = true;
-            this.SpeedLabel.BackColor = System.Drawing.Color.Black;
-            this.SpeedLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.SpeedLabel.Location = new System.Drawing.Point(2, 146);
-            this.SpeedLabel.Name = "SpeedLabel";
-            this.SpeedLabel.Size = new System.Drawing.Size(44, 13);
-            this.SpeedLabel.TabIndex = 7;
-            this.SpeedLabel.Text = "Speed: ";
+            this.reloadPreviousToolStripMenuItem.Name = "reloadPreviousToolStripMenuItem";
+            this.reloadPreviousToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
+            this.reloadPreviousToolStripMenuItem.Text = "Reload Previous";
+            this.reloadPreviousToolStripMenuItem.Click += new System.EventHandler(this.reloadPreviousToolStripMenuItem_Click);
             // 
             // DisplayForm
             // 
@@ -639,6 +648,7 @@
         private System.Windows.Forms.ToolStripMenuItem showFollowBodyForceToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
         private System.Windows.Forms.Label SpeedLabel;
+        private System.Windows.Forms.ToolStripMenuItem reloadPreviousToolStripMenuItem;
     }
 }
 

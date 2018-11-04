@@ -182,6 +182,30 @@ namespace NBodies.Rendering
             Add(b);
         }
 
+        //public static void Add(float locX, float locY, float size, float mass, Color color, float viscosity, int blackhole = 0)
+        //{
+        //    var b = new Body();
+
+        //    b.LocX = locX;
+        //    b.LocY = locY;
+        //    b.Mass = mass;
+        //    b.Size = size;
+        //    b.Color = color.ToArgb();
+
+        //    b.SpeedX = 0;
+        //    b.SpeedY = 0;
+        //    b.ForceX = 0;
+        //    b.ForceY = 0;
+        //    b.ForceTot = 0;
+        //    b.Visible = 1;
+        //    b.InRoche = 0;
+        //    b.BlackHole = blackhole;
+        //    b.Viscosity = viscosity;
+        //    b.UID = -1;
+
+        //    Add(b);
+        //}
+
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color)
         {
             var b = new Body();
@@ -274,11 +298,7 @@ namespace NBodies.Rendering
             return Add(b);
         }
 
-        public static float AggregateSpeed(this Body body)
-        {
-            return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
-        }
-
+       
         public static float CalcMass(float size)
         {
             //return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
@@ -295,6 +315,30 @@ namespace NBodies.Rendering
         public static float CalcRadius(float area)
         {
             return (float)Math.Sqrt(area / Math.PI);
+        }
+        public static float AggregateSpeed(this Body body)
+        {
+            return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
+        }
+
+        public static void PrintInfo(this Body body)
+        {
+            string info = $@"
+Index: { Bodies.ToList().IndexOf(body) }
+UID: { body.UID }
+Mass: { body.Mass }
+Size: { body.Size }
+InRoche: { body.InRoche }
+Density: { body.Density }
+Pressure: { body.Pressure }
+HasCollision: { body.HasCollision }
+Agg. Speed: { body.AggregateSpeed() }
+Speed (X,Y): { body.SpeedX }, { body.SpeedY }
+Position (X,Y): { body.LocX }, { body.LocY }
+Force (X,Y): { body.ForceX }, { body.ForceX }
+";
+
+            Console.WriteLine(info);
         }
     }
 }
