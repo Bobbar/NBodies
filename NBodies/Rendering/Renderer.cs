@@ -121,19 +121,16 @@ namespace NBodies.Rendering
 
                              case DisplayStyle.Pressures:
                                  bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.Pressure, true);
-
                                  _spaceColor = Color.Black;
                                  break;
 
                              case DisplayStyle.Speeds:
                                  bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.AggregateSpeed(), true);
-
                                  _spaceColor = Color.Black;
                                  break;
 
                              case DisplayStyle.Forces:
-                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.ForceTot / body.Mass, true);
-
+                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, (body.ForceTot / body.Mass), true);
                                  _spaceColor = Color.Black;
                                  break;
 

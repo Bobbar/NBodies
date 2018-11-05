@@ -175,7 +175,10 @@ namespace NBodies
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
+
+                    MainLoop.WaitForPause();
                     _shiftDown = true;
+
                     break;
 
                 case Keys.ControlKey:
@@ -192,17 +195,19 @@ namespace NBodies
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
+
                     _shiftDown = false;
                     if (!_paused) MainLoop.Resume();
+
                     break;
 
                 case Keys.ControlKey:
+
                     _ctrlDown = false;
                     if (!_paused) MainLoop.Resume();
+
                     break;
             }
-
-
         }
 
         private void RenderBox_MouseDown(object sender, MouseEventArgs e)
@@ -288,7 +293,11 @@ namespace NBodies
         private void PauseButton_CheckedChanged(object sender, EventArgs e)
         {
             MainLoop.PausePhysics = PauseButton.Checked;
-            _paused = MainLoop.PausePhysics;
+        }
+
+        private void PauseButton_Click(object sender, EventArgs e)
+        {
+            _paused = PauseButton.Checked;
         }
 
         private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
@@ -337,6 +346,8 @@ namespace NBodies
             normalToolStripMenuItem.Checked = true;
             pressuresToolStripMenuItem.Checked = false;
             highContrastToolStripMenuItem1.Checked = false;
+            speedsToolStripMenuItem.Checked = false;
+            forcesToolStripMenuItem.Checked = false;
         }
 
         private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
@@ -346,6 +357,8 @@ namespace NBodies
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = true;
             highContrastToolStripMenuItem1.Checked = false;
+            speedsToolStripMenuItem.Checked = false;
+            forcesToolStripMenuItem.Checked = false;
         }
 
         private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
@@ -355,6 +368,8 @@ namespace NBodies
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = false;
             highContrastToolStripMenuItem1.Checked = true;
+            speedsToolStripMenuItem.Checked = false;
+            forcesToolStripMenuItem.Checked = false;
         }
 
         private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -401,6 +416,11 @@ namespace NBodies
             Renderer.PressureScaleMax = (float)PressureScaleUpDown.Value;
         }
 
-       
+        private void CenterOnMassButton_Click(object sender, EventArgs e)
+        {
+            var cm = BodyManager.CenterOfMass();
+
+            RenderVars.ViewportOffset = cm;
+        }
     }
 }

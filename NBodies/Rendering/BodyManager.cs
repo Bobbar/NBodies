@@ -1,11 +1,9 @@
-﻿using NBodies.Rules;
+﻿using NBodies.Physics;
+using NBodies.Rules;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using NBodies.Physics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -30,7 +28,6 @@ namespace NBodies.Rendering
                 return _totalMass;
             }
         }
-
 
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static List<Body> _bodyStore = new List<Body>();
@@ -132,6 +129,33 @@ namespace NBodies.Rendering
             }
 
             return new Body();
+        }
+
+        public static PointF CenterOfMass()
+        {
+            double totMass = 0;
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                var body = Bodies[i];
+
+                totMass += body.Mass;
+            }
+
+            double cmX = 0, cmY = 0;
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                var body = Bodies[i];
+
+                cmX += body.Mass * body.LocX;
+                cmY += body.Mass * body.LocY;
+            }
+
+            cmX = (cmX / totMass) * -1f;
+            cmY = (cmY / totMass) * -1f;
+
+            return new PointF((float)cmX, (float)cmY);
         }
 
         public static void Move(int index, PointF location)
@@ -298,12 +322,10 @@ namespace NBodies.Rendering
             return Add(b);
         }
 
-       
         public static float CalcMass(float size)
         {
             //return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
             return (float)(Math.PI * (float)(Math.Pow(size / 2.0f, 2))) * Matter.Density;
-
         }
 
         public static float CalcMass(float size, float density)
@@ -316,6 +338,7 @@ namespace NBodies.Rendering
         {
             return (float)Math.Sqrt(area / Math.PI);
         }
+
         public static float AggregateSpeed(this Body body)
         {
             return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
