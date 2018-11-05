@@ -55,11 +55,15 @@ namespace NBodies.Rendering
 
         private static Int64 _frameCount = 0;
         private static float _timeStep = 0.008f;
-        private static ManualResetEvent _pausePhysics = new ManualResetEvent(true);
+        private static ManualResetEvent _pausePhysicsWait = new ManualResetEvent(true);
+        private static ManualResetEvent _stopLoopWait = new ManualResetEvent(true);
+        private static ManualResetEvent _drawingDoneWait = new ManualResetEvent(true);
+
         private static bool _skipPhysics = false;
         private static Task _loopTask;
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
+
 
         public static void StartLoop()
         {
@@ -74,6 +78,9 @@ namespace NBodies.Rendering
         public static void Stop()
         {
             _cancelTokenSource.Cancel();
+            _stopLoopWait.Reset();
+
+            _stopLoopWait.WaitOne(2000);
         }
 
         /// <summary>
@@ -82,10 +89,10 @@ namespace NBodies.Rendering
         public static void WaitForPause()
         {
             // Reset the wait handle.
-            _pausePhysics.Reset();
+            _pausePhysicsWait.Reset();
 
             // Wait until the handle is signaled after the GPU calcs complete.
-            _pausePhysics.WaitOne(2000);
+            _pausePhysicsWait.WaitOne(2000);
         }
 
         /// <summary>
@@ -95,12 +102,20 @@ namespace NBodies.Rendering
         {
             // Make sure the wait handle has been set
             // and set the skip bool to false to allow physics to be calculated again.
-            _pausePhysics.Set();
+            _pausePhysicsWait.Set();
             _skipPhysics = false;
         }
 
-        private static void DoLoop()
+        private async static void DoLoop()
         {
+            // 1. Make a copy of the body data and pass that to the physics methods to calculate the next frame.
+            // 2. Wait for the drawing thread to finish rendering the previous frame.
+            // 3. Once the drawing thread is finished, copy the new data to the current Bodies buffer.
+            // 4. Asyncronously start drawing the current Bodies to the field, and immediately loop to start the next physics calc.
+            //
+            // This allows the rendering and the physics calcs to work at the same time. 
+            // This way we can keep the physics thread busy with the next frame while the rendering thread is busy with the current one.
+            // The net result is a higher frame rate.
             try
             {
                 while (!_cancelTokenSource.IsCancellationRequested)
@@ -109,11 +124,24 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
+                            // 1.
+                            // Copy the current bodies to another array.
+                            var bodiesCopy = new Body[BodyManager.Bodies.Length];
+                            Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
+
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, TimeStep);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
 
                             // Process and fracture new roche bodies.
-                            ProcessRoche(ref BodyManager.Bodies);
+                            ProcessRoche(ref bodiesCopy);
+
+                            // 2.
+                            // Wait for the drawing thread to complete.
+                            _drawingDoneWait.WaitOne(-1);
+
+                            // 3.
+                            // Copy the new data to the current body collection.
+                            BodyManager.Bodies = bodiesCopy;
 
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
@@ -124,17 +152,20 @@ namespace NBodies.Rendering
                     }
 
                     // If the wait handle is nonsignaled, a pause has been requested.
-                    if (!_pausePhysics.WaitOne(0))
+                    if (!_pausePhysicsWait.WaitOne(0))
                     {
                         // Set the skip flag then set the wait handle.
                         // This allows the thread which originally called the pause to continue.
                         _skipPhysics = true;
-                        _pausePhysics.Set();
+                        _pausePhysicsWait.Set();
                     }
 
-                    // Draw all the bodies.
+                    // Make sure the drawing thread is finished.
+                    _drawingDoneWait.WaitOne(-1);
+
+                    // 4.
                     if (DrawBodies)
-                        Renderer.DrawBodies(BodyManager.Bodies);
+                        Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
                     // FPS Limiter
                     DelayFrame();
@@ -143,6 +174,11 @@ namespace NBodies.Rendering
             catch (OperationCanceledException)
             {
                 // Fail silently
+            }
+
+            if (_cancelTokenSource.IsCancellationRequested)
+            {
+                _stopLoopWait.Set();
             }
         }
 

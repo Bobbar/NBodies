@@ -42,6 +42,7 @@
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.reloadPreviousToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.LoadRecordingButton = new System.Windows.Forms.Button();
             this.RecordButton = new System.Windows.Forms.Button();
@@ -68,7 +69,8 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.reloadPreviousToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.speedsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.forcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -157,6 +159,8 @@
             this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.normalToolStripMenuItem,
             this.pressuresToolStripMenuItem,
+            this.speedsToolStripMenuItem,
+            this.forcesToolStripMenuItem,
             this.highContrastToolStripMenuItem1});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
             this.displayToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
@@ -168,7 +172,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -176,7 +180,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -184,7 +188,7 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -219,6 +223,13 @@
             this.loadStateToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
             this.loadStateToolStripMenuItem.Text = "Load State";
             this.loadStateToolStripMenuItem.Click += new System.EventHandler(this.loadStateToolStripMenuItem_Click);
+            // 
+            // reloadPreviousToolStripMenuItem
+            // 
+            this.reloadPreviousToolStripMenuItem.Name = "reloadPreviousToolStripMenuItem";
+            this.reloadPreviousToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
+            this.reloadPreviousToolStripMenuItem.Text = "Reload Previous";
+            this.reloadPreviousToolStripMenuItem.Click += new System.EventHandler(this.reloadPreviousToolStripMenuItem_Click);
             // 
             // tableLayoutPanel3
             // 
@@ -569,12 +580,21 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // reloadPreviousToolStripMenuItem
+            // speedsToolStripMenuItem
             // 
-            this.reloadPreviousToolStripMenuItem.Name = "reloadPreviousToolStripMenuItem";
-            this.reloadPreviousToolStripMenuItem.Size = new System.Drawing.Size(158, 22);
-            this.reloadPreviousToolStripMenuItem.Text = "Reload Previous";
-            this.reloadPreviousToolStripMenuItem.Click += new System.EventHandler(this.reloadPreviousToolStripMenuItem_Click);
+            this.speedsToolStripMenuItem.CheckOnClick = true;
+            this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.speedsToolStripMenuItem.Text = "Speeds";
+            this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
+            // 
+            // forcesToolStripMenuItem
+            // 
+            this.forcesToolStripMenuItem.CheckOnClick = true;
+            this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.forcesToolStripMenuItem.Text = "Forces";
+            this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
             // DisplayForm
             // 
@@ -649,6 +669,8 @@
         private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
         private System.Windows.Forms.Label SpeedLabel;
         private System.Windows.Forms.ToolStripMenuItem reloadPreviousToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem speedsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem forcesToolStripMenuItem;
     }
 }
 

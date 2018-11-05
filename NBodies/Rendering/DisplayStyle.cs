@@ -10,6 +10,8 @@ namespace NBodies.Rendering
     {
         Normal,
         Pressures,
+        Speeds,
+        Forces,
         HighContrast
     }
 }

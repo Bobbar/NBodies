@@ -70,7 +70,6 @@ namespace NBodies.IO
         {
             stateStream.Position = 0;
             MainLoop.Stop();
-            Thread.Sleep(200);
             BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<Body[]>(stateStream));
             MainLoop.StartLoop();
         }

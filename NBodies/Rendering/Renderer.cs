@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Windows.Forms;
-using System.Diagnostics;
-using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace NBodies.Rendering
 {
@@ -46,6 +46,12 @@ namespace NBodies.Rendering
         {
             _currentContext = BufferedGraphicsManager.Current;
             _buffer = _currentContext.Allocate(_imageControl.CreateGraphics(), _imageControl.DisplayRectangle);
+
+            //_buffer.Graphics.CompositingMode = CompositingMode.SourceOver;
+            //_buffer.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
+            //_buffer.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            //_buffer.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
+
             _prevSize = _imageControl.Size;
         }
 
@@ -71,99 +77,112 @@ namespace NBodies.Rendering
             _prevScale = RenderVars.CurrentScale;
         }
 
-        public static void DrawBodies(Body[] bodies)
+        public async static Task DrawBodiesAsync(Body[] bodies, ManualResetEvent complete_callback)
         {
-            var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
-            CheckScale();
+            complete_callback.Reset();
 
-            if (!Trails) _buffer.Graphics.Clear(_spaceColor);
+            await Task.Run(() =>
+             {
+                 var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
+                 CheckScale();
 
-            if (AntiAliasing)
-            {
-                _buffer.Graphics.SmoothingMode = SmoothingMode.HighQuality;
-            }
-            else
-            {
-                _buffer.Graphics.SmoothingMode = SmoothingMode.None;
-            }
+                 if (!Trails) _buffer.Graphics.Clear(_spaceColor);
 
-           
-            for (int i = 0; i < bodies.Length; i++)
-            {
+                 if (AntiAliasing)
+                 {
+                     _buffer.Graphics.SmoothingMode = SmoothingMode.HighQuality;
+                 }
+                 else
+                 {
+                     _buffer.Graphics.SmoothingMode = SmoothingMode.None;
+                 }
 
-                var body = bodies[i];
+                 _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _imageControl.Size.Width / RenderVars.CurrentScale, _imageControl.Size.Height / RenderVars.CurrentScale);
 
-                if (body.Visible == 1)
-                {
-                    if (ClipView)
-                    {
-                        _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _imageControl.Size.Width / RenderVars.CurrentScale, _imageControl.Size.Height / RenderVars.CurrentScale);
-                        if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
-                    }
+                 for (int i = 0; i < bodies.Length; i++)
+                 {
+                     var body = bodies[i];
 
-                    Color bodyColor = new Color();
+                     if (body.Visible == 1)
+                     {
+                         if (ClipView)
+                         {
+                             if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
+                         }
 
-                    switch (DisplayStyle)
-                    {
-                        case DisplayStyle.Normal:
-                            bodyColor = Color.FromArgb(body.Color);
-                            _spaceColor = Color.Black;
-                            break;
+                         Color bodyColor = new Color();
 
-                        case DisplayStyle.Pressures:
-                            //bodyColor = GetVariableColor(Color.Blue, Color.Red, 500, (int)body.Density);
-                           // bodyColor = GetVariableColor(Color.Blue, Color.Red, maxPressure, body.Pressure, true);
-                           bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.Pressure, true);
+                         switch (DisplayStyle)
+                         {
+                             case DisplayStyle.Normal:
+                                 bodyColor = Color.FromArgb(body.Color);
+                                 _spaceColor = Color.Black;
+                                 break;
 
-                            _spaceColor = Color.Black;
-                            break;
+                             case DisplayStyle.Pressures:
+                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.Pressure, true);
 
-                        case DisplayStyle.HighContrast:
-                            bodyColor = Color.Black;
-                            _spaceColor = Color.White;
-                            break;
-                    }
+                                 _spaceColor = Color.Black;
+                                 break;
 
-                    using (var bodyBrush = new SolidBrush(bodyColor))
-                    {
-                        var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
+                             case DisplayStyle.Speeds:
+                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.AggregateSpeed(), true);
 
-                        //Draw body.
-                        _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
+                                 _spaceColor = Color.Black;
+                                 break;
 
-                        // If blackhole, stroke with red circle.
-                        if (body.BlackHole == 1)
-                        {
-                            _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
-                        }
-                    }
-                }
-            }
+                             case DisplayStyle.Forces:
+                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, PressureScaleMax, body.ForceTot / body.Mass, true);
 
-            if (BodyManager.FollowSelected)
-            {
-                var body = BodyManager.FollowBody();
-                var followOffset = BodyManager.FollowBodyLoc();
-                RenderVars.ViewportOffset.X = -followOffset.X;
-                RenderVars.ViewportOffset.Y = -followOffset.Y;
+                                 _spaceColor = Color.Black;
+                                 break;
 
+                             case DisplayStyle.HighContrast:
+                                 bodyColor = Color.Black;
+                                 _spaceColor = Color.White;
+                                 break;
+                         }
 
-                if (ShowForce)
-                {
-                    var f = new PointF(body.ForceX, body.ForceY);
-                    //  var f = new PointF(body.SpeedX, body.SpeedY);
-                    var bloc = new PointF(body.LocX, body.LocY);
-                    f = f.Multi(0.1f);
-                    var floc = bloc.Add(f);
-                    _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
-                }
+                         using (var bodyBrush = new SolidBrush(bodyColor))
+                         {
+                             var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
-            }
+                             //Draw body.
+                             _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
 
+                             // If blackhole, stroke with red circle.
+                             if (body.BlackHole == 1)
+                             {
+                                 _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
+                             }
+                         }
+                     }
+                 }
 
-            //    DrawOverlays();
-            if (!_imageControl.IsDisposed && !_imageControl.Disposing)
-                _buffer.Render();
+                 if (BodyManager.FollowSelected)
+                 {
+                     var body = BodyManager.FollowBody();
+                     var followOffset = BodyManager.FollowBodyLoc();
+                     RenderVars.ViewportOffset.X = -followOffset.X;
+                     RenderVars.ViewportOffset.Y = -followOffset.Y;
+
+                     if (ShowForce)
+                     {
+                         var f = new PointF(body.ForceX, body.ForceY);
+                         //  var f = new PointF(body.SpeedX, body.SpeedY);
+                         var bloc = new PointF(body.LocX, body.LocY);
+                         f = f.Multi(0.1f);
+                         var floc = bloc.Add(f);
+                         _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                     }
+                 }
+
+                 //    DrawOverlays();
+                 if (!_imageControl.IsDisposed && !_imageControl.Disposing)
+                     _buffer.Render();
+             });
+
+            complete_callback.Set();
         }
 
         private static Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
@@ -218,7 +237,6 @@ namespace NBodies.Rendering
 
             return maxPress;
         }
-
 
         private static void DrawOverlays()
         {

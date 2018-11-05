@@ -357,6 +357,28 @@ namespace NBodies
             highContrastToolStripMenuItem1.Checked = true;
         }
 
+        private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Renderer.DisplayStyle = DisplayStyle.Speeds;
+
+            normalToolStripMenuItem.Checked = false;
+            pressuresToolStripMenuItem.Checked = false;
+            highContrastToolStripMenuItem1.Checked = false;
+            speedsToolStripMenuItem.Checked = true;
+            forcesToolStripMenuItem.Checked = false;
+        }
+
+        private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Renderer.DisplayStyle = DisplayStyle.Forces;
+
+            normalToolStripMenuItem.Checked = false;
+            pressuresToolStripMenuItem.Checked = false;
+            highContrastToolStripMenuItem1.Checked = false;
+            speedsToolStripMenuItem.Checked = false;
+            forcesToolStripMenuItem.Checked = true;
+        }
+
         private void showFollowBodyForceToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.ShowForce = showFollowBodyForceToolStripMenuItem.Checked;
@@ -378,5 +400,7 @@ namespace NBodies
         {
             Renderer.PressureScaleMax = (float)PressureScaleUpDown.Value;
         }
+
+       
     }
 }
