@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace NBodies.Rendering
 {
@@ -55,9 +56,9 @@ namespace NBodies.Rendering
 
         private static Int64 _frameCount = 0;
         private static float _timeStep = 0.008f;
-        private static ManualResetEvent _pausePhysicsWait = new ManualResetEvent(true);
+        private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEvent _stopLoopWait = new ManualResetEvent(true);
-        private static ManualResetEvent _drawingDoneWait = new ManualResetEvent(true);
+        private static ManualResetEventSlim _drawingDoneWait = new ManualResetEventSlim(true);
 
         private static bool _skipPhysics = false;
         private static Task _loopTask;
@@ -92,7 +93,7 @@ namespace NBodies.Rendering
             _pausePhysicsWait.Reset();
 
             // Wait until the handle is signaled after the GPU calcs complete.
-            _pausePhysicsWait.WaitOne(2000);
+            _pausePhysicsWait.Wait(2000);
         }
 
         /// <summary>
@@ -131,17 +132,17 @@ namespace NBodies.Rendering
 
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
-
-                            // Process and fracture new roche bodies.
-                            ProcessRoche(ref bodiesCopy);
-
+                          
                             // 2.
                             // Wait for the drawing thread to complete.
-                            _drawingDoneWait.WaitOne(-1);
+                            _drawingDoneWait.Wait(-1);
 
                             // 3.
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = bodiesCopy;
+                          
+                            // Process and fracture new roche bodies.
+                            ProcessRoche(ref BodyManager.Bodies);
 
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
@@ -152,7 +153,7 @@ namespace NBodies.Rendering
                     }
 
                     // If the wait handle is nonsignaled, a pause has been requested.
-                    if (!_pausePhysicsWait.WaitOne(0))
+                    if (!_pausePhysicsWait.Wait(0))
                     {
                         // Set the skip flag then set the wait handle.
                         // This allows the thread which originally called the pause to continue.
@@ -161,7 +162,7 @@ namespace NBodies.Rendering
                     }
 
                     // Make sure the drawing thread is finished.
-                    _drawingDoneWait.WaitOne(-1);
+                    _drawingDoneWait.Wait(-1);
 
                     // 4.
                     if (DrawBodies)

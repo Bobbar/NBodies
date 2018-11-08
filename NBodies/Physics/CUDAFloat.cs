@@ -161,7 +161,8 @@ namespace NBodies.Physics
                         if (distSqrt > 0f)
                         {
                             totMass = iBody.Mass * body.Mass;
-                            force = totMass / (distSqrt * distSqrt + 0.2f);
+                            //force = totMass / (distSqrt * distSqrt + 0.2f);
+                            force = totMass / (dist + 0.02f);
 
                             body.ForceTot += force;
 
@@ -399,8 +400,8 @@ namespace NBodies.Physics
             // Integrate forces and speeds.
             outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
             outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-            outBody.LocX += dt * outBody.SpeedX;
-            outBody.LocY += dt * outBody.SpeedY;
+            outBody.LocX += dt * (outBody.SpeedX * 0.99f);
+            outBody.LocY += dt * (outBody.SpeedY * 0.99f);
 
             outBodies[a] = outBody;
         }

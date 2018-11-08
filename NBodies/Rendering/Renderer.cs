@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System;
 
 namespace NBodies.Rendering
 {
@@ -16,24 +17,44 @@ namespace NBodies.Rendering
         public static bool Trails = false;
         public static bool ClipView = true;
         public static bool ShowForce = false;
+        public static bool ShowPath = false;
         public static float PressureScaleMax = 150;
+
+        public static int BodyAlpha
+        {
+            get
+            {
+                return _bodyAlpha;
+            }
+
+            set
+            {
+                if (value >= 1 && value <= 255)
+                {
+                    _bodyAlpha = value;
+                }
+            }
+        }
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
+        private static ManualResetEventSlim _orbitReadyWait = new ManualResetEventSlim(false);
+        private static List<PointF> _orbitPath = new List<PointF>();
+        private static List<PointF> _drawPath = new List<PointF>();
+        private static bool _orbitOffloadRunning = false;
+
+        private static int _bodyAlpha = 210;
         private static BufferedGraphicsContext _currentContext;
         private static BufferedGraphics _buffer;
-
         private static PictureBox _imageControl;
         private static float _prevScale = 0;
-
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Pen _forcePen = new Pen(Color.White, 0.2f);
+        private static Pen _orbitPen = new Pen(Color.FromArgb(200, Color.White), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
+
         private static Color _spaceColor = Color.Black;
-
         private static Size _prevSize = new Size();
-
         private static Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
-
         private static RectangleF _cullTangle;
 
         public static void Init(PictureBox imageControl)
@@ -77,13 +98,16 @@ namespace NBodies.Rendering
             _prevScale = RenderVars.CurrentScale;
         }
 
-        public async static Task DrawBodiesAsync(Body[] bodies, ManualResetEvent complete_callback)
+        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+
+        public async static Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
         {
-            complete_callback.Reset();
+            completeCallback.Reset();
 
             await Task.Run(() =>
              {
                  var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
+
                  CheckScale();
 
                  if (!Trails) _buffer.Graphics.Clear(_spaceColor);
@@ -115,7 +139,7 @@ namespace NBodies.Rendering
                          switch (DisplayStyle)
                          {
                              case DisplayStyle.Normal:
-                                 bodyColor = Color.FromArgb(body.Color);
+                                 bodyColor = Color.FromArgb(_bodyAlpha, Color.FromArgb(body.Color));
                                  _spaceColor = Color.Black;
                                  break;
 
@@ -158,19 +182,51 @@ namespace NBodies.Rendering
 
                  if (BodyManager.FollowSelected)
                  {
-                     var body = BodyManager.FollowBody();
+                     var fbody = BodyManager.FollowBody();
                      var followOffset = BodyManager.FollowBodyLoc();
                      RenderVars.ViewportOffset.X = -followOffset.X;
                      RenderVars.ViewportOffset.Y = -followOffset.Y;
 
                      if (ShowForce)
                      {
-                         var f = new PointF(body.ForceX, body.ForceY);
+                         var f = new PointF(fbody.ForceX, fbody.ForceY);
                          //  var f = new PointF(body.SpeedX, body.SpeedY);
-                         var bloc = new PointF(body.LocX, body.LocY);
+                         var bloc = new PointF(fbody.LocX, fbody.LocY);
                          f = f.Multi(0.1f);
                          var floc = bloc.Add(f);
                          _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                     }
+
+                     if (ShowPath)
+                     {
+                         // Start the offload task if needed.
+                         if (!_orbitOffloadRunning)
+                             CalcOrbitOffload();
+
+                         // Previous orbit calc is complete. 
+                         // Bring the new data into another reference.
+                         if (!_orbitReadyWait.Wait(0))
+                         {
+                             // Reference the new data.
+                             _drawPath = _orbitPath;
+
+                             _orbitReadyWait.Set();
+                         }
+
+                         // Add the final offset to the path points and draw then as a line.
+                         if (_drawPath.Count > 0)
+                         {
+                             var pathArr = _drawPath.ToArray();
+
+                             pathArr[0] = new PointF(fbody.LocX, fbody.LocY);
+
+                             for (int a = 0; a < pathArr.Length; a++)
+                             {
+                                 pathArr[a] = pathArr[a].Add(finalOffset);
+                             }
+
+                             _buffer.Graphics.DrawLines(_orbitPen, pathArr);
+                         }
                      }
                  }
 
@@ -179,7 +235,37 @@ namespace NBodies.Rendering
                      _buffer.Render();
              });
 
-            complete_callback.Set();
+            completeCallback.Set();
+        }
+
+        // Offload orbit calcs to another task/thread and update the renderer periodically.
+        // We don't want to block the rendering task while we wait for this calc to finish.
+        // We just populate a local variable with the new data and signal the render thread
+        // to update its data for drawing.
+        private async static Task CalcOrbitOffload()
+        {
+            if (_orbitOffloadRunning)
+                return;
+
+            _orbitReadyWait.Set();
+
+            await Task.Run(() =>
+            {
+                _orbitOffloadRunning = true;
+
+                while (BodyManager.FollowSelected)
+                {
+                    _orbitReadyWait.Wait(-1);
+
+                    //_orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
+                    _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
+
+
+                    _orbitReadyWait.Reset();
+                }
+
+                _orbitOffloadRunning = false;
+            });
         }
 
         private static Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
@@ -213,7 +299,7 @@ namespace NBodies.Rendering
 
             if (translucent)
             {
-                return Color.FromArgb(200, newR, newG, newB);
+                return Color.FromArgb(_bodyAlpha, newR, newG, newB);
             }
             else
             {

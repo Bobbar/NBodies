@@ -40,7 +40,9 @@
             this.speedsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.forcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.showFollowBodyForceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.followingBodyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showFollowBodyForce = new System.Windows.Forms.ToolStripMenuItem();
+            this.showPredictOrbit = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -62,6 +64,7 @@
             this.TrailsCheckBox = new System.Windows.Forms.CheckBox();
             this.PauseButton = new System.Windows.Forms.CheckBox();
             this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
+            this.AlphaUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
             this.SpeedLabel = new System.Windows.Forms.Label();
             this.FrameCountLabel = new System.Windows.Forms.Label();
@@ -77,6 +80,7 @@
             this.tableLayoutPanel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.AlphaUpDown)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.SuspendLayout();
@@ -93,7 +97,7 @@
             this.tableLayoutPanel1.RowCount = 2;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(1359, 815);
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(1589, 815);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
             // tableLayoutPanel2
@@ -109,7 +113,7 @@
             this.tableLayoutPanel2.RowCount = 2;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 39.43662F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 60.56338F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(1353, 57);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(1583, 57);
             this.tableLayoutPanel2.TabIndex = 1;
             // 
             // menuStrip1
@@ -119,7 +123,7 @@
             this.toolsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1353, 22);
+            this.menuStrip1.Size = new System.Drawing.Size(1583, 22);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -129,7 +133,7 @@
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.displayToolStripMenuItem,
-            this.showFollowBodyForceToolStripMenuItem});
+            this.followingBodyToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -140,7 +144,7 @@
             this.antiAliasingToolStripMenuItem.CheckOnClick = true;
             this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
             this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
             // 
@@ -150,7 +154,7 @@
             this.clipToViewportToolStripMenuItem.CheckOnClick = true;
             this.clipToViewportToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.clipToViewportToolStripMenuItem.Name = "clipToViewportToolStripMenuItem";
-            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
             // 
@@ -163,7 +167,7 @@
             this.forcesToolStripMenuItem,
             this.highContrastToolStripMenuItem1});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
-            this.displayToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.displayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.displayToolStripMenuItem.Text = "Display";
             // 
             // normalToolStripMenuItem
@@ -172,7 +176,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -180,7 +184,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -188,7 +192,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -196,7 +200,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -204,17 +208,34 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
-            // showFollowBodyForceToolStripMenuItem
+            // followingBodyToolStripMenuItem
             // 
-            this.showFollowBodyForceToolStripMenuItem.CheckOnClick = true;
-            this.showFollowBodyForceToolStripMenuItem.Name = "showFollowBodyForceToolStripMenuItem";
-            this.showFollowBodyForceToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
-            this.showFollowBodyForceToolStripMenuItem.Text = "Show Follow Body Force";
-            this.showFollowBodyForceToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showFollowBodyForceToolStripMenuItem_CheckedChanged);
+            this.followingBodyToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.showFollowBodyForce,
+            this.showPredictOrbit});
+            this.followingBodyToolStripMenuItem.Name = "followingBodyToolStripMenuItem";
+            this.followingBodyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.followingBodyToolStripMenuItem.Text = "Follow Body Display";
+            // 
+            // showFollowBodyForce
+            // 
+            this.showFollowBodyForce.CheckOnClick = true;
+            this.showFollowBodyForce.Name = "showFollowBodyForce";
+            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
+            this.showFollowBodyForce.Text = "Force Vector";
+            this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
+            // 
+            // predictOrbitSlowToolStripMenuItem
+            // 
+            this.showPredictOrbit.CheckOnClick = true;
+            this.showPredictOrbit.Name = "predictOrbitSlowToolStripMenuItem";
+            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
+            this.showPredictOrbit.Text = "Orbit (Slow)";
+            this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
             // toolsToolStripMenuItem
             // 
@@ -249,53 +270,56 @@
             // 
             // tableLayoutPanel3
             // 
-            this.tableLayoutPanel3.ColumnCount = 16;
+            this.tableLayoutPanel3.ColumnCount = 17;
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 95F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 109F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 97F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 68F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 48F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 90F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 47F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 89F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 48F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 78F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 74F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 72F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 84F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 101F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 49F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 59F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 40F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 95F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 174F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 266F));
-            this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 15, 0);
-            this.tableLayoutPanel3.Controls.Add(this.RecordButton, 14, 0);
-            this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 13, 0);
-            this.tableLayoutPanel3.Controls.Add(this.RadiusTextBox, 7, 0);
-            this.tableLayoutPanel3.Controls.Add(this.VeloYTextBox, 6, 0);
-            this.tableLayoutPanel3.Controls.Add(this.VeloXTextBox, 5, 0);
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 71F));
+            this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 16, 0);
+            this.tableLayoutPanel3.Controls.Add(this.RecordButton, 15, 0);
+            this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 14, 0);
+            this.tableLayoutPanel3.Controls.Add(this.RadiusTextBox, 8, 0);
+            this.tableLayoutPanel3.Controls.Add(this.VeloYTextBox, 7, 0);
+            this.tableLayoutPanel3.Controls.Add(this.VeloXTextBox, 6, 0);
             this.tableLayoutPanel3.Controls.Add(this.AddBodiesButton, 0, 0);
             this.tableLayoutPanel3.Controls.Add(this.RemoveAllButton, 1, 0);
             this.tableLayoutPanel3.Controls.Add(this.TimeStepUpDown, 3, 0);
-            this.tableLayoutPanel3.Controls.Add(this.MassTextBox, 8, 0);
-            this.tableLayoutPanel3.Controls.Add(this.FlagsTextBox, 9, 0);
-            this.tableLayoutPanel3.Controls.Add(this.UpdateButton, 10, 0);
-            this.tableLayoutPanel3.Controls.Add(this.CenterOnMassButton, 11, 0);
-            this.tableLayoutPanel3.Controls.Add(this.TrailsCheckBox, 12, 0);
+            this.tableLayoutPanel3.Controls.Add(this.MassTextBox, 9, 0);
+            this.tableLayoutPanel3.Controls.Add(this.FlagsTextBox, 10, 0);
+            this.tableLayoutPanel3.Controls.Add(this.UpdateButton, 11, 0);
+            this.tableLayoutPanel3.Controls.Add(this.CenterOnMassButton, 12, 0);
+            this.tableLayoutPanel3.Controls.Add(this.TrailsCheckBox, 13, 0);
             this.tableLayoutPanel3.Controls.Add(this.PauseButton, 2, 0);
             this.tableLayoutPanel3.Controls.Add(this.PressureScaleUpDown, 4, 0);
+            this.tableLayoutPanel3.Controls.Add(this.AlphaUpDown, 5, 0);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel3.Location = new System.Drawing.Point(3, 25);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
             this.tableLayoutPanel3.RowCount = 1;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(1347, 29);
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(1577, 29);
             this.tableLayoutPanel3.TabIndex = 1;
             // 
             // LoadRecordingButton
             // 
             this.LoadRecordingButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.LoadRecordingButton.Location = new System.Drawing.Point(1243, 3);
+            this.LoadRecordingButton.Location = new System.Drawing.Point(1509, 3);
             this.LoadRecordingButton.Name = "LoadRecordingButton";
-            this.LoadRecordingButton.Size = new System.Drawing.Size(260, 23);
+            this.LoadRecordingButton.Size = new System.Drawing.Size(65, 23);
             this.LoadRecordingButton.TabIndex = 15;
             this.LoadRecordingButton.Text = "Load Recording";
             this.LoadRecordingButton.UseVisualStyleBackColor = true;
@@ -303,9 +327,9 @@
             // RecordButton
             // 
             this.RecordButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.RecordButton.Location = new System.Drawing.Point(1147, 3);
+            this.RecordButton.Location = new System.Drawing.Point(1243, 3);
             this.RecordButton.Name = "RecordButton";
-            this.RecordButton.Size = new System.Drawing.Size(90, 23);
+            this.RecordButton.Size = new System.Drawing.Size(260, 23);
             this.RecordButton.TabIndex = 14;
             this.RecordButton.Text = "Record";
             this.RecordButton.UseVisualStyleBackColor = true;
@@ -313,35 +337,36 @@
             // ScreenShotButton
             // 
             this.ScreenShotButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ScreenShotButton.Location = new System.Drawing.Point(1063, 3);
+            this.ScreenShotButton.Location = new System.Drawing.Point(1069, 3);
             this.ScreenShotButton.Name = "ScreenShotButton";
-            this.ScreenShotButton.Size = new System.Drawing.Size(78, 23);
+            this.ScreenShotButton.Size = new System.Drawing.Size(168, 23);
             this.ScreenShotButton.TabIndex = 13;
             this.ScreenShotButton.Text = "Screenshot";
             this.ScreenShotButton.UseVisualStyleBackColor = true;
+            this.ScreenShotButton.Click += new System.EventHandler(this.ScreenShotButton_Click);
             // 
             // RadiusTextBox
             // 
             this.RadiusTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.RadiusTextBox.Location = new System.Drawing.Point(606, 3);
+            this.RadiusTextBox.Location = new System.Drawing.Point(664, 3);
             this.RadiusTextBox.Name = "RadiusTextBox";
-            this.RadiusTextBox.Size = new System.Drawing.Size(90, 20);
+            this.RadiusTextBox.Size = new System.Drawing.Size(43, 20);
             this.RadiusTextBox.TabIndex = 7;
             // 
             // VeloYTextBox
             // 
             this.VeloYTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.VeloYTextBox.Location = new System.Drawing.Point(510, 3);
+            this.VeloYTextBox.Location = new System.Drawing.Point(563, 3);
             this.VeloYTextBox.Name = "VeloYTextBox";
-            this.VeloYTextBox.Size = new System.Drawing.Size(90, 20);
+            this.VeloYTextBox.Size = new System.Drawing.Size(95, 20);
             this.VeloYTextBox.TabIndex = 6;
             // 
             // VeloXTextBox
             // 
             this.VeloXTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.VeloXTextBox.Location = new System.Drawing.Point(420, 3);
+            this.VeloXTextBox.Location = new System.Drawing.Point(467, 3);
             this.VeloXTextBox.Name = "VeloXTextBox";
-            this.VeloXTextBox.Size = new System.Drawing.Size(84, 20);
+            this.VeloXTextBox.Size = new System.Drawing.Size(90, 20);
             this.VeloXTextBox.TabIndex = 5;
             // 
             // AddBodiesButton
@@ -399,25 +424,25 @@
             // MassTextBox
             // 
             this.MassTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.MassTextBox.Location = new System.Drawing.Point(702, 3);
+            this.MassTextBox.Location = new System.Drawing.Point(713, 3);
             this.MassTextBox.Name = "MassTextBox";
-            this.MassTextBox.Size = new System.Drawing.Size(83, 20);
+            this.MassTextBox.Size = new System.Drawing.Size(53, 20);
             this.MassTextBox.TabIndex = 8;
             // 
             // FlagsTextBox
             // 
             this.FlagsTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.FlagsTextBox.Location = new System.Drawing.Point(791, 3);
+            this.FlagsTextBox.Location = new System.Drawing.Point(772, 3);
             this.FlagsTextBox.Name = "FlagsTextBox";
-            this.FlagsTextBox.Size = new System.Drawing.Size(42, 20);
+            this.FlagsTextBox.Size = new System.Drawing.Size(34, 20);
             this.FlagsTextBox.TabIndex = 9;
             // 
             // UpdateButton
             // 
             this.UpdateButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.UpdateButton.Location = new System.Drawing.Point(839, 3);
+            this.UpdateButton.Location = new System.Drawing.Point(812, 3);
             this.UpdateButton.Name = "UpdateButton";
-            this.UpdateButton.Size = new System.Drawing.Size(72, 23);
+            this.UpdateButton.Size = new System.Drawing.Size(75, 23);
             this.UpdateButton.TabIndex = 10;
             this.UpdateButton.Text = "Update";
             this.UpdateButton.UseVisualStyleBackColor = true;
@@ -426,9 +451,9 @@
             // CenterOnMassButton
             // 
             this.CenterOnMassButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.CenterOnMassButton.Location = new System.Drawing.Point(917, 3);
+            this.CenterOnMassButton.Location = new System.Drawing.Point(893, 3);
             this.CenterOnMassButton.Name = "CenterOnMassButton";
-            this.CenterOnMassButton.Size = new System.Drawing.Size(68, 23);
+            this.CenterOnMassButton.Size = new System.Drawing.Size(89, 23);
             this.CenterOnMassButton.TabIndex = 11;
             this.CenterOnMassButton.Text = "Re-center";
             this.CenterOnMassButton.UseVisualStyleBackColor = true;
@@ -439,9 +464,9 @@
             this.TrailsCheckBox.Appearance = System.Windows.Forms.Appearance.Button;
             this.TrailsCheckBox.AutoSize = true;
             this.TrailsCheckBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.TrailsCheckBox.Location = new System.Drawing.Point(991, 3);
+            this.TrailsCheckBox.Location = new System.Drawing.Point(988, 3);
             this.TrailsCheckBox.Name = "TrailsCheckBox";
-            this.TrailsCheckBox.Size = new System.Drawing.Size(66, 23);
+            this.TrailsCheckBox.Size = new System.Drawing.Size(75, 23);
             this.TrailsCheckBox.TabIndex = 16;
             this.TrailsCheckBox.Text = "Trails";
             this.TrailsCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -488,6 +513,30 @@
             0});
             this.PressureScaleUpDown.ValueChanged += new System.EventHandler(this.PressureScaleUpDown_ValueChanged);
             // 
+            // AlphaUpDown
+            // 
+            this.AlphaUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.AlphaUpDown.Location = new System.Drawing.Point(420, 3);
+            this.AlphaUpDown.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.AlphaUpDown.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.AlphaUpDown.Name = "AlphaUpDown";
+            this.AlphaUpDown.Size = new System.Drawing.Size(41, 20);
+            this.AlphaUpDown.TabIndex = 19;
+            this.AlphaUpDown.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.AlphaUpDown.ValueChanged += new System.EventHandler(this.AlphaUpDown_ValueChanged);
+            // 
             // panel1
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -504,7 +553,7 @@
             this.panel1.Controls.Add(this.RenderBox);
             this.panel1.Location = new System.Drawing.Point(3, 66);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1353, 746);
+            this.panel1.Size = new System.Drawing.Size(1583, 746);
             this.panel1.TabIndex = 0;
             // 
             // SpeedLabel
@@ -590,7 +639,7 @@
             this.RenderBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.RenderBox.Location = new System.Drawing.Point(0, 0);
             this.RenderBox.Name = "RenderBox";
-            this.RenderBox.Size = new System.Drawing.Size(1351, 744);
+            this.RenderBox.Size = new System.Drawing.Size(1581, 744);
             this.RenderBox.TabIndex = 0;
             this.RenderBox.TabStop = false;
             this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
@@ -602,7 +651,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1359, 815);
+            this.ClientSize = new System.Drawing.Size(1589, 815);
             this.Controls.Add(this.tableLayoutPanel1);
             this.DoubleBuffered = true;
             this.KeyPreview = true;
@@ -621,6 +670,7 @@
             this.tableLayoutPanel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TimeStepUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.PressureScaleUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.AlphaUpDown)).EndInit();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
@@ -667,12 +717,15 @@
         private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem showFollowBodyForceToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
         private System.Windows.Forms.Label SpeedLabel;
         private System.Windows.Forms.ToolStripMenuItem reloadPreviousToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem speedsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem forcesToolStripMenuItem;
+        private System.Windows.Forms.NumericUpDown AlphaUpDown;
+        private System.Windows.Forms.ToolStripMenuItem followingBodyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showFollowBodyForce;
+        private System.Windows.Forms.ToolStripMenuItem showPredictOrbit;
     }
 }
 

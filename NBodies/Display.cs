@@ -34,6 +34,8 @@ namespace NBodies
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
             PressureScaleUpDown.Value = (decimal)Renderer.PressureScaleMax;
+            AlphaUpDown.Value = Renderer.BodyAlpha;
+
 
             RenderBox.DoubleBuffered(true);
         }
@@ -118,7 +120,7 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
-                selectBody.PrintInfo();
+                //   selectBody.PrintInfo();
 
             }
         }
@@ -176,7 +178,7 @@ namespace NBodies
             {
                 case Keys.ShiftKey:
 
-                    MainLoop.WaitForPause();
+                    //   MainLoop.WaitForPause();
                     _shiftDown = true;
 
                     break;
@@ -394,11 +396,6 @@ namespace NBodies
             forcesToolStripMenuItem.Checked = true;
         }
 
-        private void showFollowBodyForceToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
-        {
-            Renderer.ShowForce = showFollowBodyForceToolStripMenuItem.Checked;
-        }
-
         private void UpdateButton_Click(object sender, EventArgs e)
         {
             if (_selectedUid != -1)
@@ -421,6 +418,27 @@ namespace NBodies
             var cm = BodyManager.CenterOfMass();
 
             RenderVars.ViewportOffset = cm;
+        }
+
+        private void ScreenShotButton_Click(object sender, EventArgs e)
+        {
+            // BodyManager.TotEnergy();
+            // BodyManager.CalcPath(BodyManager.FollowBody());
+        }
+
+        private void AlphaUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            Renderer.BodyAlpha = (int)AlphaUpDown.Value;
+        }
+
+        private void showFollowBodyForce_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.ShowForce = showFollowBodyForce.Checked;
+        }
+
+        private void showPredictOrbit_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.ShowPath = showPredictOrbit.Checked;
         }
     }
 }
