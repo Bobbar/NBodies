@@ -160,14 +160,16 @@ namespace NBodies.Physics
                     {
                         if (distSqrt > 0f)
                         {
-                            totMass = iBody.Mass * body.Mass;
-                            //force = totMass / (distSqrt * distSqrt + 0.2f);
-                            force = totMass / (dist + 0.02f);
+                            if (iBody.IsExplosion != 1)
+                            {
+                                totMass = iBody.Mass * body.Mass;
+                                //force = totMass / (distSqrt * distSqrt + 0.2f);
+                                force = totMass / (dist + 0.02f);
 
-                            body.ForceTot += force;
-
-                            body.ForceX += (force * distX / distSqrt);
-                            body.ForceY += (force * distY / distSqrt);
+                                body.ForceTot += force;
+                                body.ForceX += (force * distX / distSqrt);
+                                body.ForceY += (force * distY / distSqrt);
+                            }
                         }
 
                         // Check if the body is within collision distance and set a flag.
@@ -214,7 +216,7 @@ namespace NBodies.Physics
             {
                 body.InRoche = 0;
             }
-            else if (body.BlackHole == 2)
+            else if (body.BlackHole == 2 || body.IsExplosion == 1)
             {
                 body.InRoche = 1;
             }
@@ -304,18 +306,23 @@ namespace NBodies.Physics
                                             outBody.ForceY += gradY;
 
                                             // Viscosity
-                                            float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
-                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
 
-                                            // TODO: Share this with shear.      vvv
-                                            float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
-                                            float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
+                                            if (outBody.IsExplosion != 1 && inBody.IsExplosion != 1)
+                                            {
+                                                float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
+                                                float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
 
-                                            viscVelo_diffX *= visc_scalar;
-                                            viscVelo_diffY *= visc_scalar;
+                                                // TODO: Share this with shear.      vvv
+                                                float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
+                                                float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
 
-                                            outBody.ForceX -= viscVelo_diffX;
-                                            outBody.ForceY -= viscVelo_diffY;
+                                                viscVelo_diffX *= visc_scalar;
+                                                viscVelo_diffY *= visc_scalar;
+
+                                                outBody.ForceX -= viscVelo_diffX;
+                                                outBody.ForceY -= viscVelo_diffY;
+                                            }
+                                            
 
 
                                             ////Shear
@@ -402,6 +409,9 @@ namespace NBodies.Physics
             outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
             outBody.LocX += dt * (outBody.SpeedX * 0.99f);
             outBody.LocY += dt * (outBody.SpeedY * 0.99f);
+
+            if (outBody.Lifetime > 0.0f)
+                outBody.Age += (dt * 4.0f);
 
             outBodies[a] = outBody;
         }

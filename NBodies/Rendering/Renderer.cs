@@ -230,7 +230,7 @@ namespace NBodies.Rendering
                      }
                  }
 
-                 //    DrawOverlays();
+                    DrawOverlays();
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();
              });
@@ -257,8 +257,8 @@ namespace NBodies.Rendering
                 {
                     _orbitReadyWait.Wait(-1);
 
-                    //_orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
-                    _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
+                    _orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
+                   // _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
 
 
                     _orbitReadyWait.Reset();
@@ -325,7 +325,7 @@ namespace NBodies.Rendering
         {
             var ogSt = _buffer.Graphics.Save();
 
-            foreach (var overlay in OverLays)
+            foreach (var overlay in OverLays.ToArray())
             {
                 switch (overlay.Type)
                 {
@@ -334,10 +334,13 @@ namespace NBodies.Rendering
                         _buffer.Graphics.DrawString(overlay.Value, _infoTextFont, Brushes.White, overlay.Location);
                         break;
                 }
+
+                if (overlay.Destroyed)
+                    OverLays.Remove(overlay);
             }
 
             _buffer.Graphics.Restore(ogSt);
-            OverLays.Clear();
+            //OverLays.Clear();
         }
 
         //private static void DrawInfoText(PointF bodyLoc, CUDAMain.Body body)

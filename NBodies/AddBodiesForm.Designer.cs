@@ -39,6 +39,7 @@
             this.CenterMassTextBox = new System.Windows.Forms.TextBox();
             this.CenterMassCheckBox = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.StaticDensityCheckBox = new System.Windows.Forms.CheckBox();
             this.label6 = new System.Windows.Forms.Label();
             this.DensityTextBox = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
@@ -50,7 +51,8 @@
             this.MinSizeTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
-            this.StaticDensityCheckBox = new System.Windows.Forms.CheckBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.LifeTimeTextBox = new System.Windows.Forms.TextBox();
             this.BodyParamsGroup.SuspendLayout();
             this.StationaryGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
@@ -165,6 +167,8 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.label9);
+            this.panel1.Controls.Add(this.LifeTimeTextBox);
             this.panel1.Controls.Add(this.StaticDensityCheckBox);
             this.panel1.Controls.Add(this.label6);
             this.panel1.Controls.Add(this.DensityTextBox);
@@ -181,6 +185,18 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(361, 81);
             this.panel1.TabIndex = 0;
+            // 
+            // StaticDensityCheckBox
+            // 
+            this.StaticDensityCheckBox.AutoSize = true;
+            this.StaticDensityCheckBox.Checked = true;
+            this.StaticDensityCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.StaticDensityCheckBox.Location = new System.Drawing.Point(277, 51);
+            this.StaticDensityCheckBox.Name = "StaticDensityCheckBox";
+            this.StaticDensityCheckBox.Size = new System.Drawing.Size(53, 17);
+            this.StaticDensityCheckBox.TabIndex = 11;
+            this.StaticDensityCheckBox.Text = "Static";
+            this.StaticDensityCheckBox.UseVisualStyleBackColor = true;
             // 
             // label6
             // 
@@ -277,17 +293,22 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "500";
             // 
-            // StaticDensityCheckBox
+            // label9
             // 
-            this.StaticDensityCheckBox.AutoSize = true;
-            this.StaticDensityCheckBox.Checked = true;
-            this.StaticDensityCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.StaticDensityCheckBox.Location = new System.Drawing.Point(277, 51);
-            this.StaticDensityCheckBox.Name = "StaticDensityCheckBox";
-            this.StaticDensityCheckBox.Size = new System.Drawing.Size(53, 17);
-            this.StaticDensityCheckBox.TabIndex = 11;
-            this.StaticDensityCheckBox.Text = "Static";
-            this.StaticDensityCheckBox.UseVisualStyleBackColor = true;
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(38, 55);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(43, 13);
+            this.label9.TabIndex = 13;
+            this.label9.Text = "Lifetime";
+            // 
+            // LifeTimeTextBox
+            // 
+            this.LifeTimeTextBox.Location = new System.Drawing.Point(91, 52);
+            this.LifeTimeTextBox.Name = "LifeTimeTextBox";
+            this.LifeTimeTextBox.Size = new System.Drawing.Size(51, 20);
+            this.LifeTimeTextBox.TabIndex = 12;
+            this.LifeTimeTextBox.Text = "0";
             // 
             // AddBodiesForm
             // 
@@ -332,5 +353,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox NumToAddTextBox;
         private System.Windows.Forms.CheckBox StaticDensityCheckBox;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox LifeTimeTextBox;
     }
 }

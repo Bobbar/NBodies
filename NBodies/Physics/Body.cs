@@ -62,6 +62,12 @@ namespace NBodies.Physics
         public float Pressure;
 
         public int HasCollision;
+
+        public int IsExplosion;
+
+        public float Lifetime;
+
+        public float Age;
     }
    
 }

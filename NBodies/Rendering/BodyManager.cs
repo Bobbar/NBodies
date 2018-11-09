@@ -3,6 +3,7 @@ using NBodies.Rules;
 using NBodies.Shapes;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -45,6 +46,8 @@ namespace NBodies.Rendering
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
             _bodyStore.RemoveAll((b) => b.Visible == 0);
+
+            _bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
 
             Bodies = _bodyStore.ToArray();
 
@@ -347,6 +350,43 @@ namespace NBodies.Rendering
             return points;
         }
 
+        public static void InsertExplosion(PointF location, int count)
+        {
+            MainLoop.WaitForPause();
+
+            float lifetime = 0.02f;
+            var particles = new List<Body>();
+
+            for (int i = 0; i < count; i++)
+            {
+                var px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
+                var py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+
+                while (!PointHelper.PointInsideCircle(location, 0.5f, new PointF(px, py)))
+                {
+                    px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
+                    py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                }
+
+                particles.Add(NewBody(px, py, 1, 30, Color.Orange, lifetime,1));
+
+            }
+
+            Bodies = Bodies.Add(particles.ToArray());
+
+            //   Bodies = Bodies.Add(NewBody(location, 10, 200, Color.Orange, lifetime, 1));
+
+
+            MainLoop.Resume();
+
+        }
+
+        public static int NextUID()
+        {
+            _currentId++;
+            return _currentId;
+        }
+
         public static void Move(int index, PointF location)
         {
             if (index >= 0)
@@ -358,21 +398,56 @@ namespace NBodies.Rendering
 
         public static int Add(Body body)
         {
-            _currentId++;
+            //     _currentId++;
 
-            _bodyStore = Bodies.ToList();
+            //_bodyStore = Bodies.ToList();
 
-            body.UID = _currentId;
+            //body.UID = _currentId;
 
-            _bodyStore.Add(body);
-            Bodies = _bodyStore.ToArray();
+            //_bodyStore.Add(body);
+            //Bodies = _bodyStore.ToArray();
 
-            UIDIndex.Add(_currentId, Bodies.Length - 1);
+            //body.UID = _currentId;
+            body.UID = NextUID();
+            Bodies = Bodies.Add(body);
 
-            return _currentId;
+            UIDIndex.Add(body.UID, Bodies.Length - 1);
+
+            return body.UID;
         }
 
-        public static void Add(float locX, float locY, float size, float mass, Color color, int blackhole = 0)
+        public static T[] Add<T>(this T[] target, T item)
+        {
+            if (target == null)
+            {
+                //TODO: Return null or throw ArgumentNullException;
+            }
+            T[] result = new T[target.Length + 1];
+            target.CopyTo(result, 0);
+            result[target.Length] = item;
+            return result;
+        }
+
+        public static T[] Add<T>(this T[] target, params T[] items)
+        {
+            // Validate the parameters
+            if (target == null)
+            {
+                target = new T[] { };
+            }
+            if (items == null)
+            {
+                items = new T[] { };
+            }
+
+            // Join the arrays
+            T[] result = new T[target.Length + items.Length];
+            target.CopyTo(result, 0);
+            items.CopyTo(result, target.Length);
+            return result;
+        }
+
+        public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
             var b = new Body();
 
@@ -389,6 +464,61 @@ namespace NBodies.Rendering
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
+            b.Lifetime = lifetime;
+            b.Age = 0.0f;
+            b.IsExplosion = isExplosion;
+            b.BlackHole = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
+        public static Body NewBody(PointF loc, float size, float mass, Color color, float lifetime, int isExplosion = 0)
+        {
+            var b = new Body();
+
+            b.LocX = loc.X;
+            b.LocY = loc.Y;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = 0;
+            b.SpeedY = 0;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = 0;
+            b.Lifetime = lifetime;
+            b.Age = 0.0f;
+            b.IsExplosion = isExplosion;
+            b.BlackHole = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
+
+        public static void Add(float locX, float locY, float size, float mass, Color color, float lifetime, int blackhole = 0)
+        {
+            var b = new Body();
+
+            b.LocX = locX;
+            b.LocY = locY;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = 0;
+            b.SpeedY = 0;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = 0;
+            b.Lifetime = lifetime;
+            b.Age = 0.0f;
             b.BlackHole = blackhole;
             b.UID = -1;
 

@@ -14,12 +14,18 @@ namespace NBodies.Rendering
         public OverlayGraphicType Type { get; set; }
         public PointF Location { get; set; }
         public string Value { get; set; }
+        public bool Destroyed { get; set; } = false;
 
         public OverlayGraphic(OverlayGraphicType type, PointF location, string value)
         {
             Type = type;
             Location = location;
             Value = value;
+        }
+
+        public void Destroy()
+        {
+            Destroyed = true;
         }
 
 

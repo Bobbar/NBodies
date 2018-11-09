@@ -123,6 +123,7 @@ namespace NBodies
             int nMinerals = (count / 8);
             int bodyCount = 0;
 
+
             for (int i = 0; i < count; i++)
             {
                 MatterType matter = Matter.Types[0];
@@ -135,6 +136,7 @@ namespace NBodies
                 {
                     matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
                 }
+
 
 
                 bodyCount++;
@@ -169,7 +171,7 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
+                BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim()));
             }
 
             MainLoop.Resume();
@@ -185,7 +187,6 @@ namespace NBodies
         {
             AddBodiesToOrbit(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()), CenterMassCheckBox.Checked, float.Parse(CenterMassTextBox.Text.Trim()));
         }
-
         private void AddStationaryButton_Click(object sender, EventArgs e)
         {
             AddBodiesToDisc(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()));

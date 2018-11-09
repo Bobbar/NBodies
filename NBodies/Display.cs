@@ -10,14 +10,20 @@ namespace NBodies
     {
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
+        private bool _EDown = false;
+
         private int _selectedUid = -1;
         private int _mouseId = -1;
         private bool _mouseDown = false;
         private bool _bodyMovin = false;
         private PointF _mouseMoveDown = new PointF();
+        private PointF _mouseLocation = new PointF();
         private Timer _bodySizeTimer = new Timer();
         private Timer _UIUpdateTimer = new Timer();
         private bool _paused = false;
+
+        private OverlayGraphic mOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+
 
         public DisplayForm()
         {
@@ -48,6 +54,8 @@ namespace NBodies
             PhysicsProvider.InitPhysics();
 
             Renderer.Init(RenderBox);
+
+            Renderer.OverLays.Add(mOver);
 
             MainLoop.StartLoop();
         }
@@ -144,9 +152,10 @@ namespace NBodies
                 RenderVars.CurrentScale -= scaleChange;
             }
         }
-
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
+            _mouseLocation = e.Location;
+
             if (e.Button == MouseButtons.Left)
             {
                 if (_selectedUid == -1 && _shiftDown)
@@ -170,6 +179,14 @@ namespace NBodies
                     _mouseMoveDown = e.Location;
                 }
             }
+
+            if (_EDown)
+            {
+                mOver.Location = _mouseLocation.Subtract(new PointF(10,10));//ScaleHelpers.ScalePointRelative(e.Location);
+              //  mOver.Value = $@"{e.X},{e.Y}";
+            }
+           
+
         }
 
         private void DisplayForm_KeyDown(object sender, KeyEventArgs e)
@@ -187,6 +204,22 @@ namespace NBodies
 
                     MainLoop.WaitForPause();
                     _ctrlDown = true;
+
+                    break;
+
+                case Keys.E:
+
+                    _EDown = true;
+
+
+                    if (!Renderer.OverLays.Contains(mOver))
+                    {
+                        mOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10,10)), "");
+                        mOver.Value = "Boom!";
+
+                        Renderer.OverLays.Add(mOver);
+                    }
+
 
                     break;
             }
@@ -207,6 +240,13 @@ namespace NBodies
 
                     _ctrlDown = false;
                     if (!_paused) MainLoop.Resume();
+
+                    break;
+
+                case Keys.E:
+
+                    _EDown = false;
+                    mOver.Destroy();
 
                     break;
             }
@@ -254,6 +294,11 @@ namespace NBodies
                 else if (_selectedUid != -1 && mUid == -1)
                 {
                     _selectedUid = -1;
+                }
+
+                if (_EDown)
+                {
+                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 3000);
                 }
             }
         }
@@ -415,7 +460,7 @@ namespace NBodies
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
         {
-            var cm = BodyManager.CenterOfMass();
+            var cm = BodyManager.CenterOfMass().Multi(-1.0f);
 
             RenderVars.ViewportOffset = cm;
         }
