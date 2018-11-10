@@ -164,7 +164,15 @@ namespace NBodies.Rendering
                                  break;
                          }
 
-                         using (var bodyBrush = new SolidBrush(bodyColor))
+                         if (BodyManager.FollowSelected)
+                         {
+                             if (BodyManager.FollowBody().UID == body.UID)
+                             {
+                                 bodyColor = Color.Red;
+                             }
+                         }
+
+                            using (var bodyBrush = new SolidBrush(bodyColor))
                          {
                              var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
@@ -190,7 +198,7 @@ namespace NBodies.Rendering
                      if (ShowForce)
                      {
                          var f = new PointF(fbody.ForceX, fbody.ForceY);
-                         //  var f = new PointF(body.SpeedX, body.SpeedY);
+                         //var f = new PointF(fbody.SpeedX, fbody.SpeedY);
                          var bloc = new PointF(fbody.LocX, fbody.LocY);
                          f = f.Multi(0.1f);
                          var floc = bloc.Add(f);

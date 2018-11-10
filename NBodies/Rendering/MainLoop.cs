@@ -91,7 +91,6 @@ namespace NBodies.Rendering
         {
             // Reset the wait handle.
             _pausePhysicsWait.Reset();
-
             // Wait until the handle is signaled after the GPU calcs complete.
             _pausePhysicsWait.Wait(2000);
         }
@@ -147,6 +146,8 @@ namespace NBodies.Rendering
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
 
+                            BodyManager.CheckSetForNextDT();
+
                             // Increment physics frame count.
                             _frameCount++;
                         }
@@ -165,6 +166,8 @@ namespace NBodies.Rendering
                     _drawingDoneWait.Wait(-1);
 
                     // 4.
+                    //if (DrawBodies & BodyManager.CheckSetForNextDT())
+                    //    Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 

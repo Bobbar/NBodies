@@ -3,11 +3,8 @@ using NBodies.Rules;
 using NBodies.Shapes;
 using System;
 using System.Collections.Generic;
-using System.Collections;
 using System.Drawing;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -57,6 +54,60 @@ namespace NBodies.Rendering
             //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
+
+            //   CheckSetForNextDT();
+        }
+
+        public static void SetDTs()
+        {
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                if (Bodies[i].HasCollision == 1)
+                {
+                    Bodies[i].DeltaTime = MainLoop.TimeStep / 4f;
+                }
+                else
+                {
+                    Bodies[i].DeltaTime = MainLoop.TimeStep;
+                }
+            }
+        }
+
+        private static int its = 0;
+
+        public static bool CheckSetForNextDT()
+        {
+            bool ready = true;
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                if (Bodies[i].ElapTime < MainLoop.TimeStep && !(Bodies[i].ElapTime > MainLoop.TimeStep) && !(Bodies[i].DeltaTime == 0.0f))
+                {
+                    ready = false;
+                }
+            }
+
+            if (ready)
+            {
+                for (int i = 0; i < Bodies.Length; i++)
+                {
+                    Bodies[i].ElapTime = 0.0f;
+
+                    if (Bodies[i].HasCollision == 1)
+                    {
+                        Bodies[i].DeltaTime = MainLoop.TimeStep / 4f;
+                    }
+                    else
+                    {
+                        Bodies[i].DeltaTime = MainLoop.TimeStep;
+                    }
+
+                    if (Bodies[i].DeltaTime == 0.0f)
+                        Bodies[i].DeltaTime = MainLoop.TimeStep;
+                }
+            }
+
+            return ready;
         }
 
         public static void ClearBodies()
@@ -196,17 +247,13 @@ namespace NBodies.Rendering
 
                         //kinE += 0.5f * (bo)
                     }
-
                 }
             }
 
             kinE = 0.5f * kinE;
             potE = -0.5f * potE;
 
-
             Console.WriteLine($@"Kin: {kinE}  Pot: { potE}   tE: { (potE + kinE) }");
-
-
         }
 
         /// <summary>
@@ -309,13 +356,11 @@ namespace NBodies.Rendering
 
                             force.X += (f * distX / distSqrt);
                             force.Y += (f * distY / distSqrt);
-
                         }
                         else // If it is within the SOI, add to cache for faster lookup on the next loops.
                         {
                             soiBodies.Add(b);
                         }
-
                     }
                     else // After the first loop, use the hashset cache.
                     {
@@ -334,7 +379,6 @@ namespace NBodies.Rendering
                             force.Y += (f * distY / distSqrt);
                         }
                     }
-
                 }
 
                 speed.X += dtStep * force.X / body.Mass;
@@ -354,31 +398,35 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.02f;
-            var particles = new List<Body>();
+            float lifetime = 0.1f;
+            bool cloud = true;
 
-            for (int i = 0; i < count; i++)
+            if (cloud)
             {
-                var px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
-                var py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                var particles = new List<Body>();
 
-                while (!PointHelper.PointInsideCircle(location, 0.5f, new PointF(px, py)))
+                for (int i = 0; i < count; i++)
                 {
-                    px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
-                    py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                    var px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
+                    var py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+
+                    while (!PointHelper.PointInsideCircle(location, 0.5f, new PointF(px, py)))
+                    {
+                        px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
+                        py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                    }
+
+                    particles.Add(NewBody(px, py, 1.5f, 1, Color.Orange, lifetime, 1));
                 }
 
-                particles.Add(NewBody(px, py, 1, 30, Color.Orange, lifetime,1));
-
+                Bodies = Bodies.Add(particles.ToArray());
+            }
+            else
+            {
+                Bodies = Bodies.Add(NewBody(location, 10, 400, Color.Orange, lifetime, 1));
             }
 
-            Bodies = Bodies.Add(particles.ToArray());
-
-            //   Bodies = Bodies.Add(NewBody(location, 10, 200, Color.Orange, lifetime, 1));
-
-
             MainLoop.Resume();
-
         }
 
         public static int NextUID()
@@ -467,6 +515,9 @@ namespace NBodies.Rendering
             b.Lifetime = lifetime;
             b.Age = 0.0f;
             b.IsExplosion = isExplosion;
+
+            b.DeltaTime = 0.0005f;
+
             b.BlackHole = 0;
             b.UID = NextUID();
 
@@ -498,7 +549,6 @@ namespace NBodies.Rendering
 
             return b;
         }
-
 
         public static void Add(float locX, float locY, float size, float mass, Color color, float lifetime, int blackhole = 0)
         {
@@ -668,6 +718,9 @@ namespace NBodies.Rendering
             string info = $@"
 Index: { Bodies.ToList().IndexOf(body) }
 UID: { body.UID }
+DeltaTime: { body.DeltaTime }
+ElapTime: { body.ElapTime }
+IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }
 Size: { body.Size }
 InRoche: { body.InRoche }

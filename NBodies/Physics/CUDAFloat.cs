@@ -125,43 +125,47 @@ namespace NBodies.Physics
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
             Body body = inBodies[a];
-            body.ForceTot = 0;
-            body.ForceX = 0;
-            body.ForceY = 0;
-            body.HasCollision = 0;
 
-            body.Density = 0;
-            body.Pressure = 0;
-
-            ksize = body.Size;
-            ksizeSq = ksize * ksize;
-            kernRad9 = Math.Pow((double)ksize, 9.0);
-            factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
-
-            // Calculate initial body density.
-            diff = ksizeSq - FLOAT_EPSILON;
-            fac = factor * diff * diff * diff;
-            body.Density = (float)(body.Mass * fac);
-
-            int len = inBodies.Length;
-
-            for (int b = 0; b < len; b++)
+            if (body.ElapTime < dt)
             {
-                Body iBody = inBodies[b];
 
-                if (iBody.Visible == 1)
+                body.ForceTot = 0;
+                body.ForceX = 0;
+                body.ForceY = 0;
+                body.HasCollision = 0;
+
+                body.Density = 0;
+                body.Pressure = 0;
+
+                ksize = body.Size;
+                ksizeSq = ksize * ksize;
+                kernRad9 = Math.Pow((double)ksize, 9.0);
+                factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+
+                // Calculate initial body density.
+                diff = ksizeSq - FLOAT_EPSILON;
+                fac = factor * diff * diff * diff;
+                body.Density = (float)(body.Mass * fac);
+
+                int len = inBodies.Length;
+
+                for (int b = 0; b < len; b++)
                 {
-                    distX = iBody.LocX - body.LocX;
-                    distY = iBody.LocY - body.LocY;
-                    dist = (distX * distX) + (distY * distY);
-                    distSqrt = (float)Math.Sqrt(dist);
+                    Body iBody = inBodies[b];
 
-                    if (iBody.UID != body.UID)
+                    if (iBody.Visible == 1)
                     {
-                        if (distSqrt > 0f)
+                        distX = iBody.LocX - body.LocX;
+                        distY = iBody.LocY - body.LocY;
+                        dist = (distX * distX) + (distY * distY);
+                        distSqrt = (float)Math.Sqrt(dist);
+
+                        if (iBody.UID != body.UID)
                         {
-                            if (iBody.IsExplosion != 1)
+                            if (distSqrt > 0f)
                             {
+                                //if (iBody.IsExplosion != 1)
+                                //{
                                 totMass = iBody.Mass * body.Mass;
                                 //force = totMass / (distSqrt * distSqrt + 0.2f);
                                 force = totMass / (dist + 0.02f);
@@ -169,44 +173,87 @@ namespace NBodies.Physics
                                 body.ForceTot += force;
                                 body.ForceX += (force * distX / distSqrt);
                                 body.ForceY += (force * distY / distSqrt);
+                                //}
                             }
-                        }
 
-                        // Check if the body is within collision distance and set a flag.
-                        // This is checked in the collision kernel, and bodies that don't have
-                        // the flag set are skipped. This give a huge performance boost in most situations.
-                        if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
-                        {
-                            body.HasCollision = 1;
-                        }
+                            //// Check if the body is within collision distance and set a flag.
+                            //// This is checked in the collision kernel, and bodies that don't have
+                            //// the flag set are skipped. This give a huge performance boost in most situations.
+                            ////if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
+                            //if (distSqrt <= (body.Size) + (iBody.Size))
+                            //{
+                            //    body.HasCollision = 1;
+                            //}
 
-                        // SPH Density Kernel
-                        if (body.InRoche == 1 && iBody.InRoche == 1 && iBody.BlackHole != 1)
-                        {
-                            // is this distance close enough for kernal / neighbor calcs ?
-                            if (dist <= ksize)
+
+
+                            // SPH Density Kernel
+                            if (body.InRoche == 1 && iBody.InRoche == 1 && iBody.BlackHole != 1)
                             {
-                                if (dist < FLOAT_EPSILON)
+                                // is this distance close enough for kernal / neighbor calcs ?
+                                if (dist <= ksize)
                                 {
-                                    dist = FLOAT_EPSILON;
-                                }
+                                    if (dist < FLOAT_EPSILON)
+                                    {
+                                        dist = FLOAT_EPSILON;
+                                    }
 
-                                //  It's a neighbor; accumulate density.
-                                diff = ksizeSq - dist;
-                                fac = factor * diff * diff * diff;
-                                body.Density += (float)(body.Mass * fac);
+                                    //  It's a neighbor; accumulate density.
+                                    diff = ksizeSq - dist;
+                                    fac = factor * diff * diff * diff;
+                                    body.Density += (float)(body.Mass * fac);
+                                }
                             }
-                        }
-                    }
-                }
-            }
+
+
+                            // Check if the body is within collision distance and set a flag.
+                            // This is checked in the collision kernel, and bodies that don't have
+                            // the flag set are skipped. This give a huge performance boost in most situations.
+                            //if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
+                            if (distSqrt <= (body.Size) + (iBody.Size))
+                            {
+                                body.HasCollision = 1;
+                                //if (body.IsExplosion == 0)
+                                //    body.DeltaTime = dt / 4.0f;
+                            }
+
+
+                            //if (body.IsExplosion == 1 || iBody.IsExplosion == 1)
+                            //    body.DeltaTime = dt / 8.0f;
+
+                            // Check for next frame collision?
+                            //float nLocX = body.LocX + (body.DeltaTime * body.SpeedX);
+                            //float nLocY = body.LocY + (body.DeltaTime * body.SpeedY);
+
+                            //distX = iBody.LocX - nLocX;
+                            //distY = iBody.LocY - nLocX;
+                            //dist = (distX * distX) + (distY * distY);
+                            //distSqrt = (float)Math.Sqrt(dist);
+
+                            //if (distSqrt <= (body.Size) + (iBody.Size))
+                            //{
+                            //    body.HasCollision = 1;
+                            //    body.DeltaTime = dt / 4.0f;
+                            //}
+
+
+
+                        } // uid != uid
+
+                    } // ibody.visible
+
+                } // for b 
+
+            }// elap < dt
 
             gpThread.SyncThreads();
+
 
             if (body.Density > 0)
             {
                 body.Pressure = GAS_K * (body.Density);// - DENSITY_OFFSET);
             }
+
 
             if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
             {
@@ -250,7 +297,7 @@ namespace NBodies.Physics
 
             Body outBody = inBodies[a];
 
-            if (outBody.HasCollision == 1)
+            if (outBody.HasCollision == 1) //&& outBody.ElapTime < dt)
             {
 
                 float FLOAT_EPSILON = 1.192092896e-07f;
@@ -307,22 +354,32 @@ namespace NBodies.Physics
 
                                             // Viscosity
 
-                                            if (outBody.IsExplosion != 1 && inBody.IsExplosion != 1)
+                                            //if (outBody.IsExplosion != 1 && inBody.IsExplosion != 1)
+                                            //{
+                                            float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
+                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
+
+                                            // TODO: Share this with shear.      vvv
+                                            float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
+                                            float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
+
+                                            viscVelo_diffX *= visc_scalar;
+                                            viscVelo_diffY *= visc_scalar;
+
+                                            outBody.ForceX -= viscVelo_diffX;
+                                            outBody.ForceY -= viscVelo_diffY;
+                                            //}
+
+                                            if (inBody.IsExplosion == 1)
                                             {
-                                                float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
-                                                float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
 
-                                                // TODO: Share this with shear.      vvv
-                                                float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
-                                                float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
+                                                if (outBody.DeltaTime != inBody.DeltaTime)
+                                                {
+                                                    outBody.DeltaTime = inBody.DeltaTime;
+                                                    outBody.ElapTime = 0.0f;
+                                                }
 
-                                                viscVelo_diffX *= visc_scalar;
-                                                viscVelo_diffY *= visc_scalar;
-
-                                                outBody.ForceX -= viscVelo_diffX;
-                                                outBody.ForceY -= viscVelo_diffY;
                                             }
-                                            
 
 
                                             ////Shear
@@ -402,16 +459,34 @@ namespace NBodies.Physics
                 }
             }
 
-            gpThread.SyncThreads();
 
             // Integrate forces and speeds.
-            outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
-            outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-            outBody.LocX += dt * (outBody.SpeedX * 0.99f);
-            outBody.LocY += dt * (outBody.SpeedY * 0.99f);
+            //outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
+            //outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
+            //outBody.LocX += dt * (outBody.SpeedX * 0.99f);
+            //outBody.LocY += dt * (outBody.SpeedY * 0.99f);
 
-            if (outBody.Lifetime > 0.0f)
-                outBody.Age += (dt * 4.0f);
+            //if (outBody.Lifetime > 0.0f)
+            //    outBody.Age += (dt * 4.0f);
+
+
+            if (outBody.ElapTime < dt)
+            {
+                outBody.SpeedX += outBody.DeltaTime * outBody.ForceX / outBody.Mass;
+                outBody.SpeedY += outBody.DeltaTime * outBody.ForceY / outBody.Mass;
+                outBody.LocX += outBody.DeltaTime * (outBody.SpeedX * 0.99f);
+                outBody.LocY += outBody.DeltaTime * (outBody.SpeedY * 0.99f);
+
+                if (outBody.Lifetime > 0.0f)
+                    outBody.Age += (outBody.DeltaTime * 4.0f);
+
+                outBody.ElapTime += outBody.DeltaTime;
+            }
+
+
+            gpThread.SyncThreads();
+
+            
 
             outBodies[a] = outBody;
         }

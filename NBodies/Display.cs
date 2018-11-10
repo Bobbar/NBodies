@@ -128,7 +128,7 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
-                //   selectBody.PrintInfo();
+                selectBody.PrintInfo();
 
             }
         }
@@ -298,7 +298,7 @@ namespace NBodies
 
                 if (_EDown)
                 {
-                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 3000);
+                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 2000);
                 }
             }
         }

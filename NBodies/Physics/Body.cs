@@ -68,6 +68,10 @@ namespace NBodies.Physics
         public float Lifetime;
 
         public float Age;
+
+        public float ElapTime;
+
+        public float DeltaTime;
     }
    
 }
