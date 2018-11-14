@@ -118,6 +118,8 @@ namespace NBodies.Rendering
             // The net result is a higher frame rate.
             try
             {
+                //IO.Recording.StartRecording();
+
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
                     if (!_skipPhysics)
@@ -173,6 +175,9 @@ namespace NBodies.Rendering
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
+                    if (BodyManager.Bodies.Length > 0)
+                        IO.Recording.RecordFrame(BodyManager.Bodies);
+
                     // FPS Limiter
                     DelayFrame();
                 }
@@ -185,6 +190,7 @@ namespace NBodies.Rendering
             if (_cancelTokenSource.IsCancellationRequested)
             {
                 _stopLoopWait.Set();
+              //  IO.Recording.StopRecording();
             }
         }
 

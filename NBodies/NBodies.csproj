@@ -72,6 +72,7 @@
     <Compile Include="Display.Designer.cs">
       <DependentUpon>Display.cs</DependentUpon>
     </Compile>
+    <Compile Include="IO\Recording.cs" />
     <Compile Include="IO\Serializer.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Numbers.cs" />

@@ -176,7 +176,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -184,7 +184,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -192,7 +192,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -200,7 +200,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -208,7 +208,7 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -225,15 +225,15 @@
             // 
             this.showFollowBodyForce.CheckOnClick = true;
             this.showFollowBodyForce.Name = "showFollowBodyForce";
-            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
+            this.showFollowBodyForce.Size = new System.Drawing.Size(139, 22);
             this.showFollowBodyForce.Text = "Force Vector";
             this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
             // 
-            // predictOrbitSlowToolStripMenuItem
+            // showPredictOrbit
             // 
             this.showPredictOrbit.CheckOnClick = true;
-            this.showPredictOrbit.Name = "predictOrbitSlowToolStripMenuItem";
-            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
+            this.showPredictOrbit.Name = "showPredictOrbit";
+            this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
             this.showPredictOrbit.Text = "Orbit (Slow)";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
@@ -323,6 +323,7 @@
             this.LoadRecordingButton.TabIndex = 15;
             this.LoadRecordingButton.Text = "Load Recording";
             this.LoadRecordingButton.UseVisualStyleBackColor = true;
+            this.LoadRecordingButton.Click += new System.EventHandler(this.LoadRecordingButton_Click);
             // 
             // RecordButton
             // 
@@ -658,6 +659,7 @@
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "DisplayForm";
             this.Text = "NBodies";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DisplayForm_FormClosing);
             this.Load += new System.EventHandler(this.DisplayForm_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
