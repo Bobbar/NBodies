@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System;
 
 namespace NBodies.Rendering
 {
@@ -106,6 +105,17 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
              {
+                 Body followBody = new Body();
+                 // var followOffset = new PointF();
+
+                 if (BodyManager.FollowSelected)
+                 {
+                     followBody = BodyManager.FollowBody();
+                     var followOffset = new PointF(followBody.LocX, followBody.LocY);
+                     RenderVars.ViewportOffset.X = -followOffset.X;
+                     RenderVars.ViewportOffset.Y = -followOffset.Y;
+                 }
+
                  var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
 
                  CheckScale();
@@ -168,11 +178,16 @@ namespace NBodies.Rendering
                          {
                              if (BodyManager.FollowBody().UID == body.UID)
                              {
+                                 followBody = body;
                                  bodyColor = Color.Red;
                              }
                          }
+                         else
+                         {
+                             followBody = new Body();
+                         }
 
-                            using (var bodyBrush = new SolidBrush(bodyColor))
+                         using (var bodyBrush = new SolidBrush(bodyColor))
                          {
                              var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
@@ -190,16 +205,12 @@ namespace NBodies.Rendering
 
                  if (BodyManager.FollowSelected)
                  {
-                     var fbody = BodyManager.FollowBody();
-                     var followOffset = BodyManager.FollowBodyLoc();
-                     RenderVars.ViewportOffset.X = -followOffset.X;
-                     RenderVars.ViewportOffset.Y = -followOffset.Y;
 
                      if (ShowForce)
                      {
-                         var f = new PointF(fbody.ForceX, fbody.ForceY);
-                         //var f = new PointF(fbody.SpeedX, fbody.SpeedY);
-                         var bloc = new PointF(fbody.LocX, fbody.LocY);
+                         var f = new PointF(followBody.ForceX, followBody.ForceY);
+                       //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
+                         var bloc = new PointF(followBody.LocX, followBody.LocY);
                          f = f.Multi(0.1f);
                          var floc = bloc.Add(f);
                          _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
@@ -211,7 +222,7 @@ namespace NBodies.Rendering
                          if (!_orbitOffloadRunning)
                              CalcOrbitOffload();
 
-                         // Previous orbit calc is complete. 
+                         // Previous orbit calc is complete.
                          // Bring the new data into another reference.
                          if (!_orbitReadyWait.Wait(0))
                          {
@@ -221,12 +232,12 @@ namespace NBodies.Rendering
                              _orbitReadyWait.Set();
                          }
 
-                         // Add the final offset to the path points and draw then as a line.
+                         // Add the final offset to the path points and draw them as a line.
                          if (_drawPath.Count > 0)
                          {
                              var pathArr = _drawPath.ToArray();
 
-                             pathArr[0] = new PointF(fbody.LocX, fbody.LocY);
+                             pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
 
                              for (int a = 0; a < pathArr.Length; a++)
                              {
@@ -238,7 +249,7 @@ namespace NBodies.Rendering
                      }
                  }
 
-                    DrawOverlays();
+                 DrawOverlays();
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();
              });
@@ -266,8 +277,7 @@ namespace NBodies.Rendering
                     _orbitReadyWait.Wait(-1);
 
                     _orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
-                   // _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
-
+                    // _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
 
                     _orbitReadyWait.Reset();
                 }

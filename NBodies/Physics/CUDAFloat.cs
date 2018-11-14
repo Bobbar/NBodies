@@ -74,7 +74,7 @@ namespace NBodies.Physics
 
             return newcode;
         }
-
+      
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
             float viscosity = 5.0f;//7.5f;
@@ -86,8 +86,9 @@ namespace NBodies.Physics
             // otherwise we run into problems when a block encounters a dataset
             // that doesn't have a work item for each thread.
 
+
             if (bodies.Length < blocks * threadsPerBlock)
-                Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock));
+                Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock) + 1);
 
             var gpuInBodies = gpu.Allocate(bodies);
             var gpuOutBodies = gpu.Allocate(bodies);
@@ -128,7 +129,6 @@ namespace NBodies.Physics
 
             if (body.ElapTime < dt)
             {
-
                 body.ForceTot = 0;
                 body.ForceX = 0;
                 body.ForceY = 0;
@@ -158,6 +158,12 @@ namespace NBodies.Physics
                         distX = iBody.LocX - body.LocX;
                         distY = iBody.LocY - body.LocY;
                         dist = (distX * distX) + (distY * distY);
+
+                        if (dist < 0.02f)
+                        {
+                            dist = 0.02f;
+                        }
+
                         distSqrt = (float)Math.Sqrt(dist);
 
                         if (iBody.UID != body.UID)
@@ -168,7 +174,8 @@ namespace NBodies.Physics
                                 //{
                                 totMass = iBody.Mass * body.Mass;
                                 //force = totMass / (distSqrt * distSqrt + 0.2f);
-                                force = totMass / (dist + 0.02f);
+                                //force = totMass / (dist + 0.02f);
+                                force = totMass / (dist);
 
                                 body.ForceTot += force;
                                 body.ForceX += (force * distX / distSqrt);
@@ -210,34 +217,10 @@ namespace NBodies.Physics
                             // This is checked in the collision kernel, and bodies that don't have
                             // the flag set are skipped. This give a huge performance boost in most situations.
                             //if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
-                            if (distSqrt <= (body.Size) + (iBody.Size))
+                            if (distSqrt <= (body.Size * 2.0f) + (iBody.Size * 2.0f))
                             {
                                 body.HasCollision = 1;
-                                //if (body.IsExplosion == 0)
-                                //    body.DeltaTime = dt / 4.0f;
                             }
-
-
-                            //if (body.IsExplosion == 1 || iBody.IsExplosion == 1)
-                            //    body.DeltaTime = dt / 8.0f;
-
-                            // Check for next frame collision?
-                            //float nLocX = body.LocX + (body.DeltaTime * body.SpeedX);
-                            //float nLocY = body.LocY + (body.DeltaTime * body.SpeedY);
-
-                            //distX = iBody.LocX - nLocX;
-                            //distY = iBody.LocY - nLocX;
-                            //dist = (distX * distX) + (distY * distY);
-                            //distSqrt = (float)Math.Sqrt(dist);
-
-                            //if (distSqrt <= (body.Size) + (iBody.Size))
-                            //{
-                            //    body.HasCollision = 1;
-                            //    body.DeltaTime = dt / 4.0f;
-                            //}
-
-
-
                         } // uid != uid
 
                     } // ibody.visible
@@ -485,8 +468,6 @@ namespace NBodies.Physics
 
 
             gpThread.SyncThreads();
-
-            
 
             outBodies[a] = outBody;
         }

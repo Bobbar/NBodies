@@ -14,7 +14,7 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
 
-        public static int TargetFPS = 60;
+        public static int TargetFPS = 100;
 
         public static float TimeStep
         {
@@ -124,6 +124,8 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
+                            BodyManager.CheckSetForNextDT();
+
                             // 1.
                             // Copy the current bodies to another array.
                             var bodiesCopy = new Body[BodyManager.Bodies.Length];
@@ -131,7 +133,7 @@ namespace NBodies.Rendering
 
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
-                          
+
                             // 2.
                             // Wait for the drawing thread to complete.
                             _drawingDoneWait.Wait(-1);
@@ -139,14 +141,14 @@ namespace NBodies.Rendering
                             // 3.
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = bodiesCopy;
-                          
+
                             // Process and fracture new roche bodies.
                             ProcessRoche(ref BodyManager.Bodies);
 
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
 
-                            BodyManager.CheckSetForNextDT();
+                            //BodyManager.CheckSetForNextDT();
 
                             // Increment physics frame count.
                             _frameCount++;

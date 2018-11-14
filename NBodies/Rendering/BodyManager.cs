@@ -58,23 +58,7 @@ namespace NBodies.Rendering
             //   CheckSetForNextDT();
         }
 
-        public static void SetDTs()
-        {
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                if (Bodies[i].HasCollision == 1)
-                {
-                    Bodies[i].DeltaTime = MainLoop.TimeStep / 4f;
-                }
-                else
-                {
-                    Bodies[i].DeltaTime = MainLoop.TimeStep;
-                }
-            }
-        }
-
-        private static int its = 0;
-
+        
         public static bool CheckSetForNextDT()
         {
             bool ready = true;
@@ -398,7 +382,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.1f;
+            float lifetime = 0.03f;//0.1f;
             bool cloud = true;
 
             if (cloud)
@@ -715,8 +699,9 @@ namespace NBodies.Rendering
 
         public static void PrintInfo(this Body body)
         {
+            int index = Bodies.ToList().IndexOf(body);
             string info = $@"
-Index: { Bodies.ToList().IndexOf(body) }
+Index: { index }
 UID: { body.UID }
 DeltaTime: { body.DeltaTime }
 ElapTime: { body.ElapTime }
@@ -732,8 +717,8 @@ Speed (X,Y): { body.SpeedX }, { body.SpeedY }
 Position (X,Y): { body.LocX }, { body.LocY }
 Force (X,Y): { body.ForceX }, { body.ForceX }
 ";
-
-            Console.WriteLine(info);
+            if (index > -1)
+                Console.WriteLine(info);
         }
     }
 }

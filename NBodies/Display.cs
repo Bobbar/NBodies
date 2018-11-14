@@ -298,7 +298,7 @@ namespace NBodies
 
                 if (_EDown)
                 {
-                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 2000);
+                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 2500);
                 }
             }
         }
