@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using NBodies.IO;
 
 namespace NBodies.Rendering
 {
@@ -14,7 +15,7 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
 
-        public static int TargetFPS = 100;
+        public static int TargetFPS = 60;
 
         public static float TimeStep
         {
@@ -52,6 +53,22 @@ namespace NBodies.Rendering
             }
         }
 
+        public static bool Recording
+        {
+            get
+            {
+                return _recording;
+            }
+        }
+
+        public static IRecording Recorder
+        {
+            get
+            {
+                return _recorder;
+            }
+        }
+
         public static float CurrentFPS = 0;
 
         private static Int64 _frameCount = 0;
@@ -65,6 +82,10 @@ namespace NBodies.Rendering
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
+        private static bool _recording = false;
+       // private static bool _playback = false;
+
+        private static IRecording _recorder = new IO.ProtoBufRecorder();
 
         public static void StartLoop()
         {
@@ -106,6 +127,9 @@ namespace NBodies.Rendering
             _skipPhysics = false;
         }
 
+        private static Stopwatch timer = new Stopwatch();
+
+
         private async static void DoLoop()
         {
             // 1. Make a copy of the body data and pass that to the physics methods to calculate the next frame.
@@ -118,10 +142,9 @@ namespace NBodies.Rendering
             // The net result is a higher frame rate.
             try
             {
-                //IO.Recording.StartRecording();
-
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
+
                     if (!_skipPhysics)
                     {
                         if (BodyManager.Bodies.Length > 2)
@@ -154,6 +177,10 @@ namespace NBodies.Rendering
 
                             // Increment physics frame count.
                             _frameCount++;
+
+                            if (_recording && BodyManager.Bodies.Length > 0)
+                                _recorder.RecordFrame(BodyManager.Bodies);
+
                         }
                     }
 
@@ -166,6 +193,21 @@ namespace NBodies.Rendering
                         _pausePhysicsWait.Set();
                     }
 
+                    if (!_recorder.PlaybackPaused && !_recorder.PlaybackComplete)
+                    {
+                        var frame = _recorder.GetNextFrame();
+
+                        if (frame != null && frame.Length > 0)
+                        {
+                            BodyManager.Bodies = frame;
+                        }
+                        else
+                        {
+                            _skipPhysics = true;
+                            // _playback = false;
+                        }
+                    }
+
                     // Make sure the drawing thread is finished.
                     _drawingDoneWait.Wait(-1);
 
@@ -175,8 +217,6 @@ namespace NBodies.Rendering
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
-                    if (BodyManager.Bodies.Length > 0)
-                        IO.Recording.RecordFrame(BodyManager.Bodies);
 
                     // FPS Limiter
                     DelayFrame();
@@ -190,9 +230,40 @@ namespace NBodies.Rendering
             if (_cancelTokenSource.IsCancellationRequested)
             {
                 _stopLoopWait.Set();
-              //  IO.Recording.StopRecording();
+                //recorder.StopAll();
             }
         }
+
+        public static void StartRecording()
+        {
+            _recording = true;
+            _recorder.PlaybackPaused = true;
+
+            _recorder.CreateRecording($@"C:\Temp\recording.dat");
+        }
+
+        public static void StopRecording()
+        {
+            _recording = false;
+            _recorder.PlaybackPaused = true;
+
+            _recorder.StopAll();
+        }
+
+        public static void StartPlayback()
+        {
+            _skipPhysics = true;
+
+            Stop();
+
+            _recorder.OpenRecording($@"C:\Temp\recording.dat");
+
+            _recording = false;
+            _recorder.PlaybackPaused = false;
+
+            StartLoop();
+        }
+
 
         private static void DelayFrame()
         {

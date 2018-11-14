@@ -717,7 +717,7 @@ Speed (X,Y): { body.SpeedX }, { body.SpeedY }
 Position (X,Y): { body.LocX }, { body.LocY }
 Force (X,Y): { body.ForceX }, { body.ForceX }
 ";
-            if (index > -1)
+           // if (index > -1)
                 Console.WriteLine(info);
         }
     }

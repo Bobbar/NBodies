@@ -493,7 +493,21 @@ namespace NBodies
 
         private void LoadRecordingButton_Click(object sender, EventArgs e)
         {
-            NBodies.IO.Recording.OpenRecording();
+            MainLoop.StartPlayback();
+
+            new PlaybackControlForm(MainLoop.Recorder);
+        }
+
+        private void RecordButton_Click(object sender, EventArgs e)
+        {
+            if (MainLoop.Recording)
+            {
+                MainLoop.StopRecording();
+            }
+            else
+            {
+                MainLoop.StartRecording();
+            }
         }
     }
 }

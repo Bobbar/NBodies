@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>NBodies.Program</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cudafy.NET, Version=1.29.5576.13786, Culture=neutral, PublicKeyToken=63a4c9931616906b, processorArchitecture=MSIL">
       <HintPath>..\packages\CUDAfy.NET.1.29.5576.13786\lib\net40\Cudafy.NET.dll</HintPath>
@@ -72,7 +75,8 @@
     <Compile Include="Display.Designer.cs">
       <DependentUpon>Display.cs</DependentUpon>
     </Compile>
-    <Compile Include="IO\Recording.cs" />
+    <Compile Include="IO\IRecording.cs" />
+    <Compile Include="IO\ProtoBufRecorder.cs" />
     <Compile Include="IO\Serializer.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Numbers.cs" />
@@ -80,6 +84,12 @@
     <Compile Include="Physics\CUDAFloat.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
     <Compile Include="Physics\PhysicsProvider.cs" />
+    <Compile Include="PlaybackControlForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PlaybackControlForm.Designer.cs">
+      <DependentUpon>PlaybackControlForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rendering\BodyManager.cs" />
@@ -98,6 +108,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Display.resx">
       <DependentUpon>Display.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PlaybackControlForm.resx">
+      <DependentUpon>PlaybackControlForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

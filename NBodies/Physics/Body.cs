@@ -57,8 +57,10 @@ namespace NBodies.Physics
         [ProtoMember(14)]
         public int UID;
 
+        [ProtoMember(15)]
         public float Density;
 
+        [ProtoMember(16)]
         public float Pressure;
 
         public int HasCollision;

@@ -285,9 +285,9 @@
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 95F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 174F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 266F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 71F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 107F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 110F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 294F));
             this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 16, 0);
             this.tableLayoutPanel3.Controls.Add(this.RecordButton, 15, 0);
             this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 14, 0);
@@ -316,10 +316,10 @@
             // 
             // LoadRecordingButton
             // 
-            this.LoadRecordingButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.LoadRecordingButton.Location = new System.Drawing.Point(1509, 3);
+            this.LoadRecordingButton.Dock = System.Windows.Forms.DockStyle.Left;
+            this.LoadRecordingButton.Location = new System.Drawing.Point(1286, 3);
             this.LoadRecordingButton.Name = "LoadRecordingButton";
-            this.LoadRecordingButton.Size = new System.Drawing.Size(65, 23);
+            this.LoadRecordingButton.Size = new System.Drawing.Size(83, 23);
             this.LoadRecordingButton.TabIndex = 15;
             this.LoadRecordingButton.Text = "Load Recording";
             this.LoadRecordingButton.UseVisualStyleBackColor = true;
@@ -328,19 +328,20 @@
             // RecordButton
             // 
             this.RecordButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.RecordButton.Location = new System.Drawing.Point(1243, 3);
+            this.RecordButton.Location = new System.Drawing.Point(1176, 3);
             this.RecordButton.Name = "RecordButton";
-            this.RecordButton.Size = new System.Drawing.Size(260, 23);
+            this.RecordButton.Size = new System.Drawing.Size(104, 23);
             this.RecordButton.TabIndex = 14;
             this.RecordButton.Text = "Record";
             this.RecordButton.UseVisualStyleBackColor = true;
+            this.RecordButton.Click += new System.EventHandler(this.RecordButton_Click);
             // 
             // ScreenShotButton
             // 
             this.ScreenShotButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ScreenShotButton.Location = new System.Drawing.Point(1069, 3);
             this.ScreenShotButton.Name = "ScreenShotButton";
-            this.ScreenShotButton.Size = new System.Drawing.Size(168, 23);
+            this.ScreenShotButton.Size = new System.Drawing.Size(101, 23);
             this.ScreenShotButton.TabIndex = 13;
             this.ScreenShotButton.Text = "Screenshot";
             this.ScreenShotButton.UseVisualStyleBackColor = true;
