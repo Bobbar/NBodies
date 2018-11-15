@@ -8,7 +8,7 @@ namespace NBodies.Physics
 {
     public class CUDAFloat : IPhysicsCalc
     {
-        private int gpuIndex = 0;
+        private int gpuIndex = 2;
         private readonly int threadsPerBlock = 256;
         private GPGPU gpu;
 
@@ -19,15 +19,11 @@ namespace NBodies.Physics
 
         public CUDAFloat(int gpuIdx, int threadsperblock)
         {
-            gpuIndex = gpuIdx;
-            threadsPerBlock = threadsperblock;
-        }
+            if (gpuIdx != -1)
+                gpuIndex = gpuIdx;
 
-        public CUDAFloat(int gpuIdx, int threadsperblock, int devId)
-        {
-            gpuIndex = gpuIdx;
-            threadsPerBlock = threadsperblock;
-            gpuIndex = devId;
+            if (threadsperblock != -1)
+                threadsPerBlock = threadsperblock;
         }
 
         public void Init()
@@ -51,8 +47,11 @@ namespace NBodies.Physics
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
 
-            Console.WriteLine(gpu.GetDeviceProperties().ToString());
+            var props = gpu.GetDeviceProperties();
+            Console.WriteLine(props.ToString());
         }
+
+     
 
         /// <summary>
         /// Fixes missing 'struct' strings for each Body function and variable declaration.

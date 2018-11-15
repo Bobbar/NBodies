@@ -8,8 +8,8 @@ namespace NBodies
 {
     static class Program
     {
-        public static int ThreadsPerBlockArgument = 64;
-        public static int DeviceID = 0;
+        public static int ThreadsPerBlockArgument = -1;
+        public static int DeviceID = -1;
         /// <summary>
         /// The main entry point for the application.
         /// </summary>

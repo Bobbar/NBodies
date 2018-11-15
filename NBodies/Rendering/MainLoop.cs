@@ -82,7 +82,7 @@ namespace NBodies.Rendering
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
-          //private static IRecording _recorder = new IO.ProtoBufRecorder();
+       // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
 
