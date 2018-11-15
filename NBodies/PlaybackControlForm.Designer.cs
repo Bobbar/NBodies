@@ -41,9 +41,8 @@
             this.SeekTrackBar.Name = "SeekTrackBar";
             this.SeekTrackBar.Size = new System.Drawing.Size(767, 45);
             this.SeekTrackBar.TabIndex = 0;
-            this.SeekTrackBar.ValueChanged += new System.EventHandler(this.SeekTrackBar_ValueChanged);
+            this.SeekTrackBar.Scroll += new System.EventHandler(this.SeekTrackBar_Scroll);
             this.SeekTrackBar.MouseDown += new System.Windows.Forms.MouseEventHandler(this.SeekTrackBar_MouseDown);
-            this.SeekTrackBar.MouseUp += new System.Windows.Forms.MouseEventHandler(this.SeekTrackBar_MouseUp);
             // 
             // PauseResumeButton
             // 
@@ -70,6 +69,8 @@
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Playback Control";
+            this.TopMost = true;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.PlaybackControlForm_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.SeekTrackBar)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

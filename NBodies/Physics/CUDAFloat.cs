@@ -9,7 +9,7 @@ namespace NBodies.Physics
     public class CUDAFloat : IPhysicsCalc
     {
         private int gpuIndex = 0;
-        private const int threadsPerBlock = 256;
+        private readonly int threadsPerBlock = 256;
         private GPGPU gpu;
 
         public CUDAFloat(int gpuIdx)
@@ -17,10 +17,23 @@ namespace NBodies.Physics
             gpuIndex = gpuIdx;
         }
 
+        public CUDAFloat(int gpuIdx, int threadsperblock)
+        {
+            gpuIndex = gpuIdx;
+            threadsPerBlock = threadsperblock;
+        }
+
+        public CUDAFloat(int gpuIdx, int threadsperblock, int devId)
+        {
+            gpuIndex = gpuIdx;
+            threadsPerBlock = threadsperblock;
+            gpuIndex = devId;
+        }
+
         public void Init()
         {
-            var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
-            var cudaModule = CudafyModule.TryDeserialize(modulePath);
+            //var modulePath = @"..\..\Kernels\CUDAFloat.cdfy";
+            var cudaModule = CudafyModule.TryDeserialize();
 
             if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
@@ -28,12 +41,12 @@ namespace NBodies.Physics
 
                 CudafyTranslator.Language = eLanguage.OpenCL;
                 cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
-                cudaModule.Serialize(modulePath);
+                cudaModule.Serialize();
             }
 
             // Add missing 'struct' strings to generated code.
             cudaModule.SourceCode = FixCode(cudaModule.SourceCode);
-            cudaModule.Serialize(modulePath);
+            cudaModule.Serialize();
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
@@ -74,12 +87,12 @@ namespace NBodies.Physics
 
             return newcode;
         }
-      
+
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
             float viscosity = 5.0f;//7.5f;
 
-            var blocks = (bodies.Length - 1 + threadsPerBlock - 1) / threadsPerBlock;
+            var blocks = (int)Math.Round((bodies.Length - 1 + threadsPerBlock - 1) / (float)threadsPerBlock, 0);
 
             // Zero pad the body array to fit the calculated number of blocks:
             // This makes sure that the dataset fills each block completely,
@@ -159,9 +172,9 @@ namespace NBodies.Physics
                         distY = iBody.LocY - body.LocY;
                         dist = (distX * distX) + (distY * distY);
 
-                        if (dist < 0.02f)
+                        if (dist < 0.10f)
                         {
-                            dist = 0.02f;
+                            dist = 0.10f;
                         }
 
                         distSqrt = (float)Math.Sqrt(dist);

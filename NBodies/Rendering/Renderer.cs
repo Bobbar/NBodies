@@ -106,7 +106,6 @@ namespace NBodies.Rendering
             await Task.Run(() =>
              {
                  Body followBody = new Body();
-                 // var followOffset = new PointF();
 
                  if (BodyManager.FollowSelected)
                  {

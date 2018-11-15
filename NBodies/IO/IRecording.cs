@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using NBodies.Physics;
-
+﻿using NBodies.Physics;
+using System;
 
 namespace NBodies.IO
 {
@@ -13,23 +7,23 @@ namespace NBodies.IO
     {
         event EventHandler<int> ProgressChanged;
 
+        bool PlaybackActive { get; }
+        bool PlaybackComplete { get; }
         bool PlaybackPaused { get; set; }
+        bool RecordingActive { get; }
 
+        int SeekIndex { get; set; }
         int TotalFrames { get; }
+
 
         void CreateRecording(string file);
 
-        void StopAll();
-
-        void RecordFrame(Body[] frame);
+        Body[] GetNextFrame();
 
         void OpenRecording(string file);
 
-        Body[] GetNextFrame();
+        void RecordFrame(Body[] frame);
 
-        bool PlaybackComplete { get; }
-
-        void SeekToFrame(int frame);
-
+        void StopAll();
     }
 }

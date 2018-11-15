@@ -23,7 +23,7 @@ namespace NBodies
         private bool _paused = false;
 
         private OverlayGraphic mOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-
+        private PlaybackControlForm _playbackControl;
 
         public DisplayForm()
         {
@@ -114,6 +114,16 @@ namespace NBodies
                 SetSelectedInfo();
             }
 
+            if (MainLoop.Recorder.RecordingActive)
+            {
+                RecordButton.BackColor = Color.DarkGreen;
+            }
+            else
+            {
+                RecordButton.BackColor = DefaultBackColor;
+
+            }
+
         }
 
         private void SetSelectedInfo()
@@ -128,9 +138,48 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
-                selectBody.PrintInfo();
+                // selectBody.PrintInfo();
 
             }
+        }
+
+        private void StartRecording()
+        {
+            if (MainLoop.Recording)
+            {
+                MainLoop.StopRecording();
+            }
+
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "NBody Recording|*.rec";
+                saveDialog.Title = "Save Recording";
+                saveDialog.ShowDialog();
+
+                if (!string.IsNullOrEmpty(saveDialog.FileName))
+                {
+                    MainLoop.StartRecording(saveDialog.FileName);
+                }
+            }
+        }
+
+        private void StartPlayback()
+        {
+            using (var openDialog = new OpenFileDialog())
+            {
+                openDialog.Filter = "NBody Recording|*.rec";
+                openDialog.Title = "Load Recording";
+                openDialog.ShowDialog();
+
+                if (!string.IsNullOrEmpty(openDialog.FileName))
+                {
+                    var recorder = MainLoop.StartPlayback(openDialog.FileName);
+
+                    _playbackControl?.Dispose();
+                    _playbackControl = new PlaybackControlForm(recorder);
+                }
+            }
+
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
@@ -182,10 +231,10 @@ namespace NBodies
 
             if (_EDown)
             {
-                mOver.Location = _mouseLocation.Subtract(new PointF(10,10));//ScaleHelpers.ScalePointRelative(e.Location);
-              //  mOver.Value = $@"{e.X},{e.Y}";
+                mOver.Location = _mouseLocation.Subtract(new PointF(10, 10));//ScaleHelpers.ScalePointRelative(e.Location);
+                                                                             //  mOver.Value = $@"{e.X},{e.Y}";
             }
-           
+
 
         }
 
@@ -214,7 +263,7 @@ namespace NBodies
 
                     if (!Renderer.OverLays.Contains(mOver))
                     {
-                        mOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10,10)), "");
+                        mOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
                         mOver.Value = "Boom!";
 
                         Renderer.OverLays.Add(mOver);
@@ -491,11 +540,11 @@ namespace NBodies
             MainLoop.Stop();
         }
 
+
+
         private void LoadRecordingButton_Click(object sender, EventArgs e)
         {
-            MainLoop.StartPlayback();
-
-            new PlaybackControlForm(MainLoop.Recorder);
+            StartPlayback();
         }
 
         private void RecordButton_Click(object sender, EventArgs e)
@@ -506,7 +555,7 @@ namespace NBodies
             }
             else
             {
-                MainLoop.StartRecording();
+                StartRecording();
             }
         }
     }

@@ -53,24 +53,20 @@ namespace NBodies
             _recorder.PlaybackPaused = _paused;
         }
 
-        private void SeekTrackBar_ValueChanged(object sender, EventArgs e)
-        {
-            if (_paused)
-            {
-                _recorder.SeekToFrame(SeekTrackBar.Value);
-            }
-        }
-
         private void SeekTrackBar_MouseDown(object sender, MouseEventArgs e)
         {
             _paused = true;
             _recorder.PlaybackPaused = true;
         }
-
-        private void SeekTrackBar_MouseUp(object sender, MouseEventArgs e)
+      
+        private void SeekTrackBar_Scroll(object sender, EventArgs e)
         {
-            _paused = false;
-            _recorder.PlaybackPaused = false;
+            _recorder.SeekIndex = SeekTrackBar.Value;
+        }
+
+        private void PlaybackControlForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _recorder.StopAll();
         }
     }
 }

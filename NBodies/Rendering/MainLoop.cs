@@ -30,7 +30,6 @@ namespace NBodies.Rendering
             }
         }
 
-        public static int MinFrameTime = 0;
 
         public static bool PausePhysics
         {
@@ -57,7 +56,7 @@ namespace NBodies.Rendering
         {
             get
             {
-                return _recording;
+                return _recorder.RecordingActive;
             }
         }
 
@@ -71,6 +70,7 @@ namespace NBodies.Rendering
 
         public static float CurrentFPS = 0;
 
+        private static int _minFrameTime = 0;
         private static Int64 _frameCount = 0;
         private static float _timeStep = 0.008f;
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
@@ -82,14 +82,11 @@ namespace NBodies.Rendering
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
-        private static bool _recording = false;
-       // private static bool _playback = false;
-
         private static IRecording _recorder = new IO.ProtoBufRecorder();
 
         public static void StartLoop()
         {
-            MinFrameTime = 1000 / TargetFPS;
+            _minFrameTime = 1000 / TargetFPS;
 
             _cancelTokenSource = new CancellationTokenSource();
 
@@ -123,8 +120,12 @@ namespace NBodies.Rendering
         {
             // Make sure the wait handle has been set
             // and set the skip bool to false to allow physics to be calculated again.
-            _pausePhysicsWait.Set();
-            _skipPhysics = false;
+
+            if (!_recorder.PlaybackActive)
+            {
+                _pausePhysicsWait.Set();
+                _skipPhysics = false;
+            }
         }
 
         private static Stopwatch timer = new Stopwatch();
@@ -145,10 +146,11 @@ namespace NBodies.Rendering
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
 
-                    if (!_skipPhysics)
+                    if (!_skipPhysics && !_recorder.PlaybackActive)
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
+                            // Reset all bodies elapsed times if all of them are ready.
                             BodyManager.CheckSetForNextDT();
 
                             // 1.
@@ -173,12 +175,11 @@ namespace NBodies.Rendering
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
 
-                            //BodyManager.CheckSetForNextDT();
-
                             // Increment physics frame count.
                             _frameCount++;
 
-                            if (_recording && BodyManager.Bodies.Length > 0)
+                            // Send the data to the recorder if we are recording.
+                            if (_recorder.RecordingActive && BodyManager.Bodies.Length > 0)
                                 _recorder.RecordFrame(BodyManager.Bodies);
 
                         }
@@ -193,27 +194,23 @@ namespace NBodies.Rendering
                         _pausePhysicsWait.Set();
                     }
 
-                    if (!_recorder.PlaybackPaused && !_recorder.PlaybackComplete)
+                    // Make sure the drawing thread is finished.
+                    _drawingDoneWait.Wait(-1);
+
+                    // If we are playing back a recording, get the current field frame
+                    // from the recorder and bring it in to be rendered.
+                    if (_recorder.PlaybackActive && !_recorder.PlaybackComplete)
                     {
                         var frame = _recorder.GetNextFrame();
 
                         if (frame != null && frame.Length > 0)
                         {
                             BodyManager.Bodies = frame;
-                        }
-                        else
-                        {
-                            _skipPhysics = true;
-                            // _playback = false;
+                            BodyManager.RebuildUIDIndex();
                         }
                     }
 
-                    // Make sure the drawing thread is finished.
-                    _drawingDoneWait.Wait(-1);
-
                     // 4.
-                    //if (DrawBodies & BodyManager.CheckSetForNextDT())
-                    //    Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
@@ -230,46 +227,44 @@ namespace NBodies.Rendering
             if (_cancelTokenSource.IsCancellationRequested)
             {
                 _stopLoopWait.Set();
-                //recorder.StopAll();
             }
         }
 
-        public static void StartRecording()
+        public static void StartRecording(string file)
         {
-            _recording = true;
-            _recorder.PlaybackPaused = true;
+            _recorder.StopAll();
 
-            _recorder.CreateRecording($@"C:\Temp\recording.dat");
+            _recorder.CreateRecording(file);
         }
 
         public static void StopRecording()
         {
-            _recording = false;
-            _recorder.PlaybackPaused = true;
-
             _recorder.StopAll();
         }
 
-        public static void StartPlayback()
+        public static IRecording StartPlayback(string file)
         {
             _skipPhysics = true;
 
             Stop();
 
-            _recorder.OpenRecording($@"C:\Temp\recording.dat");
-
-            _recording = false;
-            _recorder.PlaybackPaused = false;
+            _recorder.OpenRecording(file);
 
             StartLoop();
+
+            return _recorder;
         }
 
+        public static void StopPlayback()
+        {
+            _recorder.StopAll();
+        }
 
         private static void DelayFrame()
         {
             int waitTime = 0;
 
-            MinFrameTime = 1000 / TargetFPS;
+            _minFrameTime = 1000 / TargetFPS;
 
             if (_fpsTimer.IsRunning)
             {
@@ -277,9 +272,9 @@ namespace NBodies.Rendering
 
                 _fpsTimer.Reset();
 
-                if (elapTime <= MinFrameTime)
+                if (elapTime <= _minFrameTime)
                 {
-                    waitTime = (int)(MinFrameTime - elapTime);
+                    waitTime = (int)(_minFrameTime - elapTime);
                     Thread.Sleep(waitTime);
                 }
 
