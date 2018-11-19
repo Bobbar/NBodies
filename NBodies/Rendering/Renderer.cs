@@ -208,7 +208,7 @@ namespace NBodies.Rendering
                      if (ShowForce)
                      {
                          var f = new PointF(followBody.ForceX, followBody.ForceY);
-                       //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
+                         //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
                          var bloc = new PointF(followBody.LocX, followBody.LocY);
                          f = f.Multi(0.1f);
                          var floc = bloc.Add(f);
@@ -238,17 +238,19 @@ namespace NBodies.Rendering
 
                              pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
 
-                             for (int a = 0; a < pathArr.Length; a++)
-                             {
-                                 pathArr[a] = pathArr[a].Add(finalOffset);
-                             }
 
-                             _buffer.Graphics.DrawLines(_orbitPen, pathArr);
+                             DrawOrbit(pathArr, finalOffset);
+                             //for (int a = 0; a < pathArr.Length; a++)
+                             //{
+                             //    pathArr[a] = pathArr[a].Add(finalOffset);
+                             //}
+
+                             //_buffer.Graphics.DrawLines(_orbitPen, pathArr);
                          }
                      }
                  }
 
-                 DrawOverlays();
+                 DrawOverlays(finalOffset);
 
 
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
@@ -256,6 +258,16 @@ namespace NBodies.Rendering
              });
 
             completeCallback.Set();
+        }
+
+        private static void DrawOrbit(PointF[] points, PointF finalOffset)
+        {
+            for (int a = 0; a < points.Length; a++)
+            {
+                points[a] = points[a].Add(finalOffset);
+            }
+
+            _buffer.Graphics.DrawLines(_orbitPen, points);
         }
 
         // Offload orbit calcs to another task/thread and update the renderer periodically.
@@ -340,7 +352,15 @@ namespace NBodies.Rendering
             return maxPress;
         }
 
-        private static void DrawOverlays()
+        public static void AddOverlay(OverlayGraphic overlay)
+        {
+            if (!OverLays.Contains(overlay))
+            {
+                OverLays.Add(overlay);
+            }
+        }
+
+        private static void DrawOverlays(PointF finalOffset)
         {
             var ogSt = _buffer.Graphics.Save();
 
@@ -348,9 +368,29 @@ namespace NBodies.Rendering
             {
                 switch (overlay.Type)
                 {
+                    case OverlayGraphicType.Orbit:
+                        DrawOrbit(overlay.OrbitPath.ToArray(), finalOffset);
+                        break;
+                }
+
+                if (overlay.Destroyed)
+                    OverLays.Remove(overlay);
+            }
+
+
+
+
+                _buffer.Graphics.ResetTransform();
+            foreach (var overlay in OverLays.ToArray())
+            {
+                switch (overlay.Type)
+                {
                     case OverlayGraphicType.Text:
-                        _buffer.Graphics.ResetTransform();
                         _buffer.Graphics.DrawString(overlay.Value, _infoTextFont, Brushes.White, overlay.Location);
+                        break;
+
+                    case OverlayGraphicType.Line:
+                        _buffer.Graphics.DrawLine(new Pen(Color.White) { EndCap = LineCap.ArrowAnchor }, overlay.Location, overlay.Location2);
                         break;
                 }
 
@@ -359,6 +399,9 @@ namespace NBodies.Rendering
             }
 
             _buffer.Graphics.Restore(ogSt);
+            
+            
+            
             //OverLays.Clear();
         }
 

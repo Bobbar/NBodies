@@ -13,6 +13,11 @@ namespace NBodies.Rendering
     {
         public OverlayGraphicType Type { get; set; }
         public PointF Location { get; set; }
+
+        public PointF Location2 { get; set; }
+
+        public List<PointF> OrbitPath { get; set; } = new List<PointF>();
+
         public string Value { get; set; }
         public bool Destroyed { get; set; } = false;
 
@@ -20,6 +25,7 @@ namespace NBodies.Rendering
         {
             Type = type;
             Location = location;
+            Location2 = location;
             Value = value;
         }
 
@@ -36,6 +42,7 @@ namespace NBodies.Rendering
         Text,
         Rect,
         Circle,
-        Line
+        Line,
+        Orbit
     }
 }

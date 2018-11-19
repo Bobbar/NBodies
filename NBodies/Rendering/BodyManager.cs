@@ -211,7 +211,7 @@ namespace NBodies.Rendering
         {
             var points = new List<PointF>();
             int segs = 500;
-            float step = 0.100f;
+            float step = 0.300f;
 
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
             PointF loc = new PointF(body.LocX, body.LocY);
@@ -411,6 +411,11 @@ namespace NBodies.Rendering
                 Bodies[i].LocY += posY;
             }
         }
+
+        //public static PointF CalcSpeedVector(PointF locA, PointF locB)
+        //{
+        //    var len = PointHelper.DistanceSqrt(locA, lo)
+        //}
 
         public static int Add(Body body)
         {

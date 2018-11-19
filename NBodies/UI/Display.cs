@@ -18,9 +18,9 @@ namespace NBodies
 
         private int _selectedUid = -1;
         private int _mouseId = -1;
-        private bool _mouseDown = false;
+        private bool _mouseRightDown = false;
         private bool _bodyMovin = false;
-        private PointF _mouseMoveDown = new PointF();
+        private PointF _mouseMoveDownLoc = new PointF();
         private PointF _mouseLocation = new PointF();
         private Timer _bodySizeTimer = new Timer();
         private Timer _UIUpdateTimer = new Timer();
@@ -28,6 +28,9 @@ namespace NBodies
 
         private OverlayGraphic explodeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+        private OverlayGraphic flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
+        private OverlayGraphic orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
+
 
         private PlaybackControlForm _playbackControl;
 
@@ -237,7 +240,7 @@ namespace NBodies
 
             if (e.Delta > 0)
             {
-                if (!_FDown)
+                if (!_FDown && !_mouseRightDown)
                     RenderVars.CurrentScale += scaleChange;
 
                 if (_FDown)
@@ -246,10 +249,16 @@ namespace NBodies
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                 }
 
+
+                if (_mouseRightDown && _mouseId != -1)
+                {
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size += 1.0f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                }
             }
             else
             {
-                if (!_FDown)
+                if (!_FDown && !_mouseRightDown)
                     RenderVars.CurrentScale -= scaleChange;
 
                 if (_FDown)
@@ -257,10 +266,17 @@ namespace NBodies
                     MainLoop.TargetFPS -= 1;
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                 }
+
+                if (_mouseRightDown && _mouseId != -1)
+                {
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size -= 1.0f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                }
             }
 
 
         }
+
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
             _mouseLocation = e.Location;
@@ -283,10 +299,26 @@ namespace NBodies
                 }
                 else
                 {
-                    var moveDiff = e.Location.Subtract(_mouseMoveDown);
+                    var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
                     RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScalePointExact(moveDiff));
-                    _mouseMoveDown = e.Location;
+                    _mouseMoveDownLoc = e.Location;
                 }
+            }
+
+            if (e.Button == MouseButtons.Right)
+            {
+                flingOver.Location2 = _mouseLocation;
+
+                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location2.X - flingOver.Location.X) / 4f;
+                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location2.Y - flingOver.Location.Y) / 4f;
+
+                orbitOver.Destroy();
+
+                var orbitPath = BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+                orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY), "");
+                orbitOver.OrbitPath = orbitPath;
+
+                Renderer.AddOverlay(orbitOver);
             }
 
             if (_EDown)
@@ -325,27 +357,21 @@ namespace NBodies
 
                     _EDown = true;
 
+                    explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                    explodeOver.Value = "Boom!";
 
-                    if (!Renderer.OverLays.Contains(explodeOver))
-                    {
-                        explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                        explodeOver.Value = "Boom!";
+                    Renderer.AddOverlay(explodeOver);
 
-                        Renderer.OverLays.Add(explodeOver);
-                    }
                     break;
 
                 case Keys.F:
 
                     _FDown = true;
 
-                    if (!Renderer.OverLays.Contains(fpsOver))
-                    {
-                        fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                        fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                    fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
 
-                        Renderer.OverLays.Add(fpsOver);
-                    }
+                    Renderer.AddOverlay(fpsOver);
 
                     break;
             }
@@ -390,18 +416,29 @@ namespace NBodies
         {
             if (e.Button == MouseButtons.Right)
             {
-                if (!_mouseDown)
+                if (!_mouseRightDown)
                 {
                     MainLoop.WaitForPause();
 
-                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 0.5f, ColorHelper.RandomColor());
-                    _mouseDown = true;
-                    _bodySizeTimer.Start();
+                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 1f, ColorHelper.RandomColor());
+
+                    flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    flingOver.Location2 = _mouseLocation;
+
+                    Renderer.AddOverlay(flingOver);
+
+                    orbitOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    orbitOver.Location2 = _mouseLocation;
+
+                    Renderer.AddOverlay(orbitOver);
+
+                    _mouseRightDown = true;
+                    // _bodySizeTimer.Start();
                 }
             }
             else if (e.Button == MouseButtons.Left)
             {
-                _mouseMoveDown = e.Location;
+                _mouseMoveDownLoc = e.Location;
 
                 if (_ctrlDown)
                 {
@@ -440,7 +477,7 @@ namespace NBodies
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
             _bodySizeTimer.Stop();
-            _mouseDown = false;
+
             //  _selectedUid = -1;
             _bodyMovin = false;
 
@@ -453,6 +490,14 @@ namespace NBodies
             if (_ctrlDown && BodyManager.FollowBodyUID != -1)
             {
                 BodyManager.FollowSelected = true;
+            }
+
+            if (_mouseRightDown)
+            {
+                _mouseRightDown = false;
+
+                flingOver.Destroy();
+                orbitOver.Destroy();
             }
         }
 
