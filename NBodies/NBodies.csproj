@@ -25,11 +25,12 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -73,17 +74,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddBodiesForm.cs">
+    <Compile Include="Physics\CUDADouble.cs" />
+    <Compile Include="UI\AddBodiesForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="AddBodiesForm.Designer.cs">
+    <Compile Include="UI\AddBodiesForm.Designer.cs">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ControlExtentions.cs" />
-    <Compile Include="Display.cs">
+    <Compile Include="UI\Display.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Display.Designer.cs">
+    <Compile Include="UI\Display.Designer.cs">
       <DependentUpon>Display.cs</DependentUpon>
     </Compile>
     <Compile Include="IO\IRecording.cs" />
@@ -96,10 +98,12 @@
     <Compile Include="Physics\CUDAFloat.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
     <Compile Include="Physics\PhysicsProvider.cs" />
-    <Compile Include="PlaybackControlForm.cs">
+    <Compile Include="UI\InputHandler.cs" />
+    <Compile Include="UI\KeyAction.cs" />
+    <Compile Include="UI\PlaybackControlForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PlaybackControlForm.Designer.cs">
+    <Compile Include="UI\PlaybackControlForm.Designer.cs">
       <DependentUpon>PlaybackControlForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
@@ -115,14 +119,13 @@
     <Compile Include="Rendering\ScaleHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />
     <Compile Include="Shapes\Ellipse.cs" />
-    <Compile Include="Tools\AttributeManager.cs" />
-    <EmbeddedResource Include="AddBodiesForm.resx">
+    <EmbeddedResource Include="UI\AddBodiesForm.resx">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Display.resx">
+    <EmbeddedResource Include="UI\Display.resx">
       <DependentUpon>Display.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="PlaybackControlForm.resx">
+    <EmbeddedResource Include="UI\PlaybackControlForm.resx">
       <DependentUpon>PlaybackControlForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">

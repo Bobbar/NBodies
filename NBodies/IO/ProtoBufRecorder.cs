@@ -74,6 +74,18 @@ namespace NBodies.IO
             get { return _recordingActive; }
         }
 
+        public double FileSize
+        {
+            get
+            {
+                if (_fileStream != null)
+                {
+                    return _fileStream.Length;
+                }
+                return 0;
+            }
+        }
+
         private void OnProgressChanged(int position)
         {
             ProgressChanged?.Invoke(this, position);

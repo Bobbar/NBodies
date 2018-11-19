@@ -10,6 +10,7 @@ namespace NBodies
     {
         public static int ThreadsPerBlockArgument = -1;
         public static int DeviceID = -1;
+      
         /// <summary>
         /// The main entry point for the application.
         /// </summary>

@@ -32,6 +32,7 @@
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -66,6 +67,7 @@
             this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.AlphaUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.RecSizeLabel = new System.Windows.Forms.Label();
             this.SpeedLabel = new System.Windows.Forms.Label();
             this.FrameCountLabel = new System.Windows.Forms.Label();
             this.PressureLabel = new System.Windows.Forms.Label();
@@ -130,6 +132,7 @@
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.drawToolStripMenuItem,
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.displayToolStripMenuItem,
@@ -137,6 +140,16 @@
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
+            // 
+            // drawToolStripMenuItem
+            // 
+            this.drawToolStripMenuItem.Checked = true;
+            this.drawToolStripMenuItem.CheckOnClick = true;
+            this.drawToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.drawToolStripMenuItem.Name = "drawToolStripMenuItem";
+            this.drawToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawToolStripMenuItem.Text = "Draw";
+            this.drawToolStripMenuItem.CheckedChanged += new System.EventHandler(this.drawToolStripMenuItem_CheckedChanged);
             // 
             // antiAliasingToolStripMenuItem
             // 
@@ -545,6 +558,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.RecSizeLabel);
             this.panel1.Controls.Add(this.SpeedLabel);
             this.panel1.Controls.Add(this.FrameCountLabel);
             this.panel1.Controls.Add(this.PressureLabel);
@@ -557,6 +571,17 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1583, 746);
             this.panel1.TabIndex = 0;
+            // 
+            // RecSizeLabel
+            // 
+            this.RecSizeLabel.AutoSize = true;
+            this.RecSizeLabel.BackColor = System.Drawing.Color.Black;
+            this.RecSizeLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.RecSizeLabel.Location = new System.Drawing.Point(2, 193);
+            this.RecSizeLabel.Name = "RecSizeLabel";
+            this.RecSizeLabel.Size = new System.Drawing.Size(78, 13);
+            this.RecSizeLabel.TabIndex = 8;
+            this.RecSizeLabel.Text = "Rec Size (MB):";
             // 
             // SpeedLabel
             // 
@@ -729,6 +754,8 @@
         private System.Windows.Forms.ToolStripMenuItem followingBodyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showFollowBodyForce;
         private System.Windows.Forms.ToolStripMenuItem showPredictOrbit;
+        private System.Windows.Forms.ToolStripMenuItem drawToolStripMenuItem;
+        private System.Windows.Forms.Label RecSizeLabel;
     }
 }
 

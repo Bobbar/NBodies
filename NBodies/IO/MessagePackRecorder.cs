@@ -72,6 +72,18 @@ namespace NBodies.IO
             get { return _recordingActive; }
         }
 
+        public double FileSize
+        {
+            get
+            {
+                if (_fileStream != null)
+                {
+                    return _fileStream.Length;
+                }
+                return 0;
+            }
+        }
+
         private void OnProgressChanged(int position)
         {
             ProgressChanged?.Invoke(this, position);
@@ -189,7 +201,7 @@ namespace NBodies.IO
             // List which contains the positions of each frame.
             // Used for fast lookups when seeking.
             var frameIdxList = new List<long>();
-
+            
             while (_fileStream.Position < _fileStream.Length)
             {
                 frameIdxList.Add(_fileStream.Position);

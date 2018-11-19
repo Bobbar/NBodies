@@ -15,6 +15,7 @@ namespace NBodies.IO
         int SeekIndex { get; set; }
         int TotalFrames { get; }
 
+        double FileSize { get; }
 
         void CreateRecording(string file);
 

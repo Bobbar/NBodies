@@ -3,6 +3,7 @@ using NBodies.Rendering;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using NBodies.UI;
 
 namespace NBodies
 {
@@ -11,6 +12,9 @@ namespace NBodies
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
         private bool _EDown = false;
+        private bool _FDown = false;
+
+
 
         private int _selectedUid = -1;
         private int _mouseId = -1;
@@ -22,7 +26,9 @@ namespace NBodies
         private Timer _UIUpdateTimer = new Timer();
         private bool _paused = false;
 
-        private OverlayGraphic mOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+        private OverlayGraphic explodeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+        private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+
         private PlaybackControlForm _playbackControl;
 
         public DisplayForm()
@@ -55,7 +61,42 @@ namespace NBodies
 
             Renderer.Init(RenderBox);
 
-            Renderer.OverLays.Add(mOver);
+            Renderer.OverLays.Add(explodeOver);
+            Renderer.OverLays.Add(fpsOver);
+
+            //var fpsKeyAction = new KeyAction(Keys.F);
+            //fpsKeyAction.WheelAction = (v) =>
+            //{
+            //    MainLoop.TargetFPS += v;
+            //    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+            //};
+
+            //fpsKeyAction.KeyDownAction = () => 
+            //{
+            //    if (!Renderer.OverLays.Contains(fpsOver))
+            //    {
+            //        fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+            //        fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+
+            //        Renderer.OverLays.Add(fpsOver);
+            //    }
+            //};
+
+            //fpsKeyAction.KeyUpAction = () =>
+            //{
+            //    fpsOver.Destroy();
+            //};
+
+            //fpsKeyAction.MouseMoveAction = (p) =>
+            //{
+            //    fpsOver.Location = p.Subtract(new PointF(10, 10));
+            //};
+
+
+            //InputHandler.AddKeyAction(fpsKeyAction);
+
+
+
 
             MainLoop.StartLoop();
         }
@@ -117,6 +158,8 @@ namespace NBodies
             if (MainLoop.Recorder.RecordingActive)
             {
                 RecordButton.BackColor = Color.DarkGreen;
+                RecSizeLabel.Visible = true;
+                RecSizeLabel.Text = $@"Rec Size (MB): { Math.Round((MainLoop.RecordedSize() / (float)1000000), 2) }";
             }
             else
             {
@@ -138,7 +181,7 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
-                // selectBody.PrintInfo();
+                selectBody.PrintInfo();
 
             }
         }
@@ -194,12 +237,29 @@ namespace NBodies
 
             if (e.Delta > 0)
             {
-                RenderVars.CurrentScale += scaleChange;
+                if (!_FDown)
+                    RenderVars.CurrentScale += scaleChange;
+
+                if (_FDown)
+                {
+                    MainLoop.TargetFPS += 1;
+                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                }
+
             }
             else
             {
-                RenderVars.CurrentScale -= scaleChange;
+                if (!_FDown)
+                    RenderVars.CurrentScale -= scaleChange;
+
+                if (_FDown)
+                {
+                    MainLoop.TargetFPS -= 1;
+                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                }
             }
+
+
         }
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
@@ -231,8 +291,13 @@ namespace NBodies
 
             if (_EDown)
             {
-                mOver.Location = _mouseLocation.Subtract(new PointF(10, 10));//ScaleHelpers.ScalePointRelative(e.Location);
-                                                                             //  mOver.Value = $@"{e.X},{e.Y}";
+                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));//ScaleHelpers.ScalePointRelative(e.Location);
+                                                                                   //  mOver.Value = $@"{e.X},{e.Y}";
+            }
+
+            if (_FDown)
+            {
+                fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
             }
 
 
@@ -261,14 +326,26 @@ namespace NBodies
                     _EDown = true;
 
 
-                    if (!Renderer.OverLays.Contains(mOver))
+                    if (!Renderer.OverLays.Contains(explodeOver))
                     {
-                        mOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                        mOver.Value = "Boom!";
+                        explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                        explodeOver.Value = "Boom!";
 
-                        Renderer.OverLays.Add(mOver);
+                        Renderer.OverLays.Add(explodeOver);
                     }
+                    break;
 
+                case Keys.F:
+
+                    _FDown = true;
+
+                    if (!Renderer.OverLays.Contains(fpsOver))
+                    {
+                        fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                        fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+
+                        Renderer.OverLays.Add(fpsOver);
+                    }
 
                     break;
             }
@@ -295,9 +372,17 @@ namespace NBodies
                 case Keys.E:
 
                     _EDown = false;
-                    mOver.Destroy();
+                    explodeOver.Destroy();
 
                     break;
+
+                case Keys.F:
+
+                    _FDown = false;
+                    fpsOver.Destroy();
+
+                    break;
+
             }
         }
 
@@ -518,6 +603,9 @@ namespace NBodies
         {
             // BodyManager.TotEnergy();
             // BodyManager.CalcPath(BodyManager.FollowBody());
+            //   BodyManager.SetVelo(40, 0);
+
+            BodyManager.ShiftPos(20000, 0);
         }
 
         private void AlphaUpDown_ValueChanged(object sender, EventArgs e)
@@ -557,6 +645,11 @@ namespace NBodies
             {
                 StartRecording();
             }
+        }
+
+        private void drawToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.DrawBodies = drawToolStripMenuItem.Checked;
         }
     }
 }

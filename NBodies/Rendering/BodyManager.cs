@@ -59,40 +59,40 @@ namespace NBodies.Rendering
         }
 
         
-        public static bool CheckSetForNextDT()
-        {
-            bool ready = true;
+        //public static bool CheckSetForNextDT()
+        //{
+        //    bool ready = true;
 
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                if (Bodies[i].ElapTime < MainLoop.TimeStep && !(Bodies[i].ElapTime > MainLoop.TimeStep) && !(Bodies[i].DeltaTime == 0.0f))
-                {
-                    ready = false;
-                }
-            }
+        //    for (int i = 0; i < Bodies.Length; i++)
+        //    {
+        //        if (Bodies[i].ElapTime < MainLoop.TimeStep && !(Bodies[i].ElapTime > MainLoop.TimeStep) && !(Bodies[i].DeltaTime == 0.0f))
+        //        {
+        //            ready = false;
+        //        }
+        //    }
 
-            if (ready)
-            {
-                for (int i = 0; i < Bodies.Length; i++)
-                {
-                    Bodies[i].ElapTime = 0.0f;
+        //    if (ready)
+        //    {
+        //        for (int i = 0; i < Bodies.Length; i++)
+        //        {
+        //            Bodies[i].ElapTime = 0.0f;
 
-                    if (Bodies[i].HasCollision == 1)
-                    {
-                        Bodies[i].DeltaTime = MainLoop.TimeStep / 4f;
-                    }
-                    else
-                    {
-                        Bodies[i].DeltaTime = MainLoop.TimeStep;
-                    }
+        //            if (Bodies[i].HasCollision == 1)
+        //            {
+        //                Bodies[i].DeltaTime = MainLoop.TimeStep;// / 4f;
+        //            }
+        //            else
+        //            {
+        //                Bodies[i].DeltaTime = MainLoop.TimeStep;
+        //            }
 
-                    if (Bodies[i].DeltaTime == 0.0f)
-                        Bodies[i].DeltaTime = MainLoop.TimeStep;
-                }
-            }
+        //            if (Bodies[i].DeltaTime == 0.0f)
+        //                Bodies[i].DeltaTime = MainLoop.TimeStep;
+        //        }
+        //    }
 
-            return ready;
-        }
+        //    return ready;
+        //}
 
         public static void ClearBodies()
         {
@@ -129,7 +129,7 @@ namespace NBodies.Rendering
         public static PointF FollowBodyLoc()
         {
             if (UIDIndex.ContainsKey(FollowBodyUID))
-                return new PointF(Bodies[UIDToIndex(FollowBodyUID)].LocX, Bodies[UIDToIndex(FollowBodyUID)].LocY);
+                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].LocX, (float)Bodies[UIDToIndex(FollowBodyUID)].LocY);
             return new PointF();
         }
 
@@ -220,13 +220,13 @@ namespace NBodies.Rendering
                     if (i != j)
                     {
                         var bodyB = Bodies[j];
-                        float totMass = bodyA.Mass * bodyB.Mass;
-                        float distX = bodyA.LocX - bodyB.LocX;
-                        float distY = bodyA.LocY - bodyB.LocY;
-                        float dist = (distX * distX) + (distY * distY);
-                        float distSqrt = (float)Math.Sqrt(dist);
+                        double totMass = bodyA.Mass * bodyB.Mass;
+                        double distX = bodyA.LocX - bodyB.LocX;
+                        double distY = bodyA.LocY - bodyB.LocY;
+                        double dist = (distX * distX) + (distY * distY);
+                        double distSqrt = Math.Sqrt(dist);
 
-                        potE += totMass / dist;
+                         potE += totMass / dist;
                         //potE += dist; //??
 
                         //kinE += 0.5f * (bo)
@@ -250,9 +250,9 @@ namespace NBodies.Rendering
             float step = 0.100f;
 
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF(body.LocX, body.LocY);
+            PointF loc = new PointF((float)body.LocX, (float)body.LocY);
             PointF force = new PointF();
-
+           
             points.Add(loc);
 
             var bodiesCopy = new Body[Bodies.Length];
@@ -296,7 +296,7 @@ namespace NBodies.Rendering
             float dtStep = 0.100f;
 
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF(body.LocX, body.LocY);
+            PointF loc = new PointF((float)body.LocX, (float)body.LocY);
             PointF force = new PointF();
 
             bool firstLoop = true;
@@ -305,7 +305,7 @@ namespace NBodies.Rendering
             // Bodies within this SOI are not included in orbit calculation.
             // This is done to improve accuracy by ignoring the neighbors of
             // a body within a large clump.
-            var soi = new Ellipse(new PointF(body.LocX, body.LocY), 10);
+            var soi = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), 10);
 
             // This hashset will be used to cache SOI bodies for faster lookup on later loops.
             var soiBodies = new HashSet<int>();
@@ -327,7 +327,7 @@ namespace NBodies.Rendering
                     if (firstLoop)
                     {
                         // If this body is outside the SOI, calculate the forces.
-                        if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
+                        if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF((float)bodyB.LocX, (float)bodyB.LocY))))
                         {
                             var distX = bodyB.LocX - loc.X;
                             var distY = bodyB.LocY - loc.Y;
@@ -338,8 +338,8 @@ namespace NBodies.Rendering
 
                             var f = totMass / (dist + 0.02f);
 
-                            force.X += (f * distX / distSqrt);
-                            force.Y += (f * distY / distSqrt);
+                            force.X += (float)(f * distX / distSqrt);
+                            force.Y += (float)(f * distY / distSqrt);
                         }
                         else // If it is within the SOI, add to cache for faster lookup on the next loops.
                         {
@@ -359,8 +359,8 @@ namespace NBodies.Rendering
 
                             var f = totMass / (dist + 0.02f);
 
-                            force.X += (f * distX / distSqrt);
-                            force.Y += (f * distY / distSqrt);
+                            force.X += (float)(f * distX / distSqrt);
+                            force.Y += (float)(f * distY / distSqrt);
                         }
                     }
                 }
@@ -382,7 +382,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.03f;//0.1f;
+            float lifetime = 0.02f;//0.1f;
             bool cloud = true;
 
             if (cloud)
@@ -400,7 +400,9 @@ namespace NBodies.Rendering
                         py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
                     }
 
-                    particles.Add(NewBody(px, py, 1.5f, 1, Color.Orange, lifetime, 1));
+                    //particles.Add(NewBody(px, py, 1.5f, 1, Color.Orange, lifetime, 1));
+                    particles.Add(NewBody(px, py, 1.0f, 1, Color.Orange, lifetime, 1));
+
                 }
 
                 Bodies = Bodies.Add(particles.ToArray());
@@ -425,6 +427,24 @@ namespace NBodies.Rendering
             {
                 Bodies[index].LocX = location.X;
                 Bodies[index].LocY = location.Y;
+            }
+        }
+
+        public static void SetVelo(float velX, float velY)
+        {
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                Bodies[i].SpeedX = velX;
+                Bodies[i].SpeedY = velY;
+            }
+        }
+
+        public static void ShiftPos(float posX, float posY)
+        {
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                Bodies[i].LocX += posX;
+                Bodies[i].LocY += posY;
             }
         }
 
@@ -500,7 +520,7 @@ namespace NBodies.Rendering
             b.Age = 0.0f;
             b.IsExplosion = isExplosion;
 
-            b.DeltaTime = 0.0005f;
+            //b.DeltaTime = 0.0005f;
 
             b.BlackHole = 0;
             b.UID = NextUID();
@@ -703,8 +723,6 @@ namespace NBodies.Rendering
             string info = $@"
 Index: { index }
 UID: { body.UID }
-DeltaTime: { body.DeltaTime }
-ElapTime: { body.ElapTime }
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }
 Size: { body.Size }

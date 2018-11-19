@@ -15,7 +15,25 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
 
-        public static int TargetFPS = 60;
+        //public static int TargetFPS = 60;
+
+        public static int TargetFPS
+        {
+
+            get
+            {
+                return _targetFPS;
+            }
+
+            set
+            {
+                if (value >= 1 && value <= 2000)
+                {
+                    _targetFPS = value;
+                }
+            }
+        }
+
 
         public static float TimeStep
         {
@@ -70,6 +88,7 @@ namespace NBodies.Rendering
 
         public static float CurrentFPS = 0;
 
+        private static int _targetFPS = 60;
         private static int _minFrameTime = 0;
         private static Int64 _frameCount = 0;
         private static float _timeStep = 0.008f;
@@ -82,7 +101,10 @@ namespace NBodies.Rendering
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
-       // private static IRecording _recorder = new IO.ProtoBufRecorder();
+        private static int _skippedFrames = 0;
+        private const int _framesToSkip = 20;
+
+        // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
 
@@ -147,13 +169,13 @@ namespace NBodies.Rendering
             {
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
-
+                    // _timeStep = -0.008f;
                     if (!_skipPhysics && !_recorder.PlaybackActive)
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
-                            // Reset all bodies elapsed times if all of them are ready.
-                            BodyManager.CheckSetForNextDT();
+                            //// Reset all bodies elapsed times if all of them are ready.
+                            //BodyManager.CheckSetForNextDT();
 
                             // 1.
                             // Copy the current bodies to another array.
@@ -182,7 +204,14 @@ namespace NBodies.Rendering
 
                             // Send the data to the recorder if we are recording.
                             if (_recorder.RecordingActive && BodyManager.Bodies.Length > 0)
-                                _recorder.RecordFrame(BodyManager.Bodies);
+                            {
+                                if (_skippedFrames >= _framesToSkip)
+                                {
+                                    _recorder.RecordFrame(BodyManager.Bodies);
+                                    _skippedFrames = 0;
+                                }
+                                _skippedFrames++;
+                            }
 
                         }
                     }
@@ -244,6 +273,11 @@ namespace NBodies.Rendering
             _recorder.StopAll();
         }
 
+        public static double RecordedSize()
+        {
+            return _recorder.FileSize;
+        }
+
         public static IRecording StartPlayback(string file)
         {
             _skipPhysics = true;
@@ -266,7 +300,7 @@ namespace NBodies.Rendering
         {
             int waitTime = 0;
 
-            _minFrameTime = 1000 / TargetFPS;
+            _minFrameTime = 1000 / _targetFPS;
 
             if (_fpsTimer.IsRunning)
             {
@@ -295,14 +329,15 @@ namespace NBodies.Rendering
             for (int b = 0; b < len; b++)
             {
                 var body = bodies[b];
-                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
+
+                if (body.BlackHole == 2)
+                    bodies[b].InRoche = 1;
+                //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
+                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
                 {
                     if (bodies[b].Size > 1)
                     {
                         bodies[b].Visible = 0;
-
-                        if (float.IsNaN(bodies[b].LocX))
-                            Debugger.Break();
 
                         FractureBody(bodies[b]);
                     }
@@ -326,7 +361,7 @@ namespace NBodies.Rendering
 
             prevMass = body.Mass;
 
-            var ellipse = new Ellipse(new PointF(body.LocX, body.LocY), body.Size * 0.5f);
+            var ellipse = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), body.Size * 0.5f);
 
             bool done = false;
             float stepSize = minSize;
