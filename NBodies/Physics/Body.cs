@@ -19,11 +19,11 @@ namespace NBodies.Physics
     {
         [ProtoMember(1)]
         [Key(0)]
-        public double LocX;
+        public float LocX;
 
         [ProtoMember(2)]
         [Key(1)]
-        public double LocY;
+        public float LocY;
 
         [ProtoMember(3)]
         [Key(2)]

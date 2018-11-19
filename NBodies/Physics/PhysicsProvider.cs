@@ -13,8 +13,8 @@ namespace NBodies.Physics
 
         public static void InitPhysics()
         {
-            //PhysicsCalc = new  CUDAFloat(Program.DeviceID, Program.ThreadsPerBlockArgument); //CUDADouble(2); 
-            PhysicsCalc = new CUDADouble(Program.DeviceID, Program.ThreadsPerBlockArgument); //CUDADouble(2); 
+            PhysicsCalc = new  CUDAFloat(Program.DeviceID, Program.ThreadsPerBlockArgument); 
+          //  PhysicsCalc = new CUDADouble(Program.DeviceID, Program.ThreadsPerBlockArgument);
 
             PhysicsCalc.Init();
         }

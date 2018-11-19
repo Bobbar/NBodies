@@ -110,7 +110,7 @@ namespace NBodies.Rendering
                  if (BodyManager.FollowSelected)
                  {
                      followBody = BodyManager.FollowBody();
-                     var followOffset = new PointF((float)followBody.LocX, (float)followBody.LocY);
+                     var followOffset = new PointF(followBody.LocX, followBody.LocY);
                      RenderVars.ViewportOffset.X = -followOffset.X;
                      RenderVars.ViewportOffset.Y = -followOffset.Y;
                  }
@@ -140,7 +140,7 @@ namespace NBodies.Rendering
                      {
                          if (ClipView)
                          {
-                             if (!_cullTangle.Contains((float)body.LocX, (float)body.LocY)) continue;
+                             if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
                          }
 
                          Color bodyColor = new Color();
@@ -188,7 +188,7 @@ namespace NBodies.Rendering
 
                          using (var bodyBrush = new SolidBrush(bodyColor))
                          {
-                             var bodyLoc = new PointF(((float)body.LocX - body.Size * 0.5f + finalOffset.X), ((float)body.LocY - body.Size * 0.5f + finalOffset.Y));
+                             var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                              //Draw body.
                              _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
@@ -209,7 +209,7 @@ namespace NBodies.Rendering
                      {
                          var f = new PointF(followBody.ForceX, followBody.ForceY);
                        //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
-                         var bloc = new PointF((float)followBody.LocX, (float)followBody.LocY);
+                         var bloc = new PointF(followBody.LocX, followBody.LocY);
                          f = f.Multi(0.1f);
                          var floc = bloc.Add(f);
                          _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
@@ -236,7 +236,7 @@ namespace NBodies.Rendering
                          {
                              var pathArr = _drawPath.ToArray();
 
-                             pathArr[0] = new PointF((float)followBody.LocX, (float)followBody.LocY);
+                             pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
 
                              for (int a = 0; a < pathArr.Length; a++)
                              {
@@ -249,6 +249,8 @@ namespace NBodies.Rendering
                  }
 
                  DrawOverlays();
+
+
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();
              });

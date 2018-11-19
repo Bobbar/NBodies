@@ -58,42 +58,6 @@ namespace NBodies.Rendering
             //   CheckSetForNextDT();
         }
 
-        
-        //public static bool CheckSetForNextDT()
-        //{
-        //    bool ready = true;
-
-        //    for (int i = 0; i < Bodies.Length; i++)
-        //    {
-        //        if (Bodies[i].ElapTime < MainLoop.TimeStep && !(Bodies[i].ElapTime > MainLoop.TimeStep) && !(Bodies[i].DeltaTime == 0.0f))
-        //        {
-        //            ready = false;
-        //        }
-        //    }
-
-        //    if (ready)
-        //    {
-        //        for (int i = 0; i < Bodies.Length; i++)
-        //        {
-        //            Bodies[i].ElapTime = 0.0f;
-
-        //            if (Bodies[i].HasCollision == 1)
-        //            {
-        //                Bodies[i].DeltaTime = MainLoop.TimeStep;// / 4f;
-        //            }
-        //            else
-        //            {
-        //                Bodies[i].DeltaTime = MainLoop.TimeStep;
-        //            }
-
-        //            if (Bodies[i].DeltaTime == 0.0f)
-        //                Bodies[i].DeltaTime = MainLoop.TimeStep;
-        //        }
-        //    }
-
-        //    return ready;
-        //}
-
         public static void ClearBodies()
         {
             FollowSelected = false;
@@ -250,7 +214,7 @@ namespace NBodies.Rendering
             float step = 0.100f;
 
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF((float)body.LocX, (float)body.LocY);
+            PointF loc = new PointF(body.LocX, body.LocY);
             PointF force = new PointF();
            
             points.Add(loc);
@@ -270,10 +234,10 @@ namespace NBodies.Rendering
                 var distSqrt = (float)Math.Sqrt(dist);
 
                 var totMass = body.Mass * (_totalMass - body.Mass);
-                var f = totMass / (dist + 0.02f);
+                var f = (float)totMass / (dist + 0.02f);
 
-                force.X += (float)(f * distX / distSqrt);
-                force.Y += (float)(f * distY / distSqrt);
+                force.X += (f * distX / distSqrt);
+                force.Y += (f * distY / distSqrt);
 
                 speed.X += step * force.X / body.Mass;
                 speed.Y += step * force.Y / body.Mass;
@@ -296,7 +260,7 @@ namespace NBodies.Rendering
             float dtStep = 0.100f;
 
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF((float)body.LocX, (float)body.LocY);
+            PointF loc = new PointF(body.LocX, body.LocY);
             PointF force = new PointF();
 
             bool firstLoop = true;
@@ -305,7 +269,7 @@ namespace NBodies.Rendering
             // Bodies within this SOI are not included in orbit calculation.
             // This is done to improve accuracy by ignoring the neighbors of
             // a body within a large clump.
-            var soi = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), 10);
+            var soi = new Ellipse(new PointF(body.LocX, body.LocY), 10);
 
             // This hashset will be used to cache SOI bodies for faster lookup on later loops.
             var soiBodies = new HashSet<int>();
@@ -327,7 +291,7 @@ namespace NBodies.Rendering
                     if (firstLoop)
                     {
                         // If this body is outside the SOI, calculate the forces.
-                        if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF((float)bodyB.LocX, (float)bodyB.LocY))))
+                        if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
                         {
                             var distX = bodyB.LocX - loc.X;
                             var distY = bodyB.LocY - loc.Y;
@@ -338,8 +302,8 @@ namespace NBodies.Rendering
 
                             var f = totMass / (dist + 0.02f);
 
-                            force.X += (float)(f * distX / distSqrt);
-                            force.Y += (float)(f * distY / distSqrt);
+                            force.X += (f * distX / distSqrt);
+                            force.Y += (f * distY / distSqrt);
                         }
                         else // If it is within the SOI, add to cache for faster lookup on the next loops.
                         {
@@ -359,8 +323,8 @@ namespace NBodies.Rendering
 
                             var f = totMass / (dist + 0.02f);
 
-                            force.X += (float)(f * distX / distSqrt);
-                            force.Y += (float)(f * distY / distSqrt);
+                            force.X += (f * distX / distSqrt);
+                            force.Y += (f * distY / distSqrt);
                         }
                     }
                 }
