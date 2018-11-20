@@ -49,7 +49,7 @@ namespace NBodies.Rendering
         private static float _prevScale = 0;
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Pen _forcePen = new Pen(Color.White, 0.2f);
-        private static Pen _orbitPen = new Pen(Color.FromArgb(200, Color.White), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
+        private static Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
 
         private static Color _spaceColor = Color.Black;
         private static Size _prevSize = new Size();
@@ -238,14 +238,7 @@ namespace NBodies.Rendering
 
                              pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
 
-
                              DrawOrbit(pathArr, finalOffset);
-                             //for (int a = 0; a < pathArr.Length; a++)
-                             //{
-                             //    pathArr[a] = pathArr[a].Add(finalOffset);
-                             //}
-
-                             //_buffer.Graphics.DrawLines(_orbitPen, pathArr);
                          }
                      }
                  }
@@ -365,8 +358,6 @@ namespace NBodies.Rendering
 
         private static void DrawOverlays(PointF finalOffset)
         {
-
-
             foreach (var overlay in OverLays.ToArray())
             {
                 if (overlay.Visible)
@@ -379,8 +370,6 @@ namespace NBodies.Rendering
                     }
                 }
             }
-
-
 
             var ogSt = _buffer.Graphics.Save();
             _buffer.Graphics.ResetTransform();
@@ -395,7 +384,7 @@ namespace NBodies.Rendering
                             break;
 
                         case OverlayGraphicType.Line:
-                            _buffer.Graphics.DrawLine(new Pen(Color.White) { EndCap = LineCap.ArrowAnchor }, overlay.Location, overlay.Location2);
+                            _buffer.Graphics.DrawLine(new Pen(Color.LimeGreen) { Width = 5.0f, EndCap = LineCap.ArrowAnchor }, overlay.Location, overlay.Location2);
                             break;
                     }
                 }
@@ -404,12 +393,5 @@ namespace NBodies.Rendering
 
             _buffer.Graphics.Restore(ogSt);
         }
-
-        //private static void DrawInfoText(PointF bodyLoc, CUDAMain.Body body)
-        //{
-        //    var textLoc = new PointF((float)(bodyLoc.X + (body.Size * 0.5f)), (float)(bodyLoc.Y - (body.Size * 0.5f)));
-        //    _buffer.Graphics.ResetTransform();
-        //    _buffer.Graphics.DrawString(string.Format("SpeedX: {0}", body.SpeedX), infoTextFont, Brushes.White, textLoc);
-        //}
     }
 }

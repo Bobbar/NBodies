@@ -92,14 +92,14 @@ namespace NBodies.Physics
 
             var blocks = (int)Math.Round((bodies.Length - 1 + threadsPerBlock - 1) / (float)threadsPerBlock, 0);
 
-            // Zero pad the body array to fit the calculated number of blocks:
-            // This makes sure that the dataset fills each block completely,
-            // otherwise we run into problems when a block encounters a dataset
-            // that doesn't have a work item for each thread.
-
-
-            if (bodies.Length < blocks * threadsPerBlock)
-                Array.Resize<Body>(ref bodies, (blocks * threadsPerBlock) + 1);
+            if (((threadsPerBlock * blocks) - bodies.Length) > threadsPerBlock)
+            {
+                blocks -= 1;
+            }
+            else if ((threadsPerBlock * blocks) < bodies.Length)
+            {
+                blocks += 1;
+            }
 
             var gpuInBodies = gpu.Allocate(bodies);
             var gpuOutBodies = gpu.Allocate(bodies);
@@ -121,8 +121,6 @@ namespace NBodies.Physics
             {
                 _drift = 1;
             }
-
-
         }
 
         [Cudafy]
@@ -131,12 +129,11 @@ namespace NBodies.Physics
             float GAS_K = 0.3f;//0.8f;// 0.1f
             float FLOAT_EPSILON = 1.192092896e-07f;
 
-            float ksize = 0;
-            float ksizeSq = 0;
-            double kernRad9 = 0;
-            double factor = 0;
-            float diff = 0;
-            double fac = 0;
+            float ksize;
+            float ksizeSq;
+            float factor;
+            float diff;
+            float fac;
 
             float totMass;
             float force;
@@ -146,6 +143,9 @@ namespace NBodies.Physics
             float distSqrt;
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+
+            if (a > inBodies.Length)
+                return;
 
             Body body = inBodies[a];
 
@@ -157,15 +157,13 @@ namespace NBodies.Physics
             body.Density = 0;
             body.Pressure = 0;
 
-            ksize = body.Size;
-            ksizeSq = ksize * ksize;
-            kernRad9 = Math.Pow((double)ksize, 9.0);
-            factor = (float)(315.0 / (64.0 * Math.PI * kernRad9));
+            ksize = 1.0f;
+            ksizeSq = 1.0f;
+            factor = 1.566682f;
 
             // Calculate initial body density.
-            diff = ksizeSq - FLOAT_EPSILON;
-            fac = factor * diff * diff * diff;
-            body.Density = (float)(body.Mass * fac);
+            fac = 1.566681f;
+            body.Density = (body.Mass * fac);
 
             int len = inBodies.Length;
 
@@ -173,71 +171,59 @@ namespace NBodies.Physics
             {
                 Body iBody = inBodies[b];
 
-                if (iBody.Visible == 1)
+                if (iBody.UID != body.UID)
                 {
 
-                    if (iBody.UID != body.UID)
+                    distX = iBody.LocX - body.LocX;
+                    distY = iBody.LocY - body.LocY;
+                    dist = (distX * distX) + (distY * distY);
+
+                    if (dist < 0.04f)
                     {
+                        dist = 0.04f;
+                    }
 
-                        distX = iBody.LocX - body.LocX;
-                        distY = iBody.LocY - body.LocY;
-                        dist = (distX * distX) + (distY * distY);
+                    distSqrt = (float)Math.Sqrt(dist);
 
-                        if (dist < 0.02f)
+                    totMass = iBody.Mass * body.Mass;
+                    force = totMass / dist;
+
+                    body.ForceTot += force;
+                    body.ForceX += (force * distX / distSqrt);
+                    body.ForceY += (force * distY / distSqrt);
+
+                    // SPH Density Kernel
+                    if (body.InRoche == 1 && iBody.InRoche == 1)
+                    {
+                        // is this distance close enough for kernal / neighbor calcs ?
+                        if (dist <= ksize)
                         {
-                            dist = 0.02f;
-                        }
-
-                        distSqrt = (float)Math.Sqrt(dist);
-
-                        totMass = iBody.Mass * body.Mass;
-                        force = totMass / (dist);
-
-                        body.ForceTot += force;
-                        body.ForceX += (force * distX / distSqrt);
-                        body.ForceY += (force * distY / distSqrt);
-
-                        // SPH Density Kernel
-                        if (body.InRoche == 1 && iBody.InRoche == 1 && iBody.BlackHole != 1)
-                        {
-                            // is this distance close enough for kernal / neighbor calcs ?
-                            if (dist <= ksize)
+                            if (dist < FLOAT_EPSILON)
                             {
-                                if (dist < FLOAT_EPSILON)
-                                {
-                                    dist = FLOAT_EPSILON;
-                                }
-
-                                //  It's a neighbor; accumulate density.
-                                diff = ksizeSq - dist;
-                                fac = factor * diff * diff * diff;
-                                body.Density += (float)(body.Mass * fac);
+                                dist = FLOAT_EPSILON;
                             }
+
+                            //  It's a neighbor; accumulate density.
+                            diff = ksizeSq - dist;
+                            fac = factor * diff * diff * diff;
+                            body.Density += body.Mass * fac;
                         }
+                    }
 
 
-                        // Check if the body is within collision distance and set a flag.
-                        // This is checked in the collision kernel, and bodies that don't have
-                        // the flag set are skipped. This give a huge performance boost in most situations.
-                        //if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
-                        if (distSqrt <= (body.Size) + (iBody.Size))
-                        {
-                            body.HasCollision = 1;
-                        }
-                    } // uid != uid
-
-                } // ibody.visible
-
+                    // Check if the body is within collision distance and set a flag.
+                    // This is checked in the collision kernel, and bodies that don't have
+                    // the flag set are skipped. This give a huge performance boost in most situations.
+                    if (distSqrt <= (body.Size) + (iBody.Size))
+                    {
+                        body.HasCollision = 1;
+                    }
+                } // uid != uid
             } // for b 
-
 
             gpThread.SyncThreads();
 
-
-            if (body.Density > 0)
-            {
-                body.Pressure = GAS_K * (body.Density);// - DENSITY_OFFSET);
-            }
+            body.Pressure = GAS_K * (body.Density);
 
             if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
             {
@@ -251,7 +237,6 @@ namespace NBodies.Physics
             {
                 body.InRoche = 1;
             }
-
 
             outBodies[a] = body;
         }
@@ -271,8 +256,6 @@ namespace NBodies.Physics
             float V2;
             float U1;
             float dV;
-            float Area1;
-            float Area2;
             float DistX;
             float DistY;
             float Dist;
@@ -280,152 +263,127 @@ namespace NBodies.Physics
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
+            if (a > inBodies.Length)
+                return;
+
             Body outBody = inBodies[a];
 
             if (outBody.HasCollision == 1)
             {
-
                 float FLOAT_EPSILON = 1.192092896e-07f;
-                float m_kernelSize = outBody.Size;
-                double kernelRad6 = Math.Pow((m_kernelSize / 3.0f), 6);
-                float m_factorPress = (float)(15.0f / (Math.PI * kernelRad6));
-                float m_kernelSizeSq = m_kernelSize * m_kernelSize;
-
-                float visc_kSize3 = (float)Math.Pow(m_kernelSize, 3);
-                float visc_Factor = (float)(15.0 / (2.0f * Math.PI * visc_kSize3));
-
-
+                float FLOAT_EPSILONSQRT = 3.45267E-11f;
+                float m_kernelSize = 1.0f;
+            
                 int len = inBodies.Length;
 
-                if (outBody.Visible == 1)
+                for (int b = 0; b < len; b++)
                 {
-                    for (int b = 0; b < len; b++)
+                    Body inBody = inBodies[b];
+
+                    if (inBody.UID != outBody.UID && inBody.HasCollision == 1)
                     {
-                        Body inBody = inBodies[b];
+                        DistX = inBody.LocX - outBody.LocX;
+                        DistY = inBody.LocY - outBody.LocY;
+                        Dist = (DistX * DistX) + (DistY * DistY);
+                        DistSqrt = (float)Math.Sqrt(Dist);
 
-                        if (inBody.UID != outBody.UID && inBody.Visible == 1 && inBody.HasCollision == 1)
+                        if (DistSqrt <= (outBody.Size * 0.5f) + (inBody.Size * 0.5f))
                         {
-                            DistX = inBody.LocX - outBody.LocX;
-                            DistY = inBody.LocY - outBody.LocY;
-                            Dist = (DistX * DistX) + (DistY * DistY);
-                            DistSqrt = (float)Math.Sqrt(Dist);
-
-                            if (DistSqrt <= (outBody.Size * 0.5f) + (inBody.Size * 0.5f))
+                            if (outBody.InRoche == 1 & inBody.InRoche == 1)
                             {
-                                if (DistSqrt > 0)
+
+                                if (Dist < FLOAT_EPSILON)
                                 {
+                                    Dist = FLOAT_EPSILON;
+                                    DistSqrt = FLOAT_EPSILONSQRT;
+                                }
 
-                                    if (outBody.InRoche == 1 & inBody.InRoche == 1)
+                                float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+                                float gradFactor = -10442.157f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
+
+                                float gradX = (DistX * gradFactor);
+                                float gradY = (DistY * gradFactor);
+
+                                gradX = gradX * scalar;
+                                gradY = gradY * scalar;
+
+                                outBody.ForceX += gradX;
+                                outBody.ForceY += gradY;
+
+                                // Viscosity
+                                float visc_Laplace = 14.323944f * (m_kernelSize - DistSqrt);
+                                float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
+
+                                float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
+                                float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
+
+                                viscVelo_diffX *= visc_scalar;
+                                viscVelo_diffY *= visc_scalar;
+
+                                outBody.ForceX -= viscVelo_diffX;
+                                outBody.ForceY -= viscVelo_diffY;
+
+                                //if (inBody.IsExplosion == 1)
+                                //{
+                                //    if (outBody.DeltaTime != inBody.DeltaTime)
+                                //    {
+                                //        outBody.DeltaTime = inBody.DeltaTime;
+                                //        outBody.ElapTime = 0.0f;
+                                //    }
+                                //}
+
+
+                                ////Shear
+                                //float shear = 0.1f;//0.1f;
+                                //float normX = DistX / DistSqrt;
+                                //float normY = DistY / DistSqrt;
+
+                                //float velo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                //float velo_diffY = inBody.SpeedY - outBody.SpeedY;
+
+                                //float tanVelx = velo_diffX - (((velo_diffX - normX) + (velo_diffY * normY)) * normX);
+                                //float tanVely = velo_diffY - (((velo_diffX - normX) + (velo_diffY * normY)) * normY);
+
+                                //outBody.ForceX += shear * tanVelx;
+                                //outBody.ForceY += shear * tanVely;
+
+                               
+                            }
+                            else if (outBody.InRoche == 1 & inBody.InRoche == 0)
+                            {
+                                outBody.Visible = 0;
+                            }
+                            else
+                            {
+                                V1x = outBody.SpeedX;
+                                V1y = outBody.SpeedY;
+                                V2x = inBody.SpeedX;
+                                V2y = inBody.SpeedY;
+                                M1 = outBody.Mass;
+                                M2 = inBody.Mass;
+                                vecX = DistX * 0.5f;
+                                vecY = DistY * 0.5f;
+                                vecX = vecX / (DistSqrt * 0.5f);
+                                vecY = vecY / (DistSqrt * 0.5f);
+                                V1 = vecX * V1x + vecY * V1y;
+                                V2 = vecX * V2x + vecY * V2y;
+                                U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
+                                dV = U1 - V1;
+
+                                if (outBody.Mass > inBody.Mass)
+                                {
+                                    outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
+                                }
+                                else if (outBody.Mass == inBody.Mass)
+                                {
+                                    if (outBody.UID > inBody.UID)
                                     {
-                                        if (outBody.Density > 0 && inBody.Density > 0)
-                                        {
-                                            if (Dist < FLOAT_EPSILON)
-                                            {
-                                                Dist = FLOAT_EPSILON;
-                                                DistSqrt = (float)Math.Sqrt(Dist);
-                                            }
-
-                                            float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
-                                            float gradFactor = -m_factorPress * 3.0f * (m_kernelSize - DistSqrt) * (m_kernelSize - DistSqrt) / DistSqrt;
-
-                                            float gradX = (DistX * gradFactor);
-                                            float gradY = (DistY * gradFactor);
-
-                                            gradX = gradX * scalar;
-                                            gradY = gradY * scalar;
-
-                                            outBody.ForceX += gradX;
-                                            outBody.ForceY += gradY;
-
-                                            // Viscosity
-
-                                            float visc_Laplace = visc_Factor * (6.0f / visc_kSize3) * (m_kernelSize - DistSqrt);
-                                            float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
-
-                                            float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
-                                            float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
-
-                                            viscVelo_diffX *= visc_scalar;
-                                            viscVelo_diffY *= visc_scalar;
-
-                                            outBody.ForceX -= viscVelo_diffX;
-                                            outBody.ForceY -= viscVelo_diffY;
-
-                                            //if (inBody.IsExplosion == 1)
-                                            //{
-                                            //    if (outBody.DeltaTime != inBody.DeltaTime)
-                                            //    {
-                                            //        outBody.DeltaTime = inBody.DeltaTime;
-                                            //        outBody.ElapTime = 0.0f;
-                                            //    }
-                                            //}
-
-
-                                            ////Shear
-                                            //float shear = 0.1f;//0.1f;
-                                            //float normX = DistX / DistSqrt;
-                                            //float normY = DistY / DistSqrt;
-
-                                            //float velo_diffX = inBody.SpeedX - outBody.SpeedX;
-                                            //float velo_diffY = inBody.SpeedY - outBody.SpeedY;
-
-                                            //float tanVelx = velo_diffX - (((velo_diffX - normX) + (velo_diffY * normY)) * normX);
-                                            //float tanVely = velo_diffY - (((velo_diffX - normX) + (velo_diffY * normY)) * normY);
-
-                                            //outBody.ForceX += shear * tanVelx;
-                                            //outBody.ForceY += shear * tanVely;
-
-                                        }
-                                    }
-                                    else if (outBody.InRoche == 1 & inBody.InRoche == 0)
-                                    {
-                                        outBody.Visible = 0;
+                                        outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
                                     }
                                     else
                                     {
-                                        V1x = outBody.SpeedX;
-                                        V1y = outBody.SpeedY;
-                                        V2x = inBody.SpeedX;
-                                        V2y = inBody.SpeedY;
-                                        M1 = outBody.Mass;
-                                        M2 = inBody.Mass;
-                                        vecX = DistX * 0.5f;
-                                        vecY = DistY * 0.5f;
-                                        vecX = vecX / (DistSqrt * 0.5f); // LenG
-                                        vecY = vecY / (DistSqrt * 0.5f); // LenG
-                                        V1 = vecX * V1x + vecY * V1y;
-                                        V2 = vecX * V2x + vecY * V2y;
-                                        U1 = (M1 * V1 + M2 * V2 - M2 * (V1 - V2)) / (M1 + M2);
-                                        dV = U1 - V1;
-
-                                        if (outBody.Mass > inBody.Mass)
-                                        {
-                                            outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                        }
-                                        else if (outBody.Mass == inBody.Mass)
-                                        {
-                                            if (outBody.UID > inBody.UID)
-                                            {
-                                                outBody = CollideBodies(outBody, inBody, dV, vecX, vecY);
-                                            }
-                                            else
-                                            {
-                                                outBody.Visible = 0;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            outBody.Visible = 0;
-                                        }
+                                        outBody.Visible = 0;
                                     }
-                                }
-                                else if (outBody.Mass > inBody.Mass)
-                                {
-                                    Area1 = (float)Math.PI * (float)(Math.Pow(outBody.Size, 2));
-                                    Area2 = (float)Math.PI * (float)(Math.Pow(inBody.Size, 2));
-                                    Area1 = Area1 + Area2;
-                                    outBody.Size = (float)Math.Sqrt(Area1 / Math.PI);
-                                    outBody.Mass = outBody.Mass + inBody.Mass;
                                 }
                                 else
                                 {
@@ -436,38 +394,15 @@ namespace NBodies.Physics
                     }
                 }
             }
+            
 
-
-            // Integrate forces and speeds.
-            //outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
-            //outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-            //outBody.LocX += dt * (outBody.SpeedX * 0.99f);
-            //outBody.LocY += dt * (outBody.SpeedY * 0.99f);
-
-            //if (outBody.Lifetime > 0.0f)
-            //    outBody.Age += (dt * 4.0f);
-
-
-            //if (outBody.ElapTime < dt)
-            //{
-            //outBody.SpeedX += outBody.DeltaTime * outBody.ForceX / outBody.Mass;
-            //outBody.SpeedY += outBody.DeltaTime * outBody.ForceY / outBody.Mass;
-            //outBody.LocX += outBody.DeltaTime * outBody.SpeedX;
-            //outBody.LocY += outBody.DeltaTime * outBody.SpeedY;
-            ////outBody.LocX += outBody.DeltaTime * (outBody.SpeedX * 0.99f);
-            ////outBody.LocY += outBody.DeltaTime * (outBody.SpeedY * 0.99f);
-
-            //if (outBody.Lifetime > 0.0f)
-            //    outBody.Age += (outBody.DeltaTime * 4.0f);
-
-            //outBody.ElapTime += outBody.DeltaTime;
-
-
+            // Leap frog integration.
             float dt2 = dt * 0.5f;
 
             float accelX = outBody.ForceX / outBody.Mass;
             float accelY = outBody.ForceY / outBody.Mass;
 
+            // Drift
             if (drift == 1)
             {
                 outBody.SpeedX += (accelX * dt2);
@@ -480,17 +415,12 @@ namespace NBodies.Physics
                 if (outBody.Lifetime > 0.0f)
                     outBody.Age += (dt * 4.0f);
 
-                //outBody.ElapTime += outBody.DeltaTime;
-
             }
-            else if (drift == 0)
+            else if (drift == 0) // Kick
             {
                 outBody.SpeedX += accelX * dt2;
                 outBody.SpeedY += accelY * dt2;
             }
-
-            //}
-
 
             gpThread.SyncThreads();
 

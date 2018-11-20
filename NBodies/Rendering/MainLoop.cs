@@ -107,7 +107,6 @@ namespace NBodies.Rendering
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
-
         public static void StartLoop()
         {
             _minFrameTime = 1000 / TargetFPS;
@@ -152,9 +151,6 @@ namespace NBodies.Rendering
             }
         }
 
-        private static Stopwatch timer = new Stopwatch();
-
-
         private async static void DoLoop()
         {
             // 1. Make a copy of the body data and pass that to the physics methods to calculate the next frame.
@@ -169,13 +165,12 @@ namespace NBodies.Rendering
             {
                 while (!_cancelTokenSource.IsCancellationRequested)
                 {
-                    // _timeStep = -0.008f;
                     if (!_skipPhysics && !_recorder.PlaybackActive)
                     {
                         if (BodyManager.Bodies.Length > 2)
                         {
-                            //// Reset all bodies elapsed times if all of them are ready.
-                            //BodyManager.CheckSetForNextDT();
+                            // Remove invisible bodies.
+                            BodyManager.CullInvisible();
 
                             // 1.
                             // Copy the current bodies to another array.
@@ -186,7 +181,7 @@ namespace NBodies.Rendering
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
 
                             // 2.
-                            // Wait for the drawing thread to complete.
+                            // Wait for the drawing thread to complete if needed.
                             _drawingDoneWait.Wait(5000);
 
                             // 3.
@@ -195,9 +190,6 @@ namespace NBodies.Rendering
 
                             // Process and fracture new roche bodies.
                             ProcessRoche(ref BodyManager.Bodies);
-
-                            // Remove invisible bodies.
-                            BodyManager.CullInvisible();
 
                             // Increment physics frame count.
                             _frameCount++;
@@ -212,7 +204,6 @@ namespace NBodies.Rendering
                                 }
                                 _skippedFrames++;
                             }
-
                         }
                     }
 
@@ -242,6 +233,7 @@ namespace NBodies.Rendering
                     }
 
                     // 4.
+                    // Draw the field asynchronously.
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
