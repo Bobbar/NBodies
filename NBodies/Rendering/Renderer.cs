@@ -262,6 +262,9 @@ namespace NBodies.Rendering
 
         private static void DrawOrbit(PointF[] points, PointF finalOffset)
         {
+            if (points.Length < 1)
+                return;
+
             for (int a = 0; a < points.Length; a++)
             {
                 points[a] = points[a].Add(finalOffset);
@@ -362,47 +365,44 @@ namespace NBodies.Rendering
 
         private static void DrawOverlays(PointF finalOffset)
         {
-            var ogSt = _buffer.Graphics.Save();
+
 
             foreach (var overlay in OverLays.ToArray())
             {
-                switch (overlay.Type)
+                if (overlay.Visible)
                 {
-                    case OverlayGraphicType.Orbit:
-                        DrawOrbit(overlay.OrbitPath.ToArray(), finalOffset);
-                        break;
+                    switch (overlay.Type)
+                    {
+                        case OverlayGraphicType.Orbit:
+                            DrawOrbit(overlay.OrbitPath.ToArray(), finalOffset);
+                            break;
+                    }
                 }
-
-                if (overlay.Destroyed)
-                    OverLays.Remove(overlay);
             }
 
 
 
-
-                _buffer.Graphics.ResetTransform();
+            var ogSt = _buffer.Graphics.Save();
+            _buffer.Graphics.ResetTransform();
             foreach (var overlay in OverLays.ToArray())
             {
-                switch (overlay.Type)
+                if (overlay.Visible)
                 {
-                    case OverlayGraphicType.Text:
-                        _buffer.Graphics.DrawString(overlay.Value, _infoTextFont, Brushes.White, overlay.Location);
-                        break;
+                    switch (overlay.Type)
+                    {
+                        case OverlayGraphicType.Text:
+                            _buffer.Graphics.DrawString(overlay.Value, _infoTextFont, Brushes.White, overlay.Location);
+                            break;
 
-                    case OverlayGraphicType.Line:
-                        _buffer.Graphics.DrawLine(new Pen(Color.White) { EndCap = LineCap.ArrowAnchor }, overlay.Location, overlay.Location2);
-                        break;
+                        case OverlayGraphicType.Line:
+                            _buffer.Graphics.DrawLine(new Pen(Color.White) { EndCap = LineCap.ArrowAnchor }, overlay.Location, overlay.Location2);
+                            break;
+                    }
                 }
 
-                if (overlay.Destroyed)
-                    OverLays.Remove(overlay);
             }
 
             _buffer.Graphics.Restore(ogSt);
-            
-            
-            
-            //OverLays.Clear();
         }
 
         //private static void DrawInfoText(PointF bodyLoc, CUDAMain.Body body)

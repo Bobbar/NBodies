@@ -312,19 +312,17 @@ namespace NBodies
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location2.X - flingOver.Location.X) / 4f;
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location2.Y - flingOver.Location.Y) / 4f;
 
-                orbitOver.Destroy();
+                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);//BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
-                var orbitPath = BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
-                orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY), "");
+                orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
                 orbitOver.OrbitPath = orbitPath;
-
+                orbitOver.Show();
                 Renderer.AddOverlay(orbitOver);
             }
 
             if (_EDown)
             {
-                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));//ScaleHelpers.ScalePointRelative(e.Location);
-                                                                                   //  mOver.Value = $@"{e.X},{e.Y}";
+                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
             }
 
             if (_FDown)
@@ -357,8 +355,10 @@ namespace NBodies
 
                     _EDown = true;
 
-                    explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                    //explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                    explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
                     explodeOver.Value = "Boom!";
+                    explodeOver.Show();
 
                     Renderer.AddOverlay(explodeOver);
 
@@ -368,8 +368,11 @@ namespace NBodies
 
                     _FDown = true;
 
-                    fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+
+                    //fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
+                    fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                    fpsOver.Show();
 
                     Renderer.AddOverlay(fpsOver);
 
@@ -398,14 +401,14 @@ namespace NBodies
                 case Keys.E:
 
                     _EDown = false;
-                    explodeOver.Destroy();
+                    explodeOver.Hide();
 
                     break;
 
                 case Keys.F:
 
                     _FDown = false;
-                    fpsOver.Destroy();
+                    fpsOver.Hide();
 
                     break;
 
@@ -422,13 +425,17 @@ namespace NBodies
 
                     _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 1f, ColorHelper.RandomColor());
 
-                    flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    //flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    flingOver.Location = _mouseLocation;
                     flingOver.Location2 = _mouseLocation;
+                    flingOver.Show();
 
                     Renderer.AddOverlay(flingOver);
 
-                    orbitOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    //orbitOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
+                    orbitOver.Location = _mouseLocation;
                     orbitOver.Location2 = _mouseLocation;
+                    orbitOver.Show();
 
                     Renderer.AddOverlay(orbitOver);
 
@@ -496,8 +503,8 @@ namespace NBodies
             {
                 _mouseRightDown = false;
 
-                flingOver.Destroy();
-                orbitOver.Destroy();
+                flingOver.Hide();
+                orbitOver.Hide();
             }
         }
 

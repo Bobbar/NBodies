@@ -190,7 +190,7 @@ namespace NBodies.Rendering
                         double dist = (distX * distX) + (distY * distY);
                         double distSqrt = Math.Sqrt(dist);
 
-                         potE += totMass / dist;
+                        potE += totMass / dist;
                         //potE += dist; //??
 
                         //kinE += 0.5f * (bo)
@@ -216,7 +216,7 @@ namespace NBodies.Rendering
             PointF speed = new PointF(body.SpeedX, body.SpeedY);
             PointF loc = new PointF(body.LocX, body.LocY);
             PointF force = new PointF();
-           
+
             points.Add(loc);
 
             var bodiesCopy = new Body[Bodies.Length];
@@ -287,44 +287,65 @@ namespace NBodies.Rendering
                 {
                     var bodyB = bodiesCopy[b];
 
-                    // Use a slow "body is inside the circle" calculation on the first loop.
-                    if (firstLoop)
+
+                    if (bodyB.UID == body.UID)
+                        continue;
+
+                    if (body.HasCollision == 0)
                     {
-                        // If this body is outside the SOI, calculate the forces.
-                        if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
-                        {
-                            var distX = bodyB.LocX - loc.X;
-                            var distY = bodyB.LocY - loc.Y;
-                            var dist = (distX * distX) + (distY * distY);
-                            var distSqrt = (float)Math.Sqrt(dist);
+                        var distX = bodyB.LocX - loc.X;
+                        var distY = bodyB.LocY - loc.Y;
+                        var dist = (distX * distX) + (distY * distY);
+                        var distSqrt = (float)Math.Sqrt(dist);
 
-                            var totMass = body.Mass * bodyB.Mass;
+                        var totMass = body.Mass * bodyB.Mass;
 
-                            var f = totMass / (dist + 0.02f);
+                        var f = totMass / (dist + 0.02f);
 
-                            force.X += (f * distX / distSqrt);
-                            force.Y += (f * distY / distSqrt);
-                        }
-                        else // If it is within the SOI, add to cache for faster lookup on the next loops.
-                        {
-                            soiBodies.Add(b);
-                        }
+                        force.X += (f * distX / distSqrt);
+                        force.Y += (f * distY / distSqrt);
                     }
-                    else // After the first loop, use the hashset cache.
+                    else
                     {
-                        if (!soiBodies.Contains(b))
+                        // Use a slow "body is inside the circle" calculation on the first loop.
+                        if (firstLoop)
                         {
-                            var distX = bodyB.LocX - loc.X;
-                            var distY = bodyB.LocY - loc.Y;
-                            var dist = (distX * distX) + (distY * distY);
-                            var distSqrt = (float)Math.Sqrt(dist);
+                            // If this body is outside the SOI, calculate the forces.
+                            if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
+                            {
+                                var distX = bodyB.LocX - loc.X;
+                                var distY = bodyB.LocY - loc.Y;
+                                var dist = (distX * distX) + (distY * distY);
+                                var distSqrt = (float)Math.Sqrt(dist);
 
-                            var totMass = body.Mass * bodyB.Mass;
+                                var totMass = body.Mass * bodyB.Mass;
 
-                            var f = totMass / (dist + 0.02f);
+                                var f = totMass / (dist + 0.02f);
 
-                            force.X += (f * distX / distSqrt);
-                            force.Y += (f * distY / distSqrt);
+                                force.X += (f * distX / distSqrt);
+                                force.Y += (f * distY / distSqrt);
+                            }
+                            else // If it is within the SOI, add to cache for faster lookup on the next loops.
+                            {
+                                soiBodies.Add(b);
+                            }
+                        }
+                        else // After the first loop, use the hashset cache.
+                        {
+                            if (!soiBodies.Contains(b))
+                            {
+                                var distX = bodyB.LocX - loc.X;
+                                var distY = bodyB.LocY - loc.Y;
+                                var dist = (distX * distX) + (distY * distY);
+                                var distSqrt = (float)Math.Sqrt(dist);
+
+                                var totMass = body.Mass * bodyB.Mass;
+
+                                var f = totMass / (dist + 0.02f);
+
+                                force.X += (f * distX / distSqrt);
+                                force.Y += (f * distY / distSqrt);
+                            }
                         }
                     }
                 }
@@ -346,7 +367,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.02f;//0.1f;
+            float lifetime = 0.05f;//0.1f;
             bool cloud = true;
 
             if (cloud)
@@ -704,8 +725,8 @@ Speed (X,Y): { body.SpeedX }, { body.SpeedY }
 Position (X,Y): { body.LocX }, { body.LocY }
 Force (X,Y): { body.ForceX }, { body.ForceX }
 ";
-           // if (index > -1)
-                Console.WriteLine(info);
+            // if (index > -1)
+            Console.WriteLine(info);
         }
     }
 }

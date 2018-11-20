@@ -187,7 +187,7 @@ namespace NBodies.Rendering
 
                             // 2.
                             // Wait for the drawing thread to complete.
-                            _drawingDoneWait.Wait(-1);
+                            _drawingDoneWait.Wait(5000);
 
                             // 3.
                             // Copy the new data to the current body collection.
@@ -226,7 +226,7 @@ namespace NBodies.Rendering
                     }
 
                     // Make sure the drawing thread is finished.
-                    _drawingDoneWait.Wait(-1);
+                    _drawingDoneWait.Wait(5000);
 
                     // If we are playing back a recording, get the current field frame
                     // from the recorder and bring it in to be rendered.

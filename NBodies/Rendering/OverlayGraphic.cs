@@ -19,7 +19,7 @@ namespace NBodies.Rendering
         public List<PointF> OrbitPath { get; set; } = new List<PointF>();
 
         public string Value { get; set; }
-        public bool Destroyed { get; set; } = false;
+        public bool Visible { get; set; } = false;
 
         public OverlayGraphic(OverlayGraphicType type, PointF location, string value)
         {
@@ -29,9 +29,14 @@ namespace NBodies.Rendering
             Value = value;
         }
 
-        public void Destroy()
+        public void Hide()
         {
-            Destroyed = true;
+            Visible = false;
+        }
+
+        public void Show()
+        {
+            Visible = true;
         }
 
 

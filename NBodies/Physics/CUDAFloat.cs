@@ -88,7 +88,7 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
-            float viscosity = 5.0f;//7.5f;
+            float viscosity = 40.0f;//5.0f;//7.5f;
 
             var blocks = (int)Math.Round((bodies.Length - 1 + threadsPerBlock - 1) / (float)threadsPerBlock, 0);
 
@@ -220,7 +220,7 @@ namespace NBodies.Physics
                         // This is checked in the collision kernel, and bodies that don't have
                         // the flag set are skipped. This give a huge performance boost in most situations.
                         //if (distSqrt <= (body.Size * 0.5f) + (iBody.Size * 0.5f))
-                        if (distSqrt <= (body.Size * 2.0f) + (iBody.Size * 2.0f))
+                        if (distSqrt <= (body.Size) + (iBody.Size))
                         {
                             body.HasCollision = 1;
                         }
