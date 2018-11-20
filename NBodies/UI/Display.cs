@@ -234,104 +234,8 @@ namespace NBodies
             BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
         }
 
-        private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
-        {
-            var scaleChange = 0.05f * RenderVars.CurrentScale;
+     
 
-            if (e.Delta > 0)
-            {
-                if (!_FDown && !_mouseRightDown)
-                    RenderVars.CurrentScale += scaleChange;
-
-                if (_FDown)
-                {
-                    MainLoop.TargetFPS += 1;
-                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                }
-
-
-                if (_mouseRightDown && _mouseId != -1)
-                {
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size += 1.0f;
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
-                }
-            }
-            else
-            {
-                if (!_FDown && !_mouseRightDown)
-                    RenderVars.CurrentScale -= scaleChange;
-
-                if (_FDown)
-                {
-                    MainLoop.TargetFPS -= 1;
-                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                }
-
-                if (_mouseRightDown && _mouseId != -1)
-                {
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size -= 1.0f;
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
-                }
-            }
-
-
-        }
-
-        private void RenderBox_MouseMove(object sender, MouseEventArgs e)
-        {
-            _mouseLocation = e.Location;
-
-            if (e.Button == MouseButtons.Left)
-            {
-                if (_selectedUid == -1 && _shiftDown)
-                {
-                    var mId = MouseOverUID(e.Location);
-                    if (mId != -1)
-                    {
-                        _bodyMovin = true;
-                        _selectedUid = mId;
-                    }
-                }
-
-                if (_bodyMovin)
-                {
-                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScalePointRelative(e.Location));
-                }
-                else
-                {
-                    var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
-                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScalePointExact(moveDiff));
-                    _mouseMoveDownLoc = e.Location;
-                }
-            }
-
-            if (e.Button == MouseButtons.Right)
-            {
-                flingOver.Location2 = _mouseLocation;
-
-                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location2.X - flingOver.Location.X) / 4f;
-                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location2.Y - flingOver.Location.Y) / 4f;
-
-                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);//BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
-
-                orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
-                orbitOver.OrbitPath = orbitPath;
-                orbitOver.Show();
-                Renderer.AddOverlay(orbitOver);
-            }
-
-            if (_EDown)
-            {
-                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
-            }
-
-            if (_FDown)
-            {
-                fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
-            }
-
-
-        }
 
         private void DisplayForm_KeyDown(object sender, KeyEventArgs e)
         {
@@ -506,6 +410,106 @@ namespace NBodies
                 flingOver.Hide();
                 orbitOver.Hide();
             }
+        }
+
+        private void RenderBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            _mouseLocation = e.Location;
+
+            if (e.Button == MouseButtons.Left)
+            {
+                if (_selectedUid == -1 && _shiftDown)
+                {
+                    var mId = MouseOverUID(e.Location);
+                    if (mId != -1)
+                    {
+                        _bodyMovin = true;
+                        _selectedUid = mId;
+                    }
+                }
+
+                if (_bodyMovin)
+                {
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScalePointRelative(e.Location));
+                }
+                else
+                {
+                    var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
+                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScalePointExact(moveDiff));
+                    _mouseMoveDownLoc = e.Location;
+                }
+            }
+
+            if (e.Button == MouseButtons.Right)
+            {
+                var speedVec = _mouseLocation.Subtract(flingOver.Location);
+                flingOver.Location2 = flingOver.Location.Subtract(speedVec);
+
+                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location.X - _mouseLocation.X) / 3f;
+                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location.Y - _mouseLocation.Y) / 3f;
+
+                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);//BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+
+                orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
+                orbitOver.OrbitPath = orbitPath;
+                orbitOver.Show();
+                Renderer.AddOverlay(orbitOver);
+            }
+
+            if (_EDown)
+            {
+                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+            }
+
+            if (_FDown)
+            {
+                fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+            }
+
+
+        }
+
+        private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
+        {
+            var scaleChange = 0.05f * RenderVars.CurrentScale;
+
+            if (e.Delta > 0)
+            {
+                if (!_FDown && !_mouseRightDown)
+                    RenderVars.CurrentScale += scaleChange;
+
+                if (_FDown)
+                {
+                    MainLoop.TargetFPS += 1;
+                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                }
+
+
+                if (_mouseRightDown && _mouseId != -1)
+                {
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size += 1.0f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                }
+            }
+            else
+            {
+                if (!_FDown && !_mouseRightDown)
+                    RenderVars.CurrentScale -= scaleChange;
+
+                if (_FDown)
+                {
+                    MainLoop.TargetFPS -= 1;
+                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                }
+
+                if (_mouseRightDown && _mouseId != -1)
+                {
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size -= 1.0f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                }
+            }
+
+
         }
 
         private void RenderBox_Resize(object sender, EventArgs e)
