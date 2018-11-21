@@ -3,7 +3,6 @@ using NBodies.Rendering;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using NBodies.UI;
 
 namespace NBodies
 {
@@ -13,8 +12,6 @@ namespace NBodies
         private bool _ctrlDown = false;
         private bool _EDown = false;
         private bool _FDown = false;
-
-
 
         private int _selectedUid = -1;
         private int _mouseId = -1;
@@ -30,7 +27,6 @@ namespace NBodies
         private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         private OverlayGraphic flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
         private OverlayGraphic orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
-
 
         private PlaybackControlForm _playbackControl;
 
@@ -50,7 +46,6 @@ namespace NBodies
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
             PressureScaleUpDown.Value = (decimal)Renderer.PressureScaleMax;
             AlphaUpDown.Value = Renderer.BodyAlpha;
-
 
             RenderBox.DoubleBuffered(true);
         }
@@ -74,7 +69,7 @@ namespace NBodies
             //    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
             //};
 
-            //fpsKeyAction.KeyDownAction = () => 
+            //fpsKeyAction.KeyDownAction = () =>
             //{
             //    if (!Renderer.OverLays.Contains(fpsOver))
             //    {
@@ -95,11 +90,7 @@ namespace NBodies
             //    fpsOver.Location = p.Subtract(new PointF(10, 10));
             //};
 
-
             //InputHandler.AddKeyAction(fpsKeyAction);
-
-
-
 
             MainLoop.StartLoop();
         }
@@ -145,13 +136,11 @@ namespace NBodies
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
 
-
             var fBody = BodyManager.FollowBody();
 
             DensityLabel.Text = string.Format("Density: {0}", fBody.Density);
             PressureLabel.Text = string.Format("Press: {0}", fBody.Pressure);
             SpeedLabel.Text = string.Format("Agg. Speed: {0}", fBody.AggregateSpeed());
-
 
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {
@@ -167,9 +156,7 @@ namespace NBodies
             else
             {
                 RecordButton.BackColor = DefaultBackColor;
-
             }
-
         }
 
         private void SetSelectedInfo()
@@ -185,7 +172,6 @@ namespace NBodies
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
                 selectBody.PrintInfo();
-
             }
         }
 
@@ -225,7 +211,6 @@ namespace NBodies
                     _playbackControl = new PlaybackControlForm(recorder);
                 }
             }
-
         }
 
         private void BodySizeTimer_Tick(object sender, EventArgs e)
@@ -233,9 +218,6 @@ namespace NBodies
             BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size = BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size + 0.5f;
             BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
         }
-
-     
-
 
         private void DisplayForm_KeyDown(object sender, KeyEventArgs e)
         {
@@ -272,13 +254,21 @@ namespace NBodies
 
                     _FDown = true;
 
-
                     //fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
                     fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                     fpsOver.Show();
 
                     Renderer.AddOverlay(fpsOver);
+
+                    break;
+
+                case Keys.B:
+
+                    if (_selectedUid != -1)
+                    {
+                        BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
+                    }
 
                     break;
             }
@@ -315,7 +305,6 @@ namespace NBodies
                     fpsOver.Hide();
 
                     break;
-
             }
         }
 
@@ -356,7 +345,6 @@ namespace NBodies
                     BodyManager.FollowSelected = false;
                     BodyManager.FollowBodyUID = -1;
                 }
-
 
                 var mUid = MouseOverUID(e.Location);
 
@@ -448,7 +436,7 @@ namespace NBodies
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location.X - _mouseLocation.X) / 3f;
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location.Y - _mouseLocation.Y) / 3f;
 
-                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);//BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]); //BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
                 orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
                 orbitOver.OrbitPath = orbitPath;
@@ -465,8 +453,6 @@ namespace NBodies
             {
                 fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
             }
-
-
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
@@ -483,7 +469,6 @@ namespace NBodies
                     MainLoop.TargetFPS += 1;
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                 }
-
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -508,8 +493,6 @@ namespace NBodies
                     BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
                 }
             }
-
-
         }
 
         private void RenderBox_Resize(object sender, EventArgs e)
@@ -683,8 +666,6 @@ namespace NBodies
         {
             MainLoop.Stop();
         }
-
-
 
         private void LoadRecordingButton_Click(object sender, EventArgs e)
         {

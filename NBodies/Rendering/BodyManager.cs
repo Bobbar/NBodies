@@ -84,10 +84,18 @@ namespace NBodies.Rendering
         {
             UIDIndex.Clear();
 
-            for (int i = 0; i < Bodies.Length; i++)
+            try
             {
-                UIDIndex.Add(Bodies[i].UID, i);
+                for (int i = 0; i < Bodies.Length; i++)
+                {
+                    UIDIndex.Add(Bodies[i].UID, i);
+                }
             }
+            catch
+            {
+                // Occational 'already added' race condition.
+            }
+          
         }
 
         public static PointF FollowBodyLoc()
@@ -367,7 +375,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.05f;//0.1f;
+            float lifetime = 0.04f;//0.1f;
             bool cloud = true;
 
             if (cloud)

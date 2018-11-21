@@ -32,6 +32,8 @@ namespace NBodies.Physics
         {
             var cudaModule = CudafyModule.TryDeserialize();
 
+            cudaModule.GenerateDebug = true;
+
             if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
@@ -45,6 +47,8 @@ namespace NBodies.Physics
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
+
+         
 
             var props = gpu.GetDeviceProperties();
             Console.WriteLine(props.ToString());
@@ -146,6 +150,8 @@ namespace NBodies.Physics
 
             if (a > inBodies.Length)
                 return;
+
+            
 
             Body body = inBodies[a];
 
@@ -273,7 +279,7 @@ namespace NBodies.Physics
                 float FLOAT_EPSILON = 1.192092896e-07f;
                 float FLOAT_EPSILONSQRT = 3.45267E-11f;
                 float m_kernelSize = 1.0f;
-            
+
                 int len = inBodies.Length;
 
                 for (int b = 0; b < len; b++)
@@ -347,7 +353,7 @@ namespace NBodies.Physics
                                 //outBody.ForceX += shear * tanVelx;
                                 //outBody.ForceY += shear * tanVely;
 
-                               
+
                             }
                             else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                             {
@@ -394,7 +400,7 @@ namespace NBodies.Physics
                     }
                 }
             }
-            
+
 
             // Leap frog integration.
             float dt2 = dt * 0.5f;

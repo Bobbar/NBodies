@@ -232,14 +232,15 @@ namespace NBodies.Rendering
                         }
                     }
 
+                    // FPS Limiter
+                    DelayFrame();
+
                     // 4.
                     // Draw the field asynchronously.
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
 
-                    // FPS Limiter
-                    DelayFrame();
                 }
             }
             catch (OperationCanceledException)
@@ -324,6 +325,7 @@ namespace NBodies.Rendering
 
                 if (body.BlackHole == 2)
                     bodies[b].InRoche = 1;
+
                 //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
                 if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
                 {
