@@ -143,8 +143,6 @@ namespace NBodies.Physics
             if (a > inBodies.Length)
                 return;
 
-            
-
             Body body = inBodies[a];
 
             body.ForceTot = 0;
@@ -169,7 +167,7 @@ namespace NBodies.Physics
             {
                 Body iBody = inBodies[b];
 
-                if (iBody.UID != body.UID)
+                if (a != b)
                 {
 
                     distX = iBody.LocX - body.LocX;
@@ -278,7 +276,7 @@ namespace NBodies.Physics
                 {
                     Body inBody = inBodies[b];
 
-                    if (inBody.UID != outBody.UID && inBody.HasCollision == 1)
+                    if (a != b && inBody.HasCollision == 1)
                     {
                         DistX = inBody.LocX - outBody.LocX;
                         DistY = inBody.LocY - outBody.LocY;

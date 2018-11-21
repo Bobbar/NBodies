@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System;
 
 namespace NBodies.Rendering
 {
@@ -56,6 +57,8 @@ namespace NBodies.Rendering
         private static Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
         private static RectangleF _cullTangle;
 
+        private static Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
+   
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
@@ -143,7 +146,7 @@ namespace NBodies.Rendering
                              if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
                          }
 
-                         Color bodyColor = new Color();
+                         Color bodyColor = Color.White;
 
                          switch (DisplayStyle)
                          {
@@ -186,19 +189,25 @@ namespace NBodies.Rendering
                              followBody = new Body();
                          }
 
-                         using (var bodyBrush = new SolidBrush(bodyColor))
+                         // Cache body brushes for faster lookup and less GC thrashing.
+                         if (!_brushCache.ContainsKey(bodyColor))
                          {
-                             var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
-
-                             //Draw body.
-                             _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
-
-                             // If blackhole, stroke with red circle.
-                             if (body.BlackHole == 1)
-                             {
-                                 _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
-                             }
+                             _brushCache.Add(bodyColor, new SolidBrush(bodyColor));
                          }
+
+                         var bodyBrush = _brushCache[bodyColor];
+
+                         var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
+
+                         //Draw body.
+                         _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
+
+                         // If blackhole, stroke with red circle.
+                         if (body.BlackHole == 1)
+                         {
+                             _buffer.Graphics.DrawEllipse(_blackHoleStroke, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
+                         }
+
                      }
                  }
 
@@ -244,7 +253,6 @@ namespace NBodies.Rendering
                  }
 
                  DrawOverlays(finalOffset);
-
 
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();

@@ -95,7 +95,7 @@ namespace NBodies.Rendering
             {
                 // Occational 'already added' race condition.
             }
-          
+
         }
 
         public static PointF FollowBodyLoc()
@@ -441,23 +441,8 @@ namespace NBodies.Rendering
             }
         }
 
-        //public static PointF CalcSpeedVector(PointF locA, PointF locB)
-        //{
-        //    var len = PointHelper.DistanceSqrt(locA, lo)
-        //}
-
         public static int Add(Body body)
         {
-            //     _currentId++;
-
-            //_bodyStore = Bodies.ToList();
-
-            //body.UID = _currentId;
-
-            //_bodyStore.Add(body);
-            //Bodies = _bodyStore.ToArray();
-
-            //body.UID = _currentId;
             body.UID = NextUID();
             Bodies = Bodies.Add(body);
 
