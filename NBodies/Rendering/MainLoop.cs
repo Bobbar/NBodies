@@ -232,8 +232,7 @@ namespace NBodies.Rendering
                         }
                     }
 
-                    // FPS Limiter
-                    DelayFrame();
+                    FPSLimiter();
 
                     // 4.
                     // Draw the field asynchronously.
@@ -289,7 +288,7 @@ namespace NBodies.Rendering
             _recorder.StopAll();
         }
 
-        private static void DelayFrame()
+        private static void FPSLimiter()
         {
             int waitTime = 0;
 
@@ -299,7 +298,7 @@ namespace NBodies.Rendering
             {
                 long elapTime = _fpsTimer.ElapsedMilliseconds;
 
-                _fpsTimer.Reset();
+                _fpsTimer.Restart();
 
                 if (elapTime <= _minFrameTime)
                 {

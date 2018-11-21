@@ -12,8 +12,6 @@ namespace NBodies.Physics
         private readonly int threadsPerBlock = 256;
         private GPGPU gpu;
 
-        private int _drift = 1;
-
         public CUDAFloat(int gpuIdx)
         {
             gpuIndex = gpuIdx;
@@ -92,7 +90,7 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
-            float viscosity = 40.0f;//5.0f;//7.5f;
+            float viscosity = 20.0f;//40.0f;//5.0f;//7.5f;
 
             var blocks = (int)Math.Round((bodies.Length - 1 + threadsPerBlock - 1) / (float)threadsPerBlock, 0);
 
@@ -110,21 +108,15 @@ namespace NBodies.Physics
 
             gpu.CopyToDevice(bodies, gpuInBodies);
 
-            gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-            gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, _drift);
+            for (int drift = 1; drift > -1; drift--)
+            {
+                gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
+            }
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
             gpu.FreeAll();
-
-            if (_drift == 1)
-            {
-                _drift = 0;
-            }
-            else if (_drift == 0)
-            {
-                _drift = 1;
-            }
         }
 
         [Cudafy]
