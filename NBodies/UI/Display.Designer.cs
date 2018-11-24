@@ -35,6 +35,7 @@
             this.drawToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -131,10 +132,12 @@
             // 
             // optionsToolStripMenuItem
             // 
+            this.optionsToolStripMenuItem.CheckOnClick = true;
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.drawToolStripMenuItem,
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
+            this.rocheLimitToolStripMenuItem,
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
@@ -170,6 +173,16 @@
             this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
+            // 
+            // rocheLimitToolStripMenuItem
+            // 
+            this.rocheLimitToolStripMenuItem.Checked = true;
+            this.rocheLimitToolStripMenuItem.CheckOnClick = true;
+            this.rocheLimitToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.rocheLimitToolStripMenuItem.Name = "rocheLimitToolStripMenuItem";
+            this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.rocheLimitToolStripMenuItem.Text = "Roche Limit";
+            this.rocheLimitToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rocheLimitToolStripMenuItem_CheckedChanged);
             // 
             // displayToolStripMenuItem
             // 
@@ -422,10 +435,10 @@
             0,
             196608});
             this.TimeStepUpDown.Minimum = new decimal(new int[] {
-            1,
+            80,
             0,
             0,
-            262144});
+            -2147221504});
             this.TimeStepUpDown.Name = "TimeStepUpDown";
             this.TimeStepUpDown.Size = new System.Drawing.Size(62, 20);
             this.TimeStepUpDown.TabIndex = 3;
@@ -756,6 +769,7 @@
         private System.Windows.Forms.ToolStripMenuItem showPredictOrbit;
         private System.Windows.Forms.ToolStripMenuItem drawToolStripMenuItem;
         private System.Windows.Forms.Label RecSizeLabel;
+        private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
     }
 }
 

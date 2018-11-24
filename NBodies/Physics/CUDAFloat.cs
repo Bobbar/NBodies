@@ -30,8 +30,6 @@ namespace NBodies.Physics
         {
             var cudaModule = CudafyModule.TryDeserialize();
 
-            cudaModule.GenerateDebug = true;
-
             if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
@@ -46,7 +44,7 @@ namespace NBodies.Physics
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
 
-         
+
 
             var props = gpu.GetDeviceProperties();
             Console.WriteLine(props.ToString());
@@ -111,7 +109,12 @@ namespace NBodies.Physics
             for (int drift = 1; drift > -1; drift--)
             {
                 gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+
+                gpu.StartTimer();
+
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
+
+                Console.WriteLine(gpu.StopTimer());
             }
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
@@ -281,12 +284,15 @@ namespace NBodies.Physics
                         DistX = inBody.LocX - outBody.LocX;
                         DistY = inBody.LocY - outBody.LocY;
                         Dist = (DistX * DistX) + (DistY * DistY);
-                        DistSqrt = (float)Math.Sqrt(Dist);
 
-                        if (DistSqrt <= (outBody.Size * 0.5f) + (inBody.Size * 0.5f))
+                        float colDist = (outBody.Size * 0.5f) + (inBody.Size * 0.5f);
+                        if (Dist <= colDist * colDist)
                         {
+                            DistSqrt = (float)Math.Sqrt(Dist);
+
                             if (outBody.InRoche == 1 & inBody.InRoche == 1)
                             {
+
 
                                 if (Dist < FLOAT_EPSILON)
                                 {
@@ -351,6 +357,8 @@ namespace NBodies.Physics
                             }
                             else
                             {
+
+
                                 V1x = outBody.SpeedX;
                                 V1y = outBody.SpeedY;
                                 V2x = inBody.SpeedX;

@@ -14,6 +14,7 @@ namespace NBodies.Rendering
     public static class MainLoop
     {
         public static bool DrawBodies = true;
+        public static bool RocheLimit = true;
 
         //public static int TargetFPS = 60;
 
@@ -189,7 +190,8 @@ namespace NBodies.Rendering
                             BodyManager.Bodies = bodiesCopy;
 
                             // Process and fracture new roche bodies.
-                            ProcessRoche(ref BodyManager.Bodies);
+                            if (RocheLimit)
+                                ProcessRoche(ref BodyManager.Bodies);
 
                             // Increment physics frame count.
                             _frameCount++;

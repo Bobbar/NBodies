@@ -688,5 +688,10 @@ namespace NBodies
         {
             MainLoop.DrawBodies = drawToolStripMenuItem.Checked;
         }
+
+        private void rocheLimitToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.RocheLimit = rocheLimitToolStripMenuItem.Checked;
+        }
     }
 }
