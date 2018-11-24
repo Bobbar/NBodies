@@ -109,12 +109,7 @@ namespace NBodies.Physics
             for (int drift = 1; drift > -1; drift--)
             {
                 gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-
-                gpu.StartTimer();
-
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
-
-                Console.WriteLine(gpu.StopTimer());
             }
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
