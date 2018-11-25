@@ -300,15 +300,20 @@ namespace NBodies.Rendering
             {
                 long elapTime = _fpsTimer.ElapsedMilliseconds;
 
-                _fpsTimer.Restart();
-
                 if (elapTime <= _minFrameTime)
                 {
                     waitTime = (int)(_minFrameTime - elapTime);
-                    Thread.Sleep(waitTime);
+
+                    if (waitTime > 0)
+                    {
+                        Thread.Sleep(waitTime);
+                    }
                 }
 
                 CurrentFPS = 1000 / (float)(elapTime + waitTime);
+
+                _fpsTimer.Restart();
+
             }
             else
             {
