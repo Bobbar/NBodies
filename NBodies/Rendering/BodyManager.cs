@@ -371,6 +371,30 @@ namespace NBodies.Rendering
             return points;
         }
 
+        public static bool IntersectsExisting(PointF location, float diameter)
+        {
+            float distX = 0;
+            float distY = 0;
+            float dist = 0;
+            float colDist = 0;
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                var body = Bodies[i];
+                distX = body.LocX - location.X;
+                distY = body.LocY - location.Y;
+                dist = (distX * distX) + (distY * distY);
+                colDist = (body.Size / 2f) + (diameter / 2f);
+
+                if (dist <= (colDist * colDist))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static void InsertExplosion(PointF location, int count)
         {
             MainLoop.WaitForPause();

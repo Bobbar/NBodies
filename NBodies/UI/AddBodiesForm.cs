@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using NBodies.Rendering;
 using NBodies.Rules;
 using NBodies.Shapes;
+using System.Diagnostics;
 
 namespace NBodies
 {
@@ -45,6 +46,11 @@ namespace NBodies
 
             var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
 
+            if (includeCenterMass)
+            {
+                BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 MatterType matter = Matter.Types[0];
@@ -60,15 +66,32 @@ namespace NBodies
 
                 bodyCount++;
 
+                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)))
+                int its = 0;
+                int maxIts = 100;
+                bool outOfSpace = false;
+
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
                 {
+                    if (its >= maxIts)
+                    {
+                        Console.WriteLine("Failed to add body after allotted tries!");
+                        outOfSpace = true;
+                        break;
+                    }
+
+                    bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+
+                    its++;
                 }
 
+                if (outOfSpace)
+                    continue;
 
                 var offsetP = new PointF(px, py);
                 offsetP = offsetP.Subtract(ellipse.Location);
@@ -79,7 +102,6 @@ namespace NBodies
                 float vx = -1 * (float)(Math.Sign(offsetP.Y) * Math.Cos(thetaV) * magV);
                 float vy = (float)(Math.Sign(offsetP.X) * Math.Sin(thetaV) * magV);
 
-                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 float newMass = 1;
 
                 if (StaticDensityCheckBox.Checked)
@@ -101,10 +123,6 @@ namespace NBodies
                 BodyManager.Add(px, py, vx, vy, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
-            if (includeCenterMass)
-            {
-                BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
-            }
 
             MainLoop.Resume();
         }
@@ -138,20 +156,35 @@ namespace NBodies
                 }
 
 
-
                 bodyCount++;
 
+                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)))
+                int its = 0;
+                int maxIts = 100;
+                bool outOfSpace = false;
+
+                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
                 {
+                    if (its >= maxIts)
+                    {
+                        Console.WriteLine("Failed to add body after allotted tries!");
+                        outOfSpace = true;
+                        break;
+                    }
+
+                    bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+
+                    its++;
                 }
 
+                if (outOfSpace)
+                    continue;
 
-                var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 float newMass;
 
 
