@@ -435,10 +435,10 @@
             0,
             196608});
             this.TimeStepUpDown.Minimum = new decimal(new int[] {
-            80,
+            1,
             0,
             0,
-            -2147221504});
+            262144});
             this.TimeStepUpDown.Name = "TimeStepUpDown";
             this.TimeStepUpDown.Size = new System.Drawing.Size(62, 20);
             this.TimeStepUpDown.TabIndex = 3;
