@@ -316,7 +316,16 @@ namespace NBodies
                 {
                     MainLoop.WaitForPause();
 
-                    _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 1f, ColorHelper.RandomColor());
+                    var mUid = MouseOverUID(e.Location);
+
+                    if (mUid != -1)
+                    {
+                        _mouseId = mUid;
+                    }
+                    else
+                    {
+                        _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 1f, ColorHelper.RandomColor());
+                    }
 
                     //flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
                     flingOver.Location = _mouseLocation;

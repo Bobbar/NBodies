@@ -31,6 +31,20 @@ namespace NBodies
             return (float)Math.Sqrt(numerator / r2);
         }
 
+        private PointF OrbitVel(PointF bodyALoc, PointF bodyBLoc, float bodyAMass)
+        {
+            var offsetP = bodyBLoc;
+            offsetP = offsetP.Subtract(bodyALoc);
+
+            float magV = CircleV(offsetP.X, offsetP.Y, bodyAMass);
+            float absAngle = (float)Math.Atan(Math.Abs(offsetP.Y / offsetP.X));
+            float thetaV = (float)Math.PI * 0.5f - absAngle;
+            float vx = -1 * (float)(Math.Sign(offsetP.Y) * Math.Cos(thetaV) * magV);
+            float vy = (float)(Math.Sign(offsetP.X) * Math.Sin(thetaV) * magV);
+
+            return new PointF(vx, vy);
+        }
+
         private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, float centerMass)
         {
             MainLoop.WaitForPause();
@@ -93,14 +107,8 @@ namespace NBodies
                 if (outOfSpace)
                     continue;
 
-                var offsetP = new PointF(px, py);
-                offsetP = offsetP.Subtract(ellipse.Location);
-
-                float magV = CircleV(offsetP.X, offsetP.Y, centerMass);
-                float absAngle = (float)Math.Atan(Math.Abs(offsetP.Y / offsetP.X));
-                float thetaV = (float)Math.PI * 0.5f - absAngle;
-                float vx = -1 * (float)(Math.Sign(offsetP.Y) * Math.Cos(thetaV) * magV);
-                float vy = (float)(Math.Sign(offsetP.X) * Math.Sin(thetaV) * magV);
+                var bodyLoc = new PointF(px, py);
+                var bodyVelo = OrbitVel(ellipse.Location, bodyLoc, centerMass);
 
                 float newMass = 1;
 
@@ -120,7 +128,7 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, vx, vy, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
+                BodyManager.Add(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
 
