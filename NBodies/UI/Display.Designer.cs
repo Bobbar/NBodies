@@ -77,6 +77,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.leapfrogIntegratorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -138,6 +139,7 @@
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
+            this.leapfrogIntegratorToolStripMenuItem,
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
@@ -687,6 +689,16 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // leapfrogIntegratorToolStripMenuItem
+            // 
+            this.leapfrogIntegratorToolStripMenuItem.Checked = true;
+            this.leapfrogIntegratorToolStripMenuItem.CheckOnClick = true;
+            this.leapfrogIntegratorToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.leapfrogIntegratorToolStripMenuItem.Name = "leapfrogIntegratorToolStripMenuItem";
+            this.leapfrogIntegratorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.leapfrogIntegratorToolStripMenuItem.Text = "Leapfrog Integrator";
+            this.leapfrogIntegratorToolStripMenuItem.CheckedChanged += new System.EventHandler(this.leapfrogIntegratorToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -770,6 +782,7 @@
         private System.Windows.Forms.ToolStripMenuItem drawToolStripMenuItem;
         private System.Windows.Forms.Label RecSizeLabel;
         private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem leapfrogIntegratorToolStripMenuItem;
     }
 }
 

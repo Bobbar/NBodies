@@ -15,6 +15,7 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
+        public static bool LeapFrog = true;
 
         //public static int TargetFPS = 60;
 
@@ -168,11 +169,10 @@ namespace NBodies.Rendering
                 {
                     if (!_skipPhysics && !_recorder.PlaybackActive)
                     {
-                        if (BodyManager.Bodies.Length > 2)
+                        if (BodyManager.Bodies.Length > 1)
                         {
-                            // Remove invisible bodies.
-                            BodyManager.CullInvisible();
-
+                            //if (BodyManager.Bodies.Length < 1)
+                            //    continue;
                             // 1.
                             // Copy the current bodies to another array.
                             var bodiesCopy = new Body[BodyManager.Bodies.Length];
@@ -192,6 +192,9 @@ namespace NBodies.Rendering
                             // Process and fracture new roche bodies.
                             if (RocheLimit)
                                 ProcessRoche(ref BodyManager.Bodies);
+
+                            // Remove invisible bodies.
+                            BodyManager.CullInvisible();
 
                             // Increment physics frame count.
                             _frameCount++;
@@ -327,9 +330,20 @@ namespace NBodies.Rendering
             int len = bodies.Length;
             for (int b = 0; b < len; b++)
             {
-                var body = bodies[b];
+                if (bodies[b].ForceTot > bodies[b].Mass * 4 & bodies[b].BlackHole == 0)
+                {
+                    bodies[b].InRoche = 1;
+                }
+                else if (bodies[b].ForceTot * 2 < bodies[b].Mass * 4)
+                {
+                    bodies[b].InRoche = 0;
+                }
+                else if (bodies[b].BlackHole == 2 || bodies[b].IsExplosion == 1)
+                {
+                    bodies[b].InRoche = 1;
+                }
 
-                if (body.BlackHole == 2)
+                if (bodies[b].BlackHole == 2)
                     bodies[b].InRoche = 1;
 
                 //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)

@@ -371,6 +371,158 @@ namespace NBodies.Rendering
             return points;
         }
 
+        /// <summary>
+        /// Calculate the orbital path of the specified body by running a low res (large dt) static simulation against the current field. Accurate, but slow.
+        /// 
+        /// This variation tries to calculate a complete orbit instead of just advancing an N amount of steps.
+        /// </summary>
+        public static List<PointF> CalcPathCircle(Body body)
+        {
+            var points = new List<PointF>();
+            int steps = 0;
+            int maxSteps = 10000;
+            float dtStep = 0.100f;
+            bool complete = false;
+            bool apoapsis = false;
+
+            PointF speed = new PointF(body.SpeedX, body.SpeedY);
+            PointF loc = new PointF(body.LocX, body.LocY);
+            PointF force = new PointF();
+
+            bool firstLoop = true;
+
+            // Define a circle of influence around the specified body.
+            // Bodies within this SOI are not included in orbit calculation.
+            // This is done to improve accuracy by ignoring the neighbors of
+            // a body within a large clump.
+            var soi = new Ellipse(new PointF(body.LocX, body.LocY), 10);
+
+            // This hashset will be used to cache SOI bodies for faster lookup on later loops.
+            var soiBodies = new HashSet<int>();
+
+            points.Add(loc);
+
+            var bodiesCopy = new Body[Bodies.Length];
+            Array.Copy(Bodies, bodiesCopy, bodiesCopy.Length);
+
+            while (!complete)
+            {
+                force = new PointF();
+
+                for (int b = 0; b < bodiesCopy.Length; b++)
+                {
+                    var bodyB = bodiesCopy[b];
+
+
+                    if (bodyB.UID == body.UID)
+                        continue;
+
+                    if (body.HasCollision == 0)
+                    {
+                        var distX = bodyB.LocX - loc.X;
+                        var distY = bodyB.LocY - loc.Y;
+                        var dist = (distX * distX) + (distY * distY);
+                        var distSqrt = (float)Math.Sqrt(dist);
+
+                        var totMass = body.Mass * bodyB.Mass;
+
+                        var f = totMass / (dist + 0.02f);
+
+                        force.X += (f * distX / distSqrt);
+                        force.Y += (f * distY / distSqrt);
+                    }
+                    else
+                    {
+                        // Use a slow "body is inside the circle" calculation on the first loop.
+                        if (firstLoop)
+                        {
+                            // If this body is outside the SOI, calculate the forces.
+                            if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
+                            {
+                                var distX = bodyB.LocX - loc.X;
+                                var distY = bodyB.LocY - loc.Y;
+                                var dist = (distX * distX) + (distY * distY);
+                                var distSqrt = (float)Math.Sqrt(dist);
+
+                                var totMass = body.Mass * bodyB.Mass;
+
+                                var f = totMass / (dist + 0.02f);
+
+                                force.X += (f * distX / distSqrt);
+                                force.Y += (f * distY / distSqrt);
+                            }
+                            else // If it is within the SOI, add to cache for faster lookup on the next loops.
+                            {
+                                soiBodies.Add(b);
+                            }
+                        }
+                        else // After the first loop, use the hashset cache.
+                        {
+                            if (!soiBodies.Contains(b))
+                            {
+                                var distX = bodyB.LocX - loc.X;
+                                var distY = bodyB.LocY - loc.Y;
+                                var dist = (distX * distX) + (distY * distY);
+                                var distSqrt = (float)Math.Sqrt(dist);
+
+                                var totMass = body.Mass * bodyB.Mass;
+
+                                var f = totMass / (dist + 0.02f);
+
+                                force.X += (f * distX / distSqrt);
+                                force.Y += (f * distY / distSqrt);
+                            }
+                        }
+                    }
+                }
+
+                speed.X += dtStep * force.X / body.Mass;
+                speed.Y += dtStep * force.Y / body.Mass;
+                loc.X += dtStep * (speed.X);
+                loc.Y += dtStep * (speed.Y);
+
+                points.Add(loc);
+
+                firstLoop = false;
+
+                if (!firstLoop && steps > 10)
+                {
+                    // Define a flat "plane" at the test body's Y coord.
+                    var planeA = new PointF(-20000f, body.LocY);
+                    var planeB = new PointF(20000f, body.LocY);
+
+                    if (!apoapsis)
+                    {
+                        // Test for the first intersection of the plane.  This will be the apoapsis.
+                        if (PointHelper.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        {
+                            apoapsis = true;
+                        }
+                    }
+                    else
+                    {
+                        // If we intersect the plane again after the apoapsis, we should now have a complete orbit.
+                        if (PointHelper.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        {
+                            complete = true;
+                        }
+                    }
+
+                    // If we haven't found an expected orbit after the maximum steps, end the loop to display what was calculated.
+                    if (steps >= maxSteps)
+                    {
+                        complete = true;
+                    }
+
+                }
+
+                steps++;
+            }
+
+            return points;
+        }
+
+
         public static bool IntersectsExisting(PointF location, float diameter)
         {
             float distX = 0;
@@ -526,6 +678,11 @@ namespace NBodies.Rendering
             b.Lifetime = lifetime;
             b.Age = 0.0f;
             b.IsExplosion = isExplosion;
+
+            if (isExplosion == 1)
+            {
+                b.InRoche = 1;
+            }
 
             //b.DeltaTime = 0.0005f;
 

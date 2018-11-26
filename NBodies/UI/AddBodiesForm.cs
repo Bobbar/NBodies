@@ -48,7 +48,7 @@ namespace NBodies
 
             if (includeCenterMass)
             {
-                BodyManager.Add(ellipse.Location, 15, centerMass, Color.Black, 1);
+                BodyManager.Add(ellipse.Location, 3, centerMass, Color.Black, 1);
             }
 
             for (int i = 0; i < count; i++)

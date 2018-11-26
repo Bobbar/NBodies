@@ -3,6 +3,7 @@ using Cudafy.Host;
 using Cudafy.Translator;
 using System;
 using System.Diagnostics;
+using NBodies.Rendering;
 
 namespace NBodies.Physics
 {
@@ -106,10 +107,18 @@ namespace NBodies.Physics
 
             gpu.CopyToDevice(bodies, gpuInBodies);
 
-            for (int drift = 1; drift > -1; drift--)
+            if (MainLoop.LeapFrog)
+            {
+                for (int drift = 1; drift > -1; drift--)
+                {
+                    gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+                    gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
+                }
+            }
+            else
             {
                 gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
+                gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, 3);
             }
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
@@ -218,19 +227,6 @@ namespace NBodies.Physics
             gpThread.SyncThreads();
 
             body.Pressure = GAS_K * (body.Density);
-
-            if (body.ForceTot > body.Mass * 4 & body.BlackHole == 0)
-            {
-                body.InRoche = 1;
-            }
-            else if (body.ForceTot * 2 < body.Mass * 4)
-            {
-                body.InRoche = 0;
-            }
-            else if (body.BlackHole == 2 || body.IsExplosion == 1)
-            {
-                body.InRoche = 1;
-            }
 
             outBodies[a] = body;
         }
@@ -352,8 +348,6 @@ namespace NBodies.Physics
                             }
                             else
                             {
-
-
                                 V1x = outBody.SpeedX;
                                 V1y = outBody.SpeedY;
                                 V2x = inBody.SpeedX;
@@ -396,14 +390,19 @@ namespace NBodies.Physics
 
 
             // Leap frog integration.
-            float dt2 = dt * 0.5f;
+            float dt2;
 
-            float accelX = outBody.ForceX / outBody.Mass;
-            float accelY = outBody.ForceY / outBody.Mass;
+            float accelX;
+            float accelY;
 
             // Drift
             if (drift == 1)
             {
+                dt2 = dt * 0.5f;
+
+                accelX = outBody.ForceX / outBody.Mass;
+                accelY = outBody.ForceY / outBody.Mass;
+
                 outBody.SpeedX += (accelX * dt2);
                 outBody.SpeedY += (accelY * dt2);
 
@@ -417,8 +416,23 @@ namespace NBodies.Physics
             }
             else if (drift == 0) // Kick
             {
+                dt2 = dt * 0.5f;
+
+                accelX = outBody.ForceX / outBody.Mass;
+                accelY = outBody.ForceY / outBody.Mass;
+
                 outBody.SpeedX += accelX * dt2;
                 outBody.SpeedY += accelY * dt2;
+            }
+            else if (drift == 3)  // Euler
+            {
+                outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
+                outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
+                outBody.LocX += dt * outBody.SpeedX;
+                outBody.LocY += dt * outBody.SpeedY;
+
+                if (outBody.Lifetime > 0.0f)
+                    outBody.Age += (dt * 4.0f);
             }
 
             gpThread.SyncThreads();

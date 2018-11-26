@@ -436,7 +436,8 @@ namespace NBodies
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location.X - _mouseLocation.X) / 3f;
                 BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location.Y - _mouseLocation.Y) / 3f;
 
-                var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]); //BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+                var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+                //var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]); //BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
                 orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
                 orbitOver.OrbitPath = orbitPath;
@@ -692,6 +693,11 @@ namespace NBodies
         private void rocheLimitToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             MainLoop.RocheLimit = rocheLimitToolStripMenuItem.Checked;
+        }
+
+        private void leapfrogIntegratorToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.LeapFrog = leapfrogIntegratorToolStripMenuItem.Checked;
         }
     }
 }
