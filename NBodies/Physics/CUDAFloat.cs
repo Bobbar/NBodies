@@ -44,7 +44,7 @@ namespace NBodies.Physics
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
-
+            
 
 
             var props = gpu.GetDeviceProperties();
@@ -150,15 +150,15 @@ namespace NBodies.Physics
             if (a > inBodies.Length)
                 return;
 
-            Body body = inBodies[a];
+            Body outBody = inBodies[a];
 
-            body.ForceTot = 0;
-            body.ForceX = 0;
-            body.ForceY = 0;
-            body.HasCollision = 0;
+            outBody.ForceTot = 0;
+            outBody.ForceX = 0;
+            outBody.ForceY = 0;
+            outBody.HasCollision = 0;
 
-            body.Density = 0;
-            body.Pressure = 0;
+            outBody.Density = 0;
+            outBody.Pressure = 0;
 
             ksize = 1.0f;
             ksizeSq = 1.0f;
@@ -166,18 +166,18 @@ namespace NBodies.Physics
 
             // Calculate initial body density.
             fac = 1.566681f;
-            body.Density = (body.Mass * fac);
+            outBody.Density = (outBody.Mass * fac);
 
             int len = inBodies.Length;
 
             for (int b = 0; b < len; b++)
             {
-                Body iBody = inBodies[b];
+                Body inBody = inBodies[b];
 
                 if (a != b)
                 {
-                    distX = iBody.LocX - body.LocX;
-                    distY = iBody.LocY - body.LocY;
+                    distX = inBody.LocX - outBody.LocX;
+                    distY = inBody.LocY - outBody.LocY;
                     dist = (distX * distX) + (distY * distY);
 
                     if (dist < 0.04f)
@@ -187,15 +187,15 @@ namespace NBodies.Physics
 
                     distSqrt = (float)Math.Sqrt(dist);
 
-                    totMass = iBody.Mass * body.Mass;
+                    totMass = inBody.Mass * outBody.Mass;
                     force = totMass / dist;
 
-                    body.ForceTot += force;
-                    body.ForceX += (force * distX / distSqrt);
-                    body.ForceY += (force * distY / distSqrt);
+                    outBody.ForceTot += force;
+                    outBody.ForceX += (force * distX / distSqrt);
+                    outBody.ForceY += (force * distY / distSqrt);
 
                     // SPH Density Kernel
-                    if (body.InRoche == 1 && iBody.InRoche == 1)
+                    if (outBody.InRoche == 1 && inBody.InRoche == 1)
                     {
                         // is this distance close enough for kernal / neighbor calcs ?
                         if (dist <= ksize)
@@ -208,7 +208,7 @@ namespace NBodies.Physics
                             //  It's a neighbor; accumulate density.
                             diff = ksizeSq - dist;
                             fac = factor * diff * diff * diff;
-                            body.Density += body.Mass * fac;
+                            outBody.Density += outBody.Mass * fac;
                         }
                     }
 
@@ -216,20 +216,20 @@ namespace NBodies.Physics
                     // Check if the body is within collision distance and set a flag.
                     // This is checked in the collision kernel, and bodies that don't have
                     // the flag set are skipped. This give a huge performance boost in most situations.
-                    if (distSqrt <= (body.Size) + (iBody.Size))
+                    if (distSqrt <= (outBody.Size) + (inBody.Size))
                     {
-                        body.HasCollision = 1;
+                        outBody.HasCollision = 1;
                     }
                 } // uid != uid
             } // for b 
 
             gpThread.SyncThreads();
 
-            body.Pressure = GAS_K * (body.Density);
+            outBody.Pressure = GAS_K * (outBody.Density);
 
-            outBodies[a] = body;
+            outBodies[a] = outBody;
         }
-
+       
         [Cudafy]
         public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt, float viscosity, int drift)
         {
