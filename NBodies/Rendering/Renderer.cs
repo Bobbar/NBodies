@@ -293,7 +293,9 @@ namespace NBodies.Rendering
                 {
                     _orbitReadyWait.Wait(-1);
 
-                    _orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
+                    _orbitPath = BodyManager.CalcPathCircle(BodyManager.FollowBody());
+
+                    //_orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
                     // _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
 
                     _orbitReadyWait.Reset();

@@ -380,8 +380,8 @@ namespace NBodies.Rendering
         {
             var points = new List<PointF>();
             int steps = 0;
-            int maxSteps = 10000;
-            float dtStep = 0.100f;
+            int maxSteps = 1000;//5000;
+            float dtStep = 0.200f;
             bool complete = false;
             bool apoapsis = false;
 
