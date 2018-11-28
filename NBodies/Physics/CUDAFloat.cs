@@ -117,11 +117,7 @@ namespace NBodies.Physics
             }
             else
             {
-
-                gpu.StartTimer();
                 gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
-                Console.WriteLine(gpu.StopTimer());
-
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, 3);
             }
 
