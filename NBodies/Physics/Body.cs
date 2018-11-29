@@ -93,6 +93,11 @@ namespace NBodies.Physics
         [IgnoreMember]
         public float Age;
 
+        [IgnoreMember]
+        public int MeshID;
+
+        public float Test;
+
         //[IgnoreMember]
         //public float ElapTime;
 

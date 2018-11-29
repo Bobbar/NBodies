@@ -34,7 +34,7 @@ namespace NBodies.Physics
             if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
-                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(CUDAFloat) });
+                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(MeshPoint), typeof(CUDAFloat) });
                 cudaModule.Serialize();
             }
 
@@ -44,7 +44,7 @@ namespace NBodies.Physics
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
-            
+
 
 
             var props = gpu.GetDeviceProperties();
@@ -84,6 +84,30 @@ namespace NBodies.Physics
                 }
             }
 
+            missingDec = true;
+            lastIdx = 0;
+
+            while (missingDec)
+            {
+                int idx = newcode.IndexOf("MeshPoint", lastIdx);
+
+                if (idx == -1)
+                {
+                    missingDec = false;
+                    continue;
+                }
+
+                lastIdx = idx + 1;
+
+                string sub = newcode.Substring(idx - 7, 7);
+
+                if (!sub.Contains("struct"))
+                {
+                    newcode = newcode.Insert(idx, "struct ");
+                }
+            }
+
+
             return newcode;
         }
 
@@ -102,24 +126,32 @@ namespace NBodies.Physics
                 blocks += 1;
             }
 
+            var gpuMesh = gpu.Allocate(BodyManager.Mesh);
+            var gpuMeshBodies = gpu.Allocate(BodyManager.MeshBodies);
             var gpuInBodies = gpu.Allocate(bodies);
             var gpuOutBodies = gpu.Allocate(bodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
+            gpu.CopyToDevice(BodyManager.Mesh, gpuMesh);
+            gpu.CopyToDevice(BodyManager.MeshBodies, gpuMeshBodies);
+
+            gpu.StartTimer();
 
             if (MainLoop.LeapFrog)
             {
                 for (int drift = 1; drift > -1; drift--)
                 {
-                    gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+                    gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, timestep);
                     gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, drift);
                 }
             }
             else
             {
-                gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, timestep);
+                gpu.Launch(blocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, timestep);
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, timestep, viscosity, 3);
             }
+
+            Console.WriteLine("Kern: " + gpu.StopTimer());
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
@@ -127,7 +159,7 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshPoint[] inMesh, int[,] inMeshBods, float dt)
         {
             float GAS_K = 0.3f;//0.8f;// 0.1f
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -152,6 +184,8 @@ namespace NBodies.Physics
 
             Body outBody = inBodies[a];
 
+            outBody.Test = 0;
+
             outBody.ForceTot = 0;
             outBody.ForceX = 0;
             outBody.ForceY = 0;
@@ -168,60 +202,113 @@ namespace NBodies.Physics
             fac = 1.566681f;
             outBody.Density = (outBody.Mass * fac);
 
-            int len = inBodies.Length;
+          //  int[,] meshBods = inMeshBods;
+
+            int len = inMesh.Length;
 
             for (int b = 0; b < len; b++)
             {
-                Body inBody = inBodies[b];
+                MeshPoint mesh = inMesh[b];
 
-                if (a != b)
+              //  outBody.Test = 111.0f;
+
+                if (mesh.Count > 0)
                 {
-                    distX = inBody.LocX - outBody.LocX;
-                    distY = inBody.LocY - outBody.LocY;
+
+                    distX = mesh.LocX - outBody.LocX;
+                    distY = mesh.LocY - outBody.LocY;
+
+                    //distX = outBody.LocX - mesh.LocX;
+                    //distY = outBody.LocY - mesh.LocY;
+
                     dist = (distX * distX) + (distY * distY);
-
-                    if (dist < 0.04f)
-                    {
-                        dist = 0.04f;
-                    }
-
                     distSqrt = (float)Math.Sqrt(dist);
 
-                    totMass = inBody.Mass * outBody.Mass;
-                    force = totMass / dist;
+                    float maxDist = 2000.0f;
 
-                    outBody.ForceTot += force;
-                    outBody.ForceX += (force * distX / distSqrt);
-                    outBody.ForceY += (force * distY / distSqrt);
-
-                    // SPH Density Kernel
-                    if (outBody.InRoche == 1 && inBody.InRoche == 1)
+                    //if (dist > maxDist * maxDist)
+                    if (distSqrt > maxDist)
                     {
-                        // is this distance close enough for kernal / neighbor calcs ?
-                        if (dist <= ksize)
-                        {
-                            if (dist < FLOAT_EPSILON)
-                            {
-                                dist = FLOAT_EPSILON;
-                            }
+                        //distSqrt = (float)Math.Sqrt(dist);
 
-                            //  It's a neighbor; accumulate density.
-                            diff = ksizeSq - dist;
-                            fac = factor * diff * diff * diff;
-                            outBody.Density += outBody.Mass * fac;
+                        totMass = mesh.Mass * outBody.Mass;
+                        force = totMass / dist;
+
+                        outBody.ForceTot += force;
+                        outBody.ForceX += (force * distX / distSqrt);
+                        outBody.ForceY += (force * distY / distSqrt);
+
+                        outBody.Test = 999.0f;
+
+                    }
+                    else
+                    {
+
+                        for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
+                        {
+                            //int meshBodId = meshBods[b, mb];
+
+                            int meshBodId = inMeshBods[b, mb];
+
+                            if (meshBodId != -1)
+                            {
+                                Body inBody = inBodies[meshBodId];
+
+                                if (inBody.UID != outBody.UID)
+                                {
+                                    distX = inBody.LocX - outBody.LocX;
+                                    distY = inBody.LocY - outBody.LocY;
+                                    dist = (distX * distX) + (distY * distY);
+
+                                    if (dist < 0.04f)
+                                    {
+                                        dist = 0.04f;
+                                    }
+
+                                    distSqrt = (float)Math.Sqrt(dist);
+
+                                    totMass = inBody.Mass * outBody.Mass;
+                                    force = totMass / dist;
+
+                                    outBody.ForceTot += force;
+                                    outBody.ForceX += (force * distX / distSqrt);
+                                    outBody.ForceY += (force * distY / distSqrt);
+
+                                    outBody.Test = 2222.0f;
+
+
+                                    if (distSqrt <= (outBody.Size) + (inBody.Size))
+                                    {
+                                        outBody.HasCollision = 1;
+                                    }
+
+                                    // SPH Density Kernel
+                                    if (outBody.InRoche == 1 && inBody.InRoche == 1)
+                                    {
+                                        // is this distance close enough for kernal / neighbor calcs ?
+                                        if (dist <= ksize)
+                                        {
+                                            if (dist < FLOAT_EPSILON)
+                                            {
+                                                dist = FLOAT_EPSILON;
+                                            }
+
+                                            //  It's a neighbor; accumulate density.
+                                            diff = ksizeSq - dist;
+                                            fac = factor * diff * diff * diff;
+                                            outBody.Density += outBody.Mass * fac;
+                                        }
+                                    }
+
+                                }
+                            }
                         }
                     }
+                }
 
+              //  gpThread.SyncThreads();
 
-                    // Check if the body is within collision distance and set a flag.
-                    // This is checked in the collision kernel, and bodies that don't have
-                    // the flag set are skipped. This give a huge performance boost in most situations.
-                    if (distSqrt <= (outBody.Size) + (inBody.Size))
-                    {
-                        outBody.HasCollision = 1;
-                    }
-                } // uid != uid
-            } // for b 
+            }
 
             gpThread.SyncThreads();
 
@@ -229,7 +316,7 @@ namespace NBodies.Physics
 
             outBodies[a] = outBody;
         }
-       
+
         [Cudafy]
         public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, float dt, float viscosity, int drift)
         {

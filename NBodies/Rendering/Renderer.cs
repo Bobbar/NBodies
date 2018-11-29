@@ -58,7 +58,7 @@ namespace NBodies.Rendering
         private static RectangleF _cullTangle;
 
         private static Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
-   
+
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
@@ -252,6 +252,8 @@ namespace NBodies.Rendering
                      }
                  }
 
+                  DrawMesh(finalOffset);
+
                  DrawOverlays(finalOffset);
 
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
@@ -259,6 +261,14 @@ namespace NBodies.Rendering
              });
 
             completeCallback.Set();
+        }
+
+        private static void DrawMesh(PointF finalOffset)
+        {
+            foreach (var m in BodyManager.Mesh)
+            {
+                _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
+            }
         }
 
         private static void DrawOrbit(PointF[] points, PointF finalOffset)

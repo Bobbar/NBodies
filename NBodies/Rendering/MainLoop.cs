@@ -109,6 +109,8 @@ namespace NBodies.Rendering
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
+        private static System.Diagnostics.Stopwatch timer = new Stopwatch();
+
         public static void StartLoop()
         {
             _minFrameTime = 1000 / TargetFPS;
@@ -171,6 +173,11 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 1)
                         {
+                            timer.Restart();
+
+                            BodyManager.BuildMesh();
+
+                            Console.WriteLine($@"Build: {timer.ElapsedMilliseconds}    Nodes: {BodyManager.Mesh.Length}");
                             //if (BodyManager.Bodies.Length < 1)
                             //    continue;
                             // 1.

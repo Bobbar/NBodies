@@ -11,6 +11,8 @@ namespace NBodies.Rendering
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
+        public static MeshPoint[] Mesh = new MeshPoint[0];
+        public static int[,] MeshBodies = new int[0, 0];
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 
@@ -35,6 +37,8 @@ namespace NBodies.Rendering
         private static int _currentId = -1;
         private static int _bodyCount = 0;
         private static double _totalMass = 0;
+
+        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
 
         public static void CullInvisible()
         {
@@ -79,6 +83,189 @@ namespace NBodies.Rendering
 
             RebuildUIDIndex();
         }
+
+        public static void BuildMesh()
+        {
+            var maxX = Bodies.Max(b => b.LocX);
+            var minX = Bodies.Min(b => b.LocX);
+
+            var maxY = Bodies.Max(b => b.LocY);
+            var minY = Bodies.Min(b => b.LocY);
+
+            float nodeSize = 0;
+            float nodeRad = 0;
+            int nodes = 20; //100;
+            float meshSize = 0;
+
+            var wX = maxX - minX;
+            var wY = maxY - minY;
+
+            if (wX > wY)
+            {
+                meshSize = wX;
+            }
+            else
+            {
+                meshSize = wY;
+            }
+
+            nodeSize = meshSize / nodes;
+            nodeRad = nodeSize / 2f;
+
+            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
+
+            List<MeshPoint> meshList = new List<MeshPoint>();
+
+            //  int[][] meshBodies = new int[nodes * nodes][];
+            //    int[,] meshBodies = new int[nodes * nodes,0];
+
+
+            float curX = minX;
+            float curY = maxY;
+
+            for (int i = 0; i < nodes * nodes; i++)
+            {
+                mesh[i].LocX = curX + (nodeRad);
+                mesh[i].LocY = curY - (nodeRad);
+                mesh[i].Mass = 0f;
+                mesh[i].Count = 0;
+
+
+                if (curX + nodeSize <= maxX)
+                {
+                    curX += nodeSize;
+                }
+                else
+                {
+                    if (curY - nodeSize >= minY)
+                    {
+                        curX = minX;
+                        curY -= nodeSize;
+                    }
+                }
+            }
+
+            List<int[]> meshBods = new List<int[]>();
+
+            int maxCount = 0;
+
+            for (int i = 0; i < mesh.Length; i++)
+            {
+                float meshTop = mesh[i].LocY + nodeRad;
+                float meshBottom = mesh[i].LocY - nodeRad;
+                float meshLeft = mesh[i].LocX - nodeRad;
+                float meshRight = mesh[i].LocX + nodeRad;
+
+                //List<int> bodies = new List<int>();
+
+                List<int> bods = new List<int>();
+
+                for (int b = 0; b < Bodies.Length; b++)
+                {
+                    if (Bodies[b].LocX < meshRight && Bodies[b].LocX > meshLeft && Bodies[b].LocY < meshTop && Bodies[b].LocY > meshBottom)
+                    {
+                        Bodies[b].MeshID = i;
+                        mesh[i].Mass += Bodies[b].Mass;
+                        mesh[i].Count++;
+                        bods.Add(b);
+                    }
+                    else
+                    {
+                        bods.Add(-1);
+                    }
+                }
+
+                if (mesh[i].Count > 0)
+                {
+                    if (mesh[i].Count > maxCount)
+                        maxCount = mesh[i].Count;
+
+                    meshList.Add(mesh[i]);
+                    meshBods.Add(bods.ToArray());
+                }
+
+
+                //var bodyArr = meshBods.ToArray();
+                //meshBodies[i] = bodyArr;
+                // Array.Resize<int[,]>(ref meshBodies[i,], bodyArr.Length);
+            }
+
+
+
+            Mesh = meshList.ToArray();
+
+            timer.Restart();
+
+            MeshBodies = CreateRectangularArray(meshBods, maxCount);
+
+            Console.WriteLine($@"Convert: {timer.ElapsedMilliseconds}");
+
+            //Mesh = mesh;
+            //MeshBodies = CreateRectangularArray(meshBods);
+
+            //   Console.WriteLine(meshBodies.ToString());
+
+        }
+
+        static int[,] CreateRectangularArray(IList<int[]> arrays, int maxLen)
+        {
+            int minorLength = arrays[0].Length;
+
+            int[,] ret = new int[arrays.Count, maxLen];
+
+            for (int i = 0; i < arrays.Count; i++)
+            {
+                List<int> bods = new List<int>();
+                int idx = 0;
+                var array = arrays[i];
+                if (array.Length != minorLength)
+                {
+                    throw new ArgumentException
+                        ("All arrays must be the same length");
+                }
+
+                for (int j = 0; j < minorLength; j++)
+                {
+                    if (array[j] != -1)
+                    {
+                        bods.Add(array[j]);
+                        //ret[i, idx] = array[j];
+                        //idx++;
+                    }
+                }
+
+                foreach (var bod in bods)
+                {
+                    ret[i, idx] = bod;
+                    idx++;
+                }
+
+                for (int x = idx; x < maxLen; x++)
+                {
+                    ret[i, x] = -1;
+                }
+
+            }
+            return ret;
+
+            //int minorLength = arrays[0].Length;
+            //T[,] ret = new T[arrays.Count, minorLength];
+            //for (int i = 0; i < arrays.Count; i++)
+            //{
+            //    var array = arrays[i];
+            //    if (array.Length != minorLength)
+            //    {
+            //        throw new ArgumentException
+            //            ("All arrays must be the same length");
+            //    }
+            //    for (int j = 0; j < minorLength; j++)
+            //    {
+            //        ret[i, j] = array[j];
+            //    }
+            //}
+            //return ret;
+        }
+
 
         public static void RebuildUIDIndex()
         {
@@ -422,6 +609,7 @@ namespace NBodies.Rendering
                         var distX = bodyB.LocX - loc.X;
                         var distY = bodyB.LocY - loc.Y;
                         var dist = (distX * distX) + (distY * distY);
+                        Console.WriteLine(dist);
                         var distSqrt = (float)Math.Sqrt(dist);
 
                         var totMass = body.Mass * bodyB.Mass;
