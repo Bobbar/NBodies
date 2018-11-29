@@ -222,11 +222,12 @@ namespace NBodies.Physics
 
         private MeshPoint[] GetNewMesh(Body[] bodies)
         {
-            var maxX = bodies.Max(b => b.LocX) + 1;
-            var minX = bodies.Min(b => b.LocX) - 1;
+            int padding = 10;
+            var maxX = bodies.Max(b => b.LocX) + padding;
+            var minX = bodies.Min(b => b.LocX) - padding;
 
-            var maxY = bodies.Max(b => b.LocY) + 1;
-            var minY = bodies.Min(b => b.LocY) - 1;
+            var maxY = bodies.Max(b => b.LocY) + padding;
+            var minY = bodies.Min(b => b.LocY) - padding;
 
             float nodeSize = 0;
             float nodeRad = 0;
@@ -253,6 +254,9 @@ namespace NBodies.Physics
 
             MeshPoint[] mesh = new MeshPoint[nodes * nodes];
 
+            int rightSteps = 0;
+            int downSteps = 0;
+
             for (int i = 0; i < nodes * nodes; i++)
             {
                 mesh[i].LocX = curX + nodeRad;
@@ -266,18 +270,18 @@ namespace NBodies.Physics
                 mesh[i].Left = mesh[i].LocX - nodeRad;
                 mesh[i].Right = mesh[i].LocX + nodeRad;
 
-                if (curX + nodeSize <= maxX)
+                curX += nodeSize;
+                rightSteps++;
+
+                if (rightSteps > nodes)
                 {
-                    curX += nodeSize;
+                    curX = minX;
+                    rightSteps = 0;
+
+                    curY -= nodeSize;
+                    downSteps++;
                 }
-                else
-                {
-                    if (curY - nodeSize >= minY)
-                    {
-                        curX = minX;
-                        curY -= nodeSize;
-                    }
-                }
+
             }
 
             return mesh;
@@ -306,7 +310,6 @@ namespace NBodies.Physics
                     curIdx[meshBods[b]]++;
                 }
             }
-
 
             for (int m = 0; m < meshes.Length; m++)
             {
@@ -390,13 +393,24 @@ namespace NBodies.Physics
 
                 if (body.LocX < outMesh.Right && body.LocX > outMesh.Left && body.LocY < outMesh.Top && body.LocY > outMesh.Bottom)
                 {
-                    outMesh.Mass += body.Mass;
-                    outMesh.CmX += body.Mass * body.LocX;
-                    outMesh.CmY += body.Mass * body.LocY;
-                    outMesh.Count++;
+                    //outMesh.Mass += body.Mass;
+                    //outMesh.CmX += body.Mass * body.LocX;
+                    //outMesh.CmY += body.Mass * body.LocY;
+                    //outMesh.Count++;
 
                     if (outMeshBods[b] == -1)
+                    {
                         outMeshBods[b] = a;
+
+                        outMesh.Mass += body.Mass;
+                        outMesh.CmX += body.Mass * body.LocX;
+                        outMesh.CmY += body.Mass * body.LocY;
+                        outMesh.Count++;
+                    }
+                    //else
+                    //{
+                    //    outMeshBods[b] = -2;
+                    //}
                 }
             }
 
@@ -406,6 +420,7 @@ namespace NBodies.Physics
                 outMesh.CmY = outMesh.CmY / (float)outMesh.Mass;
             }
 
+            gpThread.SyncThreads();
 
             outMeshes[a] = outMesh;
         }
@@ -436,7 +451,7 @@ namespace NBodies.Physics
 
             Body outBody = inBodies[a];
 
-         //   outBody.Test = 0;
+            //   outBody.Test = 0;
 
             outBody.ForceTot = 0;
             outBody.ForceX = 0;
@@ -461,7 +476,6 @@ namespace NBodies.Physics
 
                 if (mesh.Count > 0)
                 {
-
                     distX = mesh.CmX - outBody.LocX;
                     distY = mesh.CmY - outBody.LocY;
 
@@ -480,7 +494,7 @@ namespace NBodies.Physics
                         outBody.ForceX += (force * distX / distSqrt);
                         outBody.ForceY += (force * distY / distSqrt);
 
-                      //  outBody.Test = 999.0f;
+                        //  outBody.Test = 999.0f;
                     }
                     else
                     {
@@ -513,7 +527,7 @@ namespace NBodies.Physics
                                     outBody.ForceX += (force * distX / distSqrt);
                                     outBody.ForceY += (force * distY / distSqrt);
 
-                                //    outBody.Test = 2222.0f;
+                                    //    outBody.Test = 2222.0f;
 
 
                                     if (distSqrt <= (outBody.Size) + (inBody.Size))
