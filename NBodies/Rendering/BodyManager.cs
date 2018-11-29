@@ -86,11 +86,11 @@ namespace NBodies.Rendering
 
         public static void BuildMesh()
         {
-            var maxX = Bodies.Max(b => b.LocX);
-            var minX = Bodies.Min(b => b.LocX);
+            var maxX = Bodies.Max(b => b.LocX) + 1;
+            var minX = Bodies.Min(b => b.LocX) - 1;
 
-            var maxY = Bodies.Max(b => b.LocY);
-            var minY = Bodies.Min(b => b.LocY);
+            var maxY = Bodies.Max(b => b.LocY) + 1;
+            var minY = Bodies.Min(b => b.LocY) - 1;
 
             float nodeSize = 0;
             float nodeRad = 0;
@@ -112,16 +112,10 @@ namespace NBodies.Rendering
             nodeSize = meshSize / nodes;
             nodeRad = nodeSize / 2f;
 
-            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
-
-            List<MeshPoint> meshList = new List<MeshPoint>();
-
-            //  int[][] meshBodies = new int[nodes * nodes][];
-            //    int[,] meshBodies = new int[nodes * nodes,0];
-
-
             float curX = minX;
             float curY = maxY;
+
+            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
 
             for (int i = 0; i < nodes * nodes; i++)
             {
@@ -129,7 +123,7 @@ namespace NBodies.Rendering
                 mesh[i].LocY = curY - (nodeRad);
                 mesh[i].Mass = 0f;
                 mesh[i].Count = 0;
-
+                mesh[i].Size = nodeSize;
 
                 if (curX + nodeSize <= maxX)
                 {
@@ -145,9 +139,13 @@ namespace NBodies.Rendering
                 }
             }
 
+           
+            List<MeshPoint> meshList = new List<MeshPoint>();
             List<int[]> meshBods = new List<int[]>();
 
             int maxCount = 0;
+
+            timer.Restart();
 
             for (int i = 0; i < mesh.Length; i++)
             {
@@ -155,8 +153,6 @@ namespace NBodies.Rendering
                 float meshBottom = mesh[i].LocY - nodeRad;
                 float meshLeft = mesh[i].LocX - nodeRad;
                 float meshRight = mesh[i].LocX + nodeRad;
-
-                //List<int> bodies = new List<int>();
 
                 List<int> bods = new List<int>();
 
@@ -166,6 +162,10 @@ namespace NBodies.Rendering
                     {
                         Bodies[b].MeshID = i;
                         mesh[i].Mass += Bodies[b].Mass;
+
+                        mesh[i].cmX += Bodies[b].Mass * Bodies[b].LocX;
+                        mesh[i].cmY += Bodies[b].Mass * Bodies[b].LocY;
+
                         mesh[i].Count++;
                         bods.Add(b);
                     }
@@ -177,6 +177,9 @@ namespace NBodies.Rendering
 
                 if (mesh[i].Count > 0)
                 {
+                    mesh[i].cmX = mesh[i].cmX / mesh[i].Mass;
+                    mesh[i].cmY = mesh[i].cmY / mesh[i].Mass;
+
                     if (mesh[i].Count > maxCount)
                         maxCount = mesh[i].Count;
 
@@ -184,27 +187,21 @@ namespace NBodies.Rendering
                     meshBods.Add(bods.ToArray());
                 }
 
-
-                //var bodyArr = meshBods.ToArray();
-                //meshBodies[i] = bodyArr;
-                // Array.Resize<int[,]>(ref meshBodies[i,], bodyArr.Length);
             }
 
+            Console.WriteLine($@"***Timer:  {timer.ElapsedMilliseconds}");
 
+
+            //            Console.WriteLine($@"Added: {added}
+            //TBods: {Bodies.Length}
+            //MaxX: {maxX}
+            //MaxY: {maxY}
+            //Size: {nodeSize}
+            //");
 
             Mesh = meshList.ToArray();
-
-            timer.Restart();
-
             MeshBodies = CreateRectangularArray(meshBods, maxCount);
-
-            Console.WriteLine($@"Convert: {timer.ElapsedMilliseconds}");
-
-            //Mesh = mesh;
-            //MeshBodies = CreateRectangularArray(meshBods);
-
-            //   Console.WriteLine(meshBodies.ToString());
-
+                    
         }
 
         static int[,] CreateRectangularArray(IList<int[]> arrays, int maxLen)
@@ -609,7 +606,6 @@ namespace NBodies.Rendering
                         var distX = bodyB.LocX - loc.X;
                         var distY = bodyB.LocY - loc.Y;
                         var dist = (distX * distX) + (distY * distY);
-                        Console.WriteLine(dist);
                         var distSqrt = (float)Math.Sqrt(dist);
 
                         var totMass = body.Mass * bodyB.Mass;

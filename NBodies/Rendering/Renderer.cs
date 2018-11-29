@@ -252,7 +252,7 @@ namespace NBodies.Rendering
                      }
                  }
 
-                  DrawMesh(finalOffset);
+              //   DrawMesh(finalOffset);
 
                  DrawOverlays(finalOffset);
 
@@ -267,8 +267,18 @@ namespace NBodies.Rendering
         {
             foreach (var m in BodyManager.Mesh)
             {
+
+                _buffer.Graphics.DrawRectangle(Pens.Red, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
                 _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
+                _buffer.Graphics.FillEllipse(Brushes.Blue, m.cmX + finalOffset.X, m.cmY + finalOffset.Y, 2, 2);
+
             }
+
+
+            //foreach (var m in BodyManager.Mesh)
+            //{
+            //    _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
+            //}
         }
 
         private static void DrawOrbit(PointF[] points, PointF finalOffset)

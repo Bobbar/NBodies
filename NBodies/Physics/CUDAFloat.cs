@@ -174,7 +174,7 @@ namespace NBodies.Physics
             float force;
             float distX;
             float distY;
-            float dist;
+            double dist;
             float distSqrt;
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
@@ -215,24 +215,27 @@ namespace NBodies.Physics
                 if (mesh.Count > 0)
                 {
 
-                    distX = mesh.LocX - outBody.LocX;
-                    distY = mesh.LocY - outBody.LocY;
+                    distX = mesh.cmX - outBody.LocX;
+                    distY = mesh.cmY - outBody.LocY;
+
+                    //distX = mesh.LocX - outBody.LocX;
+                    //distY = mesh.LocY - outBody.LocY;
 
                     //distX = outBody.LocX - mesh.LocX;
                     //distY = outBody.LocY - mesh.LocY;
 
                     dist = (distX * distX) + (distY * distY);
-                    distSqrt = (float)Math.Sqrt(dist);
+                   // distSqrt = (float)Math.Sqrt(dist);
 
-                    float maxDist = 2000.0f;
+                    float maxDist = 100.0f;
 
-                    //if (dist > maxDist * maxDist)
-                    if (distSqrt > maxDist)
+                    if (dist > maxDist * maxDist)
+                    //if (distSqrt > maxDist)
                     {
-                        //distSqrt = (float)Math.Sqrt(dist);
+                        distSqrt = (float)Math.Sqrt(dist);
 
                         totMass = mesh.Mass * outBody.Mass;
-                        force = totMass / dist;
+                        force = totMass / (float)dist;
 
                         outBody.ForceTot += force;
                         outBody.ForceX += (force * distX / distSqrt);
@@ -268,7 +271,7 @@ namespace NBodies.Physics
                                     distSqrt = (float)Math.Sqrt(dist);
 
                                     totMass = inBody.Mass * outBody.Mass;
-                                    force = totMass / dist;
+                                    force = totMass / (float)dist;
 
                                     outBody.ForceTot += force;
                                     outBody.ForceX += (force * distX / distSqrt);
@@ -294,7 +297,7 @@ namespace NBodies.Physics
                                             }
 
                                             //  It's a neighbor; accumulate density.
-                                            diff = ksizeSq - dist;
+                                            diff = ksizeSq - (float)dist;
                                             fac = factor * diff * diff * diff;
                                             outBody.Density += outBody.Mass * fac;
                                         }

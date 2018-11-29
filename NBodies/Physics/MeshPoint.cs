@@ -12,7 +12,10 @@ namespace NBodies.Physics
     {
         public float LocX;
         public float LocY;
+        public float cmX;
+        public float cmY;
         public float Mass;
         public int Count;
+        public float Size;
     }
 }
