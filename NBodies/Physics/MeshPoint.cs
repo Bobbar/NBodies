@@ -12,10 +12,15 @@ namespace NBodies.Physics
     {
         public float LocX;
         public float LocY;
-        public float cmX;
-        public float cmY;
-        public float Mass;
+        public float CmX;
+        public float CmY;
+        public double Mass;
         public int Count;
         public float Size;
+        public float Top;
+        public float Bottom;
+        public float Left;
+        public float Right;
+
     }
 }

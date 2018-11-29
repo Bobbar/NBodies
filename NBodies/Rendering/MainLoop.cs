@@ -173,18 +173,19 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 1)
                         {
-                            timer.Restart();
+                            //timer.Restart();
 
-                            BodyManager.BuildMesh();
+                            //BodyManager.GetNewMesh();
+                            //// BodyManager.BuildMeshPara();
 
-                            Console.WriteLine($@"Build: {timer.ElapsedMilliseconds}    Nodes: {BodyManager.Mesh.Length}");
+                            //Console.WriteLine($@"Build: {timer.ElapsedMilliseconds}    Nodes: {BodyManager.Mesh.Length}");
                             //if (BodyManager.Bodies.Length < 1)
                             //    continue;
                             // 1.
                             // Copy the current bodies to another array.
                             var bodiesCopy = new Body[BodyManager.Bodies.Length];
                             Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
-
+                      
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
 
@@ -195,6 +196,7 @@ namespace NBodies.Rendering
                             // 3.
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = bodiesCopy;
+                            BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
                             // Process and fracture new roche bodies.
                             if (RocheLimit)
@@ -250,7 +252,6 @@ namespace NBodies.Rendering
                     // Draw the field asynchronously.
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
-
 
                 }
             }

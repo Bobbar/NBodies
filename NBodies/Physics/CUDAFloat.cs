@@ -4,14 +4,26 @@ using Cudafy.Translator;
 using System;
 using System.Diagnostics;
 using NBodies.Rendering;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace NBodies.Physics
 {
     public class CUDAFloat : IPhysicsCalc
     {
         private int gpuIndex = 2;
-        private readonly int threadsPerBlock = 256;
+        private static int threadsPerBlock = 256;
         private GPGPU gpu;
+        private MeshPoint[] _mesh;
+        private int[,] _meshBodies = new int[0, 0];
+
+        public MeshPoint[] CurrentMesh
+        {
+            get
+            {
+                return _mesh;
+            }
+        }
 
         public CUDAFloat(int gpuIdx)
         {
@@ -115,25 +127,56 @@ namespace NBodies.Physics
         {
             float viscosity = 20.0f;//40.0f;//5.0f;//7.5f;
 
-            var blocks = (int)Math.Round((bodies.Length - 1 + threadsPerBlock - 1) / (float)threadsPerBlock, 0);
+            int blocks = 0;
 
-            if (((threadsPerBlock * blocks) - bodies.Length) > threadsPerBlock)
+            gpu.StartTimer();
+
+            _mesh = GetNewMesh(bodies);
+
+            blocks = BlockCount(_mesh.Length);
+
+            var gpuInBodiesMesh = gpu.Allocate(bodies);
+            var gpuInMesh = gpu.Allocate(_mesh);
+            var gpuOutMesh = gpu.Allocate(_mesh);
+            int[] meshBods = Enumerable.Repeat(-1, bodies.Length).ToArray();
+            var gpuOutMeshBods = gpu.Allocate(meshBods);
+
+            gpu.CopyToDevice(bodies, gpuInBodiesMesh);
+            gpu.CopyToDevice(_mesh, gpuInMesh);
+            gpu.CopyToDevice(meshBods, gpuOutMeshBods);
+
+            gpu.Launch(blocks, threadsPerBlock).PopulateMesh(gpuInBodiesMesh, gpuInMesh, gpuOutMesh, gpuOutMeshBods);
+
+            gpu.CopyFromDevice(gpuOutMesh, _mesh);
+            gpu.CopyFromDevice(gpuOutMeshBods, meshBods);
+
+            gpu.FreeAll();
+
+            Console.WriteLine("Populate: " + gpu.StopTimer());
+
+
+            gpu.StartTimer();
+
+            ShrinkMesh(_mesh, meshBods, ref bodies);
+
+            Console.WriteLine("Prep: " + gpu.StopTimer());
+
+
+            if (_mesh.Length != _meshBodies.GetLength(0))
             {
-                blocks -= 1;
-            }
-            else if ((threadsPerBlock * blocks) < bodies.Length)
-            {
-                blocks += 1;
+                Debugger.Break();
             }
 
-            var gpuMesh = gpu.Allocate(BodyManager.Mesh);
-            var gpuMeshBodies = gpu.Allocate(BodyManager.MeshBodies);
+            blocks = BlockCount(bodies.Length);
+
+            var gpuMesh = gpu.Allocate(_mesh);
+            var gpuMeshBodies = gpu.Allocate(_meshBodies);
             var gpuInBodies = gpu.Allocate(bodies);
             var gpuOutBodies = gpu.Allocate(bodies);
 
             gpu.CopyToDevice(bodies, gpuInBodies);
-            gpu.CopyToDevice(BodyManager.Mesh, gpuMesh);
-            gpu.CopyToDevice(BodyManager.MeshBodies, gpuMeshBodies);
+            gpu.CopyToDevice(_mesh, gpuMesh);
+            gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
 
             gpu.StartTimer();
 
@@ -158,6 +201,215 @@ namespace NBodies.Physics
             gpu.FreeAll();
         }
 
+        public static int BlockCount(int len, int threads = 0)
+        {
+            if (threads == 0)
+                threads = threadsPerBlock;
+
+            var blocks = (int)Math.Round((len - 1 + threads - 1) / (float)threads, 0);
+
+            if (((threads * blocks) - len) > threads)
+            {
+                blocks -= 1;
+            }
+            else if ((threads * blocks) < len)
+            {
+                blocks += 1;
+            }
+
+            return blocks;
+        }
+
+        private MeshPoint[] GetNewMesh(Body[] bodies)
+        {
+            var maxX = bodies.Max(b => b.LocX) + 1;
+            var minX = bodies.Min(b => b.LocX) - 1;
+
+            var maxY = bodies.Max(b => b.LocY) + 1;
+            var minY = bodies.Min(b => b.LocY) - 1;
+
+            float nodeSize = 0;
+            float nodeRad = 0;
+            int nodes = 20; //100;
+            float meshSize = 0;
+
+            var wX = maxX - minX;
+            var wY = maxY - minY;
+
+            if (wX > wY)
+            {
+                meshSize = wX;
+            }
+            else
+            {
+                meshSize = wY;
+            }
+
+            nodeSize = meshSize / nodes;
+            nodeRad = nodeSize / 2f;
+
+            float curX = minX;
+            float curY = maxY;
+
+            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
+
+            for (int i = 0; i < nodes * nodes; i++)
+            {
+                mesh[i].LocX = curX + nodeRad;
+                mesh[i].LocY = curY - nodeRad;
+                mesh[i].Mass = 0f;
+                mesh[i].Count = 0;
+                mesh[i].Size = nodeSize;
+
+                mesh[i].Top = mesh[i].LocY + nodeRad;
+                mesh[i].Bottom = mesh[i].LocY - nodeRad;
+                mesh[i].Left = mesh[i].LocX - nodeRad;
+                mesh[i].Right = mesh[i].LocX + nodeRad;
+
+                if (curX + nodeSize <= maxX)
+                {
+                    curX += nodeSize;
+                }
+                else
+                {
+                    if (curY - nodeSize >= minY)
+                    {
+                        curX = minX;
+                        curY -= nodeSize;
+                    }
+                }
+            }
+
+            return mesh;
+        }
+
+        private void ShrinkMesh(MeshPoint[] meshes, int[] meshBods, ref Body[] bodies)
+        {
+            var meshList = new List<MeshPoint>();
+            var meshBodDict = new Dictionary<int, int[]>();
+            var meshBodList = new List<int[]>();
+            int maxCount = meshes.Max(m => m.Count);
+            int[] curIdx = new int[meshes.Length];
+
+            // Key = MeshID
+            // Value = int[] of body indexes
+            for (int b = 0; b < meshBods.Length; b++)
+            {
+                if (meshBods[b] != -1)
+                {
+                    if (!meshBodDict.ContainsKey(meshBods[b]))
+                    {
+                        meshBodDict.Add(meshBods[b], Enumerable.Repeat(-1, maxCount).ToArray());
+                    }
+
+                    meshBodDict[meshBods[b]][curIdx[meshBods[b]]] = b;
+                    curIdx[meshBods[b]]++;
+                }
+            }
+
+
+            for (int m = 0; m < meshes.Length; m++)
+            {
+                // Filter out empty meshes.
+                if (meshes[m].Count > 0)
+                {
+                    meshList.Add(meshes[m]);
+                    meshBodList.Add(meshBodDict[m]);
+                }
+            }
+
+            for (int i = 0; i < meshBodList.Count; i++)
+            {
+                foreach (int bodIdx in meshBodList[i])
+                {
+                    if (bodIdx != -1)
+                    {
+                        bodies[bodIdx].MeshID = i;
+                    }
+                }
+            }
+
+            _mesh = meshList.ToArray();
+            _meshBodies = CreateRectangularArray(meshBodList, maxCount);
+        }
+
+        private int[,] CreateRectangularArray(IList<int[]> arrays, int maxLen)
+        {
+            int minorLength = arrays[0].Length;
+
+            int[,] ret = new int[arrays.Count, maxLen];
+
+            for (int i = 0; i < arrays.Count; i++)
+            {
+                List<int> bods = new List<int>();
+                int idx = 0;
+                var array = arrays[i];
+                if (array.Length != minorLength)
+                {
+                    throw new ArgumentException
+                        ("All arrays must be the same length");
+                }
+
+                for (int j = 0; j < minorLength; j++)
+                {
+                    if (array[j] != -1)
+                    {
+                        bods.Add(array[j]);
+                    }
+                }
+
+                foreach (var bod in bods)
+                {
+                    ret[i, idx] = bod;
+                    idx++;
+                }
+
+                for (int x = idx; x < maxLen; x++)
+                {
+                    ret[i, x] = -1;
+                }
+
+            }
+
+            return ret;
+        }
+
+        [Cudafy]
+        public static void PopulateMesh(GThread gpThread, Body[] inBodies, MeshPoint[] inMeshes, MeshPoint[] outMeshes, int[] outMeshBods)
+        {
+            int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
+
+            if (a > inMeshes.Length)
+                return;
+
+            MeshPoint outMesh = inMeshes[a];
+
+            for (int b = 0; b < inBodies.Length; b++)
+            {
+                Body body = inBodies[b];
+
+                if (body.LocX < outMesh.Right && body.LocX > outMesh.Left && body.LocY < outMesh.Top && body.LocY > outMesh.Bottom)
+                {
+                    outMesh.Mass += body.Mass;
+                    outMesh.CmX += body.Mass * body.LocX;
+                    outMesh.CmY += body.Mass * body.LocY;
+                    outMesh.Count++;
+
+                    if (outMeshBods[b] == -1)
+                        outMeshBods[b] = a;
+                }
+            }
+
+            if (outMesh.Count > 0)
+            {
+                outMesh.CmX = outMesh.CmX / (float)outMesh.Mass;
+                outMesh.CmY = outMesh.CmY / (float)outMesh.Mass;
+            }
+
+
+            outMeshes[a] = outMesh;
+        }
+
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshPoint[] inMesh, int[,] inMeshBods, float dt)
         {
@@ -170,7 +422,7 @@ namespace NBodies.Physics
             float diff;
             float fac;
 
-            float totMass;
+            double totMass;
             float force;
             float distX;
             float distY;
@@ -184,7 +436,7 @@ namespace NBodies.Physics
 
             Body outBody = inBodies[a];
 
-            outBody.Test = 0;
+         //   outBody.Test = 0;
 
             outBody.ForceTot = 0;
             outBody.ForceX = 0;
@@ -202,55 +454,39 @@ namespace NBodies.Physics
             fac = 1.566681f;
             outBody.Density = (outBody.Mass * fac);
 
-          //  int[,] meshBods = inMeshBods;
-
             int len = inMesh.Length;
-
             for (int b = 0; b < len; b++)
             {
                 MeshPoint mesh = inMesh[b];
 
-              //  outBody.Test = 111.0f;
-
                 if (mesh.Count > 0)
                 {
 
-                    distX = mesh.cmX - outBody.LocX;
-                    distY = mesh.cmY - outBody.LocY;
-
-                    //distX = mesh.LocX - outBody.LocX;
-                    //distY = mesh.LocY - outBody.LocY;
-
-                    //distX = outBody.LocX - mesh.LocX;
-                    //distY = outBody.LocY - mesh.LocY;
+                    distX = mesh.CmX - outBody.LocX;
+                    distY = mesh.CmY - outBody.LocY;
 
                     dist = (distX * distX) + (distY * distY);
-                   // distSqrt = (float)Math.Sqrt(dist);
 
                     float maxDist = 100.0f;
 
                     if (dist > maxDist * maxDist)
-                    //if (distSqrt > maxDist)
                     {
                         distSqrt = (float)Math.Sqrt(dist);
 
                         totMass = mesh.Mass * outBody.Mass;
-                        force = totMass / (float)dist;
+                        force = (float)totMass / (float)dist;
 
                         outBody.ForceTot += force;
                         outBody.ForceX += (force * distX / distSqrt);
                         outBody.ForceY += (force * distY / distSqrt);
 
-                        outBody.Test = 999.0f;
-
+                      //  outBody.Test = 999.0f;
                     }
                     else
                     {
 
                         for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
                         {
-                            //int meshBodId = meshBods[b, mb];
-
                             int meshBodId = inMeshBods[b, mb];
 
                             if (meshBodId != -1)
@@ -271,13 +507,13 @@ namespace NBodies.Physics
                                     distSqrt = (float)Math.Sqrt(dist);
 
                                     totMass = inBody.Mass * outBody.Mass;
-                                    force = totMass / (float)dist;
+                                    force = (float)totMass / (float)dist;
 
                                     outBody.ForceTot += force;
                                     outBody.ForceX += (force * distX / distSqrt);
                                     outBody.ForceY += (force * distY / distSqrt);
 
-                                    outBody.Test = 2222.0f;
+                                //    outBody.Test = 2222.0f;
 
 
                                     if (distSqrt <= (outBody.Size) + (inBody.Size))
@@ -309,7 +545,7 @@ namespace NBodies.Physics
                     }
                 }
 
-              //  gpThread.SyncThreads();
+                //  gpThread.SyncThreads();
 
             }
 

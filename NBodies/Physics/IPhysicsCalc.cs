@@ -8,6 +8,8 @@ namespace NBodies.Physics
 {
     public interface IPhysicsCalc
     {
+        MeshPoint[] CurrentMesh { get; }
+
         void Init();
 
         void CalcMovement(ref Body[] bodies, float timestep);

@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -12,7 +14,6 @@ namespace NBodies.Rendering
     {
         public static Body[] Bodies = new Body[0];
         public static MeshPoint[] Mesh = new MeshPoint[0];
-        public static int[,] MeshBodies = new int[0, 0];
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 
@@ -58,8 +59,6 @@ namespace NBodies.Rendering
             //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
-
-            //   CheckSetForNextDT();
         }
 
         public static void ClearBodies()
@@ -82,185 +81,6 @@ namespace NBodies.Rendering
             Bodies = bodies;
 
             RebuildUIDIndex();
-        }
-
-        public static void BuildMesh()
-        {
-            var maxX = Bodies.Max(b => b.LocX) + 1;
-            var minX = Bodies.Min(b => b.LocX) - 1;
-
-            var maxY = Bodies.Max(b => b.LocY) + 1;
-            var minY = Bodies.Min(b => b.LocY) - 1;
-
-            float nodeSize = 0;
-            float nodeRad = 0;
-            int nodes = 20; //100;
-            float meshSize = 0;
-
-            var wX = maxX - minX;
-            var wY = maxY - minY;
-
-            if (wX > wY)
-            {
-                meshSize = wX;
-            }
-            else
-            {
-                meshSize = wY;
-            }
-
-            nodeSize = meshSize / nodes;
-            nodeRad = nodeSize / 2f;
-
-            float curX = minX;
-            float curY = maxY;
-
-            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
-
-            for (int i = 0; i < nodes * nodes; i++)
-            {
-                mesh[i].LocX = curX + (nodeRad);
-                mesh[i].LocY = curY - (nodeRad);
-                mesh[i].Mass = 0f;
-                mesh[i].Count = 0;
-                mesh[i].Size = nodeSize;
-
-                if (curX + nodeSize <= maxX)
-                {
-                    curX += nodeSize;
-                }
-                else
-                {
-                    if (curY - nodeSize >= minY)
-                    {
-                        curX = minX;
-                        curY -= nodeSize;
-                    }
-                }
-            }
-
-           
-            List<MeshPoint> meshList = new List<MeshPoint>();
-            List<int[]> meshBods = new List<int[]>();
-
-            int maxCount = 0;
-
-            timer.Restart();
-
-            for (int i = 0; i < mesh.Length; i++)
-            {
-                float meshTop = mesh[i].LocY + nodeRad;
-                float meshBottom = mesh[i].LocY - nodeRad;
-                float meshLeft = mesh[i].LocX - nodeRad;
-                float meshRight = mesh[i].LocX + nodeRad;
-
-                List<int> bods = new List<int>();
-
-                for (int b = 0; b < Bodies.Length; b++)
-                {
-                    if (Bodies[b].LocX < meshRight && Bodies[b].LocX > meshLeft && Bodies[b].LocY < meshTop && Bodies[b].LocY > meshBottom)
-                    {
-                        Bodies[b].MeshID = i;
-                        mesh[i].Mass += Bodies[b].Mass;
-
-                        mesh[i].cmX += Bodies[b].Mass * Bodies[b].LocX;
-                        mesh[i].cmY += Bodies[b].Mass * Bodies[b].LocY;
-
-                        mesh[i].Count++;
-                        bods.Add(b);
-                    }
-                    else
-                    {
-                        bods.Add(-1);
-                    }
-                }
-
-                if (mesh[i].Count > 0)
-                {
-                    mesh[i].cmX = mesh[i].cmX / mesh[i].Mass;
-                    mesh[i].cmY = mesh[i].cmY / mesh[i].Mass;
-
-                    if (mesh[i].Count > maxCount)
-                        maxCount = mesh[i].Count;
-
-                    meshList.Add(mesh[i]);
-                    meshBods.Add(bods.ToArray());
-                }
-
-            }
-
-            Console.WriteLine($@"***Timer:  {timer.ElapsedMilliseconds}");
-
-
-            //            Console.WriteLine($@"Added: {added}
-            //TBods: {Bodies.Length}
-            //MaxX: {maxX}
-            //MaxY: {maxY}
-            //Size: {nodeSize}
-            //");
-
-            Mesh = meshList.ToArray();
-            MeshBodies = CreateRectangularArray(meshBods, maxCount);
-                    
-        }
-
-        static int[,] CreateRectangularArray(IList<int[]> arrays, int maxLen)
-        {
-            int minorLength = arrays[0].Length;
-
-            int[,] ret = new int[arrays.Count, maxLen];
-
-            for (int i = 0; i < arrays.Count; i++)
-            {
-                List<int> bods = new List<int>();
-                int idx = 0;
-                var array = arrays[i];
-                if (array.Length != minorLength)
-                {
-                    throw new ArgumentException
-                        ("All arrays must be the same length");
-                }
-
-                for (int j = 0; j < minorLength; j++)
-                {
-                    if (array[j] != -1)
-                    {
-                        bods.Add(array[j]);
-                        //ret[i, idx] = array[j];
-                        //idx++;
-                    }
-                }
-
-                foreach (var bod in bods)
-                {
-                    ret[i, idx] = bod;
-                    idx++;
-                }
-
-                for (int x = idx; x < maxLen; x++)
-                {
-                    ret[i, x] = -1;
-                }
-
-            }
-            return ret;
-
-            //int minorLength = arrays[0].Length;
-            //T[,] ret = new T[arrays.Count, minorLength];
-            //for (int i = 0; i < arrays.Count; i++)
-            //{
-            //    var array = arrays[i];
-            //    if (array.Length != minorLength)
-            //    {
-            //        throw new ArgumentException
-            //            ("All arrays must be the same length");
-            //    }
-            //    for (int j = 0; j < minorLength; j++)
-            //    {
-            //        ret[i, j] = array[j];
-            //    }
-            //}
-            //return ret;
         }
 
 
@@ -1067,10 +887,22 @@ namespace NBodies.Rendering
 
         public static void PrintInfo(this Body body)
         {
+            MeshPoint mesh = new MeshPoint();
+            if (body.MeshID != -1 && (body.MeshID <= Mesh.Length))
+            {
+                mesh = Mesh[body.MeshID];
+            }
             int index = Bodies.ToList().IndexOf(body);
             string info = $@"
 Index: { index }
 UID: { body.UID }
+MeshID: { body.MeshID }
+    Count: { mesh.Count }
+    Mass: { mesh.Mass }
+    CmX: { mesh.CmX }
+    Cmy: { mesh.CmY }
+
+Test: { body.Test }
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }
 Size: { body.Size }
