@@ -499,7 +499,7 @@ namespace NBodies.Physics
                         distY = mesh.LocY - outBody.LocY;
                         dist = (distX * distX) + (distY * distY);
 
-                        float maxDist = 5.0f;//20.0f;
+                        float maxDist = 7.8f;//20.0f;
 
                         if (dist > maxDist * maxDist)
                         {
@@ -519,7 +519,6 @@ namespace NBodies.Physics
                         }
                         else
                         {
-
                             for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
                             {
                                 int meshBodId = inMeshBods[b, mb];
@@ -548,6 +547,29 @@ namespace NBodies.Physics
                                         outBody.ForceX += (force * distX / distSqrt);
                                         outBody.ForceY += (force * distY / distSqrt);
 
+                                        float colDist = (outBody.Size) + (inBody.Size);
+                                        if (dist <= colDist * colDist)
+                                        {
+                                            outBody.HasCollision = 1;
+                                        }
+
+                                        ////// SPH Density Kernel
+                                        ////if (outBody.InRoche == 1 && inBody.InRoche == 1)
+                                        ////{
+                                        // is this distance close enough for kernal / neighbor calcs ?
+                                        if (dist <= ksize)
+                                        {
+                                            if (dist < FLOAT_EPSILON)
+                                            {
+                                                dist = FLOAT_EPSILON;
+                                            }
+
+                                            //  It's a neighbor; accumulate density.
+                                            diff = ksizeSq - (float)dist;
+                                            fac = factor * diff * diff * diff;
+                                            outBody.Density += outBody.Mass * fac;
+                                        }
+                                        //}
                                     }
                                 }
                             }
@@ -559,7 +581,7 @@ namespace NBodies.Physics
 
             gpThread.SyncThreads();
 
-            // Calc SPH pressures for bodies within this mesh node.
+            // Calc SPH pressures and gravity for bodies within this mesh node.
             for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
             {
                 int meshBodId = inMeshBods[outBody.MeshID, mb];
@@ -573,6 +595,11 @@ namespace NBodies.Physics
                         distX = inBody.LocX - outBody.LocX;
                         distY = inBody.LocY - outBody.LocY;
                         dist = (distX * distX) + (distY * distY);
+
+                        if (dist < 0.04f)
+                        {
+                            dist = 0.04f;
+                        }
 
                         distSqrt = (float)Math.Sqrt(dist);
 
