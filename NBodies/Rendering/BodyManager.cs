@@ -48,7 +48,7 @@ namespace NBodies.Rendering
         {
             if (Bodies.Length < 1) return;
 
-            CullDistant();
+           // CullDistant();
 
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
@@ -960,8 +960,8 @@ UID: { body.UID }
 MeshID: { body.MeshID }
     Count: { mesh.BodCount }
     Mass: { mesh.Mass }
-    CmX: { mesh.CmX }
-    Cmy: { mesh.CmY }
+    Cm (X,Y): { mesh.CmX }, { mesh.CmY }
+    Loc (X,Y): { mesh.LocX }, { mesh.LocY }
     Top: { mesh.Top }
     Bottom: { mesh.Bottom }
     Left: { mesh.Left }

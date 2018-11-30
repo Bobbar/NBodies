@@ -256,6 +256,8 @@ namespace NBodies.Rendering
                  if (ShowMesh)
                      DrawMesh(finalOffset);
 
+                 // DrawOrigin(finalOffset);
+
                  DrawOverlays(finalOffset);
 
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
@@ -283,15 +285,25 @@ namespace NBodies.Rendering
 
             foreach (var m in BodyManager.Mesh)
             {
+                int pSize = 2;
+                float pOffset = 2 / 2f;
 
                 _buffer.Graphics.DrawRectangle(Pens.Red, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
-                //  _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
-                _buffer.Graphics.FillEllipse(Brushes.Yellow, m.CmX + finalOffset.X, m.CmY + finalOffset.Y, 2, 2);
-
+                _buffer.Graphics.FillEllipse(Brushes.Yellow, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
+                _buffer.Graphics.FillEllipse(Brushes.LimeGreen, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y- pOffset, pSize, pSize);
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
             }
         }
+
+        private static void DrawOrigin(PointF finalOffset)
+        {
+            var orig = _buffer.Graphics.RenderingOrigin;
+            orig = orig.Add(finalOffset.ToPoint());
+            _buffer.Graphics.DrawLine(Pens.Red, orig.X, orig.Y - 3000, orig.X, orig.Y + 3000);
+            _buffer.Graphics.DrawLine(Pens.Red, orig.X - 3000, orig.Y, orig.X + 3000, orig.Y);
+        }
+
 
         private static void DrawOrbit(PointF[] points, PointF finalOffset)
         {

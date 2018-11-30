@@ -9,6 +9,11 @@ namespace NBodies.Rendering
 {
     public static class PointHelper
     {
+        public static Point ToPoint(this PointF point)
+        {
+            return new Point((int)point.X, (int)point.Y);
+        }
+
         public static PointF Subtract(this PointF pointA, PointF pointB)
         {
             var diffX = pointA.X - pointB.X;
@@ -36,6 +41,11 @@ namespace NBodies.Rendering
         public static PointF Add(this PointF pointA, PointF pointB)
         {
             return new PointF(pointA.X + pointB.X, pointA.Y + pointB.Y);
+        }
+
+        public static Point Add(this Point pointA, Point pointB)
+        {
+            return new Point(pointA.X + pointB.X, pointA.Y + pointB.Y);
         }
 
         public static PointF Multi(this PointF pointA, float value)
