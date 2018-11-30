@@ -708,5 +708,10 @@ namespace NBodies
         {
             MainLoop.LeapFrog = leapfrogIntegratorToolStripMenuItem.Checked;
         }
+
+        private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.ShowMesh = showMeshToolStripMenuItem.Checked;
+        }
     }
 }

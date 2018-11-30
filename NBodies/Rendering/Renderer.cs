@@ -18,6 +18,7 @@ namespace NBodies.Rendering
         public static bool ClipView = true;
         public static bool ShowForce = false;
         public static bool ShowPath = false;
+        public static bool ShowMesh = false;
         public static float PressureScaleMax = 150;
 
         public static int BodyAlpha
@@ -252,7 +253,8 @@ namespace NBodies.Rendering
                      }
                  }
 
-                DrawMesh(finalOffset);
+                 if (ShowMesh)
+                     DrawMesh(finalOffset);
 
                  DrawOverlays(finalOffset);
 

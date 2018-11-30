@@ -198,6 +198,7 @@ namespace NBodies.Rendering
                             BodyManager.Bodies = bodiesCopy;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
                             BodyManager.RawMesh = PhysicsProvider.PhysicsCalc.RawMesh;
+                            BodyManager.MeshBodies = PhysicsProvider.PhysicsCalc.MeshBodies;
 
                             // Process and fracture new roche bodies.
                             if (RocheLimit)

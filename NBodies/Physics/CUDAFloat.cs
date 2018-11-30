@@ -34,6 +34,14 @@ namespace NBodies.Physics
             }
         }
 
+        public int[,] MeshBodies
+        {
+            get
+            {
+                return _meshBodies;
+            }
+        }
+
         public CUDAFloat(int gpuIdx)
         {
             gpuIndex = gpuIdx;
@@ -326,8 +334,8 @@ namespace NBodies.Physics
                     {
                         meshBodDict.Add(meshBods[b], Enumerable.Repeat(-1, maxCount).ToArray());
                     }
-
-                    meshBodDict[meshBods[b]][curIdx[meshBods[b]]] = b;
+                    var idx = curIdx[meshBods[b]];
+                    meshBodDict[meshBods[b]][idx] = b;
                     curIdx[meshBods[b]]++;
                 }
             }
@@ -494,7 +502,7 @@ namespace NBodies.Physics
 
                     dist = (distX * distX) + (distY * distY);
 
-                    float maxDist = 50.0f;
+                    float maxDist = 10.0f;
 
                     if (dist > maxDist * maxDist)
                     {

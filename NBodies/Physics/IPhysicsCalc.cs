@@ -11,6 +11,8 @@ namespace NBodies.Physics
         MeshPoint[] CurrentMesh { get; }
         MeshPoint[] RawMesh { get; }
 
+        int[,] MeshBodies { get; }
+
         void Init();
 
         void CalcMovement(ref Body[] bodies, float timestep);

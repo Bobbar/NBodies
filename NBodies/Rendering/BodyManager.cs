@@ -15,6 +15,7 @@ namespace NBodies.Rendering
         public static Body[] Bodies = new Body[0];
         public static MeshPoint[] Mesh = new MeshPoint[0];
         public static MeshPoint[] RawMesh;
+        public static int[,] MeshBodies;
 
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
@@ -47,6 +48,8 @@ namespace NBodies.Rendering
         {
             if (Bodies.Length < 1) return;
 
+            CullDistant();
+
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
             _bodyStore.RemoveAll((b) => b.Visible == 0);
@@ -61,6 +64,28 @@ namespace NBodies.Rendering
             //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
+        }
+
+        public static void CullDistant()
+        {
+            var meshCMass = MeshCenterOfMass();
+
+            for (int i = 0; i < Mesh.Length; i++)
+            {
+                var mesh = Mesh[i];
+                var dist = new PointF(mesh.CmX, mesh.CmY).DistanceSqrt(meshCMass);
+
+                if (dist > 3000)
+                {
+                    for (int b = 0; b < MeshBodies.GetLength(1); b++)
+                    {
+                        if (MeshBodies[i,b] != -1)
+                        {
+                            Bodies[MeshBodies[i, b]].Visible = 0;
+                        }
+                    }
+                }
+            }
         }
 
         public static void ClearBodies()
@@ -149,6 +174,39 @@ namespace NBodies.Rendering
 
             return new Body();
         }
+
+        public static PointF MeshCenterOfMass()
+        {
+            double totMass = 0;
+
+            for (int i = 0; i < Mesh.Length; i++)
+            {
+                var mesh = Mesh[i];
+
+                totMass += mesh.Mass;
+            }
+
+            //_totalMass = totMass;
+
+            double cmX = 0, cmY = 0;
+
+            for (int i = 0; i < Mesh.Length; i++)
+            {
+                var mesh = Mesh[i];
+
+                cmX += mesh.Mass * mesh.CmX;
+                cmY += mesh.Mass * mesh.CmY;
+            }
+
+            //cmX = (cmX / totMass) * -1f;
+            //cmY = (cmY / totMass) * -1f;
+
+            cmX = (cmX / totMass);
+            cmY = (cmY / totMass);
+
+            return new PointF((float)cmX, (float)cmY);
+        }
+
 
         public static PointF CenterOfMass()
         {
