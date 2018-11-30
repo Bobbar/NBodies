@@ -197,6 +197,7 @@ namespace NBodies.Rendering
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = bodiesCopy;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
+                            BodyManager.RawMesh = PhysicsProvider.PhysicsCalc.RawMesh;
 
                             // Process and fracture new roche bodies.
                             if (RocheLimit)

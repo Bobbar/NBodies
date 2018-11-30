@@ -265,12 +265,28 @@ namespace NBodies.Rendering
 
         private static void DrawMesh(PointF finalOffset)
         {
+            //if (BodyManager.RawMesh != null)
+            //{
+            //    foreach (var m in BodyManager.RawMesh)
+            //    {
+
+            //        _buffer.Graphics.DrawRectangle(Pens.Red, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
+            //        //  _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
+            //        _buffer.Graphics.FillEllipse(Brushes.Yellow, m.CmX + finalOffset.X, m.CmY + finalOffset.Y, 2, 2);
+
+            //        _buffer.Graphics.DrawString(BodyManager.RawMesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+            //    }
+            //}
+
+
             foreach (var m in BodyManager.Mesh)
             {
 
                 _buffer.Graphics.DrawRectangle(Pens.Red, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
-              //  _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
+                //  _buffer.Graphics.FillEllipse(Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y, 2, 2);
                 _buffer.Graphics.FillEllipse(Brushes.Yellow, m.CmX + finalOffset.X, m.CmY + finalOffset.Y, 2, 2);
+
+                //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
             }
         }

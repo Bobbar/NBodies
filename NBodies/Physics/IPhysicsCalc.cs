@@ -9,6 +9,7 @@ namespace NBodies.Physics
     public interface IPhysicsCalc
     {
         MeshPoint[] CurrentMesh { get; }
+        MeshPoint[] RawMesh { get; }
 
         void Init();
 

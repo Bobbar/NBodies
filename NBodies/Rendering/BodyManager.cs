@@ -14,6 +14,8 @@ namespace NBodies.Rendering
     {
         public static Body[] Bodies = new Body[0];
         public static MeshPoint[] Mesh = new MeshPoint[0];
+        public static MeshPoint[] RawMesh;
+
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 
@@ -901,6 +903,10 @@ MeshID: { body.MeshID }
     Mass: { mesh.Mass }
     CmX: { mesh.CmX }
     Cmy: { mesh.CmY }
+    Top: { mesh.Top }
+    Bottom: { mesh.Bottom }
+    Left: { mesh.Left }
+    Right: { mesh.Right }
 
 Test: { body.Test }
 IsExplosion: { body.IsExplosion }

@@ -15,6 +15,7 @@ namespace NBodies.Physics
         private static int threadsPerBlock = 256;
         private GPGPU gpu;
         private MeshPoint[] _mesh;
+        private MeshPoint[] _rawMesh;
         private int[,] _meshBodies = new int[0, 0];
 
         public MeshPoint[] CurrentMesh
@@ -22,6 +23,14 @@ namespace NBodies.Physics
             get
             {
                 return _mesh;
+            }
+        }
+
+        public MeshPoint[] RawMesh
+        {
+            get
+            {
+                return _rawMesh;
             }
         }
 
@@ -133,6 +142,11 @@ namespace NBodies.Physics
 
             _mesh = GetNewMesh(bodies);
 
+            var meshCopy = new MeshPoint[_mesh.Length];
+            Array.Copy(_mesh, meshCopy, _mesh.Length);
+
+            _rawMesh = meshCopy;
+
             blocks = BlockCount(_mesh.Length);
 
             var gpuInBodiesMesh = gpu.Allocate(bodies);
@@ -222,16 +236,19 @@ namespace NBodies.Physics
 
         private MeshPoint[] GetNewMesh(Body[] bodies)
         {
-            int padding = 10;
+            float nodeSize = 30f;
+            int padding = (int)nodeSize;
+
             var maxX = bodies.Max(b => b.LocX) + padding;
-            var minX = bodies.Min(b => b.LocX) - padding;
+            var minX = bodies.Min(b => b.LocX);
 
             var maxY = bodies.Max(b => b.LocY) + padding;
-            var minY = bodies.Min(b => b.LocY) - padding;
-
-            float nodeSize = 0;
+            var minY = bodies.Min(b => b.LocY);
+          
             float nodeRad = 0;
-            int nodes = 20; //100;
+            //int nodes = 20; //100;
+            int nodesPerRow = 0; //100;
+
             float meshSize = 0;
 
             var wX = maxX - minX;
@@ -246,21 +263,25 @@ namespace NBodies.Physics
                 meshSize = wY;
             }
 
-            nodeSize = meshSize / nodes;
+            nodesPerRow = (int)(meshSize / nodeSize);
+            nodesPerRow++;
+            Console.WriteLine($@"Nodes: {nodesPerRow}");
+
+            // nodeSize = meshSize / nodes;
             nodeRad = nodeSize / 2f;
 
             float curX = minX;
-            float curY = maxY;
+            float curY = minY;
 
-            MeshPoint[] mesh = new MeshPoint[nodes * nodes];
+            MeshPoint[] mesh = new MeshPoint[nodesPerRow * nodesPerRow];
 
             int rightSteps = 0;
-            int downSteps = 0;
+            int downSteps = -1;
 
-            for (int i = 0; i < nodes * nodes; i++)
+            for (int i = 0; i < nodesPerRow * nodesPerRow; i++)
             {
-                mesh[i].LocX = curX + nodeRad;
-                mesh[i].LocY = curY - nodeRad;
+                mesh[i].LocX = curX;
+                mesh[i].LocY = curY;
                 mesh[i].Mass = 0f;
                 mesh[i].Count = 0;
                 mesh[i].Size = nodeSize;
@@ -273,12 +294,12 @@ namespace NBodies.Physics
                 curX += nodeSize;
                 rightSteps++;
 
-                if (rightSteps > nodes)
+                if (rightSteps == nodesPerRow)
                 {
                     curX = minX;
                     rightSteps = 0;
 
-                    curY -= nodeSize;
+                    curY += nodeSize;
                     downSteps++;
                 }
 
@@ -393,25 +414,17 @@ namespace NBodies.Physics
 
                 if (body.LocX < outMesh.Right && body.LocX > outMesh.Left && body.LocY < outMesh.Top && body.LocY > outMesh.Bottom)
                 {
-                    //outMesh.Mass += body.Mass;
-                    //outMesh.CmX += body.Mass * body.LocX;
-                    //outMesh.CmY += body.Mass * body.LocY;
-                    //outMesh.Count++;
+                    outMesh.Mass += body.Mass;
+                    outMesh.CmX += body.Mass * body.LocX;
+                    outMesh.CmY += body.Mass * body.LocY;
+                    outMesh.Count++;
 
                     if (outMeshBods[b] == -1)
                     {
                         outMeshBods[b] = a;
-
-                        outMesh.Mass += body.Mass;
-                        outMesh.CmX += body.Mass * body.LocX;
-                        outMesh.CmY += body.Mass * body.LocY;
-                        outMesh.Count++;
                     }
-                    //else
-                    //{
-                    //    outMeshBods[b] = -2;
-                    //}
                 }
+
             }
 
             if (outMesh.Count > 0)
@@ -481,7 +494,7 @@ namespace NBodies.Physics
 
                     dist = (distX * distX) + (distY * distY);
 
-                    float maxDist = 100.0f;
+                    float maxDist = 50.0f;
 
                     if (dist > maxDist * maxDist)
                     {
