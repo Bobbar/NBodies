@@ -15,7 +15,7 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
-        public static bool LeapFrog = true;
+        public static bool LeapFrog = false;
 
         //public static int TargetFPS = 60;
 

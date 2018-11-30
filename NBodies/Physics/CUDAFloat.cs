@@ -14,11 +14,11 @@ namespace NBodies.Physics
         private int gpuIndex = 2;
         private static int threadsPerBlock = 256;
         private GPGPU gpu;
-        private MeshPoint[] _mesh;
-        private MeshPoint[] _rawMesh;
+        private MeshCell[] _mesh;
+        private MeshCell[] _rawMesh;
         private int[,] _meshBodies = new int[0, 0];
 
-        public MeshPoint[] CurrentMesh
+        public MeshCell[] CurrentMesh
         {
             get
             {
@@ -26,7 +26,7 @@ namespace NBodies.Physics
             }
         }
 
-        public MeshPoint[] RawMesh
+        public MeshCell[] RawMesh
         {
             get
             {
@@ -63,7 +63,7 @@ namespace NBodies.Physics
             if (cudaModule == null || !cudaModule.TryVerifyChecksums())
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
-                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(MeshPoint), typeof(CUDAFloat) });
+                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(MeshCell), typeof(CUDAFloat) });
                 cudaModule.Serialize();
             }
 
@@ -95,7 +95,7 @@ namespace NBodies.Physics
 
             while (missingDec)
             {
-                int idx = newcode.IndexOf("Body", lastIdx);
+                int idx = newcode.IndexOf(nameof(Body), lastIdx);
 
                 if (idx == -1)
                 {
@@ -118,7 +118,7 @@ namespace NBodies.Physics
 
             while (missingDec)
             {
-                int idx = newcode.IndexOf("MeshPoint", lastIdx);
+                int idx = newcode.IndexOf(nameof(MeshCell), lastIdx);
 
                 if (idx == -1)
                 {
@@ -142,7 +142,7 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep)
         {
-            float viscosity = 20.0f;//40.0f;//5.0f;//7.5f;
+            float viscosity = 10.0f;//20.0f;//40.0f;//5.0f;//7.5f;
 
             int blocks = 0;
 
@@ -150,12 +150,14 @@ namespace NBodies.Physics
 
             _mesh = GetNewMesh(bodies);
 
-            var meshCopy = new MeshPoint[_mesh.Length];
+            var meshCopy = new MeshCell[_mesh.Length];
             Array.Copy(_mesh, meshCopy, _mesh.Length);
 
             _rawMesh = meshCopy;
 
             blocks = BlockCount(_mesh.Length);
+
+            gpu.FreeAll();
 
             var gpuInBodiesMesh = gpu.Allocate(bodies);
             var gpuInMesh = gpu.Allocate(_mesh);
@@ -242,10 +244,10 @@ namespace NBodies.Physics
             return blocks;
         }
 
-        private MeshPoint[] GetNewMesh(Body[] bodies)
+        private MeshCell[] GetNewMesh(Body[] bodies)
         {
-            float nodeSize = 30f;
-            int padding = (int)nodeSize;
+            float cellSize = 30f;
+            int padding = (int)cellSize;
 
             var maxX = bodies.Max(b => b.LocX) + padding;
             var minX = bodies.Min(b => b.LocX);
@@ -253,9 +255,9 @@ namespace NBodies.Physics
             var maxY = bodies.Max(b => b.LocY) + padding;
             var minY = bodies.Min(b => b.LocY);
 
-            float nodeRad = 0;
+            float cellRadius = 0;
             //int nodes = 20; //100;
-            int nodesPerRow = 0; //100;
+            int cellsPerRow = 0; //100;
 
             float meshSize = 0;
 
@@ -271,41 +273,41 @@ namespace NBodies.Physics
                 meshSize = wY;
             }
 
-            nodesPerRow = (int)(meshSize / nodeSize);
-            nodesPerRow++;
+            cellsPerRow = (int)(meshSize / cellSize);
+            cellsPerRow++;
 
-            nodeRad = nodeSize / 2f;
+            cellRadius = cellSize / 2f;
 
             float curX = minX;
             float curY = minY;
 
-            MeshPoint[] mesh = new MeshPoint[nodesPerRow * nodesPerRow];
+            MeshCell[] mesh = new MeshCell[cellsPerRow * cellsPerRow];
 
             int rightSteps = 0;
             int downSteps = -1;
 
-            for (int i = 0; i < nodesPerRow * nodesPerRow; i++)
+            for (int i = 0; i < cellsPerRow * cellsPerRow; i++)
             {
                 mesh[i].LocX = curX;
                 mesh[i].LocY = curY;
                 mesh[i].Mass = 0f;
-                mesh[i].Count = 0;
-                mesh[i].Size = nodeSize;
+                mesh[i].BodCount = 0;
+                mesh[i].Size = cellSize;
 
-                mesh[i].Top = mesh[i].LocY + nodeRad;
-                mesh[i].Bottom = mesh[i].LocY - nodeRad;
-                mesh[i].Left = mesh[i].LocX - nodeRad;
-                mesh[i].Right = mesh[i].LocX + nodeRad;
+                mesh[i].Top = mesh[i].LocY + cellRadius;
+                mesh[i].Bottom = mesh[i].LocY - cellRadius;
+                mesh[i].Left = mesh[i].LocX - cellRadius;
+                mesh[i].Right = mesh[i].LocX + cellRadius;
 
-                curX += nodeSize;
+                curX += cellSize;
                 rightSteps++;
 
-                if (rightSteps == nodesPerRow)
+                if (rightSteps == cellsPerRow)
                 {
                     curX = minX;
                     rightSteps = 0;
 
-                    curY += nodeSize;
+                    curY += cellSize;
                     downSteps++;
                 }
 
@@ -314,14 +316,18 @@ namespace NBodies.Physics
             return mesh;
         }
 
-        private void ShrinkMesh(MeshPoint[] meshes, int[] meshBods, ref Body[] bodies)
+        private void ShrinkMesh(MeshCell[] meshes, int[] meshBods, ref Body[] bodies)
         {
-            var meshList = new List<MeshPoint>();
+            var meshList = new List<MeshCell>();
             var meshBodDict = new Dictionary<int, int[]>();
             var meshBodList = new List<int[]>();
-            int maxCount = meshes.Max(m => m.Count);
-            int[] curIdx = new int[meshes.Length];
+            int maxCount = meshes.Max(m => m.BodCount);
 
+            // Since the body index array must be a fixed length, 
+            // we need to track the current element index for each mesh.
+            int[] curIdxCount = new int[meshes.Length]; // Number of body indexes added to each mesh.
+
+            // Populate a dictionary with the Mesh indexes and an array of indexes for their contained Bodies.
             // Key = MeshID
             // Value = int[] of body indexes
             for (int b = 0; b < meshBods.Length; b++)
@@ -332,22 +338,25 @@ namespace NBodies.Physics
                     {
                         meshBodDict.Add(meshBods[b], Enumerable.Repeat(-1, maxCount).ToArray());
                     }
-                    var idx = curIdx[meshBods[b]];
+                    // Add the body index to the dictionary at the current index.     
+                    var idx = curIdxCount[meshBods[b]];
                     meshBodDict[meshBods[b]][idx] = b;
-                    curIdx[meshBods[b]]++;
+                    curIdxCount[meshBods[b]]++; // Increment the current index.
                 }
             }
 
+            // Itereate the meshes and collect only the ones which contain bodies.
+            // Also builds the mesh/body index list.
             for (int m = 0; m < meshes.Length; m++)
             {
-                // Filter out empty meshes.
-                if (meshes[m].Count > 0)
+                if (meshes[m].BodCount > 0)
                 {
                     meshList.Add(meshes[m]);
-                    meshBodList.Add(meshBodDict[m]);
+                    meshBodList.Add(meshBodDict[m]); // Build a list of body indexes using the dictionary from above.
                 }
             }
 
+            // Iterate the mesh/body index list and update each body with their mesh ID.
             for (int i = 0; i < meshBodList.Count; i++)
             {
                 foreach (int bodIdx in meshBodList[i])
@@ -359,60 +368,42 @@ namespace NBodies.Physics
                 }
             }
 
+            // Turn the mesh list into and array, and convert the mesh/body index list into a GPU compatible 2d array.
             _mesh = meshList.ToArray();
-            _meshBodies = CreateRectangularArray(meshBodList, maxCount);
+            _meshBodies = CreateRectangularArray(meshBodList);//, maxCount);
         }
 
-        private int[,] CreateRectangularArray(IList<int[]> arrays, int maxLen)
+        // Converts a List<int[]> into a 2d array.
+        // Credit: https://stackoverflow.com/a/9775057
+        private T[,] CreateRectangularArray<T>(IList<T[]> arrays)
         {
             int minorLength = arrays[0].Length;
-
-            int[,] ret = new int[arrays.Count, maxLen];
-
+            T[,] ret = new T[arrays.Count, minorLength];
             for (int i = 0; i < arrays.Count; i++)
             {
-                List<int> bods = new List<int>();
-                int idx = 0;
                 var array = arrays[i];
                 if (array.Length != minorLength)
                 {
                     throw new ArgumentException
                         ("All arrays must be the same length");
                 }
-
                 for (int j = 0; j < minorLength; j++)
                 {
-                    if (array[j] != -1)
-                    {
-                        bods.Add(array[j]);
-                    }
+                    ret[i, j] = array[j];
                 }
-
-                foreach (var bod in bods)
-                {
-                    ret[i, idx] = bod;
-                    idx++;
-                }
-
-                for (int x = idx; x < maxLen; x++)
-                {
-                    ret[i, x] = -1;
-                }
-
             }
-
             return ret;
         }
 
         [Cudafy]
-        public static void PopulateMesh(GThread gpThread, Body[] inBodies, MeshPoint[] inMeshes, MeshPoint[] outMeshes, int[] outMeshBods)
+        public static void PopulateMesh(GThread gpThread, Body[] inBodies, MeshCell[] inMeshes, MeshCell[] outMeshes, int[] outMeshBods)
         {
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
             if (a > inMeshes.Length)
                 return;
 
-            MeshPoint outMesh = inMeshes[a];
+            MeshCell outMesh = inMeshes[a];
 
             for (int b = 0; b < inBodies.Length; b++)
             {
@@ -423,7 +414,7 @@ namespace NBodies.Physics
                     outMesh.Mass += body.Mass;
                     outMesh.CmX += body.Mass * body.LocX;
                     outMesh.CmY += body.Mass * body.LocY;
-                    outMesh.Count++;
+                    outMesh.BodCount++;
 
                     if (outMeshBods[b] == -1)
                     {
@@ -433,19 +424,20 @@ namespace NBodies.Physics
 
             }
 
-            if (outMesh.Count > 0)
+            gpThread.SyncThreads();
+
+            if (outMesh.BodCount > 0)
             {
                 outMesh.CmX = outMesh.CmX / (float)outMesh.Mass;
                 outMesh.CmY = outMesh.CmY / (float)outMesh.Mass;
             }
 
-            gpThread.SyncThreads();
 
             outMeshes[a] = outMesh;
         }
 
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshPoint[] inMesh, int[,] inMeshBods, float dt)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[,] inMeshBods, float dt)
         {
             float GAS_K = 0.3f;//0.8f;// 0.1f
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -491,9 +483,9 @@ namespace NBodies.Physics
             {
                 if (b != outBody.MeshID)
                 {
-                    MeshPoint mesh = inMesh[b];
+                    MeshCell mesh = inMesh[b];
 
-                    if (mesh.Count > 0)
+                    if (mesh.BodCount > 0)
                     {
                         distX = mesh.LocX - outBody.LocX;
                         distY = mesh.LocY - outBody.LocY;
@@ -642,7 +634,7 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshPoint[] inMesh, int[,] inMeshBods, float dt, float viscosity, int drift)
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[,] inMeshBods, float dt, float viscosity, int drift)
         {
             float distX;
             float distY;
@@ -667,9 +659,9 @@ namespace NBodies.Physics
                 {
                     if (b != outBody.MeshID)
                     {
-                        MeshPoint mesh = inMesh[b];
+                        MeshCell mesh = inMesh[b];
 
-                        if (mesh.Count > 0)
+                        if (mesh.BodCount > 0)
                         {
                             distX = mesh.LocX - outBody.LocX;
                             distY = mesh.LocY - outBody.LocY;
@@ -866,7 +858,7 @@ namespace NBodies.Physics
                     }
                 }
 
-                
+
             }
 
             gpThread.SyncThreads();

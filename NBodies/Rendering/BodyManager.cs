@@ -13,8 +13,8 @@ namespace NBodies.Rendering
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
-        public static MeshPoint[] Mesh = new MeshPoint[0];
-        public static MeshPoint[] RawMesh;
+        public static MeshCell[] Mesh = new MeshCell[0];
+        public static MeshCell[] RawMesh;
         public static int[,] MeshBodies;
 
         public static bool FollowSelected = false;
@@ -948,7 +948,7 @@ namespace NBodies.Rendering
 
         public static void PrintInfo(this Body body)
         {
-            MeshPoint mesh = new MeshPoint();
+            MeshCell mesh = new MeshCell();
             if (body.MeshID != -1 && (body.MeshID <= Mesh.Length))
             {
                 mesh = Mesh[body.MeshID];
@@ -958,7 +958,7 @@ namespace NBodies.Rendering
 Index: { index }
 UID: { body.UID }
 MeshID: { body.MeshID }
-    Count: { mesh.Count }
+    Count: { mesh.BodCount }
     Mass: { mesh.Mass }
     CmX: { mesh.CmX }
     Cmy: { mesh.CmY }

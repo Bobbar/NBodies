@@ -8,14 +8,14 @@ using Cudafy;
 namespace NBodies.Physics
 {
     [Cudafy(eCudafyType.Struct)]
-    public struct MeshPoint
+    public struct MeshCell
     {
         public float LocX;
         public float LocY;
         public float CmX;
         public float CmY;
         public double Mass;
-        public int Count;
+        public int BodCount;
         public float Size;
         public float Top;
         public float Bottom;

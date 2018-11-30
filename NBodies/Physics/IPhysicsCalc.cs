@@ -8,8 +8,8 @@ namespace NBodies.Physics
 {
     public interface IPhysicsCalc
     {
-        MeshPoint[] CurrentMesh { get; }
-        MeshPoint[] RawMesh { get; }
+        MeshCell[] CurrentMesh { get; }
+        MeshCell[] RawMesh { get; }
 
         int[,] MeshBodies { get; }
 

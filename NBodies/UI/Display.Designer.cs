@@ -190,9 +190,7 @@
             // 
             // leapfrogIntegratorToolStripMenuItem
             // 
-            this.leapfrogIntegratorToolStripMenuItem.Checked = true;
             this.leapfrogIntegratorToolStripMenuItem.CheckOnClick = true;
-            this.leapfrogIntegratorToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.leapfrogIntegratorToolStripMenuItem.Name = "leapfrogIntegratorToolStripMenuItem";
             this.leapfrogIntegratorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.leapfrogIntegratorToolStripMenuItem.Text = "Leapfrog Integrator";
