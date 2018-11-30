@@ -252,7 +252,7 @@ namespace NBodies.Physics
 
             var maxY = bodies.Max(b => b.LocY) + padding;
             var minY = bodies.Min(b => b.LocY);
-          
+
             float nodeRad = 0;
             //int nodes = 20; //100;
             int nodesPerRow = 0; //100;
@@ -273,9 +273,7 @@ namespace NBodies.Physics
 
             nodesPerRow = (int)(meshSize / nodeSize);
             nodesPerRow++;
-            Console.WriteLine($@"Nodes: {nodesPerRow}");
 
-            // nodeSize = meshSize / nodes;
             nodeRad = nodeSize / 2f;
 
             float curX = minX;
@@ -458,11 +456,11 @@ namespace NBodies.Physics
             float diff;
             float fac;
 
-            double totMass;
+            float totMass;
             float force;
             float distX;
             float distY;
-            double dist;
+            float dist;
             float distSqrt;
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
@@ -471,8 +469,6 @@ namespace NBodies.Physics
                 return;
 
             Body outBody = inBodies[a];
-
-            //   outBody.Test = 0;
 
             outBody.ForceTot = 0;
             outBody.ForceX = 0;
@@ -493,95 +489,127 @@ namespace NBodies.Physics
             int len = inMesh.Length;
             for (int b = 0; b < len; b++)
             {
-                MeshPoint mesh = inMesh[b];
-
-                if (mesh.Count > 0)
+                if (b != outBody.MeshID)
                 {
-                    distX = mesh.CmX - outBody.LocX;
-                    distY = mesh.CmY - outBody.LocY;
+                    MeshPoint mesh = inMesh[b];
 
-                    dist = (distX * distX) + (distY * distY);
-
-                    float maxDist = 10.0f;
-
-                    if (dist > maxDist * maxDist)
+                    if (mesh.Count > 0)
                     {
-                        distSqrt = (float)Math.Sqrt(dist);
+                        distX = mesh.LocX - outBody.LocX;
+                        distY = mesh.LocY - outBody.LocY;
+                        dist = (distX * distX) + (distY * distY);
 
-                        totMass = mesh.Mass * outBody.Mass;
-                        force = (float)totMass / (float)dist;
+                        float maxDist = 5.0f;//20.0f;
 
-                        outBody.ForceTot += force;
-                        outBody.ForceX += (force * distX / distSqrt);
-                        outBody.ForceY += (force * distY / distSqrt);
-
-                        //  outBody.Test = 999.0f;
-                    }
-                    else
-                    {
-
-                        for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
+                        if (dist > maxDist * maxDist)
                         {
-                            int meshBodId = inMeshBods[b, mb];
+                            distX = mesh.CmX - outBody.LocX;
+                            distY = mesh.CmY - outBody.LocY;
+                            dist = (distX * distX) + (distY * distY);
 
-                            if (meshBodId != -1)
+                            distSqrt = (float)Math.Sqrt(dist);
+
+                            totMass = (float)mesh.Mass * outBody.Mass;
+                            force = totMass / dist;
+
+                            outBody.ForceTot += force;
+                            outBody.ForceX += (force * distX / distSqrt);
+                            outBody.ForceY += (force * distY / distSqrt);
+
+                        }
+                        else
+                        {
+
+                            for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
                             {
-                                Body inBody = inBodies[meshBodId];
+                                int meshBodId = inMeshBods[b, mb];
 
-                                if (inBody.UID != outBody.UID)
+                                if (meshBodId != -1)
                                 {
-                                    distX = inBody.LocX - outBody.LocX;
-                                    distY = inBody.LocY - outBody.LocY;
-                                    dist = (distX * distX) + (distY * distY);
+                                    Body inBody = inBodies[meshBodId];
 
-                                    if (dist < 0.04f)
+                                    if (inBody.UID != outBody.UID)
                                     {
-                                        dist = 0.04f;
-                                    }
+                                        distX = inBody.LocX - outBody.LocX;
+                                        distY = inBody.LocY - outBody.LocY;
+                                        dist = (distX * distX) + (distY * distY);
 
-                                    distSqrt = (float)Math.Sqrt(dist);
-
-                                    totMass = inBody.Mass * outBody.Mass;
-                                    force = (float)totMass / (float)dist;
-
-                                    outBody.ForceTot += force;
-                                    outBody.ForceX += (force * distX / distSqrt);
-                                    outBody.ForceY += (force * distY / distSqrt);
-
-                                    //    outBody.Test = 2222.0f;
-
-
-                                    if (distSqrt <= (outBody.Size) + (inBody.Size))
-                                    {
-                                        outBody.HasCollision = 1;
-                                    }
-
-                                    // SPH Density Kernel
-                                    if (outBody.InRoche == 1 && inBody.InRoche == 1)
-                                    {
-                                        // is this distance close enough for kernal / neighbor calcs ?
-                                        if (dist <= ksize)
+                                        if (dist < 0.04f)
                                         {
-                                            if (dist < FLOAT_EPSILON)
-                                            {
-                                                dist = FLOAT_EPSILON;
-                                            }
-
-                                            //  It's a neighbor; accumulate density.
-                                            diff = ksizeSq - (float)dist;
-                                            fac = factor * diff * diff * diff;
-                                            outBody.Density += outBody.Mass * fac;
+                                            dist = 0.04f;
                                         }
-                                    }
 
+                                        distSqrt = (float)Math.Sqrt(dist);
+
+                                        totMass = inBody.Mass * outBody.Mass;
+                                        force = totMass / dist;
+
+                                        outBody.ForceTot += force;
+                                        outBody.ForceX += (force * distX / distSqrt);
+                                        outBody.ForceY += (force * distY / distSqrt);
+
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                //  gpThread.SyncThreads();
+            }
 
+            gpThread.SyncThreads();
+
+            // Calc SPH pressures for bodies within this mesh node.
+            for (int mb = 0; mb < inMeshBods.GetLength(1); mb++)
+            {
+                int meshBodId = inMeshBods[outBody.MeshID, mb];
+
+                if (meshBodId != -1)
+                {
+                    Body inBody = inBodies[meshBodId];
+
+                    if (inBody.UID != outBody.UID)
+                    {
+                        distX = inBody.LocX - outBody.LocX;
+                        distY = inBody.LocY - outBody.LocY;
+                        dist = (distX * distX) + (distY * distY);
+
+                        distSqrt = (float)Math.Sqrt(dist);
+
+                        totMass = inBody.Mass * outBody.Mass;
+                        force = totMass / dist;
+
+                        outBody.ForceTot += force;
+                        outBody.ForceX += (force * distX / distSqrt);
+                        outBody.ForceY += (force * distY / distSqrt);
+
+
+
+                        float colDist = (outBody.Size) + (inBody.Size);
+                        if (dist <= colDist * colDist)
+                        {
+                            outBody.HasCollision = 1;
+                        }
+
+                        // SPH Density Kernel
+                        if (outBody.InRoche == 1 && inBody.InRoche == 1)
+                        {
+                            // is this distance close enough for kernal / neighbor calcs ?
+                            if (dist <= ksize)
+                            {
+                                if (dist < FLOAT_EPSILON)
+                                {
+                                    dist = FLOAT_EPSILON;
+                                }
+
+                                //  It's a neighbor; accumulate density.
+                                diff = ksizeSq - (float)dist;
+                                fac = factor * diff * diff * diff;
+                                outBody.Density += outBody.Mass * fac;
+                            }
+                        }
+                    }
+                }
             }
 
             gpThread.SyncThreads();

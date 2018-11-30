@@ -68,6 +68,7 @@ namespace NBodies.Rendering
 
         public static void CullDistant()
         {
+            float cullDist = 1000;
             var meshCMass = MeshCenterOfMass();
 
             for (int i = 0; i < Mesh.Length; i++)
@@ -75,7 +76,7 @@ namespace NBodies.Rendering
                 var mesh = Mesh[i];
                 var dist = new PointF(mesh.CmX, mesh.CmY).DistanceSqrt(meshCMass);
 
-                if (dist > 3000)
+                if (dist > cullDist)
                 {
                     for (int b = 0; b < MeshBodies.GetLength(1); b++)
                     {
