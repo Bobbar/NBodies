@@ -14,6 +14,9 @@ namespace NBodies.Physics
 
         void Init();
 
-        void CalcMovement(ref Body[] bodies, float timestep);
+      //  void CalcMovement(ref Body[] bodies, float timestep);
+
+        void CalcMovement(ref Body[] bodies, float timestep, float cellSize);
+
     }
 }

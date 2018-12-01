@@ -37,6 +37,7 @@
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.leapfrogIntegratorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -78,7 +79,6 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -196,6 +196,14 @@
             this.leapfrogIntegratorToolStripMenuItem.Text = "Leapfrog Integrator";
             this.leapfrogIntegratorToolStripMenuItem.CheckedChanged += new System.EventHandler(this.leapfrogIntegratorToolStripMenuItem_CheckedChanged);
             // 
+            // showMeshToolStripMenuItem
+            // 
+            this.showMeshToolStripMenuItem.CheckOnClick = true;
+            this.showMeshToolStripMenuItem.Name = "showMeshToolStripMenuItem";
+            this.showMeshToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.showMeshToolStripMenuItem.Text = "Show Mesh";
+            this.showMeshToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showMeshToolStripMenuItem_CheckedChanged);
+            // 
             // displayToolStripMenuItem
             // 
             this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -214,7 +222,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -222,7 +230,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -230,7 +238,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -238,7 +246,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -246,7 +254,7 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -698,14 +706,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // showMeshToolStripMenuItem
-            // 
-            this.showMeshToolStripMenuItem.CheckOnClick = true;
-            this.showMeshToolStripMenuItem.Name = "showMeshToolStripMenuItem";
-            this.showMeshToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.showMeshToolStripMenuItem.Text = "Show Mesh";
-            this.showMeshToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showMeshToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 

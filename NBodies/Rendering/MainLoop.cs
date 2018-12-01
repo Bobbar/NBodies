@@ -19,6 +19,22 @@ namespace NBodies.Rendering
 
         //public static int TargetFPS = 60;
 
+        public static float CellSize
+        {
+            get
+            {
+                return _cellSize;
+            }
+
+            set
+            {
+                if (value >= 2.0f && value <= 100f)
+                {
+                    _cellSize = value;
+                }
+            }
+        }
+
         public static int TargetFPS
         {
 
@@ -88,6 +104,8 @@ namespace NBodies.Rendering
             }
         }
 
+
+        private static float _cellSize = 30f;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;
@@ -179,7 +197,7 @@ namespace NBodies.Rendering
                             Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
                       
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, TimeStep);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, _timeStep, _cellSize);
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

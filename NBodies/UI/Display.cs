@@ -12,6 +12,8 @@ namespace NBodies
         private bool _ctrlDown = false;
         private bool _EDown = false;
         private bool _FDown = false;
+        private bool _DDown = false;
+        private bool _CDown = false;
 
         private int _selectedUid = -1;
         private int _mouseId = -1;
@@ -27,6 +29,9 @@ namespace NBodies
         private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         private OverlayGraphic flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
         private OverlayGraphic orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
+        private OverlayGraphic distLine = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
+        private OverlayGraphic distOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+        private OverlayGraphic cellSizeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
 
         private PlaybackControlForm _playbackControl;
 
@@ -62,35 +67,9 @@ namespace NBodies
             Renderer.OverLays.Add(explodeOver);
             Renderer.OverLays.Add(fpsOver);
 
-            //var fpsKeyAction = new KeyAction(Keys.F);
-            //fpsKeyAction.WheelAction = (v) =>
-            //{
-            //    MainLoop.TargetFPS += v;
-            //    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-            //};
-
-            //fpsKeyAction.KeyDownAction = () =>
-            //{
-            //    if (!Renderer.OverLays.Contains(fpsOver))
-            //    {
-            //        fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-            //        fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-
-            //        Renderer.OverLays.Add(fpsOver);
-            //    }
-            //};
-
-            //fpsKeyAction.KeyUpAction = () =>
-            //{
-            //    fpsOver.Destroy();
-            //};
-
-            //fpsKeyAction.MouseMoveAction = (p) =>
-            //{
-            //    fpsOver.Location = p.Subtract(new PointF(10, 10));
-            //};
-
-            //InputHandler.AddKeyAction(fpsKeyAction);
+            Renderer.OverLays.Add(distLine);
+            Renderer.OverLays.Add(distOver);
+            Renderer.OverLays.Add(cellSizeOver);
 
             MainLoop.StartLoop();
         }
@@ -271,6 +250,30 @@ namespace NBodies
                     }
 
                     break;
+
+                case Keys.D:
+
+                    if (!_DDown)
+                    {
+                        distLine.Location = _mouseLocation;
+                        distOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                        distOver.Value = "0.0";
+                        distLine.Show();
+                        distOver.Show();
+                    }
+
+                    _DDown = true;
+
+                    break;
+
+                case Keys.C:
+
+                    _CDown = true;
+
+                    cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
+                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                    cellSizeOver.Show();
+                    break;
             }
         }
 
@@ -303,6 +306,21 @@ namespace NBodies
 
                     _FDown = false;
                     fpsOver.Hide();
+
+                    break;
+
+                case Keys.D:
+
+                    _DDown = false;
+                    distLine.Hide();
+                    distOver.Hide();
+
+                    break;
+
+                case Keys.C:
+
+                    _CDown = false;
+                    cellSizeOver.Hide();
 
                     break;
             }
@@ -463,6 +481,22 @@ namespace NBodies
             {
                 fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
             }
+
+            if (_DDown)
+            {
+                distLine.Location2 = _mouseLocation;
+                distOver.Location = _mouseLocation.Add(new PointF(40, 10));
+
+                var loc1 = ScaleHelpers.ScalePointRelative(distLine.Location);
+                var loc2 = ScaleHelpers.ScalePointRelative(distLine.Location2);
+
+                distOver.Value = loc1.DistanceSqrt(loc2).ToString();
+            }
+
+            if (_CDown)
+            {
+                cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
+            }
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
@@ -471,7 +505,13 @@ namespace NBodies
 
             if (e.Delta > 0)
             {
-                if (!_FDown && !_mouseRightDown)
+                if (_CDown)
+                {
+                    MainLoop.CellSize += 0.5f;
+                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                }
+
+                if (!_FDown && !_CDown && !_mouseRightDown)
                     RenderVars.CurrentScale += scaleChange;
 
                 if (_FDown)
@@ -488,7 +528,13 @@ namespace NBodies
             }
             else
             {
-                if (!_FDown && !_mouseRightDown)
+                if (_CDown)
+                {
+                    MainLoop.CellSize -= 0.5f;
+                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                }
+
+                if (!_FDown && !_CDown && !_mouseRightDown)
                     RenderVars.CurrentScale -= scaleChange;
 
                 if (_FDown)
