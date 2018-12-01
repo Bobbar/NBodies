@@ -173,14 +173,6 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 1)
                         {
-                            //timer.Restart();
-
-                            //BodyManager.GetNewMesh();
-                            //// BodyManager.BuildMeshPara();
-
-                            //Console.WriteLine($@"Build: {timer.ElapsedMilliseconds}    Nodes: {BodyManager.Mesh.Length}");
-                            //if (BodyManager.Bodies.Length < 1)
-                            //    continue;
                             // 1.
                             // Copy the current bodies to another array.
                             var bodiesCopy = new Body[BodyManager.Bodies.Length];
@@ -197,7 +189,6 @@ namespace NBodies.Rendering
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = bodiesCopy;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
-                            BodyManager.RawMesh = PhysicsProvider.PhysicsCalc.RawMesh;
                             BodyManager.MeshBodies = PhysicsProvider.PhysicsCalc.MeshBodies;
 
                             // Process and fracture new roche bodies.

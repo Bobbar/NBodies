@@ -6,6 +6,7 @@ using System.Diagnostics;
 using NBodies.Rendering;
 using System.Linq;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace NBodies.Physics
 {
@@ -15,7 +16,6 @@ namespace NBodies.Physics
         private static int threadsPerBlock = 256;
         private GPGPU gpu;
         private MeshCell[] _mesh;
-        private MeshCell[] _rawMesh;
         private int[,] _meshBodies = new int[0, 0];
 
         public MeshCell[] CurrentMesh
@@ -23,14 +23,6 @@ namespace NBodies.Physics
             get
             {
                 return _mesh;
-            }
-        }
-
-        public MeshCell[] RawMesh
-        {
-            get
-            {
-                return _rawMesh;
             }
         }
 
@@ -67,20 +59,16 @@ namespace NBodies.Physics
                 cudaModule.Serialize();
             }
 
-            // Add missing 'struct' strings to generated code.
+            //Add missing 'struct' strings to generated code.
             cudaModule.SourceCode = FixCode(cudaModule.SourceCode);
             cudaModule.Serialize();
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
             gpu.LoadModule(cudaModule);
 
-
-
             var props = gpu.GetDeviceProperties();
             Console.WriteLine(props.ToString());
         }
-
-
 
         /// <summary>
         /// Fixes missing 'struct' strings for each Body function and variable declaration.
@@ -136,7 +124,6 @@ namespace NBodies.Physics
                 }
             }
 
-
             return newcode;
         }
 
@@ -148,45 +135,9 @@ namespace NBodies.Physics
 
             gpu.StartTimer();
 
-            //_mesh = GetNewMesh(bodies);
-
-            _mesh = BuildMeshTest(ref bodies, 30f);
-
-            //var meshCopy = new MeshCell[_mesh.Length];
-            //Array.Copy(_mesh, meshCopy, _mesh.Length);
-
-            //_rawMesh = meshCopy;
-
-            //blocks = BlockCount(_mesh.Length);
-
-            //gpu.FreeAll();
-
-            //var gpuInBodiesMesh = gpu.Allocate(bodies);
-            //var gpuInMesh = gpu.Allocate(_mesh);
-            //var gpuOutMesh = gpu.Allocate(_mesh);
-            //int[] meshBods = Enumerable.Repeat(-1, bodies.Length).ToArray();
-            //var gpuOutMeshBods = gpu.Allocate(meshBods);
-
-            //gpu.CopyToDevice(bodies, gpuInBodiesMesh);
-            //gpu.CopyToDevice(_mesh, gpuInMesh);
-            //gpu.CopyToDevice(meshBods, gpuOutMeshBods);
-
-            //gpu.Launch(blocks, threadsPerBlock).PopulateMesh(gpuInBodiesMesh, gpuInMesh, gpuOutMesh, gpuOutMeshBods);
-
-            //gpu.CopyFromDevice(gpuOutMesh, _mesh);
-            //gpu.CopyFromDevice(gpuOutMeshBods, meshBods);
-
-            //gpu.FreeAll();
+            _mesh = BuildMesh(ref bodies, 30f);
 
             Console.WriteLine("Populate: " + gpu.StopTimer());
-
-
-            // gpu.StartTimer();
-
-            //// ShrinkMesh(_mesh, meshBods, ref bodies);
-
-            // Console.WriteLine("Prep: " + gpu.StopTimer());
-
 
             if (_mesh.Length != _meshBodies.GetLength(0))
             {
@@ -246,214 +197,39 @@ namespace NBodies.Physics
             return blocks;
         }
 
-        private MeshCell[] GetNewMesh(Body[] bodies)
+        private MeshCell[] BuildMesh(ref Body[] bodies, float cellSize)
         {
-            float cellSize = 30f;
-
-            var maxX = bodies.Max(b => b.LocX) + cellSize;
-            var minX = bodies.Min(b => b.LocX);
-
-            var maxY = bodies.Max(b => b.LocY) + cellSize;
-            var minY = bodies.Min(b => b.LocY);
-
-
-            Console.WriteLine($@"MinX: { minX } MaxX: { maxX } ");
-            Console.WriteLine($@"MinY: { minY } MaxY: { maxY } ");
-
-            int cellsToOrig = 0;
-
-            cellsToOrig = (int)(maxX / cellSize);
-            if ((cellsToOrig * cellSize) < maxX)
-            {
-                maxX = cellsToOrig * cellSize + cellSize;
-            }
-            else
-            {
-                maxX = cellsToOrig * cellSize;
-            }
-
-            cellsToOrig = (int)(minX / cellSize);
-            if ((cellsToOrig * cellSize) > minX)
-            {
-                minX = cellsToOrig * cellSize - cellSize;
-            }
-            else
-            {
-                minX = cellsToOrig * cellSize;
-            }
-
-            cellsToOrig = (int)(maxY / cellSize);
-            if ((cellsToOrig * cellSize) < maxY)
-            {
-                maxY = cellsToOrig * cellSize + cellSize;
-            }
-            else
-            {
-                maxY = cellsToOrig * cellSize;
-            }
-
-            cellsToOrig = (int)(minY / cellSize);
-            if ((cellsToOrig * cellSize) > minY)
-            {
-                minY = cellsToOrig * cellSize - cellSize;
-            }
-            else
-            {
-                minY = cellsToOrig * cellSize;
-            }
-
-            Console.WriteLine($@"MinX: { minX } MaxX: { maxX } ");
-            Console.WriteLine($@"MinY: { minY } MaxY: { maxY } ");
-
-            float cellRadius = 0;
-            //int nodes = 20; //100;
-            int cellsPerRow = 0; //100;
-
-            float meshSize = 0;
-
-            var wX = maxX - minX;
-            var wY = maxY - minY;
-
-            if (wX > wY)
-            {
-                meshSize = wX;
-            }
-            else
-            {
-                meshSize = wY;
-            }
-
-            cellsPerRow = (int)(meshSize / cellSize);
-            cellsPerRow++;
-
-            cellRadius = cellSize / 2f;
-
-            float curX = minX;
-            float curY = minY;
-
-            MeshCell[] mesh = new MeshCell[cellsPerRow * cellsPerRow];
-
-            int rightSteps = 0;
-            int downSteps = -1;
-
-            for (int i = 0; i < cellsPerRow * cellsPerRow; i++)
-            {
-                mesh[i].LocX = curX;
-                mesh[i].LocY = curY;
-                mesh[i].Mass = 0f;
-                mesh[i].BodCount = 0;
-                mesh[i].Size = cellSize;
-
-                mesh[i].Top = mesh[i].LocY + cellRadius;
-                mesh[i].Bottom = mesh[i].LocY - cellRadius;
-                mesh[i].Left = mesh[i].LocX - cellRadius;
-                mesh[i].Right = mesh[i].LocX + cellRadius;
-
-                curX += cellSize;
-                rightSteps++;
-
-                if (rightSteps == cellsPerRow)
-                {
-                    curX = minX;
-                    rightSteps = 0;
-
-                    curY += cellSize;
-                    downSteps++;
-                }
-
-            }
-
-            return mesh;
-        }
-
-        private MeshCell[] BuildMeshTest(ref Body[] bodies, float cellSize)
-        {
-            List<MeshCell> mesh = new List<MeshCell>();
+            var meshList = new List<MeshCell>();
             int[] meshBodies = new int[bodies.Length];
+            var meshDict = new Dictionary<PointF, MeshCell>();
+            int cellIdx = 0;
 
             for (int b = 0; b < bodies.Length; b++)
             {
                 var body = bodies[b];
 
-                int cellIdx = FindCellIdx(mesh, body);
+                //  X\Y  \ cellSize = n;
+                //  wholeNum(n) * cellSize = cellLoc
 
-                if (cellIdx != -1)
-                {
-                    var cell = mesh[cellIdx];
+                float cellRad = cellSize / 2f;
 
-                    cell.Mass += body.Mass;
-                    cell.CmX += body.Mass * body.LocX;
-                    cell.CmY += body.Mass * body.LocY;
-                    cell.BodCount++;
+                float cellX;
+                float cellY;
 
-                    mesh[cellIdx] = cell;
-                    meshBodies[b] = cellIdx;
-                }
-                else
+                var divX = body.LocX / cellSize;
+                var divY = body.LocY / cellSize;
+
+                int divRX = (int)Math.Round(divX, MidpointRounding.AwayFromZero);
+                int divRY = (int)Math.Round(divY, MidpointRounding.AwayFromZero);
+
+                cellX = divRX * cellSize;
+                cellY = divRY * cellSize;
+
+                var cellLoc = new PointF(cellX, cellY);
+
+                if (!meshDict.ContainsKey(cellLoc))
                 {
                     var newCell = new MeshCell();
-
-                    float cellX;
-                    float cellY;
-                    int cellsToOrig;
-                    float edge;
-                    float cellRad = cellSize / 2f;
-
-                    if (body.LocX < 0)
-                    {
-                        cellsToOrig = (int)(body.LocX / cellSize);
-                        edge = cellsToOrig * cellSize;
-                        if ((edge - cellRad) > body.LocX)
-                        {
-                            cellX = edge - cellSize;
-                        }
-                        else
-                        {
-                            cellX = edge;
-                        }
-
-                    }
-                    else
-                    {
-                        cellsToOrig = (int)(body.LocX / cellSize);
-                        edge = cellsToOrig * cellSize;
-                        if ((edge + cellRad) < body.LocX)
-                        {
-                            cellX = edge + cellSize;
-                        }
-                        else
-                        {
-                            cellX = edge;
-                        }
-                    }
-
-
-                    if (body.LocY < 0)
-                    {
-                        cellsToOrig = (int)(body.LocY / cellSize);
-                        edge = cellsToOrig * cellSize;
-                        if ((edge - cellRad) > body.LocY)
-                        {
-                            cellY = edge - cellSize;
-                        }
-                        else
-                        {
-                            cellY = edge;
-                        }
-                    }
-                    else
-                    {
-                        cellsToOrig = (int)(body.LocY / cellSize);
-                        edge = cellsToOrig * cellSize;
-                        if ((edge + cellRad) < body.LocY)
-                        {
-                            cellY = edge + cellSize;
-                        }
-                        else
-                        {
-                            cellY = edge;
-                        }
-                    }
 
                     newCell.LocX = cellX;
                     newCell.LocY = cellY;
@@ -468,15 +244,33 @@ namespace NBodies.Physics
                     newCell.CmX += body.Mass * body.LocX;
                     newCell.CmY += body.Mass * body.LocY;
                     newCell.BodCount = 1;
+                    newCell.ID = cellIdx;
 
-                    mesh.Add(newCell);
+                    meshList.Add(newCell);
+                    meshDict.Add(cellLoc, newCell);
+                    meshBodies[b] = cellIdx;
+                    bodies[b].MeshID = cellIdx;
 
-                    meshBodies[b] = mesh.Count - 1;
+                    cellIdx++;
+                }
+                else
+                {
+                    var cell = meshDict[cellLoc];
+
+                    cell.Mass += body.Mass;
+                    cell.CmX += body.Mass * body.LocX;
+                    cell.CmY += body.Mass * body.LocY;
+                    cell.BodCount++;
+
+                    meshList[cell.ID] = cell;
+                    meshDict[cellLoc] = cell;
+                    meshBodies[b] = cell.ID;
+                    bodies[b].MeshID = cell.ID;
                 }
 
             }
 
-            var meshArr = mesh.ToArray();
+            var meshArr = meshList.ToArray();
 
             for (int m = 0; m < meshArr.Length; m++)
             {
@@ -487,36 +281,7 @@ namespace NBodies.Physics
             ParseBodList(meshArr, meshBodies, ref bodies);
 
             return meshArr;
-
         }
-
-        private int FindCellIdx(List<MeshCell> mesh, Body body)
-        {
-            for (int c = 0; c < mesh.Count; c++)
-            {
-                if (body.LocX < mesh[c].Right && body.LocX > mesh[c].Left && body.LocY > mesh[c].Top && body.LocY < mesh[c].Bottom)
-                {
-                    return c;
-                }
-            }
-
-            return -1;
-        }
-
-        //private MeshCell FindCell(List<MeshCell> mesh, Body body)
-        //{
-        //    for (int c = 0; c < mesh.Count; c++)
-        //    {
-        //        if (body.LocX < mesh[c].Right && body.LocX > mesh[c].Left && body.LocY > mesh[c].Top && body.LocY < mesh[c].Bottom)
-        //        {
-        //            return mesh[c];
-        //        }
-        //    }
-
-        //    var noMesh = new MeshCell();
-        //    noMesh.BodCount = -1;
-        //    return noMesh;
-        //}
 
         private void ParseBodList(MeshCell[] mesh, int[] meshBods, ref Body[] bodies)
         {
@@ -550,83 +315,10 @@ namespace NBodies.Physics
             // Also builds the mesh/body index list.
             for (int m = 0; m < mesh.Length; m++)
             {
-                if (mesh[m].BodCount > 0)
-                {
-                    meshBodList.Add(meshBodDict[m]); // Build a list of body indexes using the dictionary from above.
-                }
-            }
-
-            // Iterate the mesh/body index list and update each body with their mesh ID.
-            for (int i = 0; i < meshBodList.Count; i++)
-            {
-                foreach (int bodIdx in meshBodList[i])
-                {
-                    if (bodIdx != -1)
-                    {
-                        bodies[bodIdx].MeshID = i;
-                    }
-                }
+                meshBodList.Add(meshBodDict[m]); // Build a list of body indexes using the dictionary from above.
             }
 
             _meshBodies = CreateRectangularArray(meshBodList);
-        }
-
-
-        private void ShrinkMesh(MeshCell[] meshes, int[] meshBods, ref Body[] bodies)
-        {
-            var meshList = new List<MeshCell>();
-            var meshBodDict = new Dictionary<int, int[]>();
-            var meshBodList = new List<int[]>();
-            int maxCount = meshes.Max(m => m.BodCount);
-
-            // Since the body index array must be a fixed length, 
-            // we need to track the current element index for each mesh.
-            int[] curIdxCount = new int[meshes.Length]; // Number of body indexes added to each mesh.
-
-            // Populate a dictionary with the Mesh indexes and an array of indexes for their contained Bodies.
-            // Key = MeshID
-            // Value = int[] of body indexes
-            for (int b = 0; b < meshBods.Length; b++)
-            {
-                if (meshBods[b] != -1)
-                {
-                    if (!meshBodDict.ContainsKey(meshBods[b]))
-                    {
-                        meshBodDict.Add(meshBods[b], Enumerable.Repeat(-1, maxCount).ToArray());
-                    }
-                    // Add the body index to the dictionary at the current index.     
-                    var idx = curIdxCount[meshBods[b]];
-                    meshBodDict[meshBods[b]][idx] = b;
-                    curIdxCount[meshBods[b]]++; // Increment the current index.
-                }
-            }
-
-            // Itereate the meshes and collect only the ones which contain bodies.
-            // Also builds the mesh/body index list.
-            for (int m = 0; m < meshes.Length; m++)
-            {
-                if (meshes[m].BodCount > 0)
-                {
-                    meshList.Add(meshes[m]);
-                    meshBodList.Add(meshBodDict[m]); // Build a list of body indexes using the dictionary from above.
-                }
-            }
-
-            // Iterate the mesh/body index list and update each body with their mesh ID.
-            for (int i = 0; i < meshBodList.Count; i++)
-            {
-                foreach (int bodIdx in meshBodList[i])
-                {
-                    if (bodIdx != -1)
-                    {
-                        bodies[bodIdx].MeshID = i;
-                    }
-                }
-            }
-
-            // Turn the mesh list into and array, and convert the mesh/body index list into a GPU compatible 2d array.
-            _mesh = meshList.ToArray();
-            _meshBodies = CreateRectangularArray(meshBodList);//, maxCount);
         }
 
         // Converts a List<int[]> into a 2d array.
@@ -649,47 +341,6 @@ namespace NBodies.Physics
                 }
             }
             return ret;
-        }
-
-        [Cudafy]
-        public static void PopulateMesh(GThread gpThread, Body[] inBodies, MeshCell[] inMeshes, MeshCell[] outMeshes, int[] outMeshBods)
-        {
-            int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
-
-            if (a > inMeshes.Length)
-                return;
-
-            MeshCell outMesh = inMeshes[a];
-
-            for (int b = 0; b < inBodies.Length; b++)
-            {
-                Body body = inBodies[b];
-
-                if (body.LocX < outMesh.Right && body.LocX > outMesh.Left && body.LocY < outMesh.Top && body.LocY > outMesh.Bottom)
-                {
-                    outMesh.Mass += body.Mass;
-                    outMesh.CmX += body.Mass * body.LocX;
-                    outMesh.CmY += body.Mass * body.LocY;
-                    outMesh.BodCount++;
-
-                    if (outMeshBods[b] == -1)
-                    {
-                        outMeshBods[b] = a;
-                    }
-                }
-
-            }
-
-            gpThread.SyncThreads();
-
-            if (outMesh.BodCount > 0)
-            {
-                outMesh.CmX = outMesh.CmX / (float)outMesh.Mass;
-                outMesh.CmY = outMesh.CmY / (float)outMesh.Mass;
-            }
-
-
-            outMeshes[a] = outMesh;
         }
 
         [Cudafy]

@@ -10,6 +10,7 @@ namespace NBodies.Physics
     [Cudafy(eCudafyType.Struct)]
     public struct MeshCell
     {
+        public int ID;
         public float LocX;
         public float LocY;
         public float CmX;

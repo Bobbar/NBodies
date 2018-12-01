@@ -9,7 +9,6 @@ namespace NBodies.Physics
     public interface IPhysicsCalc
     {
         MeshCell[] CurrentMesh { get; }
-        MeshCell[] RawMesh { get; }
 
         int[,] MeshBodies { get; }
 
