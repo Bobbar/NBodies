@@ -213,35 +213,33 @@ namespace NBodies.Rendering
                  }
 
 
-                 //if (ShowForce)
-                 //{
-                 //    for (int i = 0; i < bodies.Length; i++)
-                 //    {
-                 //        var body = bodies[i];
+                 if (ShowForce)
+                 {
+                     for (int i = 0; i < bodies.Length; i++)
+                     {
+                         var body = bodies[i];
+                         var f = new PointF(body.ForceX, body.ForceY);
+                         var bloc = new PointF(body.LocX, body.LocY);
+                         f = f.Multi(0.01f);
+                         var floc = bloc.Add(f);
+                         _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
 
-                 //        var f = new PointF(body.ForceX, body.ForceY);
-                 //        //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
-                 //        var bloc = new PointF(body.LocX, body.LocY);
-                 //        f = f.Multi(0.01f);
-                 //        var floc = bloc.Add(f);
-                 //        _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
-
-                 //    }
-                 //}
+                     }
+                 }
 
 
                  if (BodyManager.FollowSelected)
                  {
 
-                     if (ShowForce)
-                     {
-                         var f = new PointF(followBody.ForceX, followBody.ForceY);
-                         //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
-                         var bloc = new PointF(followBody.LocX, followBody.LocY);
-                         f = f.Multi(0.1f);
-                         var floc = bloc.Add(f);
-                         _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
-                     }
+                     //if (ShowForce)
+                     //{
+                     //    var f = new PointF(followBody.ForceX, followBody.ForceY);
+                     //    //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
+                     //    var bloc = new PointF(followBody.LocX, followBody.LocY);
+                     //    f = f.Multi(0.1f);
+                     //    var floc = bloc.Add(f);
+                     //    _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                     //}
 
                      if (ShowPath)
                      {
@@ -287,15 +285,22 @@ namespace NBodies.Rendering
 
         private static void DrawMesh(PointF finalOffset)
         {
-            int pSize = 2;
-            float pOffset = 2 / 2f;
+            float pSize = 1.6f;
+            float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
+            var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));
 
             foreach (var m in BodyManager.Mesh)
             {
+                if (!_cullTangle.Contains(m.LocX, m.LocY))
+                    continue;
+
+                var meshX = m.LocX - m.Size / 2 + finalOffset.X;
+                var meshY = m.LocY - m.Size / 2 + finalOffset.Y;
+
                 _buffer.Graphics.DrawRectangle(meshPen, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
-               // _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
-                _buffer.Graphics.FillEllipse(Brushes.LawnGreen, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
+                // _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
+                _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
                 //  _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
         }

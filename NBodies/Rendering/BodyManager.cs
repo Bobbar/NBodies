@@ -949,7 +949,7 @@ namespace NBodies.Rendering
         public static void PrintInfo(this Body body)
         {
             MeshCell mesh = new MeshCell();
-            if (body.MeshID != -1 && (body.MeshID <= Mesh.Length))
+            if (body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
             {
                 mesh = Mesh[body.MeshID];
             }
@@ -962,12 +962,7 @@ MeshID: { body.MeshID }
     Mass: { mesh.Mass }
     Cm (X,Y): { mesh.CmX }, { mesh.CmY }
     Loc (X,Y): { mesh.LocX }, { mesh.LocY }
-    Top: { mesh.Top }
-    Bottom: { mesh.Bottom }
-    Left: { mesh.Left }
-    Right: { mesh.Right }
 
-Test: { body.Test }
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }
 Size: { body.Size }

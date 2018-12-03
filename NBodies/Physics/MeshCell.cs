@@ -18,10 +18,10 @@ namespace NBodies.Physics
         public double Mass;
         public int BodCount;
         public float Size;
-        public float Top;
-        public float Bottom;
-        public float Left;
-        public float Right;
+        //public float Top;
+        //public float Bottom;
+        //public float Left;
+        //public float Right;
 
     }
 }

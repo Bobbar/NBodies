@@ -507,7 +507,7 @@ namespace NBodies
             {
                 if (_CDown)
                 {
-                    MainLoop.CellSize += 0.5f;
+                    MainLoop.CellSize += 1.0f;
                     cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
                 }
 
@@ -530,7 +530,7 @@ namespace NBodies
             {
                 if (_CDown)
                 {
-                    MainLoop.CellSize -= 0.5f;
+                    MainLoop.CellSize -= 1.0f;
                     cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
                 }
 

@@ -122,7 +122,7 @@ namespace NBodies.Rendering
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static int _skippedFrames = 0;
-        private const int _framesToSkip = 20;
+        private const int _framesToSkip = 10;
 
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();

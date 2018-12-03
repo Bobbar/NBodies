@@ -1,12 +1,11 @@
 ﻿using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
-using System;
-using System.Diagnostics;
 using NBodies.Rendering;
-using System.Linq;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
+using System.Diagnostics;
+using System.Linq;
 
 namespace NBodies.Physics
 {
@@ -127,19 +126,22 @@ namespace NBodies.Physics
             return newcode;
         }
 
+        private static Stopwatch timer = new Stopwatch();
+        private static int its = 0;
+
         public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
         {
             float viscosity = 10.0f;//20.0f;//40.0f;//5.0f;//7.5f;
             //float cellSize = 5f;//30f;
-            float particleToParticlepDist = (1.41f * cellSize) / 2f;//22.0f;
+            float particleToParticlepDist = (1.6f * cellSize) / 2f;//22.0f;
 
             int blocks = 0;
 
-            gpu.StartTimer();
+            timer.Restart();
 
             _mesh = BuildMesh(ref bodies, cellSize);
 
-            Console.WriteLine("Populate: " + gpu.StopTimer());
+            Console.WriteLine(timer.ElapsedMilliseconds);
 
             if (_mesh.Length != _meshBodies.GetLength(0))
             {
@@ -199,24 +201,29 @@ namespace NBodies.Physics
             return blocks;
         }
 
+        /// <summary>
+        /// Builds the particle mesh and the mesh-body index for the current field.
+        /// </summary>
+        /// <param name="bodies">Array of bodies.</param>
+        /// <param name="cellSize">The width/height of each cell in the mesh.</param>
         private MeshCell[] BuildMesh(ref Body[] bodies, float cellSize)
         {
-            var meshList = new List<MeshCell>();
-            int[] meshBodies = new int[bodies.Length];
-            var meshDict = new Dictionary<PointF, MeshCell>();
+            // Dictionary to hold the current mesh cells for fast lookups.
+            var meshDict = new Dictionary<string, MeshCell>();
+
+            // Current cell index.
             int cellIdx = 0;
 
             for (int b = 0; b < bodies.Length; b++)
             {
+                // Calculate the cell position from the current body position.
+                // Cell Pos = Round(Body Pos / cellSize) * cellSize
+                // This formula aligns the mesh cells with the 0,0 origin.
+
                 var body = bodies[b];
 
-                //  X\Y  \ cellSize = n;
-                //  wholeNum(n) * cellSize = cellLoc
-
-                float cellRad = cellSize / 2f;
-
-                float cellX;
-                float cellY;
+                int cellX;
+                int cellY;
 
                 var divX = body.LocX / cellSize;
                 var divY = body.LocY / cellSize;
@@ -224,12 +231,14 @@ namespace NBodies.Physics
                 int divRX = (int)Math.Round(divX, MidpointRounding.AwayFromZero);
                 int divRY = (int)Math.Round(divY, MidpointRounding.AwayFromZero);
 
-                cellX = divRX * cellSize;
-                cellY = divRY * cellSize;
+                cellX = (int)(divRX * cellSize);
+                cellY = (int)(divRY * cellSize);
 
-                var cellLoc = new PointF(cellX, cellY);
+                // Concant the x/y coords to create a unique string.
+                // Strings are much faster to hash than a Point object, which was used previously.
+                var cellUID = cellX.ToString() + cellY.ToString();
 
-                if (!meshDict.ContainsKey(cellLoc))
+                if (!meshDict.ContainsKey(cellUID))
                 {
                     var newCell = new MeshCell();
 
@@ -237,93 +246,78 @@ namespace NBodies.Physics
                     newCell.LocY = cellY;
                     newCell.Size = cellSize;
 
-                    newCell.Left = newCell.LocX - cellRad;
-                    newCell.Right = newCell.LocX + cellRad;
-                    newCell.Top = newCell.LocY - cellRad;
-                    newCell.Bottom = newCell.LocY + cellRad;
-
                     newCell.Mass += body.Mass;
                     newCell.CmX += body.Mass * body.LocX;
                     newCell.CmY += body.Mass * body.LocY;
                     newCell.BodCount = 1;
                     newCell.ID = cellIdx;
 
-                    meshList.Add(newCell);
-                    meshDict.Add(cellLoc, newCell);
-                    meshBodies[b] = cellIdx;
+                    meshDict.Add(cellUID, newCell);
                     bodies[b].MeshID = cellIdx;
 
                     cellIdx++;
                 }
                 else
                 {
-                    var cell = meshDict[cellLoc];
+                    var cell = meshDict[cellUID];
 
                     cell.Mass += body.Mass;
                     cell.CmX += body.Mass * body.LocX;
                     cell.CmY += body.Mass * body.LocY;
                     cell.BodCount++;
 
-                    meshList[cell.ID] = cell;
-                    meshDict[cellLoc] = cell;
-                    meshBodies[b] = cell.ID;
+                    meshDict[cellUID] = cell;
                     bodies[b].MeshID = cell.ID;
                 }
-
             }
 
-            var meshArr = meshList.ToArray();
+            var meshArr = meshDict.Values.ToArray();
 
+            // Calculate the final center of mass for each cell.
             for (int m = 0; m < meshArr.Length; m++)
             {
                 meshArr[m].CmX = meshArr[m].CmX / (float)meshArr[m].Mass;
                 meshArr[m].CmY = meshArr[m].CmY / (float)meshArr[m].Mass;
             }
 
-            ParseBodList(meshArr, meshBodies, ref bodies);
+            // Build the 2D index from the bodies array.
+            BuildMeshBodyIndex(meshArr, bodies);
 
             return meshArr;
         }
 
-        private void ParseBodList(MeshCell[] mesh, int[] meshBods, ref Body[] bodies)
+        private void BuildMeshBodyIndex(MeshCell[] mesh, Body[] bodies)
         {
             var meshBodDict = new Dictionary<int, int[]>();
-            var meshBodList = new List<int[]>();
             int maxCount = mesh.Max(m => m.BodCount);
+            var paddedArray = Enumerable.Repeat(-1, maxCount).ToArray();
 
-            // Since the body index array must be a fixed length, 
+            // Since the body index array must be a fixed length,
             // we need to track the current element index for each mesh.
             int[] curIdxCount = new int[mesh.Length]; // Number of body indexes added to each mesh.
 
             // Populate a dictionary with the Mesh indexes and an array of indexes for their contained Bodies.
             // Key = MeshID
             // Value = int[] of body indexes
-            for (int b = 0; b < meshBods.Length; b++)
+            for (int b = 0; b < bodies.Length; b++)
             {
-                if (meshBods[b] != -1)
+                if (!meshBodDict.ContainsKey(bodies[b].MeshID))
                 {
-                    if (!meshBodDict.ContainsKey(meshBods[b]))
-                    {
-                        meshBodDict.Add(meshBods[b], Enumerable.Repeat(-1, maxCount).ToArray());
-                    }
-                    // Add the body index to the dictionary at the current index.     
-                    var idx = curIdxCount[meshBods[b]];
-                    meshBodDict[meshBods[b]][idx] = b;
-                    curIdxCount[meshBods[b]]++; // Increment the current index.
+                    var bodArray = new int[maxCount];
+                    Array.Copy(paddedArray, bodArray, maxCount);
+                    meshBodDict.Add(bodies[b].MeshID, bodArray);
                 }
+
+                // Add the body index to the dictionary at the current index.
+                var idx = curIdxCount[bodies[b].MeshID];
+                meshBodDict[bodies[b].MeshID][idx] = b;
+                curIdxCount[bodies[b].MeshID]++; // Increment the current index.
             }
 
-            // Itereate the meshes and collect only the ones which contain bodies.
-            // Also builds the mesh/body index list.
-            for (int m = 0; m < mesh.Length; m++)
-            {
-                meshBodList.Add(meshBodDict[m]); // Build a list of body indexes using the dictionary from above.
-            }
-
-            _meshBodies = CreateRectangularArray(meshBodList);
+            _meshBodies = CreateRectangularArray(meshBodDict.Values.ToList());
         }
 
-        // Converts a List<int[]> into a 2d array.
+        // Converts a List<int[]> into a 2D array.
         // Credit: https://stackoverflow.com/a/9775057
         private T[,] CreateRectangularArray<T>(IList<T[]> arrays)
         {
@@ -391,9 +385,9 @@ namespace NBodies.Physics
             for (int b = 0; b < len; b++)
             {
                 MeshCell mesh = inMesh[b];
-                
-                distX = mesh.CmX - outBody.LocX;
-                distY = mesh.CmY - outBody.LocY;
+
+                distX = mesh.LocX - outBody.LocX;
+                distY = mesh.LocY - outBody.LocY;
                 dist = (distX * distX) + (distY * distY);
 
                 float maxDist = ppDist;
@@ -412,7 +406,6 @@ namespace NBodies.Physics
                     outBody.ForceTot += force;
                     outBody.ForceX += (force * distX / distSqrt);
                     outBody.ForceY += (force * distY / distSqrt);
-
                 }
                 else
                 {
@@ -501,8 +494,8 @@ namespace NBodies.Physics
                 {
                     MeshCell mesh = inMesh[b];
 
-                    distX = mesh.CmX - outBody.LocX;
-                    distY = mesh.CmY - outBody.LocY;
+                    distX = mesh.LocX - outBody.LocX;
+                    distY = mesh.LocY - outBody.LocY;
                     dist = (distX * distX) + (distY * distY);
 
                     float maxDist = ppDist;
@@ -560,7 +553,6 @@ namespace NBodies.Physics
 
                                             outBody.ForceX -= viscVelo_diffX;
                                             outBody.ForceY -= viscVelo_diffY;
-
                                         }
                                         else if (outBody.InRoche == 1 & inBody.InRoche == 0)
                                         {
@@ -595,7 +587,6 @@ namespace NBodies.Physics
                                             }
                                         }
                                     }
-
                                 }
                             }
                         }
@@ -625,10 +616,8 @@ namespace NBodies.Physics
                 outBody.LocX += outBody.SpeedX * dt;
                 outBody.LocY += outBody.SpeedY * dt;
 
-
                 if (outBody.Lifetime > 0.0f)
                     outBody.Age += (dt * 4.0f);
-
             }
             else if (drift == 0) // Kick
             {
@@ -654,7 +643,6 @@ namespace NBodies.Physics
             outBodies[a] = outBody;
         }
 
-
         [Cudafy]
         public static Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY)
         {
@@ -676,6 +664,5 @@ namespace NBodies.Physics
 
             return bodyA;
         }
-
     }
 }
