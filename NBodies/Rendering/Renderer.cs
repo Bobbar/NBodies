@@ -58,7 +58,7 @@ namespace NBodies.Rendering
         private static Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
         private static RectangleF _cullTangle;
 
-        private static Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
+        private static Dictionary<int, SolidBrush> _brushCache = new Dictionary<int, SolidBrush>();
 
         public static void Init(PictureBox imageControl)
         {
@@ -100,8 +100,6 @@ namespace NBodies.Rendering
             _buffer.Graphics.ScaleTransform(RenderVars.CurrentScale, RenderVars.CurrentScale);
             _prevScale = RenderVars.CurrentScale;
         }
-
-        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
 
         public async static Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
         {
@@ -191,12 +189,14 @@ namespace NBodies.Rendering
                          }
 
                          // Cache body brushes for faster lookup and less GC thrashing.
-                         if (!_brushCache.ContainsKey(bodyColor))
+                         int brushID = bodyColor.ToArgb();
+
+                         if (!_brushCache.ContainsKey(brushID))
                          {
-                             _brushCache.Add(bodyColor, new SolidBrush(bodyColor));
+                             _brushCache.Add(brushID, new SolidBrush(bodyColor));
                          }
 
-                         var bodyBrush = _brushCache[bodyColor];
+                         var bodyBrush = _brushCache[brushID];
 
                          var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
@@ -301,7 +301,7 @@ namespace NBodies.Rendering
                 _buffer.Graphics.DrawRectangle(meshPen, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
                 // _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
                 _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
-               // _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                // _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
         }
 
@@ -312,7 +312,6 @@ namespace NBodies.Rendering
             _buffer.Graphics.DrawLine(Pens.Red, orig.X, orig.Y - 3000, orig.X, orig.Y + 3000);
             _buffer.Graphics.DrawLine(Pens.Red, orig.X - 3000, orig.Y, orig.X + 3000, orig.Y);
         }
-
 
         private static void DrawOrbit(PointF[] points, PointF finalOffset)
         {

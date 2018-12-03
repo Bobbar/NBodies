@@ -127,7 +127,6 @@ namespace NBodies.Physics
         }
 
         private static Stopwatch timer = new Stopwatch();
-        private static int its = 0;
 
         public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
         {
