@@ -17,6 +17,7 @@ namespace NBodies.Rendering
         public static bool Trails = false;
         public static bool ClipView = true;
         public static bool ShowForce = false;
+        public static bool ShowAllForce = false;
         public static bool ShowPath = false;
         public static bool ShowMesh = false;
         public static float PressureScaleMax = 150;
@@ -213,13 +214,17 @@ namespace NBodies.Rendering
                  }
 
 
-                 if (ShowForce)
+                 if (ShowAllForce)
                  {
                      for (int i = 0; i < bodies.Length; i++)
                      {
                          var body = bodies[i];
-                         var f = new PointF(body.ForceX, body.ForceY);
                          var bloc = new PointF(body.LocX, body.LocY);
+
+                         if (!_cullTangle.Contains(body.LocX, body.LocY))
+                             continue;
+
+                         var f = new PointF(body.ForceX, body.ForceY);
                          f = f.Multi(0.01f);
                          var floc = bloc.Add(f);
                          _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
@@ -231,15 +236,15 @@ namespace NBodies.Rendering
                  if (BodyManager.FollowSelected)
                  {
 
-                     //if (ShowForce)
-                     //{
-                     //    var f = new PointF(followBody.ForceX, followBody.ForceY);
-                     //    //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
-                     //    var bloc = new PointF(followBody.LocX, followBody.LocY);
-                     //    f = f.Multi(0.1f);
-                     //    var floc = bloc.Add(f);
-                     //    _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
-                     //}
+                     if (ShowForce)
+                     {
+                         var f = new PointF(followBody.ForceX, followBody.ForceY);
+                         //  var f = new PointF(followBody.SpeedX, followBody.SpeedY);
+                         var bloc = new PointF(followBody.LocX, followBody.LocY);
+                         f = f.Multi(0.1f);
+                         var floc = bloc.Add(f);
+                         _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
+                     }
 
                      if (ShowPath)
                      {

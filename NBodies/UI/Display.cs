@@ -15,6 +15,9 @@ namespace NBodies
         private bool _DDown = false;
         private bool _CDown = false;
 
+        private bool _hideToolbar = false;
+        private float _ogToolbarHeight;
+
         private int _selectedUid = -1;
         private int _mouseId = -1;
         private bool _mouseRightDown = false;
@@ -273,6 +276,24 @@ namespace NBodies
                     cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
                     cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
                     cellSizeOver.Show();
+                    break;
+
+                case Keys.F11:
+
+                    if (!_hideToolbar)
+                    {
+                        _ogToolbarHeight = RootLayoutTable.RowStyles[0].Height;
+                        RootLayoutTable.RowStyles[0].Height = 0;
+                        this.FormBorderStyle = FormBorderStyle.None;
+                        _hideToolbar = true;
+                    }
+                    else
+                    {
+                        RootLayoutTable.RowStyles[0].Height = _ogToolbarHeight;
+                        this.FormBorderStyle = FormBorderStyle.Sizable;
+                        _hideToolbar = false;
+                    }
+                   
                     break;
             }
         }
@@ -758,6 +779,11 @@ namespace NBodies
         private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             Renderer.ShowMesh = showMeshToolStripMenuItem.Checked;
+        }
+
+        private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            Renderer.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
         }
     }
 }

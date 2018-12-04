@@ -140,6 +140,7 @@ namespace NBodies.Physics
 
             _mesh = BuildMesh(ref bodies, cellSize);
 
+            // Console.WriteLine($@"{timer.ElapsedMilliseconds}");
             Console.WriteLine($@"Build ({_mesh.Length}): {timer.ElapsedMilliseconds}");
 
             blocks = BlockCount(bodies.Length);
@@ -153,7 +154,7 @@ namespace NBodies.Physics
             gpu.CopyToDevice(_mesh, gpuMesh);
             gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
 
-            gpu.StartTimer();
+            // gpu.StartTimer();
 
             if (MainLoop.LeapFrog)
             {
@@ -169,7 +170,7 @@ namespace NBodies.Physics
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, timestep, viscosity, 3, particleToParticleDist);
             }
 
-            Console.WriteLine("Kern: " + gpu.StopTimer());
+            // Console.WriteLine("Kern: " + gpu.StopTimer());
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
@@ -195,6 +196,26 @@ namespace NBodies.Physics
             return blocks;
         }
 
+        static int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
+        static int[] S = new int[] { 1, 2, 4, 8 };
+
+        private int MortonNumber(int x, int y)
+        {
+            x &= 0x0000ffff;
+            x = (x | (x << S[3])) & B[3];
+            x = (x | (x << S[2])) & B[2];
+            x = (x | (x << S[1])) & B[1];
+            x = (x | (x << S[0])) & B[0];
+
+            y &= 0x0000ffff;
+            y = (y | (y << S[3])) & B[3];
+            y = (y | (y << S[2])) & B[2];
+            y = (y | (y << S[1])) & B[1];
+            y = (y | (y << S[0])) & B[0];
+
+            return x | (y << 1);
+        }
+
         /// <summary>
         /// Builds the particle mesh and the mesh-body index for the current field.
         /// </summary>
@@ -203,7 +224,7 @@ namespace NBodies.Physics
         private MeshCell[] BuildMesh(ref Body[] bodies, float cellSize)
         {
             // Dictionary to hold the current mesh cells for fast lookups.
-            var meshDict = new Dictionary<string, MeshCell>();
+            var meshDict = new Dictionary<int, MeshCell>();
 
             // Current cell index.
             int cellIdx = 0;
@@ -228,9 +249,9 @@ namespace NBodies.Physics
                 cellX = (int)(divRX * cellSize);
                 cellY = (int)(divRY * cellSize);
 
-                // Concant the x/y coords to create a unique string.
-                // Strings are much faster to hash than a Point object, which was used previously.
-                var cellUID = cellX.ToString() + cellY.ToString();
+                // Interleave the x/y coordinates to create a morton number; use this for cell UID. 
+                // This is done because hashing an integer is extremely fast.
+                var cellUID = MortonNumber(cellX, cellY);
 
                 if (!meshDict.ContainsKey(cellUID))
                 {

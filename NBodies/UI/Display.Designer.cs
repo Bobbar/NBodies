@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.RootLayoutTable = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -79,7 +79,8 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.tableLayoutPanel1.SuspendLayout();
+            this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
@@ -90,20 +91,20 @@
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.SuspendLayout();
             // 
-            // tableLayoutPanel1
+            // RootLayoutTable
             // 
-            this.tableLayoutPanel1.ColumnCount = 1;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Controls.Add(this.tableLayoutPanel2, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.panel1, 0, 1);
-            this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
-            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 2;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(1589, 815);
-            this.tableLayoutPanel1.TabIndex = 0;
+            this.RootLayoutTable.ColumnCount = 1;
+            this.RootLayoutTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.RootLayoutTable.Controls.Add(this.tableLayoutPanel2, 0, 0);
+            this.RootLayoutTable.Controls.Add(this.panel1, 0, 1);
+            this.RootLayoutTable.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.RootLayoutTable.Location = new System.Drawing.Point(0, 0);
+            this.RootLayoutTable.Name = "RootLayoutTable";
+            this.RootLayoutTable.RowCount = 2;
+            this.RootLayoutTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
+            this.RootLayoutTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.RootLayoutTable.Size = new System.Drawing.Size(1589, 815);
+            this.RootLayoutTable.TabIndex = 0;
             // 
             // tableLayoutPanel2
             // 
@@ -142,6 +143,7 @@
             this.rocheLimitToolStripMenuItem,
             this.leapfrogIntegratorToolStripMenuItem,
             this.showMeshToolStripMenuItem,
+            this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
@@ -222,7 +224,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -230,7 +232,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -238,7 +240,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -246,7 +248,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -254,7 +256,7 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -271,7 +273,7 @@
             // 
             this.showFollowBodyForce.CheckOnClick = true;
             this.showFollowBodyForce.Name = "showFollowBodyForce";
-            this.showFollowBodyForce.Size = new System.Drawing.Size(139, 22);
+            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
             this.showFollowBodyForce.Text = "Force Vector";
             this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
             // 
@@ -279,7 +281,7 @@
             // 
             this.showPredictOrbit.CheckOnClick = true;
             this.showPredictOrbit.Name = "showPredictOrbit";
-            this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
+            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
             this.showPredictOrbit.Text = "Orbit (Slow)";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
@@ -707,12 +709,20 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // allForceVectorsToolStripMenuItem
+            // 
+            this.allForceVectorsToolStripMenuItem.CheckOnClick = true;
+            this.allForceVectorsToolStripMenuItem.Name = "allForceVectorsToolStripMenuItem";
+            this.allForceVectorsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.allForceVectorsToolStripMenuItem.Text = "All Force Vectors";
+            this.allForceVectorsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.allForceVectorsToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1589, 815);
-            this.Controls.Add(this.tableLayoutPanel1);
+            this.Controls.Add(this.RootLayoutTable);
             this.DoubleBuffered = true;
             this.KeyPreview = true;
             this.MainMenuStrip = this.menuStrip1;
@@ -722,7 +732,7 @@
             this.Load += new System.EventHandler(this.DisplayForm_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
-            this.tableLayoutPanel1.ResumeLayout(false);
+            this.RootLayoutTable.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
             this.menuStrip1.ResumeLayout(false);
@@ -741,7 +751,7 @@
 
         #endregion
 
-        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
+        private System.Windows.Forms.TableLayoutPanel RootLayoutTable;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.PictureBox RenderBox;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
@@ -792,6 +802,7 @@
         private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem leapfrogIntegratorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
     }
 }
 
