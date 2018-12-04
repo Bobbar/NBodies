@@ -14,7 +14,6 @@ namespace NBodies.Rendering
     {
         public static Body[] Bodies = new Body[0];
         public static MeshCell[] Mesh = new MeshCell[0];
-        public static MeshCell[] RawMesh;
         public static int[,] MeshBodies;
 
         public static bool FollowSelected = false;
@@ -48,7 +47,7 @@ namespace NBodies.Rendering
         {
             if (Bodies.Length < 1) return;
 
-           // CullDistant();
+            // CullDistant();
 
             _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
@@ -80,7 +79,7 @@ namespace NBodies.Rendering
                 {
                     for (int b = 0; b < MeshBodies.GetLength(1); b++)
                     {
-                        if (MeshBodies[i,b] != -1)
+                        if (MeshBodies[i, b] != -1)
                         {
                             Bodies[MeshBodies[i, b]].Visible = 0;
                         }
@@ -441,6 +440,7 @@ namespace NBodies.Rendering
         /// 
         /// This variation tries to calculate a complete orbit instead of just advancing an N amount of steps.
         /// </summary>
+        /// 
         public static List<PointF> CalcPathCircle(Body body)
         {
             var points = new List<PointF>();
@@ -454,90 +454,32 @@ namespace NBodies.Rendering
             PointF loc = new PointF(body.LocX, body.LocY);
             PointF force = new PointF();
 
-            bool firstLoop = true;
-
-            // Define a circle of influence around the specified body.
-            // Bodies within this SOI are not included in orbit calculation.
-            // This is done to improve accuracy by ignoring the neighbors of
-            // a body within a large clump.
-            var soi = new Ellipse(new PointF(body.LocX, body.LocY), 10);
-
-            // This hashset will be used to cache SOI bodies for faster lookup on later loops.
-            var soiBodies = new HashSet<int>();
-
             points.Add(loc);
-
-            var bodiesCopy = new Body[Bodies.Length];
-            Array.Copy(Bodies, bodiesCopy, bodiesCopy.Length);
 
             while (!complete)
             {
                 force = new PointF();
 
-                for (int b = 0; b < bodiesCopy.Length; b++)
+                for (int c = 0; c < Mesh.Length; c++)
                 {
-                    var bodyB = bodiesCopy[b];
+                    var cell = Mesh[c];
 
-
-                    if (bodyB.UID == body.UID)
+                    if (cell.ID == body.MeshID)
                         continue;
 
-                    if (body.HasCollision == 0)
-                    {
-                        var distX = bodyB.LocX - loc.X;
-                        var distY = bodyB.LocY - loc.Y;
-                        var dist = (distX * distX) + (distY * distY);
-                        var distSqrt = (float)Math.Sqrt(dist);
+                    var distX = cell.CmX - loc.X;
+                    var distY = cell.CmY - loc.Y;
+                    var dist = (distX * distX) + (distY * distY);
+                    var distSqrt = (float)Math.Sqrt(dist);
 
-                        var totMass = body.Mass * bodyB.Mass;
+                    if (distSqrt > (cell.Size * 2))
+                    {
+                        var totMass = body.Mass * cell.Mass;
 
                         var f = totMass / (dist + 0.02f);
 
-                        force.X += (f * distX / distSqrt);
-                        force.Y += (f * distY / distSqrt);
-                    }
-                    else
-                    {
-                        // Use a slow "body is inside the circle" calculation on the first loop.
-                        if (firstLoop)
-                        {
-                            // If this body is outside the SOI, calculate the forces.
-                            if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
-                            {
-                                var distX = bodyB.LocX - loc.X;
-                                var distY = bodyB.LocY - loc.Y;
-                                var dist = (distX * distX) + (distY * distY);
-                                var distSqrt = (float)Math.Sqrt(dist);
-
-                                var totMass = body.Mass * bodyB.Mass;
-
-                                var f = totMass / (dist + 0.02f);
-
-                                force.X += (f * distX / distSqrt);
-                                force.Y += (f * distY / distSqrt);
-                            }
-                            else // If it is within the SOI, add to cache for faster lookup on the next loops.
-                            {
-                                soiBodies.Add(b);
-                            }
-                        }
-                        else // After the first loop, use the hashset cache.
-                        {
-                            if (!soiBodies.Contains(b))
-                            {
-                                var distX = bodyB.LocX - loc.X;
-                                var distY = bodyB.LocY - loc.Y;
-                                var dist = (distX * distX) + (distY * distY);
-                                var distSqrt = (float)Math.Sqrt(dist);
-
-                                var totMass = body.Mass * bodyB.Mass;
-
-                                var f = totMass / (dist + 0.02f);
-
-                                force.X += (f * distX / distSqrt);
-                                force.Y += (f * distY / distSqrt);
-                            }
-                        }
+                        force.X += (float)(f * distX / distSqrt);
+                        force.Y += (float)(f * distY / distSqrt);
                     }
                 }
 
@@ -548,9 +490,7 @@ namespace NBodies.Rendering
 
                 points.Add(loc);
 
-                firstLoop = false;
-
-                if (!firstLoop && steps > 10)
+                if (steps > 10)
                 {
                     // Define a flat "plane" at the test body's Y coord.
                     var planeA = new PointF(-20000f, body.LocY);
@@ -578,7 +518,6 @@ namespace NBodies.Rendering
                     {
                         complete = true;
                     }
-
                 }
 
                 steps++;
@@ -586,7 +525,6 @@ namespace NBodies.Rendering
 
             return points;
         }
-
 
         public static bool IntersectsExisting(PointF location, float diameter)
         {
@@ -920,6 +858,7 @@ namespace NBodies.Rendering
             b.InRoche = 0;
             b.BlackHole = 0;
             b.UID = -1;
+            b.MeshID = -1;
 
             return Add(b);
         }
