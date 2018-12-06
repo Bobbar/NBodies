@@ -75,6 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Physics\MeshCell.cs" />
+    <Compile Include="Shapes\ColoredLine.cs" />
     <Compile Include="UI\AddBodiesForm.cs">
       <SubType>Form</SubType>
     </Compile>

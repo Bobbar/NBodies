@@ -290,10 +290,12 @@ namespace NBodies.Rendering
 
         private static void DrawMesh(PointF finalOffset)
         {
-            float pSize = 1.6f;
+            float pSize = 1.0f;
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
             var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));
+            var disBrush = new SolidBrush(Color.FromArgb(100, Color.Orange));
+
 
             foreach (var m in BodyManager.Mesh)
             {
@@ -304,8 +306,11 @@ namespace NBodies.Rendering
                 var meshY = m.LocY - m.Size / 2 + finalOffset.Y;
 
                 _buffer.Graphics.DrawRectangle(meshPen, m.LocX - m.Size / 2 + finalOffset.X, m.LocY - m.Size / 2 + finalOffset.Y, m.Size, m.Size);
-                // _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
+
+                _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
                 _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
+
+
                 // _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
         }

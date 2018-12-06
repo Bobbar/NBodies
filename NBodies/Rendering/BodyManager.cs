@@ -526,6 +526,57 @@ namespace NBodies.Rendering
             return points;
         }
 
+        //public static ColoredLine[] GetInteractions(Body body)
+        //{
+        //    float distX, distY, dist;
+
+        //    var lineList = new List<ColoredLine>();
+
+        //    MeshCell bodyCell = Mesh[body.MeshID];
+
+        //    var bodyLoc = new PointF(body.LocX, body.LocY);
+
+        //    for (int c = 0; c < Mesh.Length; c++)
+        //    {
+        //        MeshCell cell = Mesh[c];
+        //        var cellLoc = new PointF(cell.CmX, cell.CmY);
+
+        //        //distX = cell.LocX - body.LocX;
+        //        //distY = cell.LocY - body.LocY;
+        //        distX = cell.CmX - body.LocX;
+        //        distY = cell.CmY - body.LocY;
+        //        dist = (distX * distX) + (distY * distY);
+
+        //        float maxDist = cell.PPDist + bodyCell.PPDist;//ppDist;
+
+        //        if (dist > maxDist * maxDist && cell.ID != body.MeshID)
+        //        {
+        //            //mesh line;
+        //            lineList.Add(new ColoredLine(Color.LawnGreen, bodyLoc, cellLoc));
+        //        }
+        //        else
+        //        {
+        //            int mbLen = cell.BodCount;
+        //            for (int mb = 0; mb < mbLen; mb++)
+        //            {
+        //                int meshBodId = MeshBodies[c, mb];
+
+        //                Body cellBod = Bodies[meshBodId];
+        //                var cellBodLoc = new PointF(cellBod.LocX, cellBod.LocY);
+
+        //                if (cellBod.UID != body.UID)
+        //                {
+        //                    // body line
+        //                    lineList.Add(new ColoredLine(Color.Red, bodyLoc, cellBodLoc));
+
+        //                }
+        //            }
+        //        }
+        //    }
+
+        //    return lineList.ToArray();
+        //}
+
         public static bool IntersectsExisting(PointF location, float diameter)
         {
             float distX = 0;
@@ -554,7 +605,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0.04f;//0.1f;
+            float lifetime = 0;//0.04f;//0.1f;
             bool cloud = true;
 
             if (cloud)
@@ -899,6 +950,7 @@ UID: { body.UID }
 MeshID: { body.MeshID }
     Count: { mesh.BodCount }
     Mass: { mesh.Mass }
+    Neighbors: { mesh.Neighbors }
     Cm (X,Y): { mesh.CmX }, { mesh.CmY }
     Loc (X,Y): { mesh.LocX }, { mesh.LocY }
 
