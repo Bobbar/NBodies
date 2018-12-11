@@ -605,7 +605,7 @@ namespace NBodies.Rendering
         {
             MainLoop.WaitForPause();
 
-            float lifetime = 0;//0.04f;//0.1f;
+            float lifetime = 0.08f;//0.1f;
             bool cloud = true;
 
             if (cloud)

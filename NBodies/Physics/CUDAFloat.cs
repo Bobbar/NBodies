@@ -376,7 +376,7 @@ namespace NBodies.Physics
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
-            if (a > inBodies.Length)
+            if (a > inBodies.Length - 1)
                 return;
 
             Body outBody = inBodies[a];
@@ -502,7 +502,7 @@ namespace NBodies.Physics
 
             int a = gpThread.blockDim.x * gpThread.blockIdx.x + gpThread.threadIdx.x;
 
-            if (a > inBodies.Length)
+            if (a > inBodies.Length - 1)
                 return;
 
             Body outBody = inBodies[a];
