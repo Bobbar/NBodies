@@ -105,7 +105,7 @@ namespace NBodies.Rendering
         }
 
 
-        private static float _cellSize = 30f;
+        private static float _cellSize = 20f;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;

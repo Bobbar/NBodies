@@ -140,8 +140,8 @@ namespace NBodies.Physics
 
             _mesh = BuildMesh(ref bodies, cellSize);
 
-            // Console.WriteLine($@"{timer.ElapsedMilliseconds}");
-            Console.WriteLine($@"Build ({_mesh.Length}): {timer.ElapsedMilliseconds}");
+            Console.WriteLine($@"{timer.ElapsedMilliseconds}");
+            // Console.WriteLine($@"Build ({_mesh.Length}): {timer.ElapsedMilliseconds}");
 
             blocks = BlockCount(bodies.Length);
 
@@ -157,7 +157,7 @@ namespace NBodies.Physics
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
 
 
-            gpu.StartTimer();
+            //gpu.StartTimer();
 
             if (MainLoop.LeapFrog)
             {
@@ -173,7 +173,10 @@ namespace NBodies.Physics
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
             }
 
-            Console.WriteLine("Kern: " + gpu.StopTimer());
+
+            // Console.WriteLine(gpu.StopTimer());
+
+            //Console.WriteLine("Kern: " + gpu.StopTimer());
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
@@ -330,6 +333,7 @@ namespace NBodies.Physics
             for (int i = 0; i < mesh.Length; i++)
             {
                 int count = 0;
+                var neighborsUnsort = new List<int>();
 
                 for (int x = -1; x <= 1; x++)
                 {
@@ -342,10 +346,19 @@ namespace NBodies.Physics
 
                         if (meshDict.ContainsKey(cellUID))
                         {
-                            neighborIdx[i, count] = meshDict[cellUID].ID;
+                            neighborsUnsort.Add(meshDict[cellUID].ID);
                             count++;
                         }
                     }
+                }
+
+                var neighborsSort = neighborsUnsort.ToArray();
+
+                Array.Sort(neighborsSort);
+
+                for (int n = 0; n < neighborsSort.Length; n++)
+                {
+                    neighborIdx[i, n] = neighborsSort[n];
                 }
 
                 mesh[i].Neighbors = count;
