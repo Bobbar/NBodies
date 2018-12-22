@@ -15,22 +15,14 @@ namespace NBodies.Physics
         private static int threadsPerBlock = 256;
         private GPGPU gpu;
         private MeshCell[] _mesh;
-        private int[,] _meshBodies = new int[0, 0];
-        private int[,] _meshNeighbors = new int[0, 0];
+        private int[] _meshBodies = new int[0];
+        private int[] _meshNeighbors = new int[0];
 
         public MeshCell[] CurrentMesh
         {
             get
             {
                 return _mesh;
-            }
-        }
-
-        public int[,] MeshBodies
-        {
-            get
-            {
-                return _meshBodies;
             }
         }
 
@@ -128,22 +120,26 @@ namespace NBodies.Physics
         }
 
         private static Stopwatch timer = new Stopwatch();
+        private static Stopwatch timer2 = new Stopwatch();
+
 
         public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
         {
             float viscosity = 10.0f;//20.0f;//40.0f;//5.0f;//7.5f;
-            //float cellSize = 5f;//30f;
 
             int blocks = 0;
+
+            timer2.Restart();
 
             timer.Restart();
 
             _mesh = BuildMesh(ref bodies, cellSize);
 
-            Console.WriteLine($@"{timer.ElapsedMilliseconds}");
-            // Console.WriteLine($@"Build ({_mesh.Length}): {timer.ElapsedMilliseconds}");
+            Console.WriteLine($@"Mesh ({_mesh.Length}): {timer.ElapsedMilliseconds}");
 
             blocks = BlockCount(bodies.Length);
+
+            timer.Restart();
 
             var gpuMesh = gpu.Allocate(_mesh);
             var gpuMeshBodies = gpu.Allocate(_meshBodies);
@@ -156,8 +152,10 @@ namespace NBodies.Physics
             gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
 
+            Console.WriteLine($@"Allocate: {timer.ElapsedMilliseconds}");
 
-            //gpu.StartTimer();
+
+            gpu.StartTimer();
 
             if (MainLoop.LeapFrog)
             {
@@ -176,11 +174,13 @@ namespace NBodies.Physics
 
             // Console.WriteLine(gpu.StopTimer());
 
-            //Console.WriteLine("Kern: " + gpu.StopTimer());
+            Console.WriteLine("Kern: " + gpu.StopTimer());
 
             gpu.CopyFromDevice(gpuInBodies, bodies);
 
             gpu.FreeAll();
+
+            Console.WriteLine("Tot: " + timer2.ElapsedMilliseconds);
         }
 
         public static int BlockCount(int len, int threads = 0)
@@ -231,6 +231,7 @@ namespace NBodies.Physics
         {
             // Dictionary to hold the current mesh cells for fast lookups.
             var meshDict = new Dictionary<int, MeshCell>();
+            var meshBods = new List<List<int>>();
 
             // Current cell index.
             int cellIdx = 0;
@@ -272,11 +273,14 @@ namespace NBodies.Physics
                     newCell.CmY += body.Mass * body.LocY;
                     newCell.BodCount = 1;
                     newCell.ID = cellIdx;
+                    newCell.BodStartIdx = cellIdx;
 
                     meshDict.Add(cellUID, newCell);
                     bodies[b].MeshID = cellIdx;
 
                     cellIdx++;
+
+                    meshBods.Add(new List<int>() { b });
                 }
                 else
                 {
@@ -289,6 +293,8 @@ namespace NBodies.Physics
 
                     meshDict[cellUID] = cell;
                     bodies[b].MeshID = cell.ID;
+
+                    meshBods[cell.ID].Add(b);
                 }
             }
 
@@ -302,33 +308,33 @@ namespace NBodies.Physics
             }
 
             // Build the 2D mesh-body index.
-            BuildMeshBodyIndex(meshArr, bodies);
+            BuildMeshBodyIndex(ref meshArr, meshBods);
 
             BuildMeshNeighborIndex(ref meshArr, meshDict, cellSize);
 
             return meshArr;
         }
 
-        private void BuildMeshBodyIndex(MeshCell[] mesh, Body[] bodies)
+        private void BuildMeshBodyIndex(ref MeshCell[] mesh, List<List<int>> meshBods)
         {
-            int maxCount = mesh.Max(m => m.BodCount);
-            int[,] meshBodIndex = new int[mesh.Length, maxCount];
-            // Since the body index array must be a fixed length,
-            // we need to track the current element index for each mesh.
-            int[] curIdxCount = new int[mesh.Length]; // Number of body indexes added to each mesh.
+            var bodList = new List<int>();
 
-            for (int b = 0; b < bodies.Length; b++)
+            for (int m = 0; m < meshBods.Count; m++)
             {
-                meshBodIndex[bodies[b].MeshID, curIdxCount[bodies[b].MeshID]] = b;
-                curIdxCount[bodies[b].MeshID]++;
+                mesh[m].BodStartIdx = bodList.Count;
+
+                for (int b = 0; b < meshBods[m].Count; b++)
+                {
+                    bodList.Add(meshBods[m][b]);
+                }
             }
 
-            _meshBodies = meshBodIndex;
+            _meshBodies = bodList.ToArray();
         }
 
         private void BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, MeshCell> meshDict, float cellSize)
         {
-            var neighborIdx = new int[mesh.Length, 9];
+            var neighborIdxList = new List<int>();
 
             for (int i = 0; i < mesh.Length; i++)
             {
@@ -354,22 +360,25 @@ namespace NBodies.Physics
 
                 var neighborsSort = neighborsUnsort.ToArray();
 
-                Array.Sort(neighborsSort);
+                if (neighborsSort.Length > 1)
+                {
+                    Array.Sort(neighborsSort);
+                }
 
                 for (int n = 0; n < neighborsSort.Length; n++)
                 {
-                    neighborIdx[i, n] = neighborsSort[n];
+                    neighborIdxList.Add(neighborsSort[n]);
                 }
 
+                mesh[i].NeighborStartIdx = neighborIdxList.Count - count;
                 mesh[i].Neighbors = count;
             }
 
-            _meshNeighbors = neighborIdx;
-
+            _meshNeighbors = neighborIdxList.ToArray();
         }
 
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[,] inMeshBods, int[,] meshNeighbors, float dt)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, float dt)
         {
             float GAS_K = 0.3f;//0.8f;// 0.1f
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -412,11 +421,11 @@ namespace NBodies.Physics
             outBody.Density = (outBody.Mass * fac);
 
             int len = inMesh.Length;
-            for (int b = 0; b < len; b++)
+            for (int c = 0; c < len; c++)
             {
-                MeshCell cell = inMesh[b];
+                MeshCell cell = inMesh[c];
 
-                if (cell.ID != outBody.MeshID && IsNeighbor(cell.ID, meshNeighbors, bodyCell.Neighbors, bodyCell.ID) == -1)
+                if (cell.ID != outBody.MeshID && IsNeighbor(cell.ID, meshNeighbors, bodyCell.NeighborStartIdx, bodyCell.Neighbors) == -1)
                 {
                     distX = cell.CmX - outBody.LocX;
                     distY = cell.CmY - outBody.LocY;
@@ -433,15 +442,16 @@ namespace NBodies.Physics
                 }
             }
 
-            for (int i = 0; i < bodyCell.Neighbors; i++)
+            for (int n = bodyCell.NeighborStartIdx; n < bodyCell.NeighborStartIdx + bodyCell.Neighbors; n++)
             {
-                int nId = meshNeighbors[bodyCell.ID, i];
+                int nId = meshNeighbors[n];
                 MeshCell cell = inMesh[nId];
 
-                int mbLen = cell.BodCount;
-                for (int mb = 0; mb < mbLen; mb++)
+                int mbStart = cell.BodStartIdx;
+                int mbLen = cell.BodCount + mbStart;
+                for (int mb = mbStart; mb < mbLen; mb++)
                 {
-                    int meshBodId = inMeshBods[nId, mb];
+                    int meshBodId = inMeshBods[mb];
                     Body inBody = inBodies[meshBodId];
 
                     if (inBody.UID != outBody.UID)
@@ -494,11 +504,11 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static int IsNeighbor(int testId, int[,] nIdx, int count, int cellId)
+        public static int IsNeighbor(int testId, int[] nIdx, int startIdx, int count)
         {
-            for (int i = 0; i < count; i++)
+            for (int i = startIdx; i < startIdx + count; i++)
             {
-                if (testId == nIdx[cellId, i])
+                if (testId == nIdx[i])
                     return 0;
             }
 
@@ -506,7 +516,7 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[,] inMeshBods, int[,] meshNeighbors, float dt, float viscosity, int drift)
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, float dt, float viscosity, int drift)
         {
             float distX;
             float distY;
@@ -524,15 +534,16 @@ namespace NBodies.Physics
             {
                 MeshCell bodyCell = inMesh[outBody.MeshID];
 
-                for (int i = 0; i < bodyCell.Neighbors; i++)
+                for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.Neighbors; i++)
                 {
-                    int nId = meshNeighbors[bodyCell.ID, i];
+                    int nId = meshNeighbors[i];
                     MeshCell cell = inMesh[nId];
 
-                    int mbLen = cell.BodCount;
-                    for (int mb = 0; mb < mbLen; mb++)
+                    int mbStart = cell.BodStartIdx;
+                    int mbLen = cell.BodCount + mbStart;
+                    for (int mb = mbStart; mb < mbLen; mb++)
                     {
-                        int meshBodId = inMeshBods[nId, mb];
+                        int meshBodId = inMeshBods[mb];
                         Body inBody = inBodies[meshBodId];
 
                         if (inBody.UID != outBody.UID)
@@ -558,6 +569,7 @@ namespace NBodies.Physics
                                         distSqrt = FLOAT_EPSILONSQRT;
                                     }
 
+                                    // Pressure
                                     float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
                                     float gradFactor = -10442.157f * (m_kernelSize - distSqrt) * (m_kernelSize - distSqrt) / distSqrt;
 

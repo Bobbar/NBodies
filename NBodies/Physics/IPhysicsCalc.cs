@@ -10,11 +10,7 @@ namespace NBodies.Physics
     {
         MeshCell[] CurrentMesh { get; }
 
-        int[,] MeshBodies { get; }
-
         void Init();
-
-      //  void CalcMovement(ref Body[] bodies, float timestep);
 
         void CalcMovement(ref Body[] bodies, float timestep, float cellSize);
 
