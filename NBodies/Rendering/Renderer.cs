@@ -113,9 +113,8 @@ namespace NBodies.Rendering
                  if (BodyManager.FollowSelected)
                  {
                      followBody = BodyManager.FollowBody();
-                     var followOffset = new PointF(followBody.LocX, followBody.LocY);
-                     RenderVars.ViewportOffset.X = -followOffset.X;
-                     RenderVars.ViewportOffset.Y = -followOffset.Y;
+                     RenderVars.ViewportOffset.X = -followBody.LocX;
+                     RenderVars.ViewportOffset.Y = -followBody.LocY;
                  }
 
                  var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
@@ -138,6 +137,7 @@ namespace NBodies.Rendering
                  for (int i = 0; i < bodies.Length; i++)
                  {
                      var body = bodies[i];
+                     var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                      if (body.Visible == 1)
                      {
@@ -176,18 +176,6 @@ namespace NBodies.Rendering
                                  break;
                          }
 
-                         if (BodyManager.FollowSelected)
-                         {
-                             if (BodyManager.FollowBody().UID == body.UID)
-                             {
-                                 followBody = body;
-                                 bodyColor = Color.Red;
-                             }
-                         }
-                         else
-                         {
-                             followBody = new Body();
-                         }
 
                          // Cache body brushes for faster lookup and less GC thrashing.
                          int brushID = bodyColor.ToArgb();
@@ -199,7 +187,6 @@ namespace NBodies.Rendering
 
                          var bodyBrush = _brushCache[brushID];
 
-                         var bodyLoc = new PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
 
                          //Draw body.
                          _buffer.Graphics.FillEllipse(bodyBrush, bodyLoc.X, bodyLoc.Y, body.Size, body.Size);
@@ -294,8 +281,6 @@ namespace NBodies.Rendering
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
             var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));
-            var disBrush = new SolidBrush(Color.FromArgb(100, Color.Orange));
-
 
             foreach (var m in BodyManager.Mesh)
             {
