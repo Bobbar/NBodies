@@ -119,27 +119,15 @@ namespace NBodies.Physics
             return newcode;
         }
 
-        private static Stopwatch timer = new Stopwatch();
-        private static Stopwatch timer2 = new Stopwatch();
-
-
         public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
         {
-            float viscosity = 10.0f;//20.0f;//40.0f;//5.0f;//7.5f;
+            float viscosity = 10.0f;
 
             int blocks = 0;
 
-            timer2.Restart();
-
-            timer.Restart();
-
             _mesh = BuildMesh(ref bodies, cellSize);
 
-            Console.WriteLine($@"Mesh ({_mesh.Length}): {timer.ElapsedMilliseconds}");
-
             blocks = BlockCount(bodies.Length);
-
-            timer.Restart();
 
             var gpuMesh = gpu.Allocate(_mesh);
             var gpuMeshBodies = gpu.Allocate(_meshBodies);
@@ -151,11 +139,6 @@ namespace NBodies.Physics
             gpu.CopyToDevice(_mesh, gpuMesh);
             gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
-
-            Console.WriteLine($@"Allocate: {timer.ElapsedMilliseconds}");
-
-
-            gpu.StartTimer();
 
             if (MainLoop.LeapFrog)
             {
@@ -171,16 +154,9 @@ namespace NBodies.Physics
                 gpu.Launch(blocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
             }
 
-
-            // Console.WriteLine(gpu.StopTimer());
-
-            Console.WriteLine("Kern: " + gpu.StopTimer());
-
             gpu.CopyFromDevice(gpuInBodies, bodies);
-
             gpu.FreeAll();
 
-            Console.WriteLine("Tot: " + timer2.ElapsedMilliseconds);
         }
 
         public static int BlockCount(int len, int threads = 0)

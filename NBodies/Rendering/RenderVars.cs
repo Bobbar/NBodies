@@ -24,7 +24,7 @@ namespace NBodies.Rendering
                 if (_currentScale != value)
                 {
                     _currentScale = value;
-                    ScaleOffset = ScaleHelpers.ScalePointExact(ScreenCenter);
+                    ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(ScreenCenter);
                 }
             }
         }
@@ -43,7 +43,7 @@ namespace NBodies.Rendering
             set
             {
                 _screenCenter = value;
-                ScaleOffset = ScaleHelpers.ScalePointExact(_screenCenter);
+                ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(_screenCenter);
 
             }
         }

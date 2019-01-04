@@ -1,5 +1,6 @@
 ﻿using NBodies.Physics;
 using NBodies.Rendering;
+using NBodies.Extensions;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -61,7 +62,7 @@ namespace NBodies
         private void DisplayForm_Load(object sender, EventArgs e)
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
-            RenderVars.ScaleOffset = ScaleHelpers.ScalePointExact(RenderVars.ScreenCenter);
+            RenderVars.ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(RenderVars.ScreenCenter);
 
             PhysicsProvider.InitPhysics();
 
@@ -84,7 +85,7 @@ namespace NBodies
                 for (int i = 0; i < BodyManager.Bodies.Length; i++)
                 {
                     var body = BodyManager.Bodies[i];
-                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScalePointRelative(mouseLoc).Y - body.LocY, 2));
+                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).Y - body.LocY, 2));
 
                     if (dist < body.Size * 0.5f)
                     {
@@ -363,7 +364,7 @@ namespace NBodies
                     }
                     else
                     {
-                        _mouseId = BodyManager.Add(ScaleHelpers.ScalePointRelative((PointF)e.Location), 1f, ColorHelper.RandomColor());
+                        _mouseId = BodyManager.Add(ScaleHelpers.ScreenPointToField((PointF)e.Location), 1f, ColorHelper.RandomColor());
                     }
 
                     //flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
@@ -416,7 +417,7 @@ namespace NBodies
 
                 if (_EDown)
                 {
-                    BodyManager.InsertExplosion(ScaleHelpers.ScalePointRelative(_mouseLocation), 2500);
+                    BodyManager.InsertExplosion(ScaleHelpers.ScreenPointToField(_mouseLocation), 2500);
                 }
             }
         }
@@ -466,12 +467,12 @@ namespace NBodies
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScalePointRelative(e.Location));
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScreenPointToField(e.Location));
                 }
                 else
                 {
                     var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
-                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.ScalePointExact(moveDiff));
+                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.FieldPointToScreenUnscaled(moveDiff));
                     _mouseMoveDownLoc = e.Location;
                 }
             }
@@ -508,8 +509,8 @@ namespace NBodies
                 distLine.Location2 = _mouseLocation;
                 distOver.Location = _mouseLocation.Add(new PointF(40, 10));
 
-                var loc1 = ScaleHelpers.ScalePointRelative(distLine.Location);
-                var loc2 = ScaleHelpers.ScalePointRelative(distLine.Location2);
+                var loc1 = ScaleHelpers.ScreenPointToField(distLine.Location);
+                var loc2 = ScaleHelpers.ScreenPointToField(distLine.Location2);
 
                 distOver.Value = loc1.DistanceSqrt(loc2).ToString();
             }

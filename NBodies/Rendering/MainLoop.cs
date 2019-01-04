@@ -1,5 +1,6 @@
 ﻿using NBodies.Physics;
 using NBodies.Shapes;
+using NBodies.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -413,7 +414,7 @@ namespace NBodies.Rendering
             {
                 var testPoint = new PointF(Xpos, Ypos);
 
-                if (PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
+                if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
                     newPoints.Add(testPoint);
                 }

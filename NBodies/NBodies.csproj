@@ -82,7 +82,7 @@
     <Compile Include="UI\AddBodiesForm.Designer.cs">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="ControlExtentions.cs" />
+    <Compile Include="Extensions\ControlExtentions.cs" />
     <Compile Include="UI\Display.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -114,7 +114,7 @@
     <Compile Include="Rendering\DisplayStyle.cs" />
     <Compile Include="Rendering\MainLoop.cs" />
     <Compile Include="Rendering\OverlayGraphic.cs" />
-    <Compile Include="Rendering\PointHelpers.cs" />
+    <Compile Include="Extensions\PointExtensions.cs" />
     <Compile Include="Rendering\Renderer.cs" />
     <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\ScaleHelpers.cs" />
@@ -138,7 +138,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <None Include="Kernels\CUDAFloat.cdfy" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -149,22 +148,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <None Include="ExternalTools\place_these_executables_in_same_folder_as_Cudafy.NET.dll_" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\packages\MessagePackAnalyzer.1.6.0\analyzers\dotnet\cs\MessagePackAnalyzer.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Readme\CUDA.NET.Readme.txt" />
-    <Content Include="Readme\CUDAfy-License.txt" />
-    <Content Include="Readme\example_source_code.cs.txt" />
-    <Content Include="Readme\ILSpy-license.txt" />
-    <Content Include="Readme\README.txt" />
-    <Content Include="ExternalTools\cudafycl.exe" />
-    <Content Include="ExternalTools\CudafyViewer.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

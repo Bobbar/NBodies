@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using NBodies.Extensions;
 using NBodies.Rendering;
 using NBodies.Rules;
 using NBodies.Shapes;
-using System.Diagnostics;
+using System;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace NBodies
 {
@@ -58,7 +52,7 @@ namespace NBodies
             int nMinerals = (count / 8);
             int bodyCount = 0;
 
-            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
 
             if (includeCenterMass)
             {
@@ -88,7 +82,7 @@ namespace NBodies
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
                 {
                     if (its >= maxIts)
                     {
@@ -143,7 +137,7 @@ namespace NBodies
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
-            var ellipse = new Ellipse(ScaleHelpers.ScalePointRelative(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
 
             int nGas = (count / 8) * 7;
             int nMinerals = (count / 8);
@@ -174,7 +168,7 @@ namespace NBodies
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                while (!PointHelper.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
                 {
                     if (its >= maxIts)
                     {

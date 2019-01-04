@@ -1,4 +1,5 @@
 ﻿using NBodies.Physics;
+using NBodies.Extensions;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -117,7 +118,7 @@ namespace NBodies.Rendering
                      RenderVars.ViewportOffset.Y = -followBody.LocY;
                  }
 
-                 var finalOffset = PointHelper.Add(RenderVars.ViewportOffset, RenderVars.ScaleOffset);
+                 var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);
 
                  CheckScale();
 

@@ -2,7 +2,7 @@
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace NBodies
+namespace NBodies.Extensions
 {
     public static class ControlExtentions
     {

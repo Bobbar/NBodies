@@ -1,6 +1,7 @@
 ﻿using NBodies.Physics;
 using NBodies.Rules;
 using NBodies.Shapes;
+using NBodies.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -372,7 +373,7 @@ namespace NBodies.Rendering
                         if (firstLoop)
                         {
                             // If this body is outside the SOI, calculate the forces.
-                            if (!PointHelper.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
+                            if (!PointExtensions.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
                             {
                                 var distX = bodyB.LocX - loc.X;
                                 var distY = bodyB.LocY - loc.Y;
@@ -488,7 +489,7 @@ namespace NBodies.Rendering
                     if (!apoapsis)
                     {
                         // Test for the first intersection of the plane.  This will be the apoapsis.
-                        if (PointHelper.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
                         {
                             apoapsis = true;
                         }
@@ -496,7 +497,7 @@ namespace NBodies.Rendering
                     else
                     {
                         // If we intersect the plane again after the apoapsis, we should now have a complete orbit.
-                        if (PointHelper.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
                         {
                             complete = true;
                         }
@@ -606,7 +607,7 @@ namespace NBodies.Rendering
                     var px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
                     var py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
 
-                    while (!PointHelper.PointInsideCircle(location, 0.5f, new PointF(px, py)))
+                    while (!PointExtensions.PointInsideCircle(location, 0.5f, new PointF(px, py)))
                     {
                         px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
                         py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);

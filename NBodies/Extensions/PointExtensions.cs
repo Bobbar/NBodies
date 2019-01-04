@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
 
-namespace NBodies.Rendering
+namespace NBodies.Extensions
 {
-    public static class PointHelper
+    public static class PointExtensions
     {
         public static Point ToPoint(this PointF point)
         {
