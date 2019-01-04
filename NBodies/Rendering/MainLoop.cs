@@ -390,14 +390,14 @@ namespace NBodies.Rendering
 
             newMass = BodyManager.CalcMass(1, density);
 
-            //int num = (int)(body.Mass / nMass);
-
+            int num = (int)(body.Mass / newMass);
+           
             prevMass = body.Mass;
 
             var ellipse = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), body.Size * 0.5f);
 
             bool done = false;
-            float stepSize = minSize;
+            float stepSize = minSize * 0.98f;
 
             //float startXpos = ellipse.Location.X - (ellipse.Size / 2) + stepSize;
             //float startYpos = ellipse.Location.Y - (ellipse.Size / 2) + stepSize;
@@ -410,6 +410,8 @@ namespace NBodies.Rendering
 
             List<PointF> newPoints = new List<PointF>();
 
+            int its = 0;
+
             while (!done)
             {
                 var testPoint = new PointF(Xpos, Ypos);
@@ -421,11 +423,11 @@ namespace NBodies.Rendering
 
                 Xpos += stepSize;
 
-                if (Xpos > ellipse.Location.X + (ellipse.Size + minSize))
+                if (Xpos > ellipse.Location.X + (ellipse.Size))
                 {
                     if (flipflop)
                     {
-                        Xpos = startXpos + (minSize / 2);
+                        Xpos = startXpos + (minSize / 2f);
                         flipflop = false;
                     }
                     else
@@ -434,18 +436,25 @@ namespace NBodies.Rendering
                         flipflop = true;
                     }
 
-                    Ypos += stepSize - 0.15f;
+                    Ypos += stepSize - 0.20f;
                 }
 
-                if (Ypos > ellipse.Location.Y + (ellipse.Size) + minSize)
+                if (newPoints.Count == num)
                 {
                     done = true;
                 }
+
+               
+                //if (Ypos > ellipse.Location.Y + (ellipse.Size + padding))
+                //{
+                //    done = true;
+                //}
             }
 
             // newMass = prevMass / newPoints.Count;
 
             //  float postMass = newMass * newPoints.Count;
+            Console.WriteLine(num + " - " + newPoints.Count);
 
             foreach (var pnt in newPoints)
             {

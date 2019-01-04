@@ -567,8 +567,11 @@ namespace NBodies
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size -= 1.0f;
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                    if (BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size - 1.0f > 0.5f)
+                    {
+                        BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size -= 1.0f;
+                        BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Mass = BodyManager.CalcMass(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size);
+                    }
                 }
             }
         }

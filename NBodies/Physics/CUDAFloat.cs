@@ -14,7 +14,7 @@ namespace NBodies.Physics
         private int gpuIndex = 2;
         private static int threadsPerBlock = 256;
         private GPGPU gpu;
-        private MeshCell[] _mesh;
+        private MeshCell[] _mesh = new MeshCell[0];
         private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
 
@@ -119,13 +119,20 @@ namespace NBodies.Physics
             return newcode;
         }
 
+        private Stopwatch timer = new Stopwatch();
+
+
         public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
         {
             float viscosity = 10.0f;
 
             int blocks = 0;
 
+            timer.Restart();
+
             _mesh = BuildMesh(ref bodies, cellSize);
+
+            Console.WriteLine(timer.ElapsedTicks);
 
             blocks = BlockCount(bodies.Length);
 
@@ -206,7 +213,7 @@ namespace NBodies.Physics
         private MeshCell[] BuildMesh(ref Body[] bodies, float cellSize)
         {
             // Dictionary to hold the current mesh cells for fast lookups.
-            var meshDict = new Dictionary<int, MeshCell>();
+            var meshDict = new Dictionary<int, MeshCell>(_mesh.Length);
             var meshBods = new List<List<int>>();
 
             // Current cell index.
@@ -284,16 +291,16 @@ namespace NBodies.Physics
             }
 
             // Build the 2D mesh-body index.
-            BuildMeshBodyIndex(ref meshArr, meshBods);
+            BuildMeshBodyIndex(ref meshArr, meshBods, bodies.Length);
 
             BuildMeshNeighborIndex(ref meshArr, meshDict, cellSize);
 
             return meshArr;
         }
 
-        private void BuildMeshBodyIndex(ref MeshCell[] mesh, List<List<int>> meshBods)
+        private void BuildMeshBodyIndex(ref MeshCell[] mesh, List<List<int>> meshBods, int bodyCount)
         {
-            var bodList = new List<int>();
+            var bodList = new List<int>(bodyCount);
 
             for (int m = 0; m < meshBods.Count; m++)
             {
@@ -310,12 +317,12 @@ namespace NBodies.Physics
 
         private void BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, MeshCell> meshDict, float cellSize)
         {
-            var neighborIdxList = new List<int>();
+            var neighborIdxList = new List<int>(mesh.Length * 9);
 
             for (int i = 0; i < mesh.Length; i++)
             {
                 int count = 0;
-                var neighborsUnsort = new List<int>();
+                var neighborsUnsort = new List<int>(9);
 
                 for (int x = -1; x <= 1; x++)
                 {
