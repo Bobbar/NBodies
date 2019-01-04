@@ -242,38 +242,27 @@ namespace NBodies.Rendering
 
         public static void TotEnergy()
         {
-            double potE = 0;
-            double kinE = 0;
+            float E = 0, d = 0;
 
             for (int i = 0; i < Bodies.Length; i++)
             {
-                var bodyA = Bodies[i];
+                var body = Bodies[i];
 
-                kinE += bodyA.Mass * bodyA.AggregateSpeed() * bodyA.AggregateSpeed();
+                E += 0.5f * body.Mass * body.Velocity().Length();
 
                 for (int j = 0; j < Bodies.Length; j++)
                 {
                     if (i != j)
                     {
                         var bodyB = Bodies[j];
-                        double totMass = bodyA.Mass * bodyB.Mass;
-                        double distX = bodyA.LocX - bodyB.LocX;
-                        double distY = bodyA.LocY - bodyB.LocY;
-                        double dist = (distX * distX) + (distY * distY);
-                        double distSqrt = Math.Sqrt(dist);
+                        d = body.Position().DistanceSqrt(bodyB.Position());
 
-                        potE += totMass / dist;
-                        //potE += dist; //??
-
-                        //kinE += 0.5f * (bo)
+                        E -= 1.488E-34f * body.Mass * bodyB.Mass / d;
                     }
                 }
             }
 
-            kinE = 0.5f * kinE;
-            potE = -0.5f * potE;
-
-            Console.WriteLine($@"Kin: {kinE}  Pot: { potE}   tE: { (potE + kinE) }");
+            Console.WriteLine($@"Energy: {E}");
         }
 
         /// <summary>
@@ -934,6 +923,16 @@ namespace NBodies.Rendering
         public static float AggregateSpeed(this Body body)
         {
             return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
+        }
+
+        public static PointF Velocity(this Body body)
+        {
+            return new PointF(body.SpeedX, body.SpeedY);
+        }
+
+        public static PointF Position(this Body body)
+        {
+            return new PointF((float)body.LocX, (float)body.LocY);
         }
 
         public static void PrintInfo(this Body body)

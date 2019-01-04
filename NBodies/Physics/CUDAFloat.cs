@@ -468,7 +468,7 @@ namespace NBodies.Physics
                             }
 
                             //  It's a neighbor; accumulate density.
-                            diff = ksizeSq - (float)dist;
+                            diff = ksizeSq - dist;
                             fac = factor * diff * diff * diff;
                             outBody.Density += outBody.Mass * fac;
                         }
@@ -584,7 +584,7 @@ namespace NBodies.Physics
 
                                     // Viscosity
                                     float visc_Laplace = 14.323944f * (m_kernelSize - distSqrt);
-                                    float visc_scalar = outBody.Mass * visc_Laplace * viscosity * 1.0f / outBody.Density;
+                                    float visc_scalar = viscosity * outBody.Mass / inBody.Density * visc_Laplace;
 
                                     float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
                                     float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
