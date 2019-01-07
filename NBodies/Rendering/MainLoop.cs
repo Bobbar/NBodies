@@ -196,7 +196,7 @@ namespace NBodies.Rendering
                             // Copy the current bodies to another array.
                             var bodiesCopy = new Body[BodyManager.Bodies.Length];
                             Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
-                      
+
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, _timeStep, _cellSize);
 
@@ -314,28 +314,27 @@ namespace NBodies.Rendering
 
         private static void FPSLimiter()
         {
-            int waitTime = 0;
-
-            _minFrameTime = 1000 / _targetFPS;
+            int ticksPerSecond = 1000 * 10000;
+            float targetFrameTime = ticksPerSecond / (float)_targetFPS;
+            long waitTime = 0;
 
             if (_fpsTimer.IsRunning)
             {
-                long elapTime = _fpsTimer.ElapsedMilliseconds;
+                long elapTime = _fpsTimer.Elapsed.Ticks;
 
-                if (elapTime <= _minFrameTime)
+                if (elapTime <= targetFrameTime)
                 {
-                    waitTime = (int)(_minFrameTime - elapTime);
+                    waitTime = (long)(targetFrameTime - elapTime);
 
                     if (waitTime > 0)
                     {
-                        Thread.Sleep(waitTime);
+                        Thread.Sleep(new TimeSpan(waitTime));
                     }
                 }
 
-                CurrentFPS = 1000 / (float)(elapTime + waitTime);
+                CurrentFPS = ticksPerSecond / (elapTime + waitTime);
 
                 _fpsTimer.Restart();
-
             }
             else
             {
@@ -391,7 +390,7 @@ namespace NBodies.Rendering
             newMass = BodyManager.CalcMass(1, density);
 
             int num = (int)(body.Mass / newMass);
-           
+
             prevMass = body.Mass;
 
             var ellipse = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), body.Size * 0.5f);
@@ -439,13 +438,14 @@ namespace NBodies.Rendering
                     Ypos += stepSize - 0.20f;
                 }
 
-                if (newPoints.Count == num)
+                if (newPoints.Count == num || its > num * 4)
                 {
                     done = true;
                 }
 
-               
-                //if (Ypos > ellipse.Location.Y + (ellipse.Size + padding))
+                its++;
+
+                //if (Ypos > ellipse.Location.Y + (ellipse.Size))
                 //{
                 //    done = true;
                 //}

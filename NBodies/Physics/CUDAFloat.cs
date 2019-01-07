@@ -128,11 +128,11 @@ namespace NBodies.Physics
 
             int blocks = 0;
 
-            timer.Restart();
+           // timer.Restart();
 
             _mesh = BuildMesh(ref bodies, cellSize);
 
-            Console.WriteLine(timer.ElapsedTicks);
+          //  Console.WriteLine(timer.ElapsedTicks);
 
             blocks = BlockCount(bodies.Length);
 
@@ -290,7 +290,7 @@ namespace NBodies.Physics
                 meshArr[m].CmY = meshArr[m].CmY / (float)meshArr[m].Mass;
             }
 
-            // Build the 2D mesh-body index.
+            // Build the mesh-body index.
             BuildMeshBodyIndex(ref meshArr, meshBods, bodies.Length);
 
             BuildMeshNeighborIndex(ref meshArr, meshDict, cellSize);
