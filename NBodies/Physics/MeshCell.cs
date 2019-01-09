@@ -16,11 +16,11 @@ namespace NBodies.Physics
         public float CmX;
         public float CmY;
         public double Mass;
-        public int BodStartIdx;
-        public int BodCount;
         public float Size;
+        public int BodyStartIdx;
+        public int BodyCount;
         public int NeighborStartIdx;
-        public int Neighbors;
-       
+        public int NeighborCount;
+
     }
 }

@@ -948,9 +948,9 @@ namespace NBodies.Rendering
 Index: { index }
 UID: { body.UID }
 MeshID: { body.MeshID }
-    Count: { mesh.BodCount }
+    Count: { mesh.BodyCount }
     Mass: { mesh.Mass }
-    Neighbors: { mesh.Neighbors }
+    Neighbors: { mesh.NeighborCount }
     Cm (X,Y): { mesh.CmX }, { mesh.CmY }
     Loc (X,Y): { mesh.LocX }, { mesh.LocY }
 
