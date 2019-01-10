@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace NBodies.Physics
 {
@@ -52,7 +53,7 @@ namespace NBodies.Physics
             }
 
             //Add missing 'struct' strings to generated code.
-            cudaModule.SourceCode = FixCode(cudaModule.SourceCode);
+            cudaModule.SourceCode = FixCode(cudaModule.SourceCode, nameof(Body), nameof(MeshCell));
             cudaModule.Serialize();
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
@@ -67,56 +68,47 @@ namespace NBodies.Physics
         /// 
         /// Cudafy doesn't seem to support structs correctly within functions and local variables.
         /// </summary>
-        private string FixCode(string code)
+        private string FixCode(string code, params string[] targets)
         {
+            var rgx = new Regex("[^a-zA-Z0-9 -]");
             string newcode = string.Copy(code);
 
-            bool missingDec = true;
-
-            int lastIdx = 0;
-
-            // Body structs
-            while (missingDec)
+            foreach (string target in targets)
             {
-                int idx = newcode.IndexOf(nameof(Body), lastIdx);
+                bool missingDec = true;
+                int position = 0;
 
-                if (idx == -1)
+                // Body structs
+                while (missingDec)
                 {
-                    missingDec = false;
-                    continue;
-                }
+                    // Search for target string.
+                    int idx = newcode.IndexOf(target, position);
 
-                lastIdx = idx + 1;
+                    // Stop if no match found.
+                    if (idx == -1)
+                    {
+                        missingDec = false;
+                        continue;
+                    }
 
-                string sub = newcode.Substring(idx - 7, 7);
+                    // Move the position past the current match.
+                    position = idx + target.Length;
 
-                if (!sub.Contains("struct"))
-                {
-                    newcode = newcode.Insert(idx, "struct ");
-                }
-            }
+                    // Check both sides of the located string to make sure it's a match.
+                    string check = newcode.Substring(idx - 1, target.Length + 2);
+                    check = rgx.Replace(check, "").Trim(); // Remove non-alpha and spaces.
 
-            missingDec = true;
-            lastIdx = 0;
+                    if (check == target)
+                    {
+                        // Make sure 'struct' isn't already present.
+                        string sub = newcode.Substring(idx - 7, 7);
 
-            // Meshcell structs
-            while (missingDec)
-            {
-                int idx = newcode.IndexOf(nameof(MeshCell), lastIdx);
-
-                if (idx == -1)
-                {
-                    missingDec = false;
-                    continue;
-                }
-
-                lastIdx = idx + 1;
-
-                string sub = newcode.Substring(idx - 7, 7);
-
-                if (!sub.Contains("struct"))
-                {
-                    newcode = newcode.Insert(idx, "struct ");
+                        if (!sub.Contains("struct"))
+                        {
+                            // Add 'struct' before the target string.
+                            newcode = newcode.Insert(idx, "struct ");
+                        }
+                    }
                 }
             }
 

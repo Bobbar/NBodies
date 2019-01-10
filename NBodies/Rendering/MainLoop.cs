@@ -176,6 +176,8 @@ namespace NBodies.Rendering
 
         private async static void DoLoop()
         {
+            // Double-buffered body array:
+            //
             // 1. Make a copy of the body data and pass that to the physics methods to calculate the next frame.
             // 2. Wait for the drawing thread to finish rendering the previous frame.
             // 3. Once the drawing thread is finished, copy the new data to the current Bodies buffer.
@@ -209,7 +211,7 @@ namespace NBodies.Rendering
                             BodyManager.Bodies = bodiesCopy;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
-                            // Process and fracture new roche bodies.
+                            // Process and fracture roche bodies.
                             if (RocheLimit)
                                 ProcessRoche(ref BodyManager.Bodies);
 
