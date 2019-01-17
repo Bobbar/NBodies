@@ -13,6 +13,8 @@ namespace NBodies.Physics
         public int ID;
         public float LocX;
         public float LocY;
+        public int xID;
+        public int yID;
         public float CmX;
         public float CmY;
         public double Mass;

@@ -12,7 +12,7 @@ namespace NBodies.Physics
 
         void Init();
 
-        void CalcMovement(ref Body[] bodies, float timestep, float cellSize);
+        void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp);
 
     }
 }

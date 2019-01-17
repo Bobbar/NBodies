@@ -20,18 +20,18 @@ namespace NBodies.Rendering
 
         //public static int TargetFPS = 60;
 
-        public static float CellSize
+        public static int CellSizeExp
         {
             get
             {
-                return _cellSize;
+                return _cellSizeExp;
             }
 
             set
             {
-                if (value >= 2.0f && value <= 100f)
+                if (value >= 1 && value <= 8)
                 {
-                    _cellSize = value;
+                    _cellSizeExp = value;
                 }
             }
         }
@@ -106,7 +106,7 @@ namespace NBodies.Rendering
         }
 
 
-        private static float _cellSize = 20f;
+        private static int _cellSizeExp = 4;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;
@@ -123,7 +123,7 @@ namespace NBodies.Rendering
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static int _skippedFrames = 0;
-        private const int _framesToSkip = 10;
+        private const int _framesToSkip = 20;//10;
 
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
@@ -200,7 +200,7 @@ namespace NBodies.Rendering
                             Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, _timeStep, _cellSize);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, _timeStep, _cellSizeExp);
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

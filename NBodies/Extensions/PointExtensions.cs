@@ -53,6 +53,11 @@ namespace NBodies.Extensions
             return new PointF(pointA.X * value, pointA.Y * value);
         }
 
+        public static PointF Div(this PointF pointA, float value)
+        {
+            return new PointF(pointA.X / value, pointA.Y / value);
+        }
+
         public static float DistanceSqrt(this PointF pointA, PointF pointB)
         {
             return (float)Math.Sqrt(Math.Pow(pointA.X - pointB.X, 2) + Math.Pow(pointA.Y - pointB.Y, 2));

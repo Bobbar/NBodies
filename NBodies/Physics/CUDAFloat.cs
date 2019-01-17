@@ -115,7 +115,7 @@ namespace NBodies.Physics
             return newcode;
         }
 
-        public void CalcMovement(ref Body[] bodies, float timestep, float cellSize)
+        public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp)
         {
             float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
@@ -124,7 +124,7 @@ namespace NBodies.Physics
             threadBlocks = BlockCount(bodies.Length);
 
             // Build the particle mesh, mesh index, and mesh neighbors index.
-            BuildMesh(ref bodies, cellSize);
+            BuildMesh(ref bodies, cellSizeExp);
 
             // Allocate GPU memory.
             var gpuMesh = gpu.Allocate(_mesh);
@@ -210,9 +210,10 @@ namespace NBodies.Physics
         /// Builds the particle mesh, mesh-body index and mesh-neighbor index for the current field.
         /// </summary>
         /// <param name="bodies">Array of bodies.</param>
-        /// <param name="cellSize">The width/height of each cell in the mesh.</param>
-        private void BuildMesh(ref Body[] bodies, float cellSize)
+        /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
+        private void BuildMesh(ref Body[] bodies, int cellSizeExp)
         {
+            int cellSize = (int)Math.Pow(2, cellSizeExp);
             // Dictionary to hold the current mesh cells for fast lookups.
             var meshDict = new Dictionary<int, MeshCell>(_mesh.Length);
             // 2D Collection to hold the indexes of bodies contained in each cell.
@@ -222,35 +223,29 @@ namespace NBodies.Physics
 
             for (int b = 0; b < bodies.Length; b++)
             {
-                // Calculate the cell position from the current body position.
-                // Cell Pos = Round(Body Pos / cellSize) * cellSize
-                // This formula aligns the mesh cells with the 0,0 origin.
-
                 var body = bodies[b];
 
-                int cellX;
-                int cellY;
+                // Calculate the cell position from the current body position.
+                // Right bit-shift to get the x/y grid indexes.
 
-                float divX = body.LocX / cellSize;
-                float divY = body.LocY / cellSize;
+                int idxX = (int)body.LocX >> cellSizeExp;
+                int idxY = (int)body.LocY >> cellSizeExp;
 
-                // Must round away from zero for correct grid alignment.
-                int divRX = (int)Math.Round(divX, MidpointRounding.AwayFromZero);
-                int divRY = (int)Math.Round(divY, MidpointRounding.AwayFromZero);
-
-                cellX = (int)(divRX * cellSize);
-                cellY = (int)(divRY * cellSize);
-
-                // Interleave the x/y coordinates to create a morton number; use this for cell UID/Hash. 
-                var cellUID = MortonNumber(cellX, cellY);
+                // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash. 
+                var cellUID = MortonNumber(idxX, idxY);
 
                 // Add body to new cell.
                 if (!meshDict.ContainsKey(cellUID))
                 {
                     var newCell = new MeshCell();
 
-                    newCell.LocX = cellX;
-                    newCell.LocY = cellY;
+                    // Convert the grid index to a real location.
+                    newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
+                    newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
+
+                    newCell.xID = idxX;
+                    newCell.yID = idxY;
+
                     newCell.Size = cellSize;
 
                     newCell.Mass += body.Mass;
@@ -303,7 +298,7 @@ namespace NBodies.Physics
             _meshBodies = BuildMeshBodyIndex(ref meshArr, meshBods, bodies.Length);
 
             // Build the mesh-neighbor index.
-            _meshNeighbors = BuildMeshNeighborIndex(ref meshArr, meshDict, cellSize);
+            _meshNeighbors = BuildMeshNeighborIndex(ref meshArr, meshDict);
 
             // Set mesh array field.
             _mesh = meshArr;
@@ -345,7 +340,7 @@ namespace NBodies.Physics
         /// <param name="mesh">Particle mesh array.</param>
         /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
         /// <param name="cellSize">Size of mesh cells.</param>
-        private int[] BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, MeshCell> meshDict, float cellSize)
+        private int[] BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, MeshCell> meshDict)
         {
             // Collection to store the the mesh neighbor indexes.
             // Initialized with mesh length * 9 (8 neighbors per cell plus itself).
@@ -364,10 +359,10 @@ namespace NBodies.Physics
                 {
                     for (int y = -1; y <= 1; y++)
                     {
-                        // Apply the current X/Y mulipliers to the mesh location to get
+                        // Apply the current X/Y mulipliers to the mesh grid coords to get
                         // the coordinates of a neighboring cell.
-                        int nX = (int)(mesh[i].LocX + (cellSize * x));
-                        int nY = (int)(mesh[i].LocY + (cellSize * y));
+                        int nX = mesh[i].xID + x;
+                        int nY = mesh[i].yID + y;
 
                         // Convert the new coords to a cell UID/Hash and check if the cell exists.
                         var cellUID = MortonNumber(nX, nY);
@@ -614,8 +609,8 @@ namespace NBodies.Physics
                         // Double tests are bad.
                         if (inBody.UID != outBody.UID)
                         {
-                            distX = inBody.LocX - outBody.LocX;
-                            distY = inBody.LocY - outBody.LocY;
+                            distX = outBody.LocX - inBody.LocX;
+                            distY = outBody.LocY - inBody.LocY;
                             dist = (distX * distX) + (distY * distY);
 
                             // Calc the distance and check for collision.
@@ -651,21 +646,21 @@ namespace NBodies.Physics
                                     gradX = gradX * scalar;
                                     gradY = gradY * scalar;
 
-                                    outBody.ForceX += gradX;
-                                    outBody.ForceY += gradY;
+                                    outBody.ForceX -= gradX;
+                                    outBody.ForceY -= gradY;
 
                                     // Viscosity force
                                     float visc_Laplace = 14.323944f * (m_kernelSize - distSqrt);
-                                    float visc_scalar = viscosity * outBody.Mass / inBody.Density * visc_Laplace;
+                                    float visc_scalar = inBody.Mass * visc_Laplace * viscosity * 1.0f / inBody.Density;
 
-                                    float viscVelo_diffX = outBody.SpeedX - inBody.SpeedX;
-                                    float viscVelo_diffY = outBody.SpeedY - inBody.SpeedY;
+                                    float viscVelo_diffX = inBody.SpeedX - outBody.SpeedX;
+                                    float viscVelo_diffY = inBody.SpeedY - outBody.SpeedY;
 
                                     viscVelo_diffX *= visc_scalar;
                                     viscVelo_diffY *= visc_scalar;
 
-                                    outBody.ForceX -= viscVelo_diffX;
-                                    outBody.ForceY -= viscVelo_diffY;
+                                    outBody.ForceX += viscVelo_diffX;
+                                    outBody.ForceY += viscVelo_diffY;
                                 }
                                 // Elastic collision.
                                 else if (outBody.InRoche == 1 & inBody.InRoche == 0) // Out of roche bodies always consume in roche bodies.

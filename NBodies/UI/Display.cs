@@ -275,7 +275,7 @@ namespace NBodies
                     _CDown = true;
 
                     cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
-                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
                     cellSizeOver.Show();
                     break;
 
@@ -529,8 +529,8 @@ namespace NBodies
             {
                 if (_CDown)
                 {
-                    MainLoop.CellSize += 1.0f;
-                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                    MainLoop.CellSizeExp += 1;
+                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
                 }
 
                 if (!_FDown && !_CDown && !_mouseRightDown)
@@ -552,8 +552,8 @@ namespace NBodies
             {
                 if (_CDown)
                 {
-                    MainLoop.CellSize -= 1.0f;
-                    cellSizeOver.Value = "Cell Size: " + MainLoop.CellSize.ToString();
+                    MainLoop.CellSizeExp -= 1;
+                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
                 }
 
                 if (!_FDown && !_CDown && !_mouseRightDown)

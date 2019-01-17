@@ -52,7 +52,7 @@ namespace NBodies.Rendering
         private static PictureBox _imageControl;
         private static float _prevScale = 0;
         private static Pen _blackHoleStroke = new Pen(Color.Red);
-        private static Pen _forcePen = new Pen(Color.FromArgb(100, Color.White), 0.2f);
+        private static Pen _forcePen = new Pen(Color.FromArgb(100, Color.DimGray), 0.2f);//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private static Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
 
         private static Color _spaceColor = Color.Black;
@@ -213,7 +213,9 @@ namespace NBodies.Rendering
                              continue;
 
                          var f = new PointF(body.ForceX, body.ForceY);
-                         f = f.Multi(0.01f);
+                         f = f.Div(f.LengthSqrt());
+
+                         //f = f.Multi(0.01f);
                          var floc = bloc.Add(f);
                          _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
 
