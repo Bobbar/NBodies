@@ -128,7 +128,7 @@ namespace NBodies.Rendering
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
-        private static System.Diagnostics.Stopwatch timer = new Stopwatch();
+        private static Stopwatch timer = new Stopwatch();
 
         public static void StartLoop()
         {
@@ -350,22 +350,6 @@ namespace NBodies.Rendering
             int len = bodies.Length;
             for (int b = 0; b < len; b++)
             {
-                if (bodies[b].ForceTot > bodies[b].Mass * 4 & bodies[b].BlackHole == 0)
-                {
-                    bodies[b].InRoche = 1;
-                }
-                else if (bodies[b].ForceTot * 2 < bodies[b].Mass * 4)
-                {
-                    bodies[b].InRoche = 0;
-                }
-                else if (bodies[b].BlackHole == 2 || bodies[b].IsExplosion == 1)
-                {
-                    bodies[b].InRoche = 1;
-                }
-
-                if (bodies[b].BlackHole == 2)
-                    bodies[b].InRoche = 1;
-
                 //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
                 if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
                 {
@@ -456,7 +440,7 @@ namespace NBodies.Rendering
             // newMass = prevMass / newPoints.Count;
 
             //  float postMass = newMass * newPoints.Count;
-            Console.WriteLine(num + " - " + newPoints.Count);
+            //   Console.WriteLine(num + " - " + newPoints.Count);
 
             foreach (var pnt in newPoints)
             {

@@ -65,7 +65,7 @@ namespace NBodies.Physics
 
         /// <summary>
         /// Fixes missing 'struct' strings for each function and variable declaration.
-        /// 
+        ///
         /// Cudafy doesn't seem to support structs correctly within functions and local variables.
         /// </summary>
         private string FixCode(string code, params string[] targets)
@@ -157,7 +157,6 @@ namespace NBodies.Physics
             // Copy updated bodies back to host and free memory.
             gpu.CopyFromDevice(gpuInBodies, bodies);
             gpu.FreeAll();
-
         }
 
         /// <summary>
@@ -186,8 +185,9 @@ namespace NBodies.Physics
         }
 
         // Calculate dimensionless morton number from X/Y coords.
-        static int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
-        static int[] S = new int[] { 1, 2, 4, 8 };
+        private static int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
+
+        private static int[] S = new int[] { 1, 2, 4, 8 };
 
         private int MortonNumber(int x, int y)
         {
@@ -231,7 +231,7 @@ namespace NBodies.Physics
                 int idxX = (int)body.LocX >> cellSizeExp;
                 int idxY = (int)body.LocY >> cellSizeExp;
 
-                // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash. 
+                // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
                 var cellUID = MortonNumber(idxX, idxY);
 
                 // Add body to new cell.
@@ -290,8 +290,8 @@ namespace NBodies.Physics
             }
 
             // Build flattened mesh-body and mesh-neighbor indexes:
-            // 
-            // Mesh cells contain a start index and a count which will be used 
+            //
+            // Mesh cells contain a start index and a count which will be used
             // within the kernels to access the correct elements of these indexes.
 
             // Build the mesh-body index.
@@ -458,23 +458,26 @@ namespace NBodies.Physics
             for (int c = 0; c < len; c++)
             {
                 // Make sure the current cell index is not a neighbor or this body's cell.
-                if (c != outBody.MeshID && IsNeighbor(c, meshNeighbors, bodyCell.NeighborStartIdx, bodyCell.NeighborCount) == -1)
+                if (c != outBody.MeshID)
                 {
                     // Calculate the force from the cells center of mass.
                     MeshCell cell = inMesh[c];
 
-                    distX = cell.CmX - outBody.LocX;
-                    distY = cell.CmY - outBody.LocY;
-                    dist = (distX * distX) + (distY * distY);
+                    if (IsNeighbor(bodyCell, cell) == -1)
+                    {
+                        distX = cell.CmX - outBody.LocX;
+                        distY = cell.CmY - outBody.LocY;
+                        dist = (distX * distX) + (distY * distY);
 
-                    distSqrt = (float)Math.Sqrt(dist);
+                        distSqrt = (float)Math.Sqrt(dist);
 
-                    totMass = (float)cell.Mass * outBody.Mass;
-                    force = totMass / dist;
+                        totMass = (float)cell.Mass * outBody.Mass;
+                        force = totMass / dist;
 
-                    outBody.ForceTot += force;
-                    outBody.ForceX += (force * distX / distSqrt);
-                    outBody.ForceY += (force * distY / distSqrt);
+                        outBody.ForceTot += force;
+                        outBody.ForceX += (force * distX / distSqrt);
+                        outBody.ForceY += (force * distY / distSqrt);
+                    }
                 }
             }
 
@@ -545,6 +548,22 @@ namespace NBodies.Physics
             // Calculate pressure from density.
             outBody.Pressure = GAS_K * (outBody.Density);
 
+            if (outBody.ForceTot > outBody.Mass * 4 & outBody.BlackHole == 0)
+            {
+                outBody.InRoche = 1;
+            }
+            else if (outBody.ForceTot * 2 < outBody.Mass * 4)
+            {
+                outBody.InRoche = 0;
+            }
+            else if (outBody.BlackHole == 2 || outBody.IsExplosion == 1)
+            {
+                outBody.InRoche = 1;
+            }
+
+            if (outBody.BlackHole == 2)
+                outBody.InRoche = 1;
+
             // Write back to memory.
             outBodies[a] = outBody;
         }
@@ -553,15 +572,20 @@ namespace NBodies.Physics
         /// Tests the specified cell index to see if it falls within the specified range of neighbor cell indexes.
         /// </summary>
         [Cudafy]
-        public static int IsNeighbor(int testIdx, int[] nIdx, int startIdx, int count)
+        public static int IsNeighbor(MeshCell testCell, MeshCell neighborCell)
         {
-            for (int i = startIdx; i < startIdx + count; i++)
+            int match = -1;
+
+            for (int x = -1; x <= 1; x++)
             {
-                if (testIdx == nIdx[i])
-                    return 0;
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (neighborCell.xID == testCell.xID + x && neighborCell.yID == testCell.yID + y)
+                        match = 1;
+                }
             }
 
-            return -1;
+            return match;
         }
 
         /// <summary>
@@ -705,7 +729,6 @@ namespace NBodies.Physics
             }
 
             gpThread.SyncThreads();
-
 
             // Leap frog integration.
             float dt2;
