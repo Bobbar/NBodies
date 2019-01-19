@@ -106,7 +106,7 @@ namespace NBodies.Rendering
         }
 
 
-        private static int _cellSizeExp = 4;
+        private static int _cellSizeExp = 1;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;
@@ -211,12 +211,18 @@ namespace NBodies.Rendering
                             BodyManager.Bodies = bodiesCopy;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
+                         //   timer.Restart();
+
+
                             // Process and fracture roche bodies.
                             if (RocheLimit)
                                 ProcessRoche(ref BodyManager.Bodies);
 
+                           // Console.WriteLine(timer.ElapsedMilliseconds);
+
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
+
 
                             // Increment physics frame count.
                             _frameCount++;
@@ -263,8 +269,11 @@ namespace NBodies.Rendering
 
                     // 4.
                     // Draw the field asynchronously.
+                    //if (DrawBodies)
+                    //    Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
+
                     if (DrawBodies)
-                        Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
+                        D2DRenderer.Test(BodyManager.Bodies);
 
                 }
             }

@@ -50,9 +50,10 @@ namespace NBodies.Rendering
         private static BufferedGraphicsContext _currentContext;
         private static BufferedGraphics _buffer;
         private static PictureBox _imageControl;
+        private static Form _targetForm;
         private static float _prevScale = 0;
         private static Pen _blackHoleStroke = new Pen(Color.Red);
-        private static Pen _forcePen = new Pen(Color.FromArgb(100, Color.DimGray), 0.2f);//new Pen(Color.FromArgb(100, Color.White), 0.2f);
+        private static Pen _forcePen = new Pen(Color.FromArgb(150, Color.SpringGreen), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private static Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
 
         private static Color _spaceColor = Color.Black;
@@ -65,7 +66,7 @@ namespace NBodies.Rendering
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
-            _forcePen.EndCap = LineCap.ArrowAnchor;
+            _targetForm = imageControl.FindForm();
         }
 
         private static void InitGfx()
@@ -103,12 +104,23 @@ namespace NBodies.Rendering
             _prevScale = RenderVars.CurrentScale;
         }
 
+        static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+
+        //public static void Draw(Body[] bodies)
+        //{
+        //    D2DRenderer.Test(bodies);
+        //}
+
         public async static Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
         {
             completeCallback.Reset();
 
             await Task.Run(() =>
              {
+                 timer.Restart();
+
+
+
                  Body followBody = new Body();
 
                  if (BodyManager.FollowSelected)
@@ -207,10 +219,11 @@ namespace NBodies.Rendering
                      for (int i = 0; i < bodies.Length; i++)
                      {
                          var body = bodies[i];
-                         var bloc = new PointF(body.LocX, body.LocY);
 
                          if (!_cullTangle.Contains(body.LocX, body.LocY))
                              continue;
+
+                         var bloc = new PointF(body.LocX, body.LocY);
 
                          var f = new PointF(body.ForceX, body.ForceY);
                          f = f.Div(f.LengthSqrt());
@@ -274,6 +287,8 @@ namespace NBodies.Rendering
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();
              });
+
+            Console.WriteLine(timer.ElapsedMilliseconds);
 
             completeCallback.Set();
         }

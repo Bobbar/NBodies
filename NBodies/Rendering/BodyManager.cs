@@ -48,9 +48,6 @@ namespace NBodies.Rendering
         {
             if (Bodies.Length < 1) return;
 
-            // CullDistant();
-
-            _bodyStore.Clear();
             _bodyStore = Bodies.ToList();
             _bodyStore.RemoveAll((b) => b.Visible == 0);
 
@@ -64,29 +61,6 @@ namespace NBodies.Rendering
             //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
-        }
-
-        public static void CullDistant()
-        {
-            float cullDist = 1000;
-            var meshCMass = MeshCenterOfMass();
-
-            for (int i = 0; i < Mesh.Length; i++)
-            {
-                var mesh = Mesh[i];
-                var dist = new PointF(mesh.CmX, mesh.CmY).DistanceSqrt(meshCMass);
-
-                if (dist > cullDist)
-                {
-                    for (int b = 0; b < MeshBodies.GetLength(1); b++)
-                    {
-                        if (MeshBodies[i, b] != -1)
-                        {
-                            Bodies[MeshBodies[i, b]].Visible = 0;
-                        }
-                    }
-                }
-            }
         }
 
         public static void ClearBodies()

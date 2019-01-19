@@ -67,6 +67,7 @@ namespace NBodies
             PhysicsProvider.InitPhysics();
 
             Renderer.Init(RenderBox);
+            D2DRenderer.Init(RenderBox);
 
             Renderer.OverLays.Add(explodeOver);
             Renderer.OverLays.Add(fpsOver);
