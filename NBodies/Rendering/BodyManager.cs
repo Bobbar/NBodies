@@ -89,6 +89,20 @@ namespace NBodies.Rendering
             }
         }
 
+        public static double UpdateTotMass()
+        {
+            double tMass = 0;
+
+            for (int i = 0; i < Mesh.Length; i++)
+            {
+                tMass += Mesh[i].Mass;
+            }
+
+            _totalMass = tMass;
+
+            return _totalMass;
+        }
+
         public static void ClearBodies()
         {
             FollowSelected = false;

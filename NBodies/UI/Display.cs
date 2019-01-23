@@ -25,7 +25,6 @@ namespace NBodies
         private bool _bodyMovin = false;
         private PointF _mouseMoveDownLoc = new PointF();
         private PointF _mouseLocation = new PointF();
-        private Timer _bodySizeTimer = new Timer();
         private Timer _UIUpdateTimer = new Timer();
         private bool _paused = false;
 
@@ -42,9 +41,6 @@ namespace NBodies
         public DisplayForm()
         {
             InitializeComponent();
-
-            _bodySizeTimer.Interval = 10;
-            _bodySizeTimer.Tick += BodySizeTimer_Tick;
 
             _UIUpdateTimer.Interval = 100;
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
@@ -117,13 +113,23 @@ namespace NBodies
             FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
             FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
-            TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
+            TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.UpdateTotMass());
+            ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
 
-            var fBody = BodyManager.FollowBody();
 
-            DensityLabel.Text = string.Format("Density: {0}", fBody.Density);
-            PressureLabel.Text = string.Format("Press: {0}", fBody.Pressure);
-            SpeedLabel.Text = string.Format("Agg. Speed: {0}", fBody.AggregateSpeed());
+            if (BodyManager.FollowSelected)
+            {
+                DensityLabel.Visible = true;
+                PressureLabel.Visible = true;
+                SpeedLabel.Visible = true;
+            }
+            else
+            {
+                DensityLabel.Visible = false;
+                PressureLabel.Visible = false;
+                SpeedLabel.Visible = false;
+            }
+
 
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {
@@ -138,6 +144,7 @@ namespace NBodies
             }
             else
             {
+                RecSizeLabel.Visible = false;
                 RecordButton.BackColor = DefaultBackColor;
             }
         }
@@ -154,8 +161,14 @@ namespace NBodies
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.BlackHole.ToString();
 
+
+                DensityLabel.Text = string.Format("Density: {0}", selectBody.Density);
+                PressureLabel.Text = string.Format("Press: {0}", selectBody.Pressure);
+                SpeedLabel.Text = string.Format("Agg. Speed: {0}", selectBody.AggregateSpeed());
+
                 selectBody.PrintInfo();
             }
+
         }
 
         private void StartRecording()
@@ -294,7 +307,7 @@ namespace NBodies
                         this.FormBorderStyle = FormBorderStyle.Sizable;
                         _hideToolbar = false;
                     }
-                   
+
                     break;
             }
         }
@@ -424,8 +437,6 @@ namespace NBodies
 
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
-            _bodySizeTimer.Stop();
-
             //  _selectedUid = -1;
             _bodyMovin = false;
 
@@ -511,6 +522,8 @@ namespace NBodies
 
                 var loc1 = ScaleHelpers.ScreenPointToField(distLine.Location);
                 var loc2 = ScaleHelpers.ScreenPointToField(distLine.Location2);
+
+                Console.WriteLine(loc1.Distance(loc2).ToString());
 
                 distOver.Value = loc1.DistanceSqrt(loc2).ToString();
             }

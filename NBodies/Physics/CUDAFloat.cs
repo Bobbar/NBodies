@@ -54,6 +54,7 @@ namespace NBodies.Physics
 
             //Add missing 'struct' strings to generated code.
             cudaModule.SourceCode = FixCode(cudaModule.SourceCode, nameof(Body), nameof(MeshCell));
+            cudaModule.SourceCode = cudaModule.SourceCode.Replace("sqrt((double", "half_sqrt((float");
             cudaModule.Serialize();
 
             gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
@@ -791,7 +792,7 @@ namespace NBodies.Physics
                 float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size * 0.5f, 2));
                 float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size * 0.5f, 2));
                 float a = a1 + a2;
-                bodyA.Size = (float)Math.Sqrt(a / Math.PI) * 2;
+                bodyA.Size = (float)Math.Sqrt((float)(a / Math.PI)) * 2;
             }
 
             bodyA.Mass += bodyB.Mass;
