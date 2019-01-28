@@ -67,6 +67,8 @@ namespace NBodies.Rendering
         {
             _imageControl = imageControl;
             _targetForm = imageControl.FindForm();
+
+           // InitGfx();
         }
 
         private static void InitGfx()

@@ -13,6 +13,7 @@ using wic = SharpDX.WIC;
 using dw = SharpDX.DirectWrite;
 using SharpDX.Mathematics;
 
+using SharpDX.Mathematics.Interop;
 
 using NBodies.Physics;
 using NBodies.Extensions;
@@ -25,6 +26,7 @@ namespace NBodies.Rendering
 {
     public static class D2DRenderer
     {
+        private static Control _target;
         //  private static Device d2dDevice = new SharpDX.DXGI.Device()
         private static dxgi.SwapChain1 swapChain;
         private static d2.Bitmap1 d2dTarget;
@@ -34,23 +36,68 @@ namespace NBodies.Rendering
         static d2.RenderTargetProperties rndTargProperties;
         static d2.WindowRenderTarget wndRender;
 
+        private static Matrix3x2 _transform = new Matrix3x2();
+
+        private static Size _prevSize;
+        private static float _prevScale;
+
+        private static System.Drawing.RectangleF _cullTangle;
+
+
+        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+
         public static void Init(Control target)
         {
+            _target = target;
             rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format.B8G8R8A8_UNorm, d2.AlphaMode.Premultiplied));
+          //  rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format., d2.AlphaMode.Premultiplied));
+
             hwndProperties = new d2.HwndRenderTargetProperties();
             hwndProperties.Hwnd = target.Handle;
             hwndProperties.PixelSize = new Size2(target.ClientSize.Width, target.ClientSize.Height);
-            hwndProperties.PresentOptions = d2.PresentOptions.None;
+            hwndProperties.PresentOptions = d2.PresentOptions.RetainContents;
+            rndTargProperties.MinLevel = d2.FeatureLevel.Level_DEFAULT;
 
             wndRender = new d2.WindowRenderTarget(fact, rndTargProperties, hwndProperties);
+
+            _prevSize = target.ClientSize;
+        }
+
+        public static void CheckScale()
+        {
+            if (_target.ClientSize != _prevSize)
+            {
+                // Init(_target);
+
+                //  hwndProperties.PixelSize = new Size2(_target.ClientSize.Width, _target.ClientSize.Height);
+                UpdateGraphicsScale();
+            }
+
+            if (_prevScale != RenderVars.CurrentScale)
+            {
+                UpdateGraphicsScale();
+            }
+        }
+
+        private static void UpdateGraphicsScale()
+        {
+           
+            _transform.ScaleVector = new Vector2(RenderVars.CurrentScale, RenderVars.CurrentScale);
+            wndRender.Transform = _transform;
+            _prevScale = RenderVars.CurrentScale;
         }
 
         public static void Test(Body[] bodies)
         {
+            timer.Restart();
 
 
+            CheckScale();
+
+            var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);
 
 
+            _cullTangle = new System.Drawing.RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _target.ClientSize.Width / RenderVars.CurrentScale, _target.ClientSize.Height / RenderVars.CurrentScale);
 
 
             //        var defaultDevice = new SharpDX.Direct3D11.Device(SharpDX.Direct3D.DriverType.Hardware,
@@ -74,35 +121,66 @@ namespace NBodies.Rendering
             //d2dContext.BeginDraw();
 
             //d2dContext.Clear(new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 255));
+            
+          
+
             wndRender.BeginDraw();
 
             wndRender.Clear(new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 255));
 
             //var scenebrush = new d2.SolidColorBrush(wndRender, new SharpDX.Mathematics.Interop.RawColor4(66, 136, 244, 100));
             var scenebrush = new d2.SolidColorBrush(wndRender, new SharpDX.Mathematics.Interop.RawColor4(0, 0, 1, 0.75f));
+           
 
-            var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);
+            var drawEllip = new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(), 0, 0);
 
 
             for (int i = 0; i < bodies.Length; i++)
-            {
+            { 
                 var body = bodies[i];
-                var bodyLoc = new System.Drawing.PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
+                //var bodyLoc = new System.Drawing.PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
+                var bodyLoc = new System.Drawing.PointF((body.LocX + finalOffset.X), (body.LocY + finalOffset.Y));
 
-               // d2dContext.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size, body.Size), new SharpDX.Direct2D1.SolidColorBrush(d2dContext, new SharpDX.Mathematics.Interop.RawColor4(255, 255, 255, 255)));
-                wndRender.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size, body.Size), scenebrush);
+
+                if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
+
+                drawEllip.Point.X = bodyLoc.X;
+                drawEllip.Point.Y = bodyLoc.Y;
+                drawEllip.RadiusX = body.Size * 0.5f;
+                drawEllip.RadiusY = body.Size * 0.5f;
+
+                var bc = System.Drawing.Color.FromArgb(body.Color);
+
+                scenebrush.Color = new SharpDX.Mathematics.Interop.RawColor4(bc.R / 255f, bc.G / 255f, bc.B / 255f, 0.75f);
+
+                // d2dContext.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size, body.Size), new SharpDX.Direct2D1.SolidColorBrush(d2dContext, new SharpDX.Mathematics.Interop.RawColor4(255, 255, 255, 255)));
+                //wndRender.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size / 2, body.Size / 2), scenebrush);
+                //wndRender.FillEllipse(drawEllip, scenebrush);
+
+                wndRender.FillEllipse(drawEllip, scenebrush);
+
                
-            
-           
+
+
 
             }
 
-           // d2dContext.EndDraw();
+            //   var blah = new Matrix3x2();
+
+
+            // wndRender.Transform = new RawMatrix3x2()
+
+            // d2dContext.EndDraw();
 
             //wndRender.Flush();
             wndRender.EndDraw();
 
 
+            Console.WriteLine(timer.ElapsedMilliseconds);
+
+
         }
+
+
     }
 }
