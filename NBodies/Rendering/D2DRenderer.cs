@@ -193,6 +193,17 @@ namespace NBodies.Rendering
             _wndRender.Transform = ogSt;
         }
 
+        public override void DrawOrbit(PointF[] points, PointF finalOffset)
+        {
+            if (points.Length < 1)
+                return;
+
+            for (int a = 1; a < points.Length; a++)
+            {
+                _wndRender.DrawLine(points[a - 1].Add(finalOffset).ToVector(), points[a].Add(finalOffset).ToVector(), _orbitBrush, 0.4f, _arrowStyle);
+            }
+        }
+
         public override void BeginDraw()
         {
             _wndRender.BeginDraw();
@@ -248,15 +259,6 @@ namespace NBodies.Rendering
             return new RawColor4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
         }
 
-        private void DrawOrbit(PointF[] points, PointF finalOffset)
-        {
-            if (points.Length < 1)
-                return;
-
-            for (int a = 1; a < points.Length; a++)
-            {
-                _wndRender.DrawLine(points[a - 1].Add(finalOffset).ToVector(), points[a].Add(finalOffset).ToVector(), _orbitBrush, 0.4f, _arrowStyle);
-            }
-        }
+      
     }
 }

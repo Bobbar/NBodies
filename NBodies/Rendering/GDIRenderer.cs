@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using System;
 
 namespace NBodies.Rendering
 {
@@ -33,7 +32,7 @@ namespace NBodies.Rendering
         {
             _currentContext = BufferedGraphicsManager.Current;
             _buffer = _currentContext.Allocate(_targetControl.CreateGraphics(), _targetControl.DisplayRectangle);
-           
+
             //_buffer.Graphics.CompositingMode = CompositingMode.SourceOver;
             //_buffer.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
             //_buffer.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
@@ -157,6 +156,19 @@ namespace NBodies.Rendering
             _buffer.Graphics.Restore(ogSt);
         }
 
+        public override void DrawOrbit(PointF[] points, PointF finalOffset)
+        {
+            if (points.Length < 1)
+                return;
+
+            for (int a = 0; a < points.Length; a++)
+            {
+                points[a] = points[a].Add(finalOffset);
+            }
+
+            _buffer.Graphics.DrawLines(_orbitPen, points);
+        }
+
         public override void BeginDraw()
         {
             // Nothing to do.
@@ -197,20 +209,5 @@ namespace NBodies.Rendering
         {
             InitGraphics();
         }
-
-        private void DrawOrbit(PointF[] points, PointF finalOffset)
-        {
-            if (points.Length < 1)
-                return;
-
-            for (int a = 0; a < points.Length; a++)
-            {
-                points[a] = points[a].Add(finalOffset);
-            }
-
-            _buffer.Graphics.DrawLines(_orbitPen, points);
-        }
-
-       
     }
 }

@@ -40,14 +40,18 @@ namespace NBodies.Rendering
             }
         }
 
+        private static int _bodyAlpha = 210;
+
         protected Control _targetControl;
         protected float _prevScale = 0;
-
         protected Color _clearColor = Color.Black;
         protected RectangleF _cullTangle;
         protected Size _viewPortSize;
 
-        private static int _bodyAlpha = 210;
+        private ManualResetEventSlim _orbitReadyWait = new ManualResetEventSlim(false);
+        private bool _orbitOffloadRunning = false;
+        private List<PointF> _orbitPath = new List<PointF>();
+        private List<PointF> _drawPath = new List<PointF>();
 
         private Stopwatch timer = new Stopwatch();
 
@@ -133,6 +137,43 @@ namespace NBodies.Rendering
                     DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
                 }
 
+                if (BodyManager.FollowSelected)
+                {
+                    var followBody = BodyManager.FollowBody();
+
+                    if (ShowForce)
+                    {
+                        DrawForceVectors(new Body[] { followBody }, finalOffset.X, finalOffset.Y);
+                    }
+
+                    if (ShowPath)
+                    {
+                        // Start the offload task if needed.
+                        if (!_orbitOffloadRunning)
+                            CalcOrbitOffload();
+
+                        // Previous orbit calc is complete.
+                        // Bring the new data into another reference.
+                        if (!_orbitReadyWait.Wait(0))
+                        {
+                            // Reference the new data.
+                            _drawPath = _orbitPath;
+
+                            _orbitReadyWait.Set();
+                        }
+
+                        // Add the final offset to the path points and draw them as a line.
+                        if (_drawPath.Count > 0)
+                        {
+                            var pathArr = _drawPath.ToArray();
+
+                            pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
+
+                            DrawOrbit(pathArr, finalOffset);
+                        }
+                    }
+                }
+
                 if (ShowMesh)
                 {
                     DrawMesh(BodyManager.Mesh, finalOffset.X, finalOffset.Y);
@@ -163,6 +204,8 @@ namespace NBodies.Rendering
         public abstract void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY);
 
         public abstract void DrawOverlays(float offsetX, float offsetY);
+
+        public abstract void DrawOrbit(PointF[] points, PointF finalOffset);
 
         public abstract void BeginDraw();
 
@@ -202,6 +245,38 @@ namespace NBodies.Rendering
 
             return finalOffset;
         }
+
+        // Offload orbit calcs to another task/thread and update the renderer periodically.
+        // We don't want to block the rendering task while we wait for this calc to finish.
+        // We just populate a local variable with the new data and signal the render thread
+        // to update its data for drawing.
+        private async Task CalcOrbitOffload()
+        {
+            if (_orbitOffloadRunning)
+                return;
+
+            _orbitReadyWait.Set();
+
+            await Task.Run(() =>
+            {
+                _orbitOffloadRunning = true;
+
+                while (BodyManager.FollowSelected)
+                {
+                    _orbitReadyWait.Wait(-1);
+
+                    _orbitPath = BodyManager.CalcPathCircle(BodyManager.FollowBody());
+
+                    //_orbitPath = BodyManager.CalcPath(BodyManager.FollowBody());
+                    // _orbitPath = BodyManager.CalcPathCM(BodyManager.FollowBody());
+
+                    _orbitReadyWait.Reset();
+                }
+
+                _orbitOffloadRunning = false;
+            });
+        }
+
 
         internal Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
         {
