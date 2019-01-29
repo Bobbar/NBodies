@@ -5,10 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
 
+
 namespace NBodies.Extensions
 {
     public static class PointExtensions
     {
+        public static SharpDX.Vector2 ToVector(this PointF point)
+        {
+            return new SharpDX.Vector2(point.X, point.Y);
+        }
+
         public static Point ToPoint(this PointF point)
         {
             return new Point((int)point.X, (int)point.Y);

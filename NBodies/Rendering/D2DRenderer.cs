@@ -1,186 +1,234 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SharpDX;
-//using System.Drawing;
-
-using d2 = SharpDX.Direct2D1;
-using d3d = SharpDX.Direct3D11;
-using dxgi = SharpDX.DXGI;
-using wic = SharpDX.WIC;
-using dw = SharpDX.DirectWrite;
-using SharpDX.Mathematics;
-
-using SharpDX.Mathematics.Interop;
-
+﻿using NBodies.Extensions;
 using NBodies.Physics;
-using NBodies.Extensions;
-
-using System.Windows.Forms;
-
+using SharpDX;
+using SharpDX.Mathematics.Interop;
 using System.Drawing;
+using System.Windows.Forms;
+using d2 = SharpDX.Direct2D1;
+using dw = SharpDX.DirectWrite;
+using dxgi = SharpDX.DXGI;
+using System;
 
 namespace NBodies.Rendering
 {
-    public static class D2DRenderer
+    public sealed class D2DRenderer : RenderBase
     {
-        private static Control _target;
-        //  private static Device d2dDevice = new SharpDX.DXGI.Device()
-        private static dxgi.SwapChain1 swapChain;
-        private static d2.Bitmap1 d2dTarget;
+        private d2.Factory _fact = new d2.Factory(d2.FactoryType.SingleThreaded);
+        private dw.Factory _dwFact = new dw.Factory(dw.FactoryType.Shared);
+        private d2.HwndRenderTargetProperties _hwndProperties;
+        private d2.RenderTargetProperties _rndTargProperties;
+        private d2.WindowRenderTarget _wndRender;
+        private Matrix3x2 _transform = new Matrix3x2();
 
-        static SharpDX.Direct2D1.Factory fact = new SharpDX.Direct2D1.Factory(SharpDX.Direct2D1.FactoryType.SingleThreaded);
-        static d2.HwndRenderTargetProperties hwndProperties;
-        static d2.RenderTargetProperties rndTargProperties;
-        static d2.WindowRenderTarget wndRender;
+        private d2.SolidColorBrush _bodyBrush;
+        private d2.SolidColorBrush _whiteBrush;
+        private d2.SolidColorBrush _greenBrush;
+        private d2.SolidColorBrush _grayBrush;
+        private d2.SolidColorBrush _orbitBrush;
 
-        private static Matrix3x2 _transform = new Matrix3x2();
+        private d2.Ellipse _bodyEllipse;
 
-        private static Size _prevSize;
-        private static float _prevScale;
+        private dw.TextFormat _infoText;
 
-        private static System.Drawing.RectangleF _cullTangle;
+        private d2.StrokeStyle _arrowStyle;
 
-
-        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
-
-        public static void Init(Control target)
+        public D2DRenderer(Control targetControl) : base(targetControl)
         {
-            _target = target;
-            rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format.B8G8R8A8_UNorm, d2.AlphaMode.Premultiplied));
-          //  rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format., d2.AlphaMode.Premultiplied));
-
-            hwndProperties = new d2.HwndRenderTargetProperties();
-            hwndProperties.Hwnd = target.Handle;
-            hwndProperties.PixelSize = new Size2(target.ClientSize.Width, target.ClientSize.Height);
-            hwndProperties.PresentOptions = d2.PresentOptions.RetainContents;
-            rndTargProperties.MinLevel = d2.FeatureLevel.Level_DEFAULT;
-
-            wndRender = new d2.WindowRenderTarget(fact, rndTargProperties, hwndProperties);
-
-            _prevSize = target.ClientSize;
         }
 
-        public static void CheckScale()
+        public override void Clear(System.Drawing.Color color)
         {
-            if (_target.ClientSize != _prevSize)
+            _wndRender.Clear(ConvertColor(color));
+        }
+
+        public override void InitGraphics()
+        {
+            _rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format.B8G8R8A8_UNorm, d2.AlphaMode.Premultiplied));
+            _rndTargProperties.MinLevel = d2.FeatureLevel.Level_10;
+
+            InitProperties(_targetControl);
+
+            _wndRender = new d2.WindowRenderTarget(_fact, _rndTargProperties, _hwndProperties);
+
+            _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
+            _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
+            _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 8);
+            _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
+            _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
+            _orbitBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
+            _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(150, System.Drawing.Color.LightGray)));
+
+            var arrowProps = new SharpDX.Direct2D1.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
+            _arrowStyle = new SharpDX.Direct2D1.StrokeStyle(_fact, arrowProps);
+
+            _viewPortSize = _targetControl.Size;
+        }
+
+        private void InitProperties(Control targetControl)
+        {
+            if (targetControl.InvokeRequired)
             {
-                // Init(_target);
-
-                //  hwndProperties.PixelSize = new Size2(_target.ClientSize.Width, _target.ClientSize.Height);
-                UpdateGraphicsScale();
+                targetControl.Invoke(new Action(() => InitProperties(targetControl)));
             }
-
-            if (_prevScale != RenderVars.CurrentScale)
+            else
             {
-                UpdateGraphicsScale();
+                _hwndProperties = new d2.HwndRenderTargetProperties();
+                _hwndProperties.Hwnd = _targetControl.Handle;
+                _hwndProperties.PixelSize = new Size2(targetControl.ClientSize.Width, targetControl.ClientSize.Height);
+                _hwndProperties.PresentOptions = d2.PresentOptions.Immediately;
             }
         }
 
-        private static void UpdateGraphicsScale()
+        public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
         {
-           
-            _transform.ScaleVector = new Vector2(RenderVars.CurrentScale, RenderVars.CurrentScale);
-            wndRender.Transform = _transform;
-            _prevScale = RenderVars.CurrentScale;
+            _bodyBrush.Color = ConvertColor(color);
+            _bodyEllipse.Point.X = X;
+            _bodyEllipse.Point.Y = Y;
+            _bodyEllipse.RadiusX = body.Size * 0.5f;
+            _bodyEllipse.RadiusY = body.Size * 0.5f;
+
+            _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
         }
 
-        public static void Test(Body[] bodies)
+        public override void DrawForceVectors(Body[] bodies, float offsetX, float offsetY)
         {
-            timer.Restart();
-
-
-            CheckScale();
-
-            var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);
-
-
-            _cullTangle = new System.Drawing.RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _target.ClientSize.Width / RenderVars.CurrentScale, _target.ClientSize.Height / RenderVars.CurrentScale);
-
-
-            //        var defaultDevice = new SharpDX.Direct3D11.Device(SharpDX.Direct3D.DriverType.Hardware,
-            //                                                         d3d.DeviceCreationFlags.VideoSupport
-            //                                                         | d3d.DeviceCreationFlags.BgraSupport
-            //                                                         | d3d.DeviceCreationFlags.None);
-
-            //        var d3dDevice = defaultDevice.QueryInterface<d3d.Device1>();
-            //        var dxgiDevice = d3dDevice.QueryInterface<dxgi.Device>();
-            //        var d2dDevice = new d2.Device(dxgiDevice);
-            //        var d2dContext = new d2.DeviceContext(d2dDevice, d2.DeviceContextOptions.None);
-
-            //        d2.BitmapProperties1 properties = new d2.BitmapProperties1(new d2.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied),
-            //96, 96, d2.BitmapOptions.Target | d2.BitmapOptions.CannotDraw);
-
-            //        dxgi.Surface backBuffer = swapChain.GetBackBuffer<dxgi.Surface>(0);
-
-            //        d2dTarget = new d2.Bitmap1(d2dContext, backBuffer, properties);
-
-            //d2dContext.Target = d2dTarget;
-            //d2dContext.BeginDraw();
-
-            //d2dContext.Clear(new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 255));
-            
-          
-
-            wndRender.BeginDraw();
-
-            wndRender.Clear(new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 255));
-
-            //var scenebrush = new d2.SolidColorBrush(wndRender, new SharpDX.Mathematics.Interop.RawColor4(66, 136, 244, 100));
-            var scenebrush = new d2.SolidColorBrush(wndRender, new SharpDX.Mathematics.Interop.RawColor4(0, 0, 1, 0.75f));
-           
-
-            var drawEllip = new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(), 0, 0);
-
-
             for (int i = 0; i < bodies.Length; i++)
-            { 
+            {
                 var body = bodies[i];
-                //var bodyLoc = new System.Drawing.PointF((body.LocX - body.Size * 0.5f + finalOffset.X), (body.LocY - body.Size * 0.5f + finalOffset.Y));
-                var bodyLoc = new System.Drawing.PointF((body.LocX + finalOffset.X), (body.LocY + finalOffset.Y));
 
+                if (!_cullTangle.Contains(body.LocX, body.LocY))
+                    continue;
 
-                if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
+                var bloc = new PointF(body.LocX, body.LocY);
 
-                drawEllip.Point.X = bodyLoc.X;
-                drawEllip.Point.Y = bodyLoc.Y;
-                drawEllip.RadiusX = body.Size * 0.5f;
-                drawEllip.RadiusY = body.Size * 0.5f;
+                var f = new PointF(body.ForceX, body.ForceY);
+                f = f.Div(f.LengthSqrt());
 
-                var bc = System.Drawing.Color.FromArgb(body.Color);
-
-                scenebrush.Color = new SharpDX.Mathematics.Interop.RawColor4(bc.R / 255f, bc.G / 255f, bc.B / 255f, 0.75f);
-
-                // d2dContext.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size, body.Size), new SharpDX.Direct2D1.SolidColorBrush(d2dContext, new SharpDX.Mathematics.Interop.RawColor4(255, 255, 255, 255)));
-                //wndRender.FillEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Mathematics.Interop.RawVector2(bodyLoc.X, bodyLoc.Y), body.Size / 2, body.Size / 2), scenebrush);
-                //wndRender.FillEllipse(drawEllip, scenebrush);
-
-                wndRender.FillEllipse(drawEllip, scenebrush);
-
-               
-
-
-
+                //f = f.Multi(0.01f);
+                var floc = bloc.Add(f);
+                var finalOffset = new PointF(offsetX, offsetY);
+                _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _grayBrush, 0.2f, _arrowStyle);
             }
-
-            //   var blah = new Matrix3x2();
-
-
-            // wndRender.Transform = new RawMatrix3x2()
-
-            // d2dContext.EndDraw();
-
-            //wndRender.Flush();
-            wndRender.EndDraw();
-
-
-            Console.WriteLine(timer.ElapsedMilliseconds);
-
-
         }
 
+        public override void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY)
+        {
+            float pSize = 1.0f;
+            float pOffset = pSize / 2f;
+            var meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
+            var centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
+            var massBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.GreenYellow)));
 
+            foreach (var m in mesh)
+            {
+                if (!_cullTangle.Contains(m.LocX, m.LocY))
+                    continue;
+
+                var meshX = m.LocX - m.Size / 2 + offsetX;
+                var meshY = m.LocY - m.Size / 2 + offsetY;
+
+                _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), meshBrush, 0.1f);
+
+                var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX - pOffset, m.LocY + offsetY - pOffset), pSize, pSize);
+
+                _wndRender.FillEllipse(centerEllip, centerBrush);
+
+                var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX - pOffset, m.CmY + offsetY - pOffset), pSize, pSize);
+
+                _wndRender.FillEllipse(massEllip, massBrush);
+
+                //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+            }
+        }
+
+        public override void DrawOverlays(float offsetX, float offsetY)
+        {
+            var finalOffset = new PointF(offsetX, offsetY);
+
+            foreach (var overlay in OverLays.ToArray())
+            {
+                if (overlay.Visible)
+                {
+                    switch (overlay.Type)
+                    {
+                        case OverlayGraphicType.Orbit:
+                            DrawOrbit(overlay.OrbitPath.ToArray(), finalOffset);
+                            break;
+                    }
+                }
+            }
+
+            var ogSt = _wndRender.Transform;
+            _wndRender.Transform = new Matrix3x2(1, 0, 0, 1, 0, 0);
+            foreach (var overlay in OverLays.ToArray())
+            {
+                if (overlay.Visible)
+                {
+                    switch (overlay.Type)
+                    {
+                        case OverlayGraphicType.Text:
+                            _wndRender.DrawText(overlay.Value, _infoText, new SharpDX.RectangleF(overlay.Location.X, overlay.Location.Y, 50f, 50f), _whiteBrush);
+                            break;
+
+                        case OverlayGraphicType.Line:
+                            _wndRender.DrawLine(overlay.Location.ToVector(), overlay.Location2.ToVector(), _greenBrush, 5.0f, _arrowStyle);
+                            break;
+                    }
+                }
+            }
+
+            _wndRender.Transform = ogSt;
+        }
+
+        public override void BeginDraw()
+        {
+            _wndRender.BeginDraw();
+        }
+
+        public override void EndDraw()
+        {
+            _wndRender.EndDraw();
+        }
+
+        public override void SetAntiAliasing(bool enabled)
+        {
+            if (enabled)
+            {
+                _wndRender.AntialiasMode = d2.AntialiasMode.PerPrimitive;
+            }
+            else
+            {
+                _wndRender.AntialiasMode = d2.AntialiasMode.Aliased;
+            }
+        }
+
+        public override void UpdateGraphicsScale(float currentScale)
+        {
+            _transform.ScaleVector = new Vector2(currentScale, currentScale);
+            _wndRender.Transform = _transform;
+            _prevScale = currentScale;
+        }
+
+        public override void UpdateViewportSize(float width, float height)
+        {
+            InitGraphics();
+        }
+
+        private RawColor4 ConvertColor(System.Drawing.Color color)
+        {
+            return new RawColor4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+        }
+
+        private void DrawOrbit(PointF[] points, PointF finalOffset)
+        {
+            if (points.Length < 1)
+                return;
+
+            for (int a = 1; a < points.Length; a++)
+            {
+                _wndRender.DrawLine(points[a - 1].Add(finalOffset).ToVector(), points[a].Add(finalOffset).ToVector(), _orbitBrush, 0.4f, _arrowStyle);
+            }
+        }
     }
 }

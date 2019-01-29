@@ -100,6 +100,9 @@
   <ItemGroup>
     <Compile Include="Physics\MeshCell.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
+    <Compile Include="Rendering\D2DRendererStatic.cs" />
+    <Compile Include="Rendering\GDIRenderer.cs" />
+    <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Shapes\ColoredLine.cs" />
     <Compile Include="UI\AddBodiesForm.cs">
       <SubType>Form</SubType>

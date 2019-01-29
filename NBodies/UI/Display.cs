@@ -53,10 +53,10 @@ namespace NBodies
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
-            PressureScaleUpDown.Value = (decimal)Renderer.PressureScaleMax;
-            AlphaUpDown.Value = Renderer.BodyAlpha;
+            PressureScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
+            AlphaUpDown.Value = RenderBase.BodyAlpha;
 
-            RenderBox.DoubleBuffered(true);
+            //RenderBox.DoubleBuffered(true);
         }
 
         private void DisplayForm_Load(object sender, EventArgs e)
@@ -66,15 +66,19 @@ namespace NBodies
 
             PhysicsProvider.InitPhysics();
 
-            Renderer.Init(RenderBox);
-            D2DRenderer.Init(RenderBox);
+            MainLoop.Renderer = new GDIRenderer(RenderBox);
+          // MainLoop.Renderer = new D2DRenderer(RenderBox);
 
-            Renderer.OverLays.Add(explodeOver);
-            Renderer.OverLays.Add(fpsOver);
 
-            Renderer.OverLays.Add(distLine);
-            Renderer.OverLays.Add(distOver);
-            Renderer.OverLays.Add(cellSizeOver);
+            // Renderer.Init(RenderBox);
+            //D2DRenderBase.Init(RenderBox);
+
+            RenderBase.OverLays.Add(explodeOver);
+            RenderBase.OverLays.Add(fpsOver);
+
+            RenderBase.OverLays.Add(distLine);
+            RenderBase.OverLays.Add(distOver);
+            RenderBase.OverLays.Add(cellSizeOver);
 
             MainLoop.StartLoop();
         }
@@ -230,7 +234,7 @@ namespace NBodies
                     explodeOver.Value = "Boom!";
                     explodeOver.Show();
 
-                    Renderer.AddOverlay(explodeOver);
+                    RenderBase.AddOverlay(explodeOver);
 
                     break;
 
@@ -243,7 +247,7 @@ namespace NBodies
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                     fpsOver.Show();
 
-                    Renderer.AddOverlay(fpsOver);
+                    RenderBase.AddOverlay(fpsOver);
 
                     break;
 
@@ -373,14 +377,14 @@ namespace NBodies
                     flingOver.Location2 = _mouseLocation;
                     flingOver.Show();
 
-                    Renderer.AddOverlay(flingOver);
+                    RenderBase.AddOverlay(flingOver);
 
                     //orbitOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
                     orbitOver.Location = _mouseLocation;
                     orbitOver.Location2 = _mouseLocation;
                     orbitOver.Show();
 
-                    Renderer.AddOverlay(orbitOver);
+                    RenderBase.AddOverlay(orbitOver);
 
                     _mouseRightDown = true;
                     // _bodySizeTimer.Start();
@@ -492,7 +496,7 @@ namespace NBodies
                 orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
                 orbitOver.OrbitPath = orbitPath;
                 orbitOver.Show();
-                Renderer.AddOverlay(orbitOver);
+                RenderBase.AddOverlay(orbitOver);
             }
 
             if (_EDown)
@@ -589,7 +593,7 @@ namespace NBodies
 
         private void TrailsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.Trails = TrailsCheckBox.Checked;
+            RenderBase.Trails = TrailsCheckBox.Checked;
         }
 
         private void PauseButton_CheckedChanged(object sender, EventArgs e)
@@ -619,12 +623,12 @@ namespace NBodies
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.AntiAliasing = antiAliasingToolStripMenuItem.Checked;
+            RenderBase.AAEnabled = antiAliasingToolStripMenuItem.Checked;
         }
 
         private void clipToViewportToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.ClipView = clipToViewportToolStripMenuItem.Checked;
+            RenderBase.ClipView = clipToViewportToolStripMenuItem.Checked;
         }
 
         private void TimeStepUpDown_ValueChanged(object sender, EventArgs e)
@@ -643,7 +647,7 @@ namespace NBodies
 
         private void normalToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Renderer.DisplayStyle = DisplayStyle.Normal;
+            RenderBase.DisplayStyle = DisplayStyle.Normal;
 
             normalToolStripMenuItem.Checked = true;
             pressuresToolStripMenuItem.Checked = false;
@@ -654,7 +658,7 @@ namespace NBodies
 
         private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Renderer.DisplayStyle = DisplayStyle.Pressures;
+            RenderBase.DisplayStyle = DisplayStyle.Pressures;
 
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = true;
@@ -665,7 +669,7 @@ namespace NBodies
 
         private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            Renderer.DisplayStyle = DisplayStyle.HighContrast;
+            RenderBase.DisplayStyle = DisplayStyle.HighContrast;
 
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = false;
@@ -676,7 +680,7 @@ namespace NBodies
 
         private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Renderer.DisplayStyle = DisplayStyle.Speeds;
+            RenderBase.DisplayStyle = DisplayStyle.Speeds;
 
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = false;
@@ -687,7 +691,7 @@ namespace NBodies
 
         private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Renderer.DisplayStyle = DisplayStyle.Forces;
+            RenderBase.DisplayStyle = DisplayStyle.Forces;
 
             normalToolStripMenuItem.Checked = false;
             pressuresToolStripMenuItem.Checked = false;
@@ -710,7 +714,7 @@ namespace NBodies
 
         private void PressureScaleUpDown_ValueChanged(object sender, EventArgs e)
         {
-            Renderer.PressureScaleMax = (float)PressureScaleUpDown.Value;
+            RenderBase.StyleScaleMax = (float)PressureScaleUpDown.Value;
         }
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
@@ -731,17 +735,17 @@ namespace NBodies
 
         private void AlphaUpDown_ValueChanged(object sender, EventArgs e)
         {
-            Renderer.BodyAlpha = (int)AlphaUpDown.Value;
+            RenderBase.BodyAlpha = (int)AlphaUpDown.Value;
         }
 
         private void showFollowBodyForce_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.ShowForce = showFollowBodyForce.Checked;
+            RenderBase.ShowForce = showFollowBodyForce.Checked;
         }
 
         private void showPredictOrbit_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.ShowPath = showPredictOrbit.Checked;
+            RenderBase.ShowPath = showPredictOrbit.Checked;
         }
 
         private void DisplayForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -783,12 +787,12 @@ namespace NBodies
 
         private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.ShowMesh = showMeshToolStripMenuItem.Checked;
+            RenderBase.ShowMesh = showMeshToolStripMenuItem.Checked;
         }
 
         private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            Renderer.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
+            RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
         }
     }
 }

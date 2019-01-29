@@ -50,7 +50,7 @@ namespace NBodies.Rendering
         private static BufferedGraphicsContext _currentContext;
         private static BufferedGraphics _buffer;
         private static PictureBox _imageControl;
-        private static Form _targetForm;
+        //   private static Form _targetForm;
         private static float _prevScale = 0;
         private static Pen _blackHoleStroke = new Pen(Color.Red);
         private static Pen _forcePen = new Pen(Color.FromArgb(150, Color.SpringGreen), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
@@ -66,13 +66,15 @@ namespace NBodies.Rendering
         public static void Init(PictureBox imageControl)
         {
             _imageControl = imageControl;
-            _targetForm = imageControl.FindForm();
-
-           // InitGfx();
+            // _targetForm = imageControl.FindForm();
+            Console.WriteLine($@"Init: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+            // InitGfx();
         }
 
         private static void InitGfx()
         {
+            Console.WriteLine($@"Gfx: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+
             _currentContext = BufferedGraphicsManager.Current;
             _buffer = _currentContext.Allocate(_imageControl.CreateGraphics(), _imageControl.DisplayRectangle);
 
@@ -119,7 +121,7 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
              {
-                 timer.Restart();
+               //  timer.Restart();
 
 
 
@@ -288,9 +290,12 @@ namespace NBodies.Rendering
 
                  if (!_imageControl.IsDisposed && !_imageControl.Disposing)
                      _buffer.Render();
+
+                 Console.WriteLine($@"End: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+
              });
 
-            Console.WriteLine(timer.ElapsedMilliseconds);
+           // Console.WriteLine(timer.ElapsedMilliseconds);
 
             completeCallback.Set();
         }
