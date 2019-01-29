@@ -100,7 +100,6 @@
   <ItemGroup>
     <Compile Include="Physics\MeshCell.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
-    <Compile Include="Rendering\D2DRendererStatic.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Shapes\ColoredLine.cs" />
@@ -143,7 +142,6 @@
     <Compile Include="Rendering\MainLoop.cs" />
     <Compile Include="Rendering\OverlayGraphic.cs" />
     <Compile Include="Extensions\PointExtensions.cs" />
-    <Compile Include="Rendering\Renderer.cs" />
     <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\ScaleHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />

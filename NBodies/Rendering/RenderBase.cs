@@ -55,6 +55,7 @@ namespace NBodies.Rendering
         protected void Init(Control targetControl)
         {
             _targetControl = targetControl;
+            InitGraphics();
         }
 
         public async Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
@@ -168,14 +169,16 @@ namespace NBodies.Rendering
         {
             if (_targetControl.ClientSize != _viewPortSize)
             {
-                InitGraphics();
-
+                UpdateViewportSize(_targetControl.ClientSize.Width, _targetControl.ClientSize.Height);
                 UpdateGraphicsScale(RenderVars.CurrentScale);
+
+                _viewPortSize = _targetControl.ClientSize;
             }
 
             if (_prevScale != RenderVars.CurrentScale)
             {
                 UpdateGraphicsScale(RenderVars.CurrentScale);
+
                 _prevScale = RenderVars.CurrentScale;
             }
         }

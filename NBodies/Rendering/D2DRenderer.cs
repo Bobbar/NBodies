@@ -13,7 +13,7 @@ namespace NBodies.Rendering
 {
     public sealed class D2DRenderer : RenderBase
     {
-        private d2.Factory _fact = new d2.Factory(d2.FactoryType.SingleThreaded);
+        private d2.Factory _fact = new d2.Factory(d2.FactoryType.MultiThreaded);
         private dw.Factory _dwFact = new dw.Factory(dw.FactoryType.Shared);
         private d2.HwndRenderTargetProperties _hwndProperties;
         private d2.RenderTargetProperties _rndTargProperties;
@@ -44,12 +44,13 @@ namespace NBodies.Rendering
         public override void InitGraphics()
         {
             _rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format.B8G8R8A8_UNorm, d2.AlphaMode.Premultiplied));
-            _rndTargProperties.MinLevel = d2.FeatureLevel.Level_10;
-
+            //_rndTargProperties.MinLevel = d2.FeatureLevel.Level_10;
+            // _rndTargProperties.Usage = d2.RenderTargetUsage.GdiCompatible;
+      
             InitProperties(_targetControl);
 
             _wndRender = new d2.WindowRenderTarget(_fact, _rndTargProperties, _hwndProperties);
-
+          
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
             _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 8);
@@ -58,8 +59,8 @@ namespace NBodies.Rendering
             _orbitBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
             _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(150, System.Drawing.Color.LightGray)));
 
-            var arrowProps = new SharpDX.Direct2D1.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
-            _arrowStyle = new SharpDX.Direct2D1.StrokeStyle(_fact, arrowProps);
+            var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
+            _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
 
             _viewPortSize = _targetControl.Size;
         }
@@ -113,7 +114,7 @@ namespace NBodies.Rendering
 
         public override void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY)
         {
-            float pSize = 1.0f;
+            float pSize = 0.3f;
             float pOffset = pSize / 2f;
             var meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
             var centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
@@ -212,7 +213,8 @@ namespace NBodies.Rendering
 
         public override void UpdateViewportSize(float width, float height)
         {
-            InitGraphics();
+            //InitGraphics();
+            _wndRender.Resize(new Size2((int)width, (int)height));
         }
 
         private RawColor4 ConvertColor(System.Drawing.Color color)

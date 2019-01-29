@@ -108,7 +108,7 @@ namespace NBodies.Rendering
 
         public static RenderBase Renderer;
 
-        private static int _cellSizeExp = 1;
+        private static int _cellSizeExp = 4;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;

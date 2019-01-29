@@ -38,6 +38,7 @@
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.leapfrogIntegratorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -79,7 +80,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ScaleLabel = new System.Windows.Forms.Label();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -206,6 +207,14 @@
             this.showMeshToolStripMenuItem.Text = "Show Mesh";
             this.showMeshToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showMeshToolStripMenuItem_CheckedChanged);
             // 
+            // allForceVectorsToolStripMenuItem
+            // 
+            this.allForceVectorsToolStripMenuItem.CheckOnClick = true;
+            this.allForceVectorsToolStripMenuItem.Name = "allForceVectorsToolStripMenuItem";
+            this.allForceVectorsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.allForceVectorsToolStripMenuItem.Text = "All Force Vectors";
+            this.allForceVectorsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.allForceVectorsToolStripMenuItem_CheckedChanged);
+            // 
             // displayToolStripMenuItem
             // 
             this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -224,7 +233,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -232,7 +241,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -240,7 +249,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -248,7 +257,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -256,7 +265,7 @@
             // 
             this.highContrastToolStripMenuItem1.CheckOnClick = true;
             this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
             this.highContrastToolStripMenuItem1.Text = "High Contrast";
             this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -273,7 +282,7 @@
             // 
             this.showFollowBodyForce.CheckOnClick = true;
             this.showFollowBodyForce.Name = "showFollowBodyForce";
-            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
+            this.showFollowBodyForce.Size = new System.Drawing.Size(139, 22);
             this.showFollowBodyForce.Text = "Force Vector";
             this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
             // 
@@ -281,7 +290,7 @@
             // 
             this.showPredictOrbit.CheckOnClick = true;
             this.showPredictOrbit.Name = "showPredictOrbit";
-            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
+            this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
             this.showPredictOrbit.Text = "Orbit (Slow)";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
@@ -589,10 +598,11 @@
             // 
             // panel1
             // 
-            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.ScaleLabel);
             this.panel1.Controls.Add(this.RecSizeLabel);
             this.panel1.Controls.Add(this.SpeedLabel);
             this.panel1.Controls.Add(this.FrameCountLabel);
@@ -612,7 +622,7 @@
             this.RecSizeLabel.AutoSize = true;
             this.RecSizeLabel.BackColor = System.Drawing.Color.Black;
             this.RecSizeLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.RecSizeLabel.Location = new System.Drawing.Point(2, 193);
+            this.RecSizeLabel.Location = new System.Drawing.Point(3, 193);
             this.RecSizeLabel.Name = "RecSizeLabel";
             this.RecSizeLabel.Size = new System.Drawing.Size(78, 13);
             this.RecSizeLabel.TabIndex = 8;
@@ -623,7 +633,7 @@
             this.SpeedLabel.AutoSize = true;
             this.SpeedLabel.BackColor = System.Drawing.Color.Black;
             this.SpeedLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.SpeedLabel.Location = new System.Drawing.Point(2, 146);
+            this.SpeedLabel.Location = new System.Drawing.Point(3, 135);
             this.SpeedLabel.Name = "SpeedLabel";
             this.SpeedLabel.Size = new System.Drawing.Size(44, 13);
             this.SpeedLabel.TabIndex = 7;
@@ -656,7 +666,7 @@
             this.DensityLabel.AutoSize = true;
             this.DensityLabel.BackColor = System.Drawing.Color.Black;
             this.DensityLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.DensityLabel.Location = new System.Drawing.Point(2, 109);
+            this.DensityLabel.Location = new System.Drawing.Point(3, 109);
             this.DensityLabel.Name = "DensityLabel";
             this.DensityLabel.Size = new System.Drawing.Size(45, 13);
             this.DensityLabel.TabIndex = 4;
@@ -709,13 +719,16 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // allForceVectorsToolStripMenuItem
+            // ScaleLabel
             // 
-            this.allForceVectorsToolStripMenuItem.CheckOnClick = true;
-            this.allForceVectorsToolStripMenuItem.Name = "allForceVectorsToolStripMenuItem";
-            this.allForceVectorsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.allForceVectorsToolStripMenuItem.Text = "All Force Vectors";
-            this.allForceVectorsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.allForceVectorsToolStripMenuItem_CheckedChanged);
+            this.ScaleLabel.AutoSize = true;
+            this.ScaleLabel.BackColor = System.Drawing.Color.Black;
+            this.ScaleLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.ScaleLabel.Location = new System.Drawing.Point(3, 83);
+            this.ScaleLabel.Name = "ScaleLabel";
+            this.ScaleLabel.Size = new System.Drawing.Size(37, 13);
+            this.ScaleLabel.TabIndex = 9;
+            this.ScaleLabel.Text = "Scale:";
             // 
             // DisplayForm
             // 
@@ -803,6 +816,7 @@
         private System.Windows.Forms.ToolStripMenuItem leapfrogIntegratorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
+        private System.Windows.Forms.Label ScaleLabel;
     }
 }
 
