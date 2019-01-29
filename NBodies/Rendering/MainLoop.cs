@@ -273,15 +273,6 @@ namespace NBodies.Rendering
                     // Draw the field asynchronously.
                     if (DrawBodies)
                         Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
-
-                    //if (DrawBodies)
-                    //    D2DRenderer.DrawBodies(BodyManager.Bodies);
-
-                    //if (DrawBodies)
-                    //    D2DRenderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
-
-                    //if (DrawBodies)
-                    //    Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
                 }
             }
             catch (OperationCanceledException)

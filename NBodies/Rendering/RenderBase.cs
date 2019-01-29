@@ -5,6 +5,8 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
+using System;
 
 namespace NBodies.Rendering
 {
@@ -46,6 +48,8 @@ namespace NBodies.Rendering
         protected Size _viewPortSize;
 
         private static int _bodyAlpha = 210;
+
+        private Stopwatch timer = new Stopwatch();
 
         protected RenderBase(Control targetControl)
         {
@@ -163,6 +167,8 @@ namespace NBodies.Rendering
         public abstract void BeginDraw();
 
         public abstract void EndDraw();
+
+        public abstract void Destroy();
 
 
         protected internal void CheckScale()

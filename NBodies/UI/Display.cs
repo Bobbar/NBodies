@@ -37,6 +37,7 @@ namespace NBodies
         private OverlayGraphic cellSizeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
 
         private PlaybackControlForm _playbackControl;
+        private bool _useD2D = true;
 
         public DisplayForm()
         {
@@ -62,9 +63,8 @@ namespace NBodies
 
             PhysicsProvider.InitPhysics();
 
-            //MainLoop.Renderer = new GDIRenderer(RenderBox);
             MainLoop.Renderer = new D2DRenderer(RenderBox);
-            
+
             RenderBase.OverLays.Add(explodeOver);
             RenderBase.OverLays.Add(fpsOver);
 
@@ -73,6 +73,27 @@ namespace NBodies
             RenderBase.OverLays.Add(cellSizeOver);
 
             MainLoop.StartLoop();
+        }
+
+
+        private void SwitchRenderer()
+        {
+            MainLoop.DrawBodies = false;
+            MainLoop.WaitForPause();
+            MainLoop.Renderer.Destroy();
+
+            _useD2D = !_useD2D;
+
+            if (_useD2D)
+            {
+                MainLoop.Renderer = new D2DRenderer(RenderBox);
+            }
+            else
+            {
+                MainLoop.Renderer = new GDIRenderer(RenderBox);
+            }
+
+            MainLoop.DrawBodies = true;
         }
 
         private int MouseOverUID(PointF mouseLoc)
@@ -116,6 +137,8 @@ namespace NBodies
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
             ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
+
+            RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
 
 
             if (BodyManager.FollowSelected)
@@ -305,7 +328,7 @@ namespace NBodies
                         this.FormBorderStyle = FormBorderStyle.Sizable;
                         _hideToolbar = false;
                     }
-                   
+
                     break;
             }
         }
@@ -728,13 +751,9 @@ namespace NBodies
             RenderVars.ViewportOffset = cm;
         }
 
-        private void ScreenShotButton_Click(object sender, EventArgs e)
+        private void ToggleRendererButton_Click(object sender, EventArgs e)
         {
-            // BodyManager.TotEnergy();
-            // BodyManager.CalcPath(BodyManager.FollowBody());
-            //   BodyManager.SetVelo(40, 0);
-
-            BodyManager.ShiftPos(20000, 0);
+            SwitchRenderer();
         }
 
         private void AlphaUpDown_ValueChanged(object sender, EventArgs e)

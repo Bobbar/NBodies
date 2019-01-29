@@ -25,15 +25,19 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _greenBrush;
         private d2.SolidColorBrush _grayBrush;
         private d2.SolidColorBrush _orbitBrush;
+        private d2.SolidColorBrush _redBrush;
 
         private d2.Ellipse _bodyEllipse;
-
         private dw.TextFormat _infoText;
-
         private d2.StrokeStyle _arrowStyle;
 
         public D2DRenderer(Control targetControl) : base(targetControl)
         {
+        }
+
+        public override string ToString()
+        {
+            return "Direct 2D";
         }
 
         public override void Clear(System.Drawing.Color color)
@@ -46,18 +50,19 @@ namespace NBodies.Rendering
             _rndTargProperties = new d2.RenderTargetProperties(new d2.PixelFormat(dxgi.Format.B8G8R8A8_UNorm, d2.AlphaMode.Premultiplied));
             //_rndTargProperties.MinLevel = d2.FeatureLevel.Level_10;
             // _rndTargProperties.Usage = d2.RenderTargetUsage.GdiCompatible;
-      
+
             InitProperties(_targetControl);
 
             _wndRender = new d2.WindowRenderTarget(_fact, _rndTargProperties, _hwndProperties);
-          
+
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
             _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 8);
             _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
             _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
             _orbitBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
-            _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(150, System.Drawing.Color.LightGray)));
+            _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
+            _redBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
 
             var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
             _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
@@ -89,6 +94,12 @@ namespace NBodies.Rendering
             _bodyEllipse.RadiusY = body.Size * 0.5f;
 
             _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+
+            if (body.BlackHole == 1)
+            {
+                _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
+
+            }
         }
 
         public override void DrawForceVectors(Body[] bodies, float offsetX, float offsetY)
@@ -190,6 +201,21 @@ namespace NBodies.Rendering
         public override void EndDraw()
         {
             _wndRender.EndDraw();
+        }
+
+        public override void Destroy()
+        {
+            _fact.Dispose();
+            _dwFact.Dispose();
+          //  _wndRender.Flush();
+            _wndRender.Dispose();
+
+            _bodyBrush.Dispose();
+            _whiteBrush.Dispose();
+            _greenBrush.Dispose();
+            _grayBrush.Dispose();
+            _orbitBrush.Dispose();
+            _redBrush.Dispose();
         }
 
         public override void SetAntiAliasing(bool enabled)

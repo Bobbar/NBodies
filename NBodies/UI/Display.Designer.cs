@@ -55,7 +55,7 @@
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.LoadRecordingButton = new System.Windows.Forms.Button();
             this.RecordButton = new System.Windows.Forms.Button();
-            this.ScreenShotButton = new System.Windows.Forms.Button();
+            this.ToggleRendererButton = new System.Windows.Forms.Button();
             this.RadiusTextBox = new System.Windows.Forms.TextBox();
             this.VeloYTextBox = new System.Windows.Forms.TextBox();
             this.VeloXTextBox = new System.Windows.Forms.TextBox();
@@ -71,6 +71,8 @@
             this.PressureScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.AlphaUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.RendererLabel = new System.Windows.Forms.Label();
+            this.ScaleLabel = new System.Windows.Forms.Label();
             this.RecSizeLabel = new System.Windows.Forms.Label();
             this.SpeedLabel = new System.Windows.Forms.Label();
             this.FrameCountLabel = new System.Windows.Forms.Label();
@@ -80,7 +82,6 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.ScaleLabel = new System.Windows.Forms.Label();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -347,7 +348,7 @@
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 294F));
             this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 16, 0);
             this.tableLayoutPanel3.Controls.Add(this.RecordButton, 15, 0);
-            this.tableLayoutPanel3.Controls.Add(this.ScreenShotButton, 14, 0);
+            this.tableLayoutPanel3.Controls.Add(this.ToggleRendererButton, 14, 0);
             this.tableLayoutPanel3.Controls.Add(this.RadiusTextBox, 8, 0);
             this.tableLayoutPanel3.Controls.Add(this.VeloYTextBox, 7, 0);
             this.tableLayoutPanel3.Controls.Add(this.VeloXTextBox, 6, 0);
@@ -393,16 +394,16 @@
             this.RecordButton.UseVisualStyleBackColor = true;
             this.RecordButton.Click += new System.EventHandler(this.RecordButton_Click);
             // 
-            // ScreenShotButton
+            // ToggleRendererButton
             // 
-            this.ScreenShotButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ScreenShotButton.Location = new System.Drawing.Point(1069, 3);
-            this.ScreenShotButton.Name = "ScreenShotButton";
-            this.ScreenShotButton.Size = new System.Drawing.Size(101, 23);
-            this.ScreenShotButton.TabIndex = 13;
-            this.ScreenShotButton.Text = "Screenshot";
-            this.ScreenShotButton.UseVisualStyleBackColor = true;
-            this.ScreenShotButton.Click += new System.EventHandler(this.ScreenShotButton_Click);
+            this.ToggleRendererButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ToggleRendererButton.Location = new System.Drawing.Point(1069, 3);
+            this.ToggleRendererButton.Name = "ToggleRendererButton";
+            this.ToggleRendererButton.Size = new System.Drawing.Size(101, 23);
+            this.ToggleRendererButton.TabIndex = 13;
+            this.ToggleRendererButton.Text = "Toggle Renderer";
+            this.ToggleRendererButton.UseVisualStyleBackColor = true;
+            this.ToggleRendererButton.Click += new System.EventHandler(this.ToggleRendererButton_Click);
             // 
             // RadiusTextBox
             // 
@@ -598,10 +599,11 @@
             // 
             // panel1
             // 
-            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.RendererLabel);
             this.panel1.Controls.Add(this.ScaleLabel);
             this.panel1.Controls.Add(this.RecSizeLabel);
             this.panel1.Controls.Add(this.SpeedLabel);
@@ -617,12 +619,34 @@
             this.panel1.Size = new System.Drawing.Size(1583, 746);
             this.panel1.TabIndex = 0;
             // 
+            // RendererLabel
+            // 
+            this.RendererLabel.AutoSize = true;
+            this.RendererLabel.BackColor = System.Drawing.Color.Black;
+            this.RendererLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.RendererLabel.Location = new System.Drawing.Point(2, 1);
+            this.RendererLabel.Name = "RendererLabel";
+            this.RendererLabel.Size = new System.Drawing.Size(74, 13);
+            this.RendererLabel.TabIndex = 10;
+            this.RendererLabel.Text = "[RENDERER]";
+            // 
+            // ScaleLabel
+            // 
+            this.ScaleLabel.AutoSize = true;
+            this.ScaleLabel.BackColor = System.Drawing.Color.Black;
+            this.ScaleLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.ScaleLabel.Location = new System.Drawing.Point(3, 95);
+            this.ScaleLabel.Name = "ScaleLabel";
+            this.ScaleLabel.Size = new System.Drawing.Size(37, 13);
+            this.ScaleLabel.TabIndex = 9;
+            this.ScaleLabel.Text = "Scale:";
+            // 
             // RecSizeLabel
             // 
             this.RecSizeLabel.AutoSize = true;
             this.RecSizeLabel.BackColor = System.Drawing.Color.Black;
             this.RecSizeLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.RecSizeLabel.Location = new System.Drawing.Point(3, 193);
+            this.RecSizeLabel.Location = new System.Drawing.Point(3, 205);
             this.RecSizeLabel.Name = "RecSizeLabel";
             this.RecSizeLabel.Size = new System.Drawing.Size(78, 13);
             this.RecSizeLabel.TabIndex = 8;
@@ -633,7 +657,7 @@
             this.SpeedLabel.AutoSize = true;
             this.SpeedLabel.BackColor = System.Drawing.Color.Black;
             this.SpeedLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.SpeedLabel.Location = new System.Drawing.Point(3, 135);
+            this.SpeedLabel.Location = new System.Drawing.Point(3, 147);
             this.SpeedLabel.Name = "SpeedLabel";
             this.SpeedLabel.Size = new System.Drawing.Size(44, 13);
             this.SpeedLabel.TabIndex = 7;
@@ -644,7 +668,7 @@
             this.FrameCountLabel.AutoSize = true;
             this.FrameCountLabel.BackColor = System.Drawing.Color.Black;
             this.FrameCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.FrameCountLabel.Location = new System.Drawing.Point(3, 27);
+            this.FrameCountLabel.Location = new System.Drawing.Point(3, 36);
             this.FrameCountLabel.Name = "FrameCountLabel";
             this.FrameCountLabel.Size = new System.Drawing.Size(38, 13);
             this.FrameCountLabel.TabIndex = 6;
@@ -655,7 +679,7 @@
             this.PressureLabel.AutoSize = true;
             this.PressureLabel.BackColor = System.Drawing.Color.Black;
             this.PressureLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.PressureLabel.Location = new System.Drawing.Point(3, 122);
+            this.PressureLabel.Location = new System.Drawing.Point(3, 134);
             this.PressureLabel.Name = "PressureLabel";
             this.PressureLabel.Size = new System.Drawing.Size(36, 13);
             this.PressureLabel.TabIndex = 5;
@@ -666,7 +690,7 @@
             this.DensityLabel.AutoSize = true;
             this.DensityLabel.BackColor = System.Drawing.Color.Black;
             this.DensityLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.DensityLabel.Location = new System.Drawing.Point(3, 109);
+            this.DensityLabel.Location = new System.Drawing.Point(3, 121);
             this.DensityLabel.Name = "DensityLabel";
             this.DensityLabel.Size = new System.Drawing.Size(45, 13);
             this.DensityLabel.TabIndex = 4;
@@ -677,7 +701,7 @@
             this.TotalMassLabel.AutoSize = true;
             this.TotalMassLabel.BackColor = System.Drawing.Color.Black;
             this.TotalMassLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.TotalMassLabel.Location = new System.Drawing.Point(3, 61);
+            this.TotalMassLabel.Location = new System.Drawing.Point(3, 73);
             this.TotalMassLabel.Name = "TotalMassLabel";
             this.TotalMassLabel.Size = new System.Drawing.Size(54, 13);
             this.TotalMassLabel.TabIndex = 3;
@@ -688,7 +712,7 @@
             this.BodyCountLabel.AutoSize = true;
             this.BodyCountLabel.BackColor = System.Drawing.Color.Black;
             this.BodyCountLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.BodyCountLabel.Location = new System.Drawing.Point(3, 48);
+            this.BodyCountLabel.Location = new System.Drawing.Point(3, 60);
             this.BodyCountLabel.Name = "BodyCountLabel";
             this.BodyCountLabel.Size = new System.Drawing.Size(42, 13);
             this.BodyCountLabel.TabIndex = 2;
@@ -699,7 +723,7 @@
             this.FPSLabel.AutoSize = true;
             this.FPSLabel.BackColor = System.Drawing.Color.Black;
             this.FPSLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.FPSLabel.Location = new System.Drawing.Point(3, 14);
+            this.FPSLabel.Location = new System.Drawing.Point(3, 23);
             this.FPSLabel.Name = "FPSLabel";
             this.FPSLabel.Size = new System.Drawing.Size(30, 13);
             this.FPSLabel.TabIndex = 1;
@@ -718,17 +742,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // ScaleLabel
-            // 
-            this.ScaleLabel.AutoSize = true;
-            this.ScaleLabel.BackColor = System.Drawing.Color.Black;
-            this.ScaleLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.ScaleLabel.Location = new System.Drawing.Point(3, 83);
-            this.ScaleLabel.Name = "ScaleLabel";
-            this.ScaleLabel.Size = new System.Drawing.Size(37, 13);
-            this.ScaleLabel.TabIndex = 9;
-            this.ScaleLabel.Text = "Scale:";
             // 
             // DisplayForm
             // 
@@ -784,7 +797,7 @@
         private System.Windows.Forms.Button CenterOnMassButton;
         private System.Windows.Forms.Button LoadRecordingButton;
         private System.Windows.Forms.Button RecordButton;
-        private System.Windows.Forms.Button ScreenShotButton;
+        private System.Windows.Forms.Button ToggleRendererButton;
         private System.Windows.Forms.CheckBox TrailsCheckBox;
         private System.Windows.Forms.CheckBox PauseButton;
         private System.Windows.Forms.ToolStripMenuItem saveStateToolStripMenuItem;
@@ -795,7 +808,6 @@
         private System.Windows.Forms.Label TotalMassLabel;
         private System.Windows.Forms.Label PressureLabel;
         private System.Windows.Forms.Label DensityLabel;
-        private System.Windows.Forms.Label FrameCountLabel;
         private System.Windows.Forms.ToolStripMenuItem displayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem normalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
@@ -817,6 +829,8 @@
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
         private System.Windows.Forms.Label ScaleLabel;
+        private System.Windows.Forms.Label RendererLabel;
+        private System.Windows.Forms.Label FrameCountLabel;
     }
 }
 

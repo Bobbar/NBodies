@@ -14,7 +14,7 @@ namespace NBodies.Rendering
         private BufferedGraphics _buffer;
         private Dictionary<int, SolidBrush> _brushCache = new Dictionary<int, SolidBrush>();
 
-        private Pen _forcePen = new Pen(Color.FromArgb(150, Color.SpringGreen), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
+        private Pen _forcePen = new Pen(Color.FromArgb(150, Color.LightGray), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
         private Pen _blackHoleStroke = new Pen(Color.Red);
 
@@ -22,6 +22,11 @@ namespace NBodies.Rendering
 
         public GDIRenderer(Control targetControl) : base(targetControl)
         {
+        }
+
+        public override string ToString()
+        {
+            return "GDI";
         }
 
         public override void InitGraphics()
@@ -161,6 +166,12 @@ namespace NBodies.Rendering
         {
             if (!_targetControl.IsDisposed && !_targetControl.Disposing)
                 _buffer.Render();
+        }
+
+        public override void Destroy()
+        {
+            _buffer.Dispose();
+            _currentContext.Dispose();
         }
 
         public override void SetAntiAliasing(bool enabled)
