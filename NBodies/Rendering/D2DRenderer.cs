@@ -26,6 +26,7 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _grayBrush;
         private d2.SolidColorBrush _orbitBrush;
         private d2.SolidColorBrush _redBrush;
+        private d2.SolidColorBrush _forceBrush;
 
         private d2.Ellipse _bodyEllipse;
         private dw.TextFormat _infoText;
@@ -63,6 +64,7 @@ namespace NBodies.Rendering
             _orbitBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
             _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
             _redBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
+            _forceBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(100, System.Drawing.Color.Chartreuse)));
 
             var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
             _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
@@ -119,7 +121,7 @@ namespace NBodies.Rendering
                 //f = f.Multi(0.01f);
                 var floc = bloc.Add(f);
                 var finalOffset = new PointF(offsetX, offsetY);
-                _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _grayBrush, 0.2f, _arrowStyle);
+                _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _forceBrush, 0.2f, _arrowStyle);
             }
         }
 

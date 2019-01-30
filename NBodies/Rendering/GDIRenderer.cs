@@ -13,7 +13,7 @@ namespace NBodies.Rendering
         private BufferedGraphics _buffer;
         private Dictionary<int, SolidBrush> _brushCache = new Dictionary<int, SolidBrush>();
 
-        private Pen _forcePen = new Pen(Color.FromArgb(150, Color.LightGray), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
+        private Pen _forcePen = new Pen(Color.FromArgb(150, Color.Chartreuse), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
         private Pen _blackHoleStroke = new Pen(Color.Red);
 
