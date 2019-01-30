@@ -33,6 +33,7 @@ namespace NBodies
 
         private bool _paused = false;
 
+        private PointF overlayTextOffset = new PointF(10, 20);
         private OverlayGraphic explodeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         private OverlayGraphic flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
@@ -263,7 +264,7 @@ namespace NBodies
                     _EDown = true;
 
                     //explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                    explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                    explodeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
                     explodeOver.Value = "Boom!";
                     explodeOver.Show();
 
@@ -276,7 +277,7 @@ namespace NBodies
                     _FDown = true;
 
                     //fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                    fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                    fpsOver.Location = _mouseLocation.Subtract(overlayTextOffset);
                     fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                     fpsOver.Show();
 
@@ -298,7 +299,7 @@ namespace NBodies
                     if (!_DDown)
                     {
                         distLine.Location = _mouseLocation;
-                        distOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                        distOver.Location = _mouseLocation.Subtract(overlayTextOffset);
                         distOver.Value = "0.0";
                         distLine.Show();
                         distOver.Show();
@@ -312,7 +313,7 @@ namespace NBodies
 
                     _CDown = true;
 
-                    cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
+                    cellSizeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
                     cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
                     cellSizeOver.Show();
                     break;
@@ -563,12 +564,12 @@ namespace NBodies
 
             if (_EDown)
             {
-                explodeOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                explodeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
             }
 
             if (_FDown)
             {
-                fpsOver.Location = _mouseLocation.Subtract(new PointF(10, 10));
+                fpsOver.Location = _mouseLocation.Subtract(overlayTextOffset);
             }
 
             if (_DDown)
@@ -584,7 +585,7 @@ namespace NBodies
 
             if (_CDown)
             {
-                cellSizeOver.Location = _mouseLocation.Subtract(new PointF(10, 20));
+                cellSizeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
             }
         }
 
