@@ -25,7 +25,12 @@ namespace NBodies
         private bool _bodyMovin = false;
         private PointF _mouseMoveDownLoc = new PointF();
         private PointF _mouseLocation = new PointF();
+        private Point _flingPrevScreenPos = new Point();
+        private PointF _flingStartPos = new PointF();
+        private PointF _flingVirtMousePos = new PointF();
+
         private Timer _UIUpdateTimer = new Timer();
+
         private bool _paused = false;
 
         private OverlayGraphic explodeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
@@ -139,7 +144,6 @@ namespace NBodies
             ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
 
             RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
-
 
             if (BodyManager.FollowSelected)
             {
@@ -398,25 +402,24 @@ namespace NBodies
                     }
                     else
                     {
-                        _mouseId = BodyManager.Add(ScaleHelpers.ScreenPointToField((PointF)e.Location), 1f, ColorHelper.RandomColor());
+                        _mouseId = BodyManager.Add(ScaleHelpers.ScreenPointToField(e.Location), 1f, ColorHelper.RandomColor());
                     }
 
-                    //flingOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
-                    flingOver.Location = _mouseLocation;
-                    flingOver.Location2 = _mouseLocation;
+                    var bodyPos = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+
+                    flingOver.Location = bodyPos;
+                    flingOver.Location2 = bodyPos;
                     flingOver.Show();
 
                     RenderBase.AddOverlay(flingOver);
 
-                    //orbitOver = new OverlayGraphic(OverlayGraphicType.Line, _mouseLocation, "");
-                    orbitOver.Location = _mouseLocation;
-                    orbitOver.Location2 = _mouseLocation;
+                    orbitOver.Location = bodyPos;
+                    orbitOver.Location2 = bodyPos;
                     orbitOver.Show();
 
                     RenderBase.AddOverlay(orbitOver);
 
                     _mouseRightDown = true;
-                    // _bodySizeTimer.Start();
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -431,7 +434,6 @@ namespace NBodies
 
                 var mUid = MouseOverUID(e.Location);
 
-                //if (_selectedUid == -1 && mUid != -1)
                 if (mUid != -1)
                 {
                     if (!_ctrlDown && _shiftDown) _bodyMovin = true;
@@ -458,7 +460,6 @@ namespace NBodies
 
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
-            //  _selectedUid = -1;
             _bodyMovin = false;
 
             if (_mouseId != -1)
@@ -479,6 +480,9 @@ namespace NBodies
                 flingOver.Hide();
                 orbitOver.Hide();
             }
+
+            _flingStartPos = new PointF();
+            _flingPrevScreenPos = new Point();
         }
 
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
@@ -511,19 +515,50 @@ namespace NBodies
 
             if (e.Button == MouseButtons.Right)
             {
-                var speedVec = _mouseLocation.Subtract(flingOver.Location);
-                flingOver.Location2 = flingOver.Location.Subtract(speedVec);
+                // This logic locks the mouse pointer to the body position and calculates a 'virtual' mouse location.
+                // This is done to allow infinite fling deflection without the mouse stopping at the edge of a screen.
 
-                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = (flingOver.Location.X - _mouseLocation.X) / 3f;
-                BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = (flingOver.Location.Y - _mouseLocation.Y) / 3f;
+                // If the mouse has moved from its previous position.
+                if (_flingPrevScreenPos != Cursor.Position)
+                {
+                    // Calculate the new virtual position from the previous position.
+                    _flingVirtMousePos = _flingVirtMousePos.Add(_flingPrevScreenPos.Subtract(Cursor.Position));
 
-                var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
-                //var orbitPath = BodyManager.CalcPath(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]); //BodyManager.CalcPathCM(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+                    // Record the initial position at the start of a fling.
+                    if (_flingStartPos == new PointF())
+                    {
+                        _flingStartPos = _flingVirtMousePos;
+                    }
 
-                orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
-                orbitOver.OrbitPath = orbitPath;
-                orbitOver.Show();
-                RenderBase.AddOverlay(orbitOver);
+                    // Calculate the amount of deflection from the start position.
+                    var deflection = _flingStartPos.Subtract(_flingVirtMousePos);
+
+                    // Update the fling overlay location to visualize the resultant vector.
+                    // VectorPos2 = VectorPos1 - deflection
+                    flingOver.Location2 = flingOver.Location.Subtract(deflection);
+
+                    // Flip and shorten the vector and apply it to the body speed.
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = -deflection.X / 3f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = -deflection.Y / 3f;
+
+                    // Calculate the new orbital path.
+                    var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
+
+                    // Update the orbit overlay.
+                    orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
+                    orbitOver.OrbitPath = orbitPath;
+                    orbitOver.Show();
+                    RenderBase.AddOverlay(orbitOver);
+                }
+
+                // Calculate the true screen position from the body location.
+                var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
+
+                // Lock the cursor in place above the body.
+                Cursor.Position = screenPosition;
+                _flingPrevScreenPos = screenPosition;
+
             }
 
             if (_EDown)
