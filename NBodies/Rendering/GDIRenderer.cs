@@ -91,7 +91,7 @@ namespace NBodies.Rendering
 
         public override void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY)
         {
-            float pSize = 1.0f;
+            float pSize = 0.6f;
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
             var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));

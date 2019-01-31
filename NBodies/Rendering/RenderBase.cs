@@ -179,7 +179,8 @@ namespace NBodies.Rendering
                     DrawMesh(BodyManager.Mesh, finalOffset.X, finalOffset.Y);
                 }
 
-                DrawOverlays(finalOffset.X, finalOffset.Y);
+                if (OverlaysVisible())
+                    DrawOverlays(finalOffset.X, finalOffset.Y);
 
                 EndDraw();
             });
@@ -213,6 +214,19 @@ namespace NBodies.Rendering
 
         public abstract void Destroy();
 
+        protected internal bool OverlaysVisible()
+        {
+            if (OverLays.Count < 1)
+                return false;
+
+            for (int i = 0; i < OverLays.Count; i++)
+            {
+                if (OverLays[i].Visible)
+                    return true;
+            }
+
+            return false;
+        }
 
         protected internal void CheckScale()
         {

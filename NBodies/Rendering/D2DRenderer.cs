@@ -58,7 +58,7 @@ namespace NBodies.Rendering
 
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
-            _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 8);
+            _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 11);
             _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
             _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
             _orbitBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
@@ -143,11 +143,11 @@ namespace NBodies.Rendering
 
                 _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), meshBrush, 0.1f);
 
-                var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX - pOffset, m.LocY + offsetY - pOffset), pSize, pSize);
+                var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX, m.LocY + offsetY), pSize, pSize);
 
                 _wndRender.FillEllipse(centerEllip, centerBrush);
 
-                var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX - pOffset, m.CmY + offsetY - pOffset), pSize, pSize);
+                var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSize, pSize);
 
                 _wndRender.FillEllipse(massEllip, massBrush);
 
@@ -182,7 +182,7 @@ namespace NBodies.Rendering
                     switch (overlay.Type)
                     {
                         case OverlayGraphicType.Text:
-                            _wndRender.DrawText(overlay.Value, _infoText, new SharpDX.RectangleF(overlay.Location.X, overlay.Location.Y, 50f, 50f), _whiteBrush);
+                            _wndRender.DrawText(overlay.Value, _infoText, new SharpDX.RectangleF(overlay.Location.X, overlay.Location.Y, 200f, 200f), _whiteBrush);
                             break;
 
                         case OverlayGraphicType.Line:

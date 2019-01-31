@@ -391,6 +391,8 @@ namespace NBodies
         {
             if (e.Button == MouseButtons.Right)
             {
+                Cursor.Hide();
+
                 if (!_mouseRightDown)
                 {
                     MainLoop.WaitForPause();
@@ -461,6 +463,8 @@ namespace NBodies
 
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
+            Cursor.Show();
+
             _bodyMovin = false;
 
             if (_mouseId != -1)
