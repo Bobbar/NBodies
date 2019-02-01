@@ -1,4 +1,4 @@
-﻿namespace NBodies
+﻿namespace NBodies.UI
 {
     partial class DisplayForm
     {
@@ -44,7 +44,7 @@
             this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.speedsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.forcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.highContrastToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.highContrastToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.followingBodyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showFollowBodyForce = new System.Windows.Forms.ToolStripMenuItem();
             this.showPredictOrbit = new System.Windows.Forms.ToolStripMenuItem();
@@ -223,7 +223,7 @@
             this.pressuresToolStripMenuItem,
             this.speedsToolStripMenuItem,
             this.forcesToolStripMenuItem,
-            this.highContrastToolStripMenuItem1});
+            this.highContrastToolStripMenuItem});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
             this.displayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.displayToolStripMenuItem.Text = "Display";
@@ -262,13 +262,13 @@
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
-            // highContrastToolStripMenuItem1
+            // highContrastToolStripMenuItem
             // 
-            this.highContrastToolStripMenuItem1.CheckOnClick = true;
-            this.highContrastToolStripMenuItem1.Name = "highContrastToolStripMenuItem1";
-            this.highContrastToolStripMenuItem1.Size = new System.Drawing.Size(148, 22);
-            this.highContrastToolStripMenuItem1.Text = "High Contrast";
-            this.highContrastToolStripMenuItem1.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
+            this.highContrastToolStripMenuItem.CheckOnClick = true;
+            this.highContrastToolStripMenuItem.Name = "highContrastToolStripMenuItem";
+            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem.Text = "High Contrast";
+            this.highContrastToolStripMenuItem.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
             // followingBodyToolStripMenuItem
             // 
@@ -811,7 +811,7 @@
         private System.Windows.Forms.ToolStripMenuItem displayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem normalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown PressureScaleUpDown;
         private System.Windows.Forms.Label SpeedLabel;

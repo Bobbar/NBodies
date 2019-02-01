@@ -21,8 +21,23 @@ namespace NBodies.Rendering
         public static bool ShowPath = false;
         public static bool ShowMesh = false;
 
-        public static float StyleScaleMax = 150;
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
+
+        public static float StyleScaleMax
+        {
+            get
+            {
+                return _styleScaleMax;
+            }
+
+            set
+            {
+                if (value > 0 && value <= 2000)
+                {
+                    _styleScaleMax = value;
+                }
+            }
+        }
 
         public static int BodyAlpha
         {
@@ -40,6 +55,7 @@ namespace NBodies.Rendering
             }
         }
 
+        private static float _styleScaleMax = 210;
         private static int _bodyAlpha = 210;
 
         protected Control _targetControl;

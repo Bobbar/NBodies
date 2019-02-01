@@ -39,6 +39,8 @@
             this.CenterMassTextBox = new System.Windows.Forms.TextBox();
             this.CenterMassCheckBox = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.label9 = new System.Windows.Forms.Label();
+            this.LifeTimeTextBox = new System.Windows.Forms.TextBox();
             this.StaticDensityCheckBox = new System.Windows.Forms.CheckBox();
             this.label6 = new System.Windows.Forms.Label();
             this.DensityTextBox = new System.Windows.Forms.TextBox();
@@ -51,8 +53,6 @@
             this.MinSizeTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
-            this.label9 = new System.Windows.Forms.Label();
-            this.LifeTimeTextBox = new System.Windows.Forms.TextBox();
             this.BodyParamsGroup.SuspendLayout();
             this.StationaryGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
@@ -186,6 +186,23 @@
             this.panel1.Size = new System.Drawing.Size(361, 81);
             this.panel1.TabIndex = 0;
             // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(38, 55);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(43, 13);
+            this.label9.TabIndex = 13;
+            this.label9.Text = "Lifetime";
+            // 
+            // LifeTimeTextBox
+            // 
+            this.LifeTimeTextBox.Location = new System.Drawing.Point(91, 52);
+            this.LifeTimeTextBox.Name = "LifeTimeTextBox";
+            this.LifeTimeTextBox.Size = new System.Drawing.Size(51, 20);
+            this.LifeTimeTextBox.TabIndex = 12;
+            this.LifeTimeTextBox.Text = "0";
+            // 
             // StaticDensityCheckBox
             // 
             this.StaticDensityCheckBox.AutoSize = true;
@@ -293,30 +310,15 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "500";
             // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(38, 55);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(43, 13);
-            this.label9.TabIndex = 13;
-            this.label9.Text = "Lifetime";
-            // 
-            // LifeTimeTextBox
-            // 
-            this.LifeTimeTextBox.Location = new System.Drawing.Point(91, 52);
-            this.LifeTimeTextBox.Name = "LifeTimeTextBox";
-            this.LifeTimeTextBox.Size = new System.Drawing.Size(51, 20);
-            this.LifeTimeTextBox.TabIndex = 12;
-            this.LifeTimeTextBox.Text = "0";
-            // 
             // AddBodiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(410, 380);
             this.Controls.Add(this.BodyParamsGroup);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Name = "AddBodiesForm";
+            this.Opacity = 0.8D;
             this.Text = "Add Bodies";
             this.BodyParamsGroup.ResumeLayout(false);
             this.StationaryGroup.ResumeLayout(false);

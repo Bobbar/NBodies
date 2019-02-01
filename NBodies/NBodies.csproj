@@ -140,6 +140,12 @@
     <Compile Include="Physics\PhysicsProvider.cs" />
     <Compile Include="UI\InputHandler.cs" />
     <Compile Include="UI\KeyAction.cs" />
+    <Compile Include="UI\KeyActions\AlphaKey.cs" />
+    <Compile Include="UI\KeyActions\CellSizeKey.cs" />
+    <Compile Include="UI\KeyActions\DisplayStyleKey.cs" />
+    <Compile Include="UI\KeyActions\ExplosionKey.cs" />
+    <Compile Include="UI\KeyActions\FPSKey.cs" />
+    <Compile Include="UI\KeyActions\SimpleKey.cs" />
     <Compile Include="UI\PlaybackControlForm.cs">
       <SubType>Form</SubType>
     </Compile>

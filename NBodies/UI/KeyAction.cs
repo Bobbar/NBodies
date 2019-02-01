@@ -5,55 +5,79 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
+using NBodies.Rendering;
+using NBodies.Extensions;
 
 namespace NBodies.UI
 {
-    public class KeyAction
+    public abstract class KeyAction
     {
-        public readonly Keys Key;
-        public Action<int> WheelAction;
-        public Action KeyDownAction;
-        public Action KeyUpAction;
-        public Action<Point> MouseMoveAction;
-        public Action<Point> MouseDownAction;
+        public OverlayGraphic Overlay;
+        public Dictionary<Keys, bool> KeyDownStates = new Dictionary<Keys, bool>();
 
-        public bool IsDown = false;
+        protected PointF _overlayOffset = new PointF(10, 20);
+
+        public KeyAction()
+        {
+        }
 
         public KeyAction(Keys key)
         {
-            Key = key;
+            AddKey(key);
         }
 
-        public KeyAction(Keys key, Action<int> wheelAction)
+        public abstract void DoWheelAction(int wheelValue);
+        public abstract void DoKeyDown();
+        public abstract void DoKeyUp();
+        public abstract void DoMouseMove(PointF mouseLoc);
+        public abstract void DoMouseDown(MouseButtons button, PointF mouseLoc);
+        public abstract void DoMouseUp(MouseButtons button, PointF mouseLoc);
+
+        public void MouseDown(MouseButtons button, PointF mouseLoc)
         {
-            Key = key;
-            WheelAction = wheelAction;
+            DoMouseDown(button, mouseLoc);
         }
 
-        public void DoWheelAction(int wheelValue)
+        public void MouseUp(MouseButtons button, PointF mouseLoc)
         {
-            WheelAction?.Invoke(wheelValue);
+            DoMouseUp(button, mouseLoc);
         }
 
-        public void DoKeyDown()
+        public void KeyDown()
         {
-            KeyDownAction?.Invoke();
+            DoKeyDown();
         }
 
-        public void DoKeyUp()
+        public void KeyUp()
         {
-            KeyUpAction?.Invoke();
+            DoKeyUp();
         }
 
-        public void DoMouseMove(Point mouseLoc)
+        public void MouseMove(PointF mouseLoc)
         {
-            MouseMoveAction?.Invoke(mouseLoc);
+            SetOverlayLoc(mouseLoc);
+
+            DoMouseMove(mouseLoc);
         }
 
-        public void DoMouseDown(Point mouseLoc)
+        public void MouseWheel(int wheelValue)
         {
-            MouseDownAction?.Invoke(mouseLoc);
+            DoWheelAction(wheelValue);
         }
+
+        protected void AddKey(Keys key)
+        {
+            KeyDownStates.Add(key, false);
+        }
+
+        internal void SetOverlayLoc(PointF loc)
+        {
+            if (Overlay != null)
+            {
+                Overlay.Location = loc.Subtract(_overlayOffset);
+            }
+        }
+
 
     }
 }

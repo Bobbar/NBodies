@@ -1,27 +1,26 @@
-﻿using NBodies.Physics;
+﻿using NBodies.Extensions;
+using NBodies.Physics;
 using NBodies.Rendering;
-using NBodies.Extensions;
+using NBodies.UI.KeyActions;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace NBodies
+namespace NBodies.UI
 {
     public partial class DisplayForm : Form
     {
+        private AddBodiesForm _addFormInstance = new AddBodiesForm();
+
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
-        private bool _EDown = false;
-        private bool _FDown = false;
-        private bool _DDown = false;
-        private bool _CDown = false;
+        private bool _mouseRightDown = false;
 
         private bool _hideToolbar = false;
         private float _ogToolbarHeight;
 
         private int _selectedUid = -1;
         private int _mouseId = -1;
-        private bool _mouseRightDown = false;
         private bool _bodyMovin = false;
         private PointF _mouseMoveDownLoc = new PointF();
         private PointF _mouseLocation = new PointF();
@@ -33,14 +32,12 @@ namespace NBodies
 
         private bool _paused = false;
 
-        private PointF overlayTextOffset = new PointF(10, 20);
-        private OverlayGraphic explodeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-        private OverlayGraphic fpsOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-        private OverlayGraphic flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
-        private OverlayGraphic orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
-        private OverlayGraphic distLine = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
-        private OverlayGraphic distOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-        private OverlayGraphic cellSizeOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+        private PointF _overlayTextOffset = new PointF(10, 20);
+
+        private OverlayGraphic _flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
+        private OverlayGraphic _orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
+        private OverlayGraphic _distLine = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
+        private OverlayGraphic _distOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
 
         private PlaybackControlForm _playbackControl;
         private bool _useD2D = true;
@@ -71,16 +68,20 @@ namespace NBodies
 
             MainLoop.Renderer = new D2DRenderer(RenderBox);
 
-            RenderBase.OverLays.Add(explodeOver);
-            RenderBase.OverLays.Add(fpsOver);
+            RenderBase.OverLays.Add(_distLine);
+            RenderBase.OverLays.Add(_distOver);
 
-            RenderBase.OverLays.Add(distLine);
-            RenderBase.OverLays.Add(distOver);
-            RenderBase.OverLays.Add(cellSizeOver);
+            InputHandler.AddKeyAction(new FPSKey());
+            InputHandler.AddKeyAction(new ExplosionKey());
+            InputHandler.AddKeyAction(new CellSizeKey());
+            InputHandler.AddKeyAction(new DisplayStyleKey());
+            InputHandler.AddKeyAction(new AlphaKey());
+            InputHandler.AddKeyAction(new SimpleKey(Keys.D));
+
+            SetDisplayOptionTags();
 
             MainLoop.StartLoop();
         }
-
 
         private void SwitchRenderer()
         {
@@ -143,6 +144,7 @@ namespace NBodies
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
             ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
+            AlphaUpDown.Value = RenderBase.BodyAlpha;
 
             RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
 
@@ -235,6 +237,32 @@ namespace NBodies
             }
         }
 
+        private void SetDisplayOptionTags()
+        {
+            normalToolStripMenuItem.Tag = DisplayStyle.Normal;
+            pressuresToolStripMenuItem.Tag = DisplayStyle.Pressures;
+            highContrastToolStripMenuItem.Tag = DisplayStyle.HighContrast;
+            speedsToolStripMenuItem.Tag = DisplayStyle.Speeds;
+            forcesToolStripMenuItem.Tag = DisplayStyle.Forces;
+        }
+
+        private void SetDisplayStyle(DisplayStyle style)
+        {
+            RenderBase.DisplayStyle = style;
+
+            foreach (ToolStripMenuItem item in displayToolStripMenuItem.DropDownItems)
+            {
+                if ((DisplayStyle)item.Tag == style)
+                {
+                    item.Checked = true;
+                }
+                else
+                {
+                    item.Checked = false;
+                }
+            }
+        }
+
         private void BodySizeTimer_Tick(object sender, EventArgs e)
         {
             BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size = BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Size + 0.5f;
@@ -243,6 +271,21 @@ namespace NBodies
 
         private void DisplayForm_KeyDown(object sender, KeyEventArgs e)
         {
+            InputHandler.KeyDown(e.KeyCode);
+
+            if (InputHandler.KeyIsDown(Keys.D))
+            {
+                if (_distLine.Location == new PointF())
+                {
+                    _distLine.Location = _mouseLocation;
+                    _distLine.Location2 = _mouseLocation;
+                    _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
+                    _distOver.Value = "0.0";
+                    _distLine.Show();
+                    _distOver.Show();
+                }
+            }
+
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
@@ -259,32 +302,6 @@ namespace NBodies
 
                     break;
 
-                case Keys.E:
-
-                    _EDown = true;
-
-                    //explodeOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                    explodeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-                    explodeOver.Value = "Boom!";
-                    explodeOver.Show();
-
-                    RenderBase.AddOverlay(explodeOver);
-
-                    break;
-
-                case Keys.F:
-
-                    _FDown = true;
-
-                    //fpsOver = new OverlayGraphic(OverlayGraphicType.Text, _mouseLocation.Subtract(new PointF(10, 10)), "");
-                    fpsOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                    fpsOver.Show();
-
-                    RenderBase.AddOverlay(fpsOver);
-
-                    break;
-
                 case Keys.B:
 
                     if (_selectedUid != -1)
@@ -292,30 +309,6 @@ namespace NBodies
                         BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
                     }
 
-                    break;
-
-                case Keys.D:
-
-                    if (!_DDown)
-                    {
-                        distLine.Location = _mouseLocation;
-                        distOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-                        distOver.Value = "0.0";
-                        distLine.Show();
-                        distOver.Show();
-                    }
-
-                    _DDown = true;
-
-                    break;
-
-                case Keys.C:
-
-                    _CDown = true;
-
-                    cellSizeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
-                    cellSizeOver.Show();
                     break;
 
                 case Keys.F11:
@@ -340,6 +333,18 @@ namespace NBodies
 
         private void DisplayForm_KeyUp(object sender, KeyEventArgs e)
         {
+            InputHandler.KeyUp(e.KeyCode);
+
+            if (!InputHandler.KeyIsDown(Keys.D))
+            {
+                _distLine.Hide();
+                _distOver.Hide();
+
+                _distLine.Location = new PointF();
+                _distLine.Location2 = new PointF();
+                _distOver.Location = new PointF();
+            }
+
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
@@ -356,32 +361,10 @@ namespace NBodies
 
                     break;
 
-                case Keys.E:
+                case Keys.Space:
 
-                    _EDown = false;
-                    explodeOver.Hide();
-
-                    break;
-
-                case Keys.F:
-
-                    _FDown = false;
-                    fpsOver.Hide();
-
-                    break;
-
-                case Keys.D:
-
-                    _DDown = false;
-                    distLine.Hide();
-                    distOver.Hide();
-
-                    break;
-
-                case Keys.C:
-
-                    _CDown = false;
-                    cellSizeOver.Hide();
+                    _paused = !_paused;
+                    MainLoop.PausePhysics = _paused;
 
                     break;
             }
@@ -389,6 +372,8 @@ namespace NBodies
 
         private void RenderBox_MouseDown(object sender, MouseEventArgs e)
         {
+            InputHandler.MouseDown(e.Button, e.Location);
+
             if (e.Button == MouseButtons.Right)
             {
                 Cursor.Hide();
@@ -410,17 +395,17 @@ namespace NBodies
 
                     var bodyPos = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
 
-                    flingOver.Location = bodyPos;
-                    flingOver.Location2 = bodyPos;
-                    flingOver.Show();
+                    _flingOver.Location = bodyPos;
+                    _flingOver.Location2 = bodyPos;
+                    _flingOver.Show();
 
-                    RenderBase.AddOverlay(flingOver);
+                    RenderBase.AddOverlay(_flingOver);
 
-                    orbitOver.Location = bodyPos;
-                    orbitOver.Location2 = bodyPos;
-                    orbitOver.Show();
+                    _orbitOver.Location = bodyPos;
+                    _orbitOver.Location2 = bodyPos;
+                    _orbitOver.Show();
 
-                    RenderBase.AddOverlay(orbitOver);
+                    RenderBase.AddOverlay(_orbitOver);
 
                     _mouseRightDown = true;
                 }
@@ -453,16 +438,13 @@ namespace NBodies
                 {
                     _selectedUid = -1;
                 }
-
-                if (_EDown)
-                {
-                    BodyManager.InsertExplosion(ScaleHelpers.ScreenPointToField(_mouseLocation), 2500);
-                }
             }
         }
 
         private void RenderBox_MouseUp(object sender, MouseEventArgs e)
         {
+            InputHandler.MouseUp(e.Button, e.Location);
+
             Cursor.Show();
 
             _bodyMovin = false;
@@ -482,8 +464,8 @@ namespace NBodies
             {
                 _mouseRightDown = false;
 
-                flingOver.Hide();
-                orbitOver.Hide();
+                _flingOver.Hide();
+                _orbitOver.Hide();
             }
 
             _flingStartPos = new PointF();
@@ -492,6 +474,8 @@ namespace NBodies
 
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
+            InputHandler.MouseMove(e.Location);
+
             _mouseLocation = e.Location;
 
             if (e.Button == MouseButtons.Left)
@@ -540,7 +524,7 @@ namespace NBodies
 
                     // Update the fling overlay location to visualize the resultant vector.
                     // VectorPos2 = VectorPos1 - deflection
-                    flingOver.Location2 = flingOver.Location.Subtract(deflection);
+                    _flingOver.Location2 = _flingOver.Location.Subtract(deflection);
 
                     // Flip and shorten the vector and apply it to the body speed.
                     BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = -deflection.X / 3f;
@@ -550,10 +534,10 @@ namespace NBodies
                     var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
                     // Update the orbit overlay.
-                    orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
-                    orbitOver.OrbitPath = orbitPath;
-                    orbitOver.Show();
-                    RenderBase.AddOverlay(orbitOver);
+                    _orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
+                    _orbitOver.OrbitPath = orbitPath;
+                    _orbitOver.Show();
+                    RenderBase.AddOverlay(_orbitOver);
                 }
 
                 // Calculate the true screen position from the body location.
@@ -563,56 +547,30 @@ namespace NBodies
                 // Lock the cursor in place above the body.
                 Cursor.Position = screenPosition;
                 _flingPrevScreenPos = screenPosition;
-
             }
 
-            if (_EDown)
+            if (InputHandler.KeyIsDown(Keys.D))
             {
-                explodeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-            }
+                _distLine.Location2 = _mouseLocation;
+                _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
 
-            if (_FDown)
-            {
-                fpsOver.Location = _mouseLocation.Subtract(overlayTextOffset);
-            }
+                var loc1 = ScaleHelpers.ScreenPointToField(_distLine.Location);
+                var loc2 = ScaleHelpers.ScreenPointToField(_distLine.Location2);
 
-            if (_DDown)
-            {
-                distLine.Location2 = _mouseLocation;
-                distOver.Location = _mouseLocation.Add(new PointF(40, 10));
-
-                var loc1 = ScaleHelpers.ScreenPointToField(distLine.Location);
-                var loc2 = ScaleHelpers.ScreenPointToField(distLine.Location2);
-
-                distOver.Value = loc1.DistanceSqrt(loc2).ToString();
-            }
-
-            if (_CDown)
-            {
-                cellSizeOver.Location = _mouseLocation.Subtract(overlayTextOffset);
+                _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
             }
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
         {
+            InputHandler.MouseWheel(e.Delta);
+
             var scaleChange = 0.05f * RenderVars.CurrentScale;
 
             if (e.Delta > 0)
             {
-                if (_CDown)
-                {
-                    MainLoop.CellSizeExp += 1;
-                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
-                }
-
-                if (!_FDown && !_CDown && !_mouseRightDown)
+                if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
                     RenderVars.CurrentScale += scaleChange;
-
-                if (_FDown)
-                {
-                    MainLoop.TargetFPS += 1;
-                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                }
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -622,20 +580,8 @@ namespace NBodies
             }
             else
             {
-                if (_CDown)
-                {
-                    MainLoop.CellSizeExp -= 1;
-                    cellSizeOver.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
-                }
-
-                if (!_FDown && !_CDown && !_mouseRightDown)
+                if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
                     RenderVars.CurrentScale -= scaleChange;
-
-                if (_FDown)
-                {
-                    MainLoop.TargetFPS -= 1;
-                    fpsOver.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                }
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -655,7 +601,14 @@ namespace NBodies
 
         private void AddBodiesButton_Click(object sender, EventArgs e)
         {
-            new AddBodiesForm().Show();
+            if (_addFormInstance == null || _addFormInstance.IsDisposed)
+            {
+                _addFormInstance = new AddBodiesForm();
+            }
+
+            _addFormInstance.WindowState = FormWindowState.Normal;
+            _addFormInstance.Activate();
+            _addFormInstance.Show();
         }
 
         private void TrailsCheckBox_CheckedChanged(object sender, EventArgs e)
@@ -714,57 +667,27 @@ namespace NBodies
 
         private void normalToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            RenderBase.DisplayStyle = DisplayStyle.Normal;
-
-            normalToolStripMenuItem.Checked = true;
-            pressuresToolStripMenuItem.Checked = false;
-            highContrastToolStripMenuItem1.Checked = false;
-            speedsToolStripMenuItem.Checked = false;
-            forcesToolStripMenuItem.Checked = false;
+            SetDisplayStyle(DisplayStyle.Normal);
         }
 
         private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            RenderBase.DisplayStyle = DisplayStyle.Pressures;
-
-            normalToolStripMenuItem.Checked = false;
-            pressuresToolStripMenuItem.Checked = true;
-            highContrastToolStripMenuItem1.Checked = false;
-            speedsToolStripMenuItem.Checked = false;
-            forcesToolStripMenuItem.Checked = false;
+            SetDisplayStyle(DisplayStyle.Pressures);
         }
 
         private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            RenderBase.DisplayStyle = DisplayStyle.HighContrast;
-
-            normalToolStripMenuItem.Checked = false;
-            pressuresToolStripMenuItem.Checked = false;
-            highContrastToolStripMenuItem1.Checked = true;
-            speedsToolStripMenuItem.Checked = false;
-            forcesToolStripMenuItem.Checked = false;
+            SetDisplayStyle(DisplayStyle.HighContrast);
         }
 
         private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            RenderBase.DisplayStyle = DisplayStyle.Speeds;
-
-            normalToolStripMenuItem.Checked = false;
-            pressuresToolStripMenuItem.Checked = false;
-            highContrastToolStripMenuItem1.Checked = false;
-            speedsToolStripMenuItem.Checked = true;
-            forcesToolStripMenuItem.Checked = false;
+            SetDisplayStyle(DisplayStyle.Speeds);
         }
 
         private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            RenderBase.DisplayStyle = DisplayStyle.Forces;
-
-            normalToolStripMenuItem.Checked = false;
-            pressuresToolStripMenuItem.Checked = false;
-            highContrastToolStripMenuItem1.Checked = false;
-            speedsToolStripMenuItem.Checked = false;
-            forcesToolStripMenuItem.Checked = true;
+            SetDisplayStyle(DisplayStyle.Forces);
         }
 
         private void UpdateButton_Click(object sender, EventArgs e)
