@@ -63,7 +63,10 @@ namespace NBodies.Rendering
 
             set
             {
-                _timeStep = value;
+                if (value >= 0.0001f && value <= 1f)
+                {
+                    _timeStep = value;
+                }
             }
         }
 

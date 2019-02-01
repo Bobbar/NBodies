@@ -77,6 +77,9 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new DisplayStyleKey());
             InputHandler.AddKeyAction(new AlphaKey());
             InputHandler.AddKeyAction(new SimpleKey(Keys.D));
+            InputHandler.AddKeyAction(new TimeStepKey());
+
+
 
             SetDisplayOptionTags();
 
@@ -145,6 +148,7 @@ namespace NBodies.UI
             TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
             ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
             AlphaUpDown.Value = RenderBase.BodyAlpha;
+            TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
 
             RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
 
@@ -326,6 +330,12 @@ namespace NBodies.UI
                         this.FormBorderStyle = FormBorderStyle.Sizable;
                         _hideToolbar = false;
                     }
+
+                    break;
+
+                case Keys.F9:
+
+                    NBodies.IO.Serializer.LoadPreviousState();
 
                     break;
             }

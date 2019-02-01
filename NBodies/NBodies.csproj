@@ -146,6 +146,7 @@
     <Compile Include="UI\KeyActions\ExplosionKey.cs" />
     <Compile Include="UI\KeyActions\FPSKey.cs" />
     <Compile Include="UI\KeyActions\SimpleKey.cs" />
+    <Compile Include="UI\KeyActions\TimeStepKey.cs" />
     <Compile Include="UI\PlaybackControlForm.cs">
       <SubType>Form</SubType>
     </Compile>

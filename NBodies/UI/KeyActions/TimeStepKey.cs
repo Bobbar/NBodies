@@ -9,17 +9,17 @@ using NBodies.Rendering;
 
 namespace NBodies.UI.KeyActions
 {
-    public class AlphaKey : KeyAction
+    public class TimeStepKey : KeyAction
     {
-        public AlphaKey()
+        public TimeStepKey()
         {
-            AddKey(Keys.A);
+            AddKey(Keys.T);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            Overlay.Value = "Alpha: " + RenderBase.BodyAlpha;
+            Overlay.Value = "Timestep: " + Math.Round(MainLoop.TimeStep, 5);
             Overlay.Show();
         }
 
@@ -30,25 +30,25 @@ namespace NBodies.UI.KeyActions
 
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
-            //throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
 
         public override void DoMouseMove(PointF mouseLoc)
         {
-            //throw new NotImplementedException();
+            //  throw new NotImplementedException();
         }
 
         public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
         {
-           // throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.A])
+            if (KeyDownStates[Keys.T])
             {
-                RenderBase.BodyAlpha += wheelValue;
-                Overlay.Value = "Alpha: " + RenderBase.BodyAlpha;
+                MainLoop.TimeStep += 0.0001f * wheelValue;
+                Overlay.Value = "Timestep: " + Math.Round(MainLoop.TimeStep, 5);
             }
         }
     }

@@ -22,14 +22,22 @@ namespace NBodies.IO
 
                 if (!string.IsNullOrEmpty(saveDialog.FileName))
                 {
-                    using (var fStream = new FileStream(saveDialog.FileName, FileMode.Create))
-                    {
-                        ProtoBuf.Serializer.Serialize(fStream, BodyManager.Bodies);
-                    }
+                    WriteState(saveDialog.FileName);
                 }
             }
 
             MainLoop.Resume();
+        }
+
+        public static void WriteState(string fileName)
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                using (var fStream = new FileStream(fileName, FileMode.Create))
+                {
+                    ProtoBuf.Serializer.Serialize(fStream, BodyManager.Bodies);
+                }
+            }
         }
 
         public static void LoadState()
@@ -44,18 +52,26 @@ namespace NBodies.IO
 
                 if (!string.IsNullOrEmpty(openDialog.FileName))
                 {
-                    using (var fStream = new FileStream(openDialog.FileName, FileMode.Open))
-                    {
-                        _previousStream = new MemoryStream();
-
-                        fStream.CopyTo(_previousStream);
-
-                        LoadStateStream(fStream);
-                    }
+                    ReadState(openDialog.FileName);
                 }
             }
 
             MainLoop.Resume();
+        }
+
+        public static void ReadState(string fileName)
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                using (var fStream = new FileStream(fileName, FileMode.Open))
+                {
+                    _previousStream = new MemoryStream();
+
+                    fStream.CopyTo(_previousStream);
+
+                    LoadStateStream(fStream);
+                }
+            }
         }
 
         public static void LoadPreviousState()
