@@ -11,6 +11,7 @@ namespace NBodies.Rendering
         Normal,
         Pressures,
         Speeds,
+        Index,
         Forces,
         HighContrast
     }

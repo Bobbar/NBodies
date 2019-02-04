@@ -82,6 +82,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.indexToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -222,6 +223,7 @@
             this.normalToolStripMenuItem,
             this.pressuresToolStripMenuItem,
             this.speedsToolStripMenuItem,
+            this.indexToolStripMenuItem,
             this.forcesToolStripMenuItem,
             this.highContrastToolStripMenuItem});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
@@ -234,7 +236,7 @@
             this.normalToolStripMenuItem.CheckOnClick = true;
             this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.normalToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.normalToolStripMenuItem.Text = "Normal";
             this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
             // 
@@ -242,7 +244,7 @@
             // 
             this.pressuresToolStripMenuItem.CheckOnClick = true;
             this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.pressuresToolStripMenuItem.Text = "Pressures";
             this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
             // 
@@ -250,7 +252,7 @@
             // 
             this.speedsToolStripMenuItem.CheckOnClick = true;
             this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.speedsToolStripMenuItem.Text = "Speeds";
             this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
             // 
@@ -258,7 +260,7 @@
             // 
             this.forcesToolStripMenuItem.CheckOnClick = true;
             this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.forcesToolStripMenuItem.Text = "Forces";
             this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
             // 
@@ -266,7 +268,7 @@
             // 
             this.highContrastToolStripMenuItem.CheckOnClick = true;
             this.highContrastToolStripMenuItem.Name = "highContrastToolStripMenuItem";
-            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
+            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.highContrastToolStripMenuItem.Text = "High Contrast";
             this.highContrastToolStripMenuItem.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
@@ -743,6 +745,14 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // indexToolStripMenuItem
+            // 
+            this.indexToolStripMenuItem.CheckOnClick = true;
+            this.indexToolStripMenuItem.Name = "indexToolStripMenuItem";
+            this.indexToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.indexToolStripMenuItem.Text = "Index";
+            this.indexToolStripMenuItem.Click += new System.EventHandler(this.indexToolStripMenuItem_Click);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -831,6 +841,7 @@
         private System.Windows.Forms.Label ScaleLabel;
         private System.Windows.Forms.Label RendererLabel;
         private System.Windows.Forms.Label FrameCountLabel;
+        private System.Windows.Forms.ToolStripMenuItem indexToolStripMenuItem;
     }
 }
 

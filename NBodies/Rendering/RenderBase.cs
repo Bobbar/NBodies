@@ -132,6 +132,11 @@ namespace NBodies.Rendering
                                 _clearColor = Color.Black;
                                 break;
 
+                            case DisplayStyle.Index:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, bodies.Length, i, true);
+                                _clearColor = Color.Black;
+                                break;
+
                             case DisplayStyle.Forces:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, StyleScaleMax, (body.ForceTot / body.Mass), true);
                                 _clearColor = Color.Black;

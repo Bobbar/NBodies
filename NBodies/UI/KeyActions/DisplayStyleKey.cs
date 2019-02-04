@@ -20,16 +20,16 @@ namespace NBodies.UI.KeyActions
         }
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.ShiftKey] & KeyDownStates[Keys.S])
-            {
-                Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
-            }
-            else if (!KeyDownStates[Keys.ShiftKey] & KeyDownStates[Keys.S])
+            if (KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
             {
                 Overlay.Value = "Display: " + RenderBase.DisplayStyle.ToString();
+                Overlay.Show();
             }
-
-            Overlay.Show();
+            else if (!KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
+            {
+                Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
+                Overlay.Show();
+            }
         }
 
         public override void DoKeyUp()
@@ -58,11 +58,6 @@ namespace NBodies.UI.KeyActions
             {
                 if (KeyDownStates[Keys.ShiftKey])
                 {
-                    RenderBase.StyleScaleMax += wheelValue;
-                    Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
-                }
-                else
-                {
                     int max = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max();
                     int min = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Min();
 
@@ -72,6 +67,11 @@ namespace NBodies.UI.KeyActions
                         Overlay.Value = "Display: " + RenderBase.DisplayStyle.ToString();
 
                     }
+                }
+                else
+                {
+                    RenderBase.StyleScaleMax += wheelValue;
+                    Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
                 }
             }
         }

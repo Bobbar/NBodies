@@ -149,6 +149,7 @@ namespace NBodies.UI
             ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
             AlphaUpDown.Value = RenderBase.BodyAlpha;
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
+            SetDisplayStyle(RenderBase.DisplayStyle);
 
             RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
 
@@ -247,6 +248,7 @@ namespace NBodies.UI
             pressuresToolStripMenuItem.Tag = DisplayStyle.Pressures;
             highContrastToolStripMenuItem.Tag = DisplayStyle.HighContrast;
             speedsToolStripMenuItem.Tag = DisplayStyle.Speeds;
+            indexToolStripMenuItem.Tag = DisplayStyle.Index;
             forcesToolStripMenuItem.Tag = DisplayStyle.Forces;
         }
 
@@ -695,6 +697,11 @@ namespace NBodies.UI
             SetDisplayStyle(DisplayStyle.Speeds);
         }
 
+        private void indexToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetDisplayStyle(DisplayStyle.Index);
+        }
+
         private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SetDisplayStyle(DisplayStyle.Forces);
@@ -790,5 +797,7 @@ namespace NBodies.UI
         {
             RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
         }
+
+        
     }
 }
