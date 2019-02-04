@@ -19,6 +19,21 @@ namespace NBodies.Physics
         private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
 
+        private MeshCell[] gpuMesh = new MeshCell[0];
+        private int prevMeshLen = 0;
+
+        private int[] gpuMeshBodies = new int[0];
+        private int prevMeshBodLen = 0;
+
+        private int[] gpuMeshNeighbors = new int[0];
+        private int prevMeshNLen = 0;
+
+        private Body[] gpuInBodies = new Body[0];
+        private Body[] gpuOutBodies = new Body[0];
+        private int prevBodyLen = 0;
+
+        private bool warmUp = true;
+
         public MeshCell[] CurrentMesh
         {
             get
@@ -116,6 +131,7 @@ namespace NBodies.Physics
             return newcode;
         }
 
+      
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp)
         {
             float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
@@ -123,22 +139,58 @@ namespace NBodies.Physics
 
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(bodies.Length);
-
+          
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(ref bodies, cellSizeExp);
 
-            // Allocate GPU memory.
-            var gpuMesh = gpu.Allocate(_mesh);
-            var gpuMeshBodies = gpu.Allocate(_meshBodies);
-            var gpuMeshNeighbors = gpu.Allocate(_meshNeighbors);
-            var gpuInBodies = gpu.Allocate(bodies);
-            var gpuOutBodies = gpu.Allocate(bodies);
+            // Allocate GPU memory as needed.
+            if (prevMeshLen != _mesh.Length)
+            {
+                if (!warmUp)
+                    gpu.Free(gpuMesh);
+
+                gpuMesh = gpu.Allocate(_mesh);
+                prevMeshLen = _mesh.Length;
+            }
+
+            if (prevMeshBodLen != _meshBodies.Length)
+            {
+                if (!warmUp)
+                    gpu.Free(gpuMeshBodies);
+
+                gpuMeshBodies = gpu.Allocate(_meshBodies);
+                prevMeshBodLen = _meshBodies.Length;
+            }
+
+            if (prevMeshNLen != _meshNeighbors.Length)
+            {
+                if (!warmUp)
+                    gpu.Free(gpuMeshNeighbors);
+
+                gpuMeshNeighbors = gpu.Allocate(_meshNeighbors);
+                prevMeshNLen = _meshNeighbors.Length;
+            }
+
+            if (prevBodyLen != bodies.Length)
+            {
+                if (!warmUp)
+                {
+                    gpu.Free(gpuInBodies);
+                    gpu.Free(gpuOutBodies);
+                }
+
+                gpuInBodies = gpu.Allocate(bodies);
+                gpuOutBodies = gpu.Allocate(bodies);
+                prevBodyLen = bodies.Length;
+            }
+
+            warmUp = false;
 
             // Copy host arrays to GPU device.
-            gpu.CopyToDevice(bodies, gpuInBodies);
             gpu.CopyToDevice(_mesh, gpuMesh);
             gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
+            gpu.CopyToDevice(bodies, gpuInBodies);
 
             // Launch kernels with specified integration type.
             if (MainLoop.LeapFrog)
@@ -157,7 +209,6 @@ namespace NBodies.Physics
 
             // Copy updated bodies back to host and free memory.
             gpu.CopyFromDevice(gpuInBodies, bodies);
-            gpu.FreeAll();
         }
 
         /// <summary>
@@ -501,7 +552,7 @@ namespace NBodies.Physics
                     Body inBody = inBodies[meshBodId];
 
                     // Save us from ourselves.
-                    if (inBody.UID != outBody.UID)
+                    if (meshBodId != a)
                     {
                         distX = inBody.LocX - outBody.LocX;
                         distY = inBody.LocY - outBody.LocY;
