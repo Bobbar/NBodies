@@ -84,6 +84,13 @@ namespace NBodies.Extensions
             return (float)Math.Sqrt((Math.Pow(pointA.X, 2) + Math.Pow(pointA.Y, 2)));
         }
 
+        public static PointF Normalize(this PointF point)
+        {
+            float len = point.LengthSqrt();
+
+            return point.Div(len);
+        }
+
         public static bool PointInsideCircle(PointF circleLoc, float circleRadius, PointF testPoint)
         {
             //var dist = testPoint.DistanceSqrt(circleLoc);

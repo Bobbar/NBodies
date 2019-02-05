@@ -116,9 +116,9 @@ namespace NBodies.Rendering
                 var bloc = new PointF(body.LocX, body.LocY);
 
                 var f = new PointF(body.ForceX, body.ForceY);
-                f = f.Div(f.LengthSqrt());
-
+                f = f.Normalize();
                 f = f.Multi(2f);
+
                 var floc = bloc.Add(f);
                 var finalOffset = new PointF(offsetX, offsetY);
                 _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _forceBrush, 0.2f, _arrowStyle);

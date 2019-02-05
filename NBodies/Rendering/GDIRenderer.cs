@@ -80,9 +80,9 @@ namespace NBodies.Rendering
                 var bloc = new PointF(body.LocX, body.LocY);
 
                 var f = new PointF(body.ForceX, body.ForceY);
-                f = f.Div(f.LengthSqrt());
+                f = f.Normalize();
+                f = f.Multi(2f);
 
-                //f = f.Multi(0.01f);
                 var floc = bloc.Add(f);
                 var finalOffset = new PointF(offsetX, offsetY);
                 _buffer.Graphics.DrawLine(_forcePen, bloc.Add(finalOffset), floc.Add(finalOffset));
