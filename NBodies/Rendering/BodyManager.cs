@@ -1,13 +1,11 @@
-﻿using NBodies.Physics;
+﻿using NBodies.Extensions;
+using NBodies.Physics;
 using NBodies.Rules;
 using NBodies.Shapes;
-using NBodies.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
 namespace NBodies.Rendering
 {
@@ -16,7 +14,6 @@ namespace NBodies.Rendering
         public static Body[] Bodies = new Body[0];
         public static MeshCell[] Mesh = new MeshCell[0];
         public static int[,] MeshBodies;
-
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 
@@ -24,7 +21,7 @@ namespace NBodies.Rendering
         {
             get
             {
-                return _bodyCount;
+                return Bodies.Length;
             }
         }
 
@@ -36,13 +33,102 @@ namespace NBodies.Rendering
             }
         }
 
+        public static int StateIdx
+        {
+            get
+            {
+                if (_stateIdx < 0)
+                    return 0;
+
+                return _stateIdx;
+            }
+        }
+
+        public static int StateCount
+        {
+            get
+            {
+                return _states.Count - 1;
+            }
+        }
+
         private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
         private static List<Body> _bodyStore = new List<Body>();
-        private static int _currentId = -1;
-        private static int _bodyCount = 0;
+        private static int _currentUID = -1;
         private static double _totalMass = 0;
 
-        private static System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+        private static List<Body[]> _states = new List<Body[]>();
+        private static int _stateIdx = -1;
+        private const int _maxStates = 200;
+        private const int _resolution = 5;
+        private static int _skips = 0;
+
+        public static void PushState(Body[] frame)
+        {
+            ResumeStates();
+
+            // Don't save every frame to cut back on memory usage while also increasing length of time stored.
+            if (_skips >= _resolution)
+            {
+                _states.Add(frame);
+
+                if (_states.Count - 1 > _maxStates)
+                    _states.RemoveAt(0);
+
+                _stateIdx = _states.Count - 1;
+
+                _skips = 0;
+            }
+
+            _skips++;
+        }
+
+        public static void PushState()
+        {
+            PushState(Bodies);
+        }
+
+        public static void RewindState()
+        {
+            if (_states.Count > 0)
+            {
+                if (_stateIdx - 1 >= 0)
+                    _stateIdx--;
+
+                Bodies = _states[_stateIdx];
+
+                RebuildUIDIndex();
+            }
+        }
+
+        public static void FastForwardState()
+        {
+            if (_states.Count > 0)
+            {
+                if (_stateIdx + 1 <= _states.Count - 1)
+                    _stateIdx++;
+
+                Bodies = _states[_stateIdx];
+
+                RebuildUIDIndex();
+            }
+        }
+
+        public static void ResumeStates()
+        {
+            if (_stateIdx < _states.Count - 1 && _stateIdx != -1)
+            {
+                _states.RemoveRange(_stateIdx, _states.Count - _stateIdx);
+                _stateIdx = -1;
+            }
+        }
+
+        public static void ClearStates()
+        {
+            _states.Clear();
+            _stateIdx = -1;
+            _skips = 0;
+        }
 
         public static void CullInvisible()
         {
@@ -50,15 +136,9 @@ namespace NBodies.Rendering
 
             _bodyStore = Bodies.ToList();
             _bodyStore.RemoveAll((b) => b.Visible == 0);
-
             _bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
 
             Bodies = _bodyStore.ToArray();
-
-            _bodyCount = Bodies.Length;
-
-            _totalMass = 0;
-            //_bodyStore.ForEach(b => _totalMass += b.Mass);
 
             RebuildUIDIndex();
         }
@@ -84,21 +164,20 @@ namespace NBodies.Rendering
             Bodies = new Body[0];
             UIDIndex.Clear();
             _bodyStore.Clear();
-            _currentId = -1;
-            _bodyCount = 0;
+            _currentUID = -1;
+            ClearStates();
         }
 
         public static void ReplaceBodies(Body[] bodies)
         {
             ClearBodies();
 
-            _currentId = bodies.Max((b) => b.UID);
+            _currentUID = bodies.Max((b) => b.UID);
 
             Bodies = bodies;
 
             RebuildUIDIndex();
         }
-
 
         public static void RebuildUIDIndex()
         {
@@ -115,7 +194,6 @@ namespace NBodies.Rendering
             {
                 // Occational 'already added' race condition.
             }
-
         }
 
         public static PointF FollowBodyLoc()
@@ -195,7 +273,6 @@ namespace NBodies.Rendering
 
             return new PointF((float)cmX, (float)cmY);
         }
-
 
         public static PointF CenterOfMass()
         {
@@ -337,7 +414,6 @@ namespace NBodies.Rendering
                 {
                     var bodyB = bodiesCopy[b];
 
-
                     if (bodyB.UID == body.UID)
                         continue;
 
@@ -415,10 +491,10 @@ namespace NBodies.Rendering
 
         /// <summary>
         /// Calculate the orbital path of the specified body by running a low res (large dt) static simulation against the current field. Accurate, but slow.
-        /// 
+        ///
         /// This variation tries to calculate a complete orbit instead of just advancing an N amount of steps.
         /// </summary>
-        /// 
+        ///
         public static List<PointF> CalcPathCircle(Body body)
         {
             var points = new List<PointF>();
@@ -601,9 +677,7 @@ namespace NBodies.Rendering
                         py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
                     }
 
-                    //particles.Add(NewBody(px, py, 1.5f, 1, Color.Orange, lifetime, 1));
                     particles.Add(NewBody(px, py, 1.0f, 1, Color.Orange, lifetime, 1));
-
                 }
 
                 Bodies = Bodies.Add(particles.ToArray());
@@ -613,13 +687,13 @@ namespace NBodies.Rendering
                 Bodies = Bodies.Add(NewBody(location, 10, 400, Color.Orange, lifetime, 1));
             }
 
-            MainLoop.Resume();
+            MainLoop.ResumePhysics(true);
         }
 
         public static int NextUID()
         {
-            _currentId++;
-            return _currentId;
+            _currentUID++;
+            return _currentUID;
         }
 
         public static void Move(int index, PointF location)

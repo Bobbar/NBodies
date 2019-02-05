@@ -14,7 +14,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -145,6 +146,7 @@
     <Compile Include="UI\KeyActions\DisplayStyleKey.cs" />
     <Compile Include="UI\KeyActions\ExplosionKey.cs" />
     <Compile Include="UI\KeyActions\FPSKey.cs" />
+    <Compile Include="UI\KeyActions\RewindKey.cs" />
     <Compile Include="UI\KeyActions\SimpleKey.cs" />
     <Compile Include="UI\KeyActions\TimeStepKey.cs" />
     <Compile Include="UI\PlaybackControlForm.cs">

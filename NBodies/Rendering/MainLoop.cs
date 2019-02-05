@@ -123,12 +123,16 @@ namespace NBodies.Rendering
         private static ManualResetEventSlim _drawingDoneWait = new ManualResetEventSlim(true);
 
         private static bool _skipPhysics = false;
+        private static bool _wasPaused = false;
+
         private static Task _loopTask;
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static int _skippedFrames = 0;
-        private const int _framesToSkip = 20;//10;
+        private const int _framesToSkip = 5;//10;
+
+        private static Body[] _bodiesBuffer = new Body[0];
 
         // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
@@ -149,7 +153,6 @@ namespace NBodies.Rendering
         {
             _cancelTokenSource.Cancel();
             _stopLoopWait.Reset();
-
             _stopLoopWait.WaitOne(2000);
         }
 
@@ -158,24 +161,34 @@ namespace NBodies.Rendering
         /// </summary>
         public static void WaitForPause()
         {
-            // Reset the wait handle.
-            _pausePhysicsWait.Reset();
-            // Wait until the handle is signaled after the GPU calcs complete.
-            _pausePhysicsWait.Wait(2000);
+            _wasPaused = _skipPhysics;
+
+            if (!_skipPhysics)
+            {
+                // Reset the wait handle.
+                _pausePhysicsWait.Reset();
+                // Wait until the handle is signaled after the GPU calcs complete.
+                _pausePhysicsWait.Wait(2000);
+            }
         }
 
         /// <summary>
         /// Resume physics calulations.
         /// </summary>
-        public static void Resume()
+        public static void ResumePhysics(bool forceResume = false)
         {
-            // Make sure the wait handle has been set
-            // and set the skip bool to false to allow physics to be calculated again.
-
-            if (!_recorder.PlaybackActive)
+            // If we were already paused at the last call, don't resume unless forced.
+            // This is to keep other functions from overriding a manual pause and resuming unexpectedly.
+            if (!_wasPaused || forceResume)
             {
-                _pausePhysicsWait.Set();
-                _skipPhysics = false;
+                // Make sure the wait handle has been set
+                // and set the skip bool to false to allow physics to be calculated again.
+
+                if (!_recorder.PlaybackActive)
+                {
+                    _pausePhysicsWait.Set();
+                    _skipPhysics = false;
+                }
             }
         }
 
@@ -201,11 +214,11 @@ namespace NBodies.Rendering
                         {
                             // 1.
                             // Copy the current bodies to another array.
-                            var bodiesCopy = new Body[BodyManager.Bodies.Length];
-                            Array.Copy(BodyManager.Bodies, bodiesCopy, BodyManager.Bodies.Length);
+                            _bodiesBuffer = new Body[BodyManager.Bodies.Length];
+                            Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref bodiesCopy, _timeStep, _cellSizeExp);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp);
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.
@@ -213,21 +226,15 @@ namespace NBodies.Rendering
 
                             // 3.
                             // Copy the new data to the current body collection.
-                            BodyManager.Bodies = bodiesCopy;
+                            BodyManager.Bodies = _bodiesBuffer;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
-
-                         //   timer.Restart();
-
 
                             // Process and fracture roche bodies.
                             if (RocheLimit)
                                 ProcessRoche(ref BodyManager.Bodies);
 
-                           // Console.WriteLine(timer.ElapsedMilliseconds);
-
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
-
 
                             // Increment physics frame count.
                             _frameCount++;
@@ -242,6 +249,9 @@ namespace NBodies.Rendering
                                 }
                                 _skippedFrames++;
                             }
+
+                            // Push the current field to rewind collection.
+                            BodyManager.PushState();
                         }
                     }
 

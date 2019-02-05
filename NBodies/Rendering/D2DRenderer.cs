@@ -97,7 +97,7 @@ namespace NBodies.Rendering
         public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
         {
             _bodyBrush.Color = ConvertColor(color);
-            _bodyEllipse.Point.X = X;
+            _bodyEllipse.Point.X = X; 
             _bodyEllipse.Point.Y = Y;
             _bodyEllipse.RadiusX = body.Size * 0.5f;
             _bodyEllipse.RadiusY = body.Size * 0.5f;
@@ -222,10 +222,10 @@ namespace NBodies.Rendering
 
         public override void Destroy()
         {
+            _wndRender.Dispose();
+
             _fact.Dispose();
             _dwFact.Dispose();
-            //  _wndRender.Flush();
-            _wndRender.Dispose();
 
             _bodyBrush.Dispose();
             _whiteBrush.Dispose();

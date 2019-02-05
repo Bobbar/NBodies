@@ -30,8 +30,11 @@ namespace NBodies.UI
             {
                 if (action.KeyDownStates.ContainsKey(key))
                 {
-                    action.KeyDownStates[key] = true;
-                    action.KeyDown();
+                    if (!action.KeyDownStates[key])
+                    {
+                        action.KeyDownStates[key] = true;
+                        action.KeyDown();
+                    }
                 }
             }
         }

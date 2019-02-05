@@ -126,7 +126,7 @@ namespace NBodies
             }
 
 
-            MainLoop.Resume();
+            MainLoop.ResumePhysics(true);
         }
 
         private void AddBodiesToDisc(int count, int maxSize, int minSize, int bodyMass)
@@ -209,14 +209,8 @@ namespace NBodies
                 BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim()));
             }
 
-            MainLoop.Resume();
-
-
+            MainLoop.ResumePhysics(true);
         }
-
-
-
-
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
         {

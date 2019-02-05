@@ -11,11 +11,11 @@ namespace NBodies.UI
     public partial class DisplayForm : Form
     {
         private AddBodiesForm _addFormInstance = new AddBodiesForm();
+        private PlaybackControlForm _playbackControl;
 
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
         private bool _mouseRightDown = false;
-
         private bool _hideToolbar = false;
         private float _ogToolbarHeight;
 
@@ -30,16 +30,11 @@ namespace NBodies.UI
 
         private Timer _UIUpdateTimer = new Timer();
 
-        private bool _paused = false;
-
-        private PointF _overlayTextOffset = new PointF(10, 20);
-
         private OverlayGraphic _flingOver = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
         private OverlayGraphic _orbitOver = new OverlayGraphic(OverlayGraphicType.Orbit, new PointF(), "");
         private OverlayGraphic _distLine = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
         private OverlayGraphic _distOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
 
-        private PlaybackControlForm _playbackControl;
         private bool _useD2D = true;
 
         public DisplayForm()
@@ -78,8 +73,7 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new AlphaKey());
             InputHandler.AddKeyAction(new SimpleKey(Keys.D));
             InputHandler.AddKeyAction(new TimeStepKey());
-
-
+            InputHandler.AddKeyAction(new RewindKey());
 
             SetDisplayOptionTags();
 
@@ -90,6 +84,7 @@ namespace NBodies.UI
         {
             MainLoop.DrawBodies = false;
             MainLoop.WaitForPause();
+            MainLoop.Stop();
             MainLoop.Renderer.Destroy();
 
             _useD2D = !_useD2D;
@@ -104,6 +99,8 @@ namespace NBodies.UI
             }
 
             MainLoop.DrawBodies = true;
+            MainLoop.StartLoop();
+            MainLoop.ResumePhysics();
         }
 
         private int MouseOverUID(PointF mouseLoc)
@@ -303,7 +300,9 @@ namespace NBodies.UI
 
                 case Keys.ControlKey:
 
-                    MainLoop.WaitForPause();
+                    if (!_ctrlDown)
+                        MainLoop.WaitForPause();
+
                     _ctrlDown = true;
 
                     break;
@@ -337,7 +336,7 @@ namespace NBodies.UI
 
                 case Keys.F9:
 
-                    NBodies.IO.Serializer.LoadPreviousState();
+                    IO.Serializer.LoadPreviousState();
 
                     break;
             }
@@ -362,21 +361,20 @@ namespace NBodies.UI
                 case Keys.ShiftKey:
 
                     _shiftDown = false;
-                    if (!_paused) MainLoop.Resume();
+                    MainLoop.ResumePhysics();
 
                     break;
 
                 case Keys.ControlKey:
 
                     _ctrlDown = false;
-                    if (!_paused) MainLoop.Resume();
+                    MainLoop.ResumePhysics();
 
                     break;
 
                 case Keys.Space:
 
-                    _paused = !_paused;
-                    MainLoop.PausePhysics = _paused;
+                    MainLoop.WaitForPause();
 
                     break;
             }
@@ -464,7 +462,7 @@ namespace NBodies.UI
             if (_mouseId != -1)
             {
                 _mouseId = -1;
-                if (!_paused) MainLoop.Resume();
+                MainLoop.ResumePhysics();
             }
 
             if (_ctrlDown && BodyManager.FollowBodyUID != -1)
@@ -633,11 +631,6 @@ namespace NBodies.UI
             MainLoop.PausePhysics = PauseButton.Checked;
         }
 
-        private void PauseButton_Click(object sender, EventArgs e)
-        {
-            _paused = PauseButton.Checked;
-        }
-
         private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.SaveState();
@@ -671,10 +664,8 @@ namespace NBodies.UI
         private void RemoveAllButton_Click(object sender, EventArgs e)
         {
             MainLoop.WaitForPause();
-
             BodyManager.ClearBodies();
-
-            if (!_paused) MainLoop.Resume();
+            MainLoop.ResumePhysics();
         }
 
         private void normalToolStripMenuItem_Click(object sender, EventArgs e)
@@ -797,7 +788,5 @@ namespace NBodies.UI
         {
             RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
         }
-
-        
     }
 }
