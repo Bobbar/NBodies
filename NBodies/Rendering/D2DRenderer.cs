@@ -28,6 +28,10 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _redBrush;
         private d2.SolidColorBrush _forceBrush;
 
+        private d2.SolidColorBrush _meshBrush;
+        private d2.SolidColorBrush _centerBrush;
+        private d2.SolidColorBrush _massBrush;
+
         private d2.Ellipse _bodyEllipse;
         private dw.TextFormat _infoText;
         private d2.StrokeStyle _arrowStyle;
@@ -65,6 +69,9 @@ namespace NBodies.Rendering
             _grayBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.LightGray)));
             _redBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
             _forceBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(100, System.Drawing.Color.Chartreuse)));
+            _meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.Red)));
+            _centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
+            _massBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.GreenYellow)));
 
             var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
             _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
@@ -129,10 +136,7 @@ namespace NBodies.Rendering
         {
             float pSize = 0.3f;
             float pOffset = pSize / 2f;
-            var meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Red));
-            var centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
-            var massBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.GreenYellow)));
-
+           
             foreach (var m in mesh)
             {
                 if (!_cullTangle.Contains(m.LocX, m.LocY))
@@ -141,15 +145,15 @@ namespace NBodies.Rendering
                 var meshX = m.LocX - m.Size / 2 + offsetX;
                 var meshY = m.LocY - m.Size / 2 + offsetY;
 
-                _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), meshBrush, 0.1f);
+                _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), _meshBrush, 0.2f);
 
                 var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX, m.LocY + offsetY), pSize, pSize);
 
-                _wndRender.FillEllipse(centerEllip, centerBrush);
+                _wndRender.FillEllipse(centerEllip, _centerBrush);
 
                 var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSize, pSize);
 
-                _wndRender.FillEllipse(massEllip, massBrush);
+                _wndRender.FillEllipse(massEllip, _massBrush);
 
                 //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
@@ -220,7 +224,7 @@ namespace NBodies.Rendering
         {
             _fact.Dispose();
             _dwFact.Dispose();
-          //  _wndRender.Flush();
+            //  _wndRender.Flush();
             _wndRender.Dispose();
 
             _bodyBrush.Dispose();
@@ -229,6 +233,9 @@ namespace NBodies.Rendering
             _grayBrush.Dispose();
             _orbitBrush.Dispose();
             _redBrush.Dispose();
+            _meshBrush.Dispose();
+            _centerBrush.Dispose();
+            _massBrush.Dispose();
         }
 
         public override void SetAntiAliasing(bool enabled)
@@ -261,6 +268,6 @@ namespace NBodies.Rendering
             return new RawColor4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
         }
 
-      
+
     }
 }
