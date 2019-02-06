@@ -60,10 +60,10 @@ namespace NBodies.Physics
         {
             var cudaModule = CudafyModule.TryDeserialize();
 
-            if (cudaModule == null || !cudaModule.TryVerifyChecksums())
+            if (cudaModule == null || !cudaModule.TryVerifyChecksums(ePlatform.x64, eArchitecture.OpenCL12))
             {
                 CudafyTranslator.Language = eLanguage.OpenCL;
-                cudaModule = CudafyTranslator.Cudafy(new Type[] { typeof(Body), typeof(MeshCell), typeof(CUDAFloat) });
+                cudaModule = CudafyTranslator.Cudafy(ePlatform.x64, eArchitecture.OpenCL12, new Type[] { typeof(Body), typeof(MeshCell), typeof(CUDAFloat) });
                 cudaModule.Serialize();
             }
 
@@ -131,7 +131,7 @@ namespace NBodies.Physics
             return newcode;
         }
 
-      
+
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp)
         {
             float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
@@ -139,7 +139,7 @@ namespace NBodies.Physics
 
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(bodies.Length);
-          
+
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(ref bodies, cellSizeExp);
 

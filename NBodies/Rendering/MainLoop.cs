@@ -129,8 +129,8 @@ namespace NBodies.Rendering
         private static CancellationTokenSource _cancelTokenSource;
         private static Stopwatch _fpsTimer = new Stopwatch();
 
-        private static int _skippedFrames = 0;
-        private const int _framesToSkip = 5;//10;
+        private static float _recElapTime = 0f;
+        private const float _recFrameTimeSpan = 0.04f;
 
         private static Body[] _bodiesBuffer = new Body[0];
 
@@ -242,12 +242,12 @@ namespace NBodies.Rendering
                             // Send the data to the recorder if we are recording.
                             if (_recorder.RecordingActive && BodyManager.Bodies.Length > 0)
                             {
-                                if (_skippedFrames >= _framesToSkip)
+                                if (_recElapTime >= _recFrameTimeSpan)
                                 {
                                     _recorder.RecordFrame(BodyManager.Bodies);
-                                    _skippedFrames = 0;
+                                    _recElapTime = 0f;
                                 }
-                                _skippedFrames++;
+                                _recElapTime += TimeStep;
                             }
 
                             // Push the current field to rewind collection.

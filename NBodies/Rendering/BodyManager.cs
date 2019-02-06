@@ -60,15 +60,15 @@ namespace NBodies.Rendering
         private static List<Body[]> _states = new List<Body[]>();
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
-        private const int _resolution = 5;
-        private static int _skips = 0;
+        private const float _timeSpan = 0.04f;
+        private static float _elap = 0f;
 
         public static void PushState(Body[] frame)
         {
             ResumeStates();
 
             // Don't save every frame to cut back on memory usage while also increasing length of time stored.
-            if (_skips >= _resolution)
+            if (_elap >= _timeSpan)
             {
                 _states.Add(frame);
 
@@ -77,10 +77,10 @@ namespace NBodies.Rendering
 
                 _stateIdx = _states.Count - 1;
 
-                _skips = 0;
+                _elap = 0f;
             }
 
-            _skips++;
+            _elap += MainLoop.TimeStep;
         }
 
         public static void PushState()
@@ -127,7 +127,7 @@ namespace NBodies.Rendering
         {
             _states.Clear();
             _stateIdx = -1;
-            _skips = 0;
+            _elap = 0f;
         }
 
         public static void CullInvisible()
