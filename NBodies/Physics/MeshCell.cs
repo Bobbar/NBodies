@@ -23,6 +23,6 @@ namespace NBodies.Physics
         public int BodyCount;
         public int NeighborStartIdx;
         public int NeighborCount;
-
+        public int ParentID;
     }
 }
