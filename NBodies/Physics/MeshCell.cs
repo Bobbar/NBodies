@@ -24,5 +24,6 @@ namespace NBodies.Physics
         public int NeighborStartIdx;
         public int NeighborCount;
         public int ParentID;
+        public int Level;
     }
 }

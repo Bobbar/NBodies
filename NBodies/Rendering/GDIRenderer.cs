@@ -111,13 +111,16 @@ namespace NBodies.Rendering
                 _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
                 _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
 
-             //  _buffer.Graphics.DrawString($@"{m.LocX},{m.LocY}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
-               // _buffer.Graphics.DrawString($@"{System.Math.Round(m.Mass,2)}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                //_buffer.Graphics.DrawString($@"[{m.Level}] {m.ID}->{ m.ParentID }", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+
+                _buffer.Graphics.DrawString($@"{m.LocX},{m.LocY}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                // _buffer.Graphics.DrawString($@"{System.Math.Round(m.Mass,2)}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
 
                 //_buffer.Graphics.DrawString($@"{m.xID * m.Size},{m.yID * m.Size}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
-                _buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                // _buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }

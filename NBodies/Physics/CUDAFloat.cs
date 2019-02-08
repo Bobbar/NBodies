@@ -17,6 +17,7 @@ namespace NBodies.Physics
         private GPGPU gpu;
         private MeshCell[] _mesh = new MeshCell[0];
         private int[] _levelIdx = new int[0];
+        private int _levels = 3;
         private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
 
@@ -34,6 +35,8 @@ namespace NBodies.Physics
         private int prevBodyLen = 0;
 
         private bool warmUp = true;
+
+
 
         public MeshCell[] CurrentMesh
         {
@@ -132,6 +135,7 @@ namespace NBodies.Physics
             return newcode;
         }
 
+        Stopwatch timer = new Stopwatch();
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp)
         {
@@ -141,8 +145,12 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(bodies.Length);
 
+            timer.Restart();
+
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(ref bodies, cellSizeExp);
+
+            Console.WriteLine($@"Mesh({_mesh.Length}): {timer.Elapsed.Milliseconds}");
 
             // Allocate GPU memory as needed.
             if (prevMeshLen != _mesh.Length)
@@ -207,8 +215,12 @@ namespace NBodies.Physics
             }
             else
             {
-                gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, cellSizeExp, gpuLevelIdx);
-                // gpu.Launch(threadBlocks, threadsPerBlock).CalcForceOld(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, gpuLevelIdx);
+                timer.Restart();
+
+                gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, cellSizeExp, _levels, gpuLevelIdx);
+                //gpu.Launch(threadBlocks, threadsPerBlock).CalcForceOld(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, gpuLevelIdx);
+
+                Console.WriteLine($@"Force Kernel: {timer.Elapsed.Milliseconds}");
 
                 gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
             }
@@ -361,10 +373,10 @@ namespace NBodies.Physics
             // Set mesh array field.
             _mesh = meshArr;
 
-            int[] levelIdx = new int[3];
+            int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
 
-            for (int i = 1; i < 3; i++)
+            for (int i = 1; i <= _levels; i++)
             {
                 BuildNextLevel(ref _mesh, cellSizeExp, i, ref levelIdx);
             }
@@ -422,11 +434,13 @@ namespace NBodies.Physics
 
                     newCell.BodyCount = cell.BodyCount;
                     newCell.ID = cellIdx;
-                    newCell.BodyStartIdx = cellIdx;
+                    newCell.Level = level;
+                    //newCell.BodyStartIdx = cellIdx;
 
                     meshDict.Add(cellUID, newCell);
 
                     mesh[m].ParentID = cellIdx;
+
 
                     cellIdx++;
                 }
@@ -563,7 +577,7 @@ namespace NBodies.Physics
         /// Calculates the gravitational forces, and SPH density/pressure. Also does initial collision detection.
         /// </summary>
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, float dt, int cellExp, int[] levelIdx)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, float dt, int cellExp, int topLevel, int[] levelIdx)
         {
             float GAS_K = 0.3f;
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -593,6 +607,8 @@ namespace NBodies.Physics
             // Copy current body and mesh cell from memory.
             Body outBody = inBodies[a];
             MeshCell bodyCell = inMesh[outBody.MeshID];
+            MeshCell levelCell = bodyCell;
+            MeshCell levelCellParent = inMesh[bodyCell.ParentID];
 
             // Reset forces.
             outBody.ForceTot = 0;
@@ -611,51 +627,20 @@ namespace NBodies.Physics
             fac = 1.566681f;
             outBody.Density = (outBody.Mass * fac);
 
-            for (int level = 2; level > -1; level--)
+            //for (int level = 2; level > -1; level--)
+            for (int level = 0; level <= topLevel; level++)
             {
-                //float farDist = (int)bodyCell.Size * (int)Math.Pow(2, level);
-
-
-                int parentExp = cellExp + level;
-                int parentCellIdX = (int)bodyCell.LocX >> (parentExp);
-                int parentCellIdY = (int)bodyCell.LocY >> (parentExp);
-
-                int parentCellLocX = parentCellIdX << (parentExp) + (int)((int)Math.Pow(2, parentExp) * 0.5f);
-                int parentCellLocY = parentCellIdY << (parentExp) + (int)((int)Math.Pow(2, parentExp) * 0.5f);
-
-                //int parentLocX = parentCellIdX * (int)Math.Pow(2, cellExp + level);
-                //int parentLocY = parentCellIdY * (int)Math.Pow(2, cellExp + level);
 
                 int offLeft = 0;
                 int offRight = 0;
                 int offTop = 0;
                 int offBot = 0;
 
-                //if (bodyCell.LocX < parentLocX)
-                //{
-                //    offLeft = 0;
-                //    offRight = 1;
-                //}
-                //else
-                //{
-                //    offLeft = -1;
-                //    offRight = 0;
-                //}
-
-                //if (bodyCell.LocY < parentLocY)
-                //{
-                //    offTop = 1;
-                //    offBot = 0;
-                //}
-                //else
-                //{
-
-                //}
 
                 // Accumulate forces from all mesh cells, excluding its own and neighbor cells.
                 int len;
 
-                if (level == 2)
+                if (level == topLevel)
                 {
                     len = inMesh.Length;
                 }
@@ -663,41 +648,229 @@ namespace NBodies.Physics
                 {
                     len = levelIdx[level + 1];
 
-                    int gpExp = cellExp + level + 1;
-                    int gpIdX = (int)bodyCell.LocX >> (gpExp);
-                    int gpIdY = (int)bodyCell.LocY >> (gpExp);
 
-                    int gpLocX = gpIdX << gpExp + (int)((int)Math.Pow(2, gpExp) * 0.5f);
-                    int gpLocY = gpIdY << gpExp + (int)((int)Math.Pow(2, gpExp) * 0.5f);
-
-                    if (parentCellLocX <= gpLocX && parentCellLocY <= gpLocY)
+                    if (levelCell.LocX < levelCellParent.LocX && levelCell.LocY < levelCellParent.LocY) //top-left
                     {
                         offLeft = 0;
                         offRight = 1;
                         offTop = 0;
                         offBot = 1;
                     }
-                    else if (parentCellLocX >= gpLocX && parentCellLocY <= gpLocY)
+                    else if (levelCell.LocX > levelCellParent.LocX && levelCell.LocY < levelCellParent.LocY) //top-right
                     {
                         offLeft = -1;
                         offRight = 0;
                         offTop = 0;
                         offBot = 1;
                     }
-                    else if (parentCellLocX <= gpLocX && parentCellLocY >= gpLocY)
+                    else if (levelCell.LocX < levelCellParent.LocX && levelCell.LocY > levelCellParent.LocY) //bottom-left
                     {
                         offLeft = 0;
                         offRight = 1;
                         offTop = -1;
                         offBot = 0;
                     }
-                    else if (parentCellLocX >= gpLocX && parentCellLocY >= gpLocY)
+                    else if (levelCell.LocX > levelCellParent.LocX && levelCell.LocY > levelCellParent.LocY) //bottom-right
                     {
                         offLeft = -1;
                         offRight = 0;
                         offTop = -1;
                         offBot = 0;
                     }
+
+                    #region QuadCalcs
+                    //if (levelCell.LocX <= levelCellParent.LocX && levelCell.LocY <= levelCellParent.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCell.LocX >= levelCellParent.LocX && levelCell.LocY <= levelCellParent.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCell.LocX <= levelCellParent.LocX && levelCell.LocY >= levelCellParent.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (levelCell.LocX >= levelCellParent.LocX && levelCell.LocY >= levelCellParent.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+
+                    //if (levelCellParent.LocX <= levelCell.LocX && levelCellParent.LocY <= levelCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCellParent.LocX >= levelCell.LocX && levelCellParent.LocY <= levelCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCellParent.LocX <= levelCell.LocX && levelCellParent.LocY >= levelCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (levelCellParent.LocX >= levelCell.LocX && levelCellParent.LocY >= levelCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+
+
+                    //if (levelCellParent.LocX <= bodyCell.LocX && levelCellParent.LocY <= bodyCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCellParent.LocX >= bodyCell.LocX && levelCellParent.LocY <= bodyCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (levelCellParent.LocX <= bodyCell.LocX && levelCellParent.LocY >= bodyCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (levelCellParent.LocX >= bodyCell.LocX && levelCellParent.LocY >= bodyCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+
+
+                    //if (bodyCell.LocX <= bodyCellParent.LocX && bodyCell.LocY <= bodyCellParent.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (bodyCell.LocX >= bodyCellParent.LocX && bodyCell.LocY <= bodyCellParent.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (bodyCell.LocX <= bodyCellParent.LocX && bodyCell.LocY >= bodyCellParent.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (bodyCell.LocX >= bodyCellParent.LocX && bodyCell.LocY >= bodyCellParent.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+
+
+                    //MeshCell gpCell = inMesh[bodyCellParent.ParentID];
+
+                    //if (bodyCellParent.LocX <= gpCell.LocX && bodyCellParent.LocY <= gpCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (bodyCellParent.LocX >= gpCell.LocX && bodyCellParent.LocY <= gpCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (bodyCellParent.LocX <= gpCell.LocX && bodyCellParent.LocY >= gpCell.LocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (bodyCellParent.LocX >= gpCell.LocX && bodyCellParent.LocY >= gpCell.LocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+
+
+                    //int parentCellLocX = parentCellIdX << (parentExp) + (int)((int)Math.Pow(2, parentExp) * 0.5f);
+                    //int parentCellLocY = parentCellIdY << (parentExp) + (int)((int)Math.Pow(2, parentExp) * 0.5f);
+
+                    //int gpExp = cellExp + level + 1;
+                    //int gpIdX = (int)bodyCell.LocX >> (gpExp);
+                    //int gpIdY = (int)bodyCell.LocY >> (gpExp);
+
+                    //int gpLocX = gpIdX << gpExp + (int)((int)Math.Pow(2, gpExp) * 0.5f);
+                    //int gpLocY = gpIdY << gpExp + (int)((int)Math.Pow(2, gpExp) * 0.5f);
+
+
+
+
+                    //if (parentCellLocX <= gpLocX && parentCellLocY <= gpLocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (parentCellLocX >= gpLocX && parentCellLocY <= gpLocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = 0;
+                    //    offBot = 1;
+                    //}
+                    //else if (parentCellLocX <= gpLocX && parentCellLocY >= gpLocY)
+                    //{
+                    //    offLeft = 0;
+                    //    offRight = 1;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
+                    //else if (parentCellLocX >= gpLocX && parentCellLocY >= gpLocY)
+                    //{
+                    //    offLeft = -1;
+                    //    offRight = 0;
+                    //    offTop = -1;
+                    //    offBot = 0;
+                    //}
 
                     //if (parentCellIdX <= gpIdX && parentCellIdY <= gpIdY)
                     //{
@@ -728,6 +901,8 @@ namespace NBodies.Physics
                     //    offBot = 0;
                     //}
 
+                    #endregion QuadCalcs
+
                 }
                 //for (int c = 0; c < len; c++)
 
@@ -740,7 +915,8 @@ namespace NBodies.Physics
                         MeshCell cell = inMesh[c];
 
                         //if (IsNeighbor(bodyCell, cell) == -1)
-                        if (InRange(parentCellIdX, parentCellIdY, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, level) == 1)
+                        //  if (InRange(bodyCellParent.xID, bodyCellParent.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, level) == 1)
+                        if (InRange(levelCell.xID, levelCell.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, topLevel, level) == 1)
                         {
                             distX = cell.CmX - outBody.LocX;
                             distY = cell.CmY - outBody.LocY;
@@ -754,13 +930,19 @@ namespace NBodies.Physics
                             outBody.ForceTot += force;
                             outBody.ForceX += (force * distX / distSqrt);
                             outBody.ForceY += (force * distY / distSqrt);
-
                         }
                     }
                 }
+                // What to do at top level?
+
+                //if (level != 2)
+                //{
+                levelCell = levelCellParent;
+                levelCellParent = inMesh[levelCellParent.ParentID];
+                //}
             }
 
-
+            // bodyCell = inMesh[outBody.MeshID];
 
             // Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
             // Read from the flattened mesh-neighbor index at the correct location.
@@ -870,11 +1052,11 @@ namespace NBodies.Physics
         }
 
         [Cudafy]
-        public static int InRange(int aIdX, int aIdY, int bIdX, int bIdY, int offLeft, int offRight, int offTop, int offBot, int level)
+        public static int InRange(int aIdX, int aIdY, int bIdX, int bIdY, int offLeft, int offRight, int offTop, int offBot, int topLevel, int level)
         {
             int yes = 0;
 
-            if (level == 2)
+            if (level == topLevel)
             {
                 yes = 1;
 
@@ -890,13 +1072,12 @@ namespace NBodies.Physics
             else
             {
                 yes = 0;
-                // Need to skip over 1 and 0?
 
-                for (int x = -2 + offLeft; x < 2 + offRight; x++)
+                for (int x = -2 + offLeft; x <= 2 + offRight; x++)
                 {
-                    for (int y = -2 + offTop; y < 2 + offBot; y++)
+                    for (int y = -2 + offTop; y <= 2 + offBot; y++)
                     {
-                        if (x <= -2 && y <= -2 || x <= -2 && y >= 2 || x >= 2 && y <= -2 || x >= 2 && y >= 2) // UGHHHH
+                        if (((x * x) + (y * y)) > 2)
                         {
                             if (bIdX == aIdX + x && bIdY == aIdY + y)
                                 yes = 1;
@@ -904,8 +1085,6 @@ namespace NBodies.Physics
                     }
                 }
 
-
-               
             }
 
             return yes;
