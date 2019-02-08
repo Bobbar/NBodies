@@ -17,7 +17,7 @@ namespace NBodies.Physics
         private GPGPU gpu;
         private MeshCell[] _mesh = new MeshCell[0];
         private int[] _levelIdx = new int[0];
-        private int _levels = 3;
+        private int _levels = 3;//3;
         private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
         private int[] _meshChilds = new int[0];
@@ -207,12 +207,9 @@ namespace NBodies.Physics
                 prevBodyLen = bodies.Length;
             }
 
-            warmUp = false;
-
             int[] gpuLevelIdx = gpu.Allocate(_levelIdx);
 
-
-
+          
             // Copy host arrays to GPU device.
             gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
             gpu.CopyToDevice(_mesh, gpuMesh);
@@ -245,6 +242,12 @@ namespace NBodies.Physics
 
             // Copy updated bodies back to host and free memory.
             gpu.CopyFromDevice(gpuInBodies, bodies);
+
+            if (!warmUp)
+                gpu.Free(gpuLevelIdx);
+
+
+            warmUp = false;
         }
 
         /// <summary>
@@ -692,7 +695,7 @@ namespace NBodies.Physics
             fac = 1.566681f;
             outBody.Density = (outBody.Mass * fac);
 
-        
+
             for (int level = 0; level < topLevel; level++)
             {
                 int start = 0;
@@ -712,87 +715,48 @@ namespace NBodies.Physics
                 start = levelCellParent.NeighborStartIdx;
                 len = start + levelCellParent.NeighborCount;
 
-                //for (int c = levelIdx[level]; c < len; c++)
                 for (int nc = start; nc < len; nc++)
                 {
                     int nId = meshNeighbors[nc];
+                  
+                    MeshCell nCell = inMesh[nId];
+                  
+                    int childStartIdx = nCell.ChildIdxStart;
+                    int childLen = childStartIdx + nCell.ChildCount;
 
-                    //if (nId != levelCellParent.ID)
-                    //{
-                        MeshCell nCell = inMesh[nId];
+                    for (int c = childStartIdx; c < childLen; c++)
+                    {
+                        int cId = meshChilds[c];
+                     
+                        // Make sure the current cell index is not a neighbor or this body's cell.
+                        if (cId != outBody.MeshID)
+                        {
+                            // Calculate the force from the cells center of mass.
+                            MeshCell cell = inMesh[cId];
 
-                        //if (level < topLevel)
-                        //{
-                            int childStartIdx = nCell.ChildIdxStart;
-                            int childLen = childStartIdx + nCell.ChildCount;
-
-                            for (int c = childStartIdx; c < childLen; c++)
+                            if (IsNeighbor(levelCell, cell) == -1)
                             {
-                                int cId = meshChilds[c];
-                                // Make sure the current cell index is not a neighbor or this body's cell.
-                                if (cId != outBody.MeshID)
-                                {
-                                    // Calculate the force from the cells center of mass.
-                                    MeshCell cell = inMesh[cId];
+                                distX = cell.CmX - outBody.LocX;
+                                distY = cell.CmY - outBody.LocY;
+                                dist = (distX * distX) + (distY * distY);
 
-                                    if (IsNeighbor(levelCell, cell) == -1)
-                                    //  if (InRange(bodyCellParent.xID, bodyCellParent.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, level) == 1)
-                                    //if (InRange(levelCell.xID, levelCell.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, topLevel, level) == 1)
-                                    {
-                                        distX = cell.CmX - outBody.LocX;
-                                        distY = cell.CmY - outBody.LocY;
-                                        dist = (distX * distX) + (distY * distY);
+                                distSqrt = (float)Math.Sqrt(dist);
 
-                                        distSqrt = (float)Math.Sqrt(dist);
+                                totMass = (float)cell.Mass * outBody.Mass;
+                                force = totMass / dist;
 
-                                        totMass = (float)cell.Mass * outBody.Mass;
-                                        force = totMass / dist;
-
-                                        outBody.ForceTot += force;
-                                        outBody.ForceX += (force * distX / distSqrt);
-                                        outBody.ForceY += (force * distY / distSqrt);
-                                    }
-                                }
+                                outBody.ForceTot += force;
+                                outBody.ForceX += (force * distX / distSqrt);
+                                outBody.ForceY += (force * distY / distSqrt);
                             }
+                        }
+                    }
 
-                        //}
-                        //else
-                        //{
-
-                        //    // Calculate the force from the cells center of mass.
-                        //    // MeshCell cell = inMesh[c];
-
-                        //    if (IsNeighbor(levelCell, nCell) == -1)
-                        //    //  if (InRange(bodyCellParent.xID, bodyCellParent.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, level) == 1)
-                        //    //if (InRange(levelCell.xID, levelCell.yID, cell.xID, cell.yID, offLeft, offRight, offTop, offBot, topLevel, level) == 1)
-                        //    {
-                        //        distX = nCell.CmX - outBody.LocX;
-                        //        distY = nCell.CmY - outBody.LocY;
-                        //        dist = (distX * distX) + (distY * distY);
-
-                        //        distSqrt = (float)Math.Sqrt(dist);
-
-                        //        totMass = (float)nCell.Mass * outBody.Mass;
-                        //        force = totMass / dist;
-
-                        //        outBody.ForceTot += force;
-                        //        outBody.ForceX += (force * distX / distSqrt);
-                        //        outBody.ForceY += (force * distY / distSqrt);
-                        //    }
-
-                        //}
-                    //}
                 }
-                // What to do at top level?
 
-                //if (level != 2)
-                //{
 
-                //if (level < topLevel)
-                //{
                 levelCell = levelCellParent;
                 levelCellParent = inMesh[levelCellParent.ParentID];
-                //}
             }
 
             for (int top = levelIdx[topLevel]; top < inMesh.Length; top++)
@@ -818,7 +782,7 @@ namespace NBodies.Physics
                 }
             }
 
-            // bodyCell = inMesh[outBody.MeshID];
+
 
             // Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
             // Read from the flattened mesh-neighbor index at the correct location.
