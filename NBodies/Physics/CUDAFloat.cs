@@ -13,11 +13,11 @@ namespace NBodies.Physics
     public class CUDAFloat : IPhysicsCalc
     {
         private int gpuIndex = 2;
-        private static int threadsPerBlock = 256;
+        private static int _threadsPerBlock = 256;
         private GPGPU gpu;
         private MeshCell[] _mesh = new MeshCell[0];
         private int[] _levelIdx = new int[0];
-        private int _levels = 5;//3;
+        private int _levels = 4;//3;
         private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
         private int[] _meshChilds = new int[0];
@@ -62,7 +62,7 @@ namespace NBodies.Physics
                 gpuIndex = gpuIdx;
 
             if (threadsperblock != -1)
-                threadsPerBlock = threadsperblock;
+                _threadsPerBlock = threadsperblock;
         }
 
         public void Init()
@@ -141,9 +141,13 @@ namespace NBodies.Physics
         }
 
         Stopwatch timer = new Stopwatch();
+        Stopwatch timer2 = new Stopwatch();
 
-        public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp)
+
+        public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock)
         {
+            _threadsPerBlock = threadsPerBlock;
+            _levels = meshLevels;
             float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
 
@@ -259,7 +263,7 @@ namespace NBodies.Physics
         public static int BlockCount(int len, int threads = 0)
         {
             if (threads == 0)
-                threads = threadsPerBlock;
+                threads = _threadsPerBlock;
 
             var blocks = (int)Math.Round((len - 1 + threads - 1) / (float)threads, 0);
 
@@ -314,7 +318,6 @@ namespace NBodies.Physics
             int cellIdx = 0;
 
             var childIdx = new List<List<int>>();
-
 
             for (int b = 0; b < bodies.Length; b++)
             {
@@ -404,17 +407,27 @@ namespace NBodies.Physics
             int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
 
+
             for (int i = 1; i <= _levels; i++)
             {
                 BuildNextLevel(ref _mesh, ref meshDict, ref childIdx, cellSizeExp, i, ref levelIdx);
             }
 
+
+
             _levelIdx = levelIdx;
+
+            timer2.Restart();
 
             // Build the mesh-neighbor index.
             _meshNeighbors = BuildMeshNeighborIndex(ref _mesh, meshDict);
 
+            Console.WriteLine($@"C/N: {timer2.Elapsed.Milliseconds}");
+
+
             _meshChilds = BuildMeshChildIndex(ref _mesh, childIdx);
+
+
         }
 
 

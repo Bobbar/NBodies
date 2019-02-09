@@ -108,10 +108,43 @@ namespace NBodies.Rendering
             }
         }
 
+        public static int MeshLevels
+        {
+            get
+            {
+                return _meshLevels;
+            }
+
+            set
+            {
+                if (value >= 1 & value <= 10)
+                {
+                    _meshLevels = value;
+                }
+            }
+        }
+
+        public static int ThreadsPerBlock
+        {
+            get
+            {
+                return _threadsPBExp;
+            }
+
+            set
+            {
+                if (value >= 4 && value <= 8)
+                {
+                    _threadsPBExp = value;
+                }
+            }
+        }
 
         public static RenderBase Renderer;
 
         private static int _cellSizeExp = 4;
+        private static int _meshLevels = 4;
+        private static int _threadsPBExp = 8;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;
@@ -218,7 +251,7 @@ namespace NBodies.Rendering
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _meshLevels, (int)Math.Pow(2,_threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

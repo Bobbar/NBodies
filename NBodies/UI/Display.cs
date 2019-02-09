@@ -74,6 +74,9 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new SimpleKey(Keys.D));
             InputHandler.AddKeyAction(new TimeStepKey());
             InputHandler.AddKeyAction(new RewindKey());
+            InputHandler.AddKeyAction(new LevelKey());
+            InputHandler.AddKeyAction(new ThreadsKey());
+
 
             SetDisplayOptionTags();
 
