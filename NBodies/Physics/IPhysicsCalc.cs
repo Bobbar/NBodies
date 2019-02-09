@@ -10,6 +10,8 @@ namespace NBodies.Physics
     {
         MeshCell[] CurrentMesh { get; }
 
+        int[] LevelIndex { get; }
+
         void Init();
 
         void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock);

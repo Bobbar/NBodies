@@ -514,7 +514,7 @@ namespace NBodies.Rendering
             {
                 force = new PointF();
 
-                for (int c = 0; c < Mesh.Length; c++)
+                for (int c = 0; c < PhysicsProvider.PhysicsCalc.LevelIndex[1]; c++)
                 {
                     var cell = Mesh[c];
 
