@@ -543,6 +543,14 @@ namespace NBodies.UI
                     BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = -deflection.X / 3f;
                     BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = -deflection.Y / 3f;
 
+                    // Calculate the true screen position from the body location.
+                    var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                    var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
+
+                    // Lock the cursor in place above the body.
+                    Cursor.Position = screenPosition;
+                    _flingPrevScreenPos = screenPosition;
+
                     // Calculate the new orbital path.
                     var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
@@ -553,13 +561,6 @@ namespace NBodies.UI
                     RenderBase.AddOverlay(_orbitOver);
                 }
 
-                // Calculate the true screen position from the body location.
-                var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
-                var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
-
-                // Lock the cursor in place above the body.
-                Cursor.Position = screenPosition;
-                _flingPrevScreenPos = screenPosition;
             }
 
             if (InputHandler.KeyIsDown(Keys.D))

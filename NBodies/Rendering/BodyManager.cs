@@ -497,6 +497,9 @@ namespace NBodies.Rendering
         ///
         public static List<PointF> CalcPathCircle(Body body)
         {
+            if (Mesh.Length < 1)
+                return new List<PointF>();
+
             var points = new List<PointF>();
             int steps = 0;
             int maxSteps = 1000;//5000;
