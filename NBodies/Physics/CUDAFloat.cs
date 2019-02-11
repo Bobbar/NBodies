@@ -158,12 +158,12 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(bodies.Length);
 
-         //   timer.Restart();
+           // timer.Restart();
 
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(ref bodies, cellSizeExp);
 
-          //  Console.WriteLine($@"Mesh({_mesh.Length}): {timer.Elapsed.Milliseconds}");
+        //    Console.WriteLine($@"Mesh({_mesh.Length}): {timer.Elapsed.Milliseconds}");
 
             // Allocate GPU memory as needed.
             if (prevMeshLen != _mesh.Length)
@@ -236,11 +236,11 @@ namespace NBodies.Physics
             }
             else
             {
-               // timer.Restart();
+                // timer.Restart();
 
                 gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
 
-             //   Console.WriteLine($@"Force Kernel: {timer.Elapsed.Milliseconds}");
+                //   Console.WriteLine($@"Force Kernel: {timer.Elapsed.Milliseconds}");
 
                 gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
             }
@@ -317,7 +317,7 @@ namespace NBodies.Physics
             // Dictionary to hold the current mesh cells for fast lookups.
             var meshDict = new Dictionary<int, int>[_levels + 1];//(_mesh.Length);
             meshDict[0] = new Dictionary<int, int>();
-           
+
             // 2D Collection to hold the indexes of bodies contained in each cell.
             var meshBods = new List<List<int>>();
             var childIdx = new List<List<int>>();
@@ -576,6 +576,81 @@ namespace NBodies.Physics
         /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
         /// <param name="cellSize">Size of mesh cells.</param>
         private int[] BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, int>[] meshDict)
+        {
+            // Collection to store the the mesh neighbor indexes.
+            // Initialized with mesh length * 9 (8 neighbors per cell plus itself).
+            var neighborIdxList = new List<int>(mesh.Length * 9);
+            var neighborIdx = new int[mesh.Length * 9];
+
+            var meshCopy = new MeshCell[mesh.Length];
+            Array.Copy(mesh, meshCopy, mesh.Length);
+
+            var options = new ParallelOptions();
+            options.MaxDegreeOfParallelism = 8;
+
+            Parallel.For(0, mesh.Length, options, (m) =>
+            {
+                // Count of neighbors found.
+                int count = 0;
+
+                for (int x = -1; x <= 1; x++)
+                {
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        // Apply the current X/Y mulipliers to the mesh grid coords to get
+                        // the coordinates of a neighboring cell.
+                        int nX = meshCopy[m].xID + x;
+                        int nY = meshCopy[m].yID + y;
+
+                        // Convert the new coords to a cell UID/Hash and check if the cell exists.
+                        var cellUID = MortonNumber(nX, nY);
+
+                        int nCellId;
+                        if (meshDict[meshCopy[m].Level].TryGetValue(cellUID, out nCellId))
+                        {
+                            neighborIdx[(m * 9) + count] = nCellId;
+                            count++;
+                        }
+                    }
+                }
+
+                // Pad unused elements for later removal.
+                for (int i = (m * 9) + count; i < (m * 9) + 9; i++)
+                {
+                    neighborIdx[i] = -1;
+                }
+
+            });
+
+            // Build the final index.
+            for (int m = 0; m < mesh.Length; m++)
+            {
+                int count = 0;
+
+                for (int i = (m * 9); i < (m * 9) + 9; i++)
+                {
+                    if (neighborIdx[i] != -1)
+                    {
+                        neighborIdxList.Add(neighborIdx[i]);
+                        count++;
+                    }
+                }
+
+                mesh[m].NeighborStartIdx = neighborIdxList.Count - count;
+                mesh[m].NeighborCount = count;
+            }
+
+            // Return the flattened mesh neighbor index.
+            return neighborIdxList.ToArray();
+        }
+
+        /// <summary>
+        /// Builds a flattened index of mesh neighbors.
+        /// </summary>
+        /// <param name="mesh">Particle mesh array.</param>
+        /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
+        /// <param name="cellSize">Size of mesh cells.</param>
+        private int[] BuildMeshNeighborIndexOld(ref MeshCell[] mesh, Dictionary<int, int>[] meshDict)
         {
             // Collection to store the the mesh neighbor indexes.
             // Initialized with mesh length * 9 (8 neighbors per cell plus itself).
