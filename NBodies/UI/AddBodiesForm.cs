@@ -2,9 +2,11 @@
 using NBodies.Rendering;
 using NBodies.Rules;
 using NBodies.Shapes;
+using NBodies.Physics;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace NBodies
 {
@@ -43,6 +45,7 @@ namespace NBodies
         {
             MainLoop.WaitForPause();
 
+            var newBodies = new List<Body>();
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
@@ -122,9 +125,12 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
+                newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color)));
+
+               // BodyManager.Add(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
             }
 
+            BodyManager.Add(newBodies.ToArray());
 
             MainLoop.ResumePhysics(true);
         }
@@ -133,6 +139,7 @@ namespace NBodies
         {
             MainLoop.WaitForPause();
 
+            var newBodies = new List<Body>();
 
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
@@ -206,8 +213,11 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim()));
+                newBodies.Add(BodyManager.NewBody(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim())));
+                //BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim()));
             }
+
+            BodyManager.Add(newBodies.ToArray());
 
             MainLoop.ResumePhysics(true);
         }

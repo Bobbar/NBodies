@@ -767,6 +767,33 @@ namespace NBodies.Rendering
             return result;
         }
 
+        public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color)
+        {
+            var b = new Body();
+
+            b.LocX = locX;
+            b.LocY = locY;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = veloX;
+            b.SpeedY = veloY;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = 0;
+            b.Lifetime = 0;
+            b.Age = 0.0f;
+            b.IsExplosion = 0;
+
+            b.BlackHole = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
         public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
             var b = new Body();
@@ -875,6 +902,11 @@ namespace NBodies.Rendering
 
         //    Add(b);
         //}
+
+        public static void Add(Body[] bodies)
+        {
+            Bodies = Bodies.Add(bodies);
+        }
 
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color)
         {

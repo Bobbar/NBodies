@@ -158,12 +158,8 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(bodies.Length);
 
-           // timer.Restart();
-
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(ref bodies, cellSizeExp);
-
-        //    Console.WriteLine($@"Mesh({_mesh.Length}): {timer.Elapsed.Milliseconds}");
 
             // Allocate GPU memory as needed.
             if (prevMeshLen != _mesh.Length)
@@ -230,18 +226,13 @@ namespace NBodies.Physics
             {
                 for (int drift = 1; drift > -1; drift--)
                 {
-                    //gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep);
-                    //gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, drift);
+                    gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
+                    gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, drift);
                 }
             }
             else
             {
-                // timer.Restart();
-
                 gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
-
-                //   Console.WriteLine($@"Force Kernel: {timer.Elapsed.Milliseconds}");
-
                 gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
             }
 
@@ -312,15 +303,15 @@ namespace NBodies.Physics
         {
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
-            var meshList = new List<MeshCell>();
+            // List to hold all new mesh cells.
+            var meshList = new List<MeshCell>(_mesh.Length);
 
-            // Dictionary to hold the current mesh cells for fast lookups.
-            var meshDict = new Dictionary<int, int>[_levels + 1];//(_mesh.Length);
+            // Dictionary to hold mesh cell ids for fast lookups. One for each level.
+            var meshDict = new Dictionary<int, int>[_levels + 1];
             meshDict[0] = new Dictionary<int, int>();
 
-            // 2D Collection to hold the indexes of bodies contained in each cell.
-            var meshBods = new List<List<int>>();
-            var childIdx = new List<List<int>>();
+            // 2D Collection to hold the indexes of bodies contained in each first level cell.
+            var meshBods = new List<List<int>>(_mesh.Length);
 
             // Current cell index.
             int cellIdx = 0;
@@ -331,7 +322,6 @@ namespace NBodies.Physics
 
                 // Calculate the cell position from the current body position.
                 // Right bit-shift to get the x/y grid indexes.
-
                 int idxX = (int)body.LocX >> cellSizeExp;
                 int idxY = (int)body.LocY >> cellSizeExp;
 
@@ -347,24 +337,19 @@ namespace NBodies.Physics
                     // Convert the grid index to a real location.
                     newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
                     newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
-
                     newCell.xID = idxX;
                     newCell.yID = idxY;
-
                     newCell.Size = cellSize;
-
                     newCell.Mass += body.Mass;
                     newCell.CmX += body.Mass * body.LocX;
                     newCell.CmY += body.Mass * body.LocY;
-
                     newCell.BodyCount = 1;
                     newCell.ID = cellIdx;
                     newCell.BodyStartIdx = cellIdx;
 
                     meshDict[0].Add(cellUID, newCell.ID);
                     meshList.Add(newCell);
-
-                    meshBods.Add(new List<int>() { b }); // Add body index to mesh-body collection.
+                    meshBods.Add(new List<int>(10) { b }); // Add body index to mesh-body collection.
 
                     bodies[b].MeshID = cellIdx; // Set the body mesh ID.
 
@@ -373,7 +358,6 @@ namespace NBodies.Physics
                 else // Add body to existing cell.
                 {
                     var parentCell = meshList[parentCellId];
-
                     parentCell.Mass += body.Mass;
                     parentCell.CmX += body.Mass * body.LocX;
                     parentCell.CmY += body.Mass * body.LocY;
@@ -386,9 +370,6 @@ namespace NBodies.Physics
                 }
             }
 
-            // Get the completed mesh list from the dictionary for furthur processing.
-            // var meshList = meshDict[0].Values.ToList();
-
             // Calculate the final center of mass for each cell.
             for (int m = 0; m < meshList.Count; m++)
             {
@@ -398,36 +379,47 @@ namespace NBodies.Physics
                 meshList[m] = cell;
             }
 
-            // Build flattened mesh-body and mesh-neighbor indexes:
-            //
-            // Mesh cells contain a start index and a count which will be used
-            // within the kernels to access the correct elements of these indexes.
-
             // Build the mesh-body index for bottom level.
             _meshBodies = BuildMeshBodyIndex(ref meshList, meshBods, bodies.Length);
 
-            // Build top levels.
+            // Index to hold the starting indexes for each level.
             int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
 
-            for (int i = 1; i <= _levels; i++)
+            // Calculate max child cells for all levels.
+            // Use this value to initialize the child cell collection to reduce resizing overhead.
+            int maxChilds = 0;
+            int prevLen = meshList.Count;
+            for (int x = 0; x <= _levels; x++)
             {
-                BuildNextLevel(ref meshList, ref meshDict, ref childIdx, cellSizeExp, i, ref levelIdx);
+                maxChilds += (prevLen / 2) * 4;
+                prevLen = prevLen / 2;
+            }
+
+            // Init the child cell collection.
+            var childCellIdx = new List<int[]>(maxChilds);
+
+            // Build the upper levels of the mesh.
+            for (int level = 1; level <= _levels; level++)
+            {
+                BuildNextLevel(ref meshList, ref meshDict, ref childCellIdx, ref levelIdx, cellSizeExp, level);
             }
 
             // Get the completed mesh and level index.
             _mesh = meshList.ToArray();
-
             _levelIdx = levelIdx;
 
-            // Build the mesh-neighbor index.
-            _meshNeighbors = BuildMeshNeighborIndex(ref _mesh, meshDict);
+            // Build mesh neighbor index for all levels.
+            _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
 
             // Build the mesh-child cells index.
-            _meshChilds = BuildMeshChildIndex(ref _mesh, childIdx);
+            _meshChilds = BuildMeshChildIndex(ref _mesh, childCellIdx);
         }
 
-        private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref List<List<int>> childIdx, int cellSizeExp, int level, ref int[] levelIdx)
+        // Static instance for new empty child array.
+        static readonly int[] _emptyChilds = new int[4] { -1, -1, -1, -1 };
+
+        private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref List<int[]> childIdx, ref int[] levelIdx, int cellSizeExp, int level)
         {
             cellSizeExp += level;
 
@@ -446,7 +438,6 @@ namespace NBodies.Physics
 
                 // Calculate the cell position from the current body position.
                 // Right bit-shift to get the x/y grid indexes.
-
                 int idxX = (int)childCell.LocX >> cellSizeExp;
                 int idxY = (int)childCell.LocY >> cellSizeExp;
 
@@ -462,21 +453,24 @@ namespace NBodies.Physics
                     // Convert the grid index to a real location.
                     newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
                     newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
-
                     newCell.xID = idxX;
                     newCell.yID = idxY;
-
                     newCell.Size = cellSize;
-
                     newCell.Mass += childCell.Mass;
                     newCell.CmX += (float)childCell.Mass * childCell.CmX;
                     newCell.CmY += (float)childCell.Mass * childCell.CmY;
-
                     newCell.BodyCount = childCell.BodyCount;
                     newCell.ID = cellIdx;
                     newCell.Level = level;
+                    newCell.ChildCount = 1;
 
-                    childIdx.Add(new List<int>() { childCell.ID });
+                    //  childIdx.Add(new int[4] { childCell.ID, -1, -1, -1 });
+
+                    int[] chlds = new int[4]; // For whatever reason, this is much faster...
+                    Array.Copy(_emptyChilds, chlds, 4);
+                    childIdx.Add(chlds);
+                    childIdx[childIdx.Count - 1][0] = childCell.ID;
+
                     meshDict[level].Add(cellUID, newCell.ID);
                     mesh.Add(newCell);
 
@@ -492,12 +486,13 @@ namespace NBodies.Physics
                     parentCell.CmX += (float)childCell.Mass * childCell.CmX;
                     parentCell.CmY += (float)childCell.Mass * childCell.CmY;
                     parentCell.BodyCount += childCell.BodyCount;
+                    parentCell.ChildCount++;
                     mesh[parentCellId] = parentCell;
 
                     childCell.ParentID = parentCellId;
                     mesh[m] = childCell;
 
-                    childIdx[parentCellId - levelIdx[1]].Add(childCell.ID);
+                    childIdx[parentCellId - levelIdx[1]][parentCell.ChildCount - 1] = childCell.ID;
                 }
             }
 
@@ -530,12 +525,7 @@ namespace NBodies.Physics
                 // Set the body start index to the current body list count.
                 cell.BodyStartIdx = bodList.Count;
 
-                // Iterate the inner list to get the body indexes for the current cell.
-                for (int b = 0; b < meshBods[m].Count; b++)
-                {
-                    // Add body index to the collection.
-                    bodList.Add(meshBods[m][b]);
-                }
+                bodList.AddRange(meshBods[m]);
 
                 mesh[m] = cell;
             }
@@ -544,28 +534,21 @@ namespace NBodies.Physics
             return bodList.ToArray();
         }
 
-        private int[] BuildMeshChildIndex(ref MeshCell[] mesh, List<List<int>> childIdx)
+        private int[] BuildMeshChildIndex(ref MeshCell[] mesh, List<int[]> childIdx)
         {
-            // Collection to store the body indexes.
-            // Initialized with current body count to reduce resizing overhead.
             var childList = new List<int>();
             int levelOffset = _levelIdx[1];
 
-            // Iterate the mesh cells.
             for (int m = levelOffset; m < mesh.Length; m++)
             {
-                // Set the body start index to the current body list count.
-                mesh[m].ChildIdxStart = childList.Count;
-                mesh[m].ChildCount = childIdx[m - levelOffset].Count;
-                // Iterate the inner list to get the body indexes for the current cell.
-                for (int b = 0; b < childIdx[m - levelOffset].Count; b++)
+                for (int b = 0; b < mesh[m].ChildCount; b++)
                 {
-                    // Add body index to the collection.
                     childList.Add(childIdx[m - levelOffset][b]);
                 }
+
+                mesh[m].ChildIdxStart = childList.Count - mesh[m].ChildCount;
             }
 
-            // Return the flattened body index array.
             return childList.ToArray();
         }
 
@@ -575,18 +558,15 @@ namespace NBodies.Physics
         /// <param name="mesh">Particle mesh array.</param>
         /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
         /// <param name="cellSize">Size of mesh cells.</param>
-        private int[] BuildMeshNeighborIndex(ref MeshCell[] mesh, Dictionary<int, int>[] meshDict)
+        private int[] BuildMeshNeighborIndex(MeshCell[] mesh, Dictionary<int, int>[] meshDict)
         {
             // Collection to store the the mesh neighbor indexes.
             // Initialized with mesh length * 9 (8 neighbors per cell plus itself).
             var neighborIdxList = new List<int>(mesh.Length * 9);
             var neighborIdx = new int[mesh.Length * 9];
 
-            var meshCopy = new MeshCell[mesh.Length];
-            Array.Copy(mesh, meshCopy, mesh.Length);
-
             var options = new ParallelOptions();
-            options.MaxDegreeOfParallelism = 8;
+            options.MaxDegreeOfParallelism = Environment.ProcessorCount;
 
             Parallel.For(0, mesh.Length, options, (m) =>
             {
@@ -599,14 +579,14 @@ namespace NBodies.Physics
                     {
                         // Apply the current X/Y mulipliers to the mesh grid coords to get
                         // the coordinates of a neighboring cell.
-                        int nX = meshCopy[m].xID + x;
-                        int nY = meshCopy[m].yID + y;
+                        int nX = mesh[m].xID + x;
+                        int nY = mesh[m].yID + y;
 
                         // Convert the new coords to a cell UID/Hash and check if the cell exists.
                         var cellUID = MortonNumber(nX, nY);
 
                         int nCellId;
-                        if (meshDict[meshCopy[m].Level].TryGetValue(cellUID, out nCellId))
+                        if (meshDict[mesh[m].Level].TryGetValue(cellUID, out nCellId))
                         {
                             neighborIdx[(m * 9) + count] = nCellId;
                             count++;
@@ -621,6 +601,7 @@ namespace NBodies.Physics
                 }
 
             });
+
 
             // Build the final index.
             for (int m = 0; m < mesh.Length; m++)
@@ -638,105 +619,6 @@ namespace NBodies.Physics
 
                 mesh[m].NeighborStartIdx = neighborIdxList.Count - count;
                 mesh[m].NeighborCount = count;
-            }
-
-            // Return the flattened mesh neighbor index.
-            return neighborIdxList.ToArray();
-        }
-
-        /// <summary>
-        /// Builds a flattened index of mesh neighbors.
-        /// </summary>
-        /// <param name="mesh">Particle mesh array.</param>
-        /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
-        /// <param name="cellSize">Size of mesh cells.</param>
-        private int[] BuildMeshNeighborIndexOld(ref MeshCell[] mesh, Dictionary<int, int>[] meshDict)
-        {
-            // Collection to store the the mesh neighbor indexes.
-            // Initialized with mesh length * 9 (8 neighbors per cell plus itself).
-            var neighborIdxList = new List<int>(mesh.Length * 9);
-            var neighborLevels = new List<int>[_levels + 1];
-            var counts = new int[mesh.Length];
-
-            var meshCopy = new MeshCell[mesh.Length];
-            Array.Copy(mesh, meshCopy, mesh.Length);
-
-            var options = new ParallelOptions();
-            options.MaxDegreeOfParallelism = _levels + 1;
-
-            Parallel.For(0, _levels + 1, options, (level) =>
-            {
-                int len = 0;
-
-                if (level < _levels)
-                {
-                    len = _levelIdx[level + 1];
-                }
-                else
-                {
-                    len = meshCopy.Length;
-                }
-
-                neighborLevels[level] = new List<int>();
-
-                for (int i = _levelIdx[level]; i < len; i++)
-                {
-                    // Count of neighbors found.
-                    int count = 0;
-
-                    for (int x = -1; x <= 1; x++)
-                    {
-                        for (int y = -1; y <= 1; y++)
-                        {
-                            // Apply the current X/Y mulipliers to the mesh grid coords to get
-                            // the coordinates of a neighboring cell.
-                            int nX = meshCopy[i].xID + x;
-                            int nY = meshCopy[i].yID + y;
-
-                            // Convert the new coords to a cell UID/Hash and check if the cell exists.
-                            var cellUID = MortonNumber(nX, nY);
-
-                            int nCellId;
-                            if (meshDict[level].TryGetValue(cellUID, out nCellId))
-                            {
-                                // Add the neighboring cell ID.
-                                neighborLevels[level].Add(nCellId);
-                                count++;
-                            }
-                        }
-                    }
-
-                    counts[i] = count;
-                }
-            });
-
-            int start = 0;
-
-            for (int level = 0; level <= _levels; level++)
-            {
-                int len = 0;
-
-                if (level < _levels)
-                {
-                    len = _levelIdx[level + 1];
-                }
-                else
-                {
-                    len = mesh.Length;
-                }
-
-                for (int i = _levelIdx[level]; i < len; i++)
-                {
-                    mesh[i].NeighborStartIdx = start;
-                    mesh[i].NeighborCount = counts[i];
-
-                    start += counts[i];
-                }
-
-                for (int n = 0; n < neighborLevels[level].Count; n++)
-                {
-                    neighborIdxList.Add(neighborLevels[level][n]);
-                }
             }
 
             // Return the flattened mesh neighbor index.

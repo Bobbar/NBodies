@@ -163,7 +163,7 @@ namespace NBodies.Rendering
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static float _recElapTime = 0f;
-        private const float _recFrameTimeSpan = 0.04f;
+        private const float _recFrameTimeSpan = 0.30f;//0.04f;
 
         private static Body[] _bodiesBuffer = new Body[0];
 
