@@ -61,7 +61,7 @@ namespace NBodies.Rendering
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
         private const float _timeSpan = 0.04f;
-        private static float _elap = 0f;
+        private static float _elap = _timeSpan;
 
         public static void PushState(Body[] frame)
         {
@@ -99,6 +99,8 @@ namespace NBodies.Rendering
 
                 RebuildUIDIndex();
             }
+
+            _elap = _timeSpan;
         }
 
         public static void FastForwardState()
@@ -127,7 +129,7 @@ namespace NBodies.Rendering
         {
             _states.Clear();
             _stateIdx = -1;
-            _elap = 0f;
+            _elap = _timeSpan;
         }
 
         public static void CullInvisible()
@@ -522,30 +524,7 @@ namespace NBodies.Rendering
         //    return lineList.ToArray();
         //}
 
-        public static bool IntersectsExisting(PointF location, float diameter)
-        {
-            float distX = 0;
-            float distY = 0;
-            float dist = 0;
-            float colDist = 0;
-
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                var body = Bodies[i];
-                distX = body.LocX - location.X;
-                distY = body.LocY - location.Y;
-                dist = (distX * distX) + (distY * distY);
-                colDist = (body.Size / 2f) + (diameter / 2f);
-
-                if (dist <= (colDist * colDist))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
+       
         public static void InsertExplosion(PointF location, int count)
         {
             MainLoop.WaitForPause();
@@ -655,6 +634,33 @@ namespace NBodies.Rendering
             return result;
         }
 
+        public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color, int inRoche)
+        {
+            var b = new Body();
+
+            b.LocX = locX;
+            b.LocY = locY;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = veloX;
+            b.SpeedY = veloY;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = inRoche;
+            b.Lifetime = 0;
+            b.Age = 0.0f;
+            b.IsExplosion = 0;
+
+            b.BlackHole = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
         public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color)
         {
             var b = new Body();
@@ -737,6 +743,32 @@ namespace NBodies.Rendering
             b.Age = 0.0f;
             b.IsExplosion = isExplosion;
             b.BlackHole = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
+        public static Body NewBody(PointF loc, float size, float mass, Color color, int isBlackhole = 0)
+        {
+            var b = new Body();
+
+            b.LocX = loc.X;
+            b.LocY = loc.Y;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+
+            b.SpeedX = 0;
+            b.SpeedY = 0;
+            b.ForceX = 0;
+            b.ForceY = 0;
+            b.ForceTot = 0;
+            b.Visible = 1;
+            b.InRoche = 0;
+            b.Lifetime = 0;
+            b.Age = 0.0f;
+            b.IsExplosion = 0;
+            b.BlackHole = isBlackhole;
             b.UID = NextUID();
 
             return b;

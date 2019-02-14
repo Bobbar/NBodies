@@ -260,13 +260,16 @@ namespace NBodies.Rendering
                     {
                         if (BodyManager.Bodies.Length > 1)
                         {
+                            // Push the current field to rewind collection.
+                            BodyManager.PushState();
+
                             // 1.
                             // Copy the current bodies to another array.
                             _bodiesBuffer = new Body[BodyManager.Bodies.Length];
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _meshLevels, (int)Math.Pow(2,_threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.
@@ -298,8 +301,6 @@ namespace NBodies.Rendering
                                 _recElapTime += TimeStep;
                             }
 
-                            // Push the current field to rewind collection.
-                            BodyManager.PushState();
                         }
                     }
 
@@ -461,7 +462,7 @@ namespace NBodies.Rendering
             float Xpos = startXpos;
             float Ypos = startYpos;
 
-            List<PointF> newPoints = new List<PointF>();
+            var newBodies = new List<Body>();
 
             int its = 0;
 
@@ -471,7 +472,7 @@ namespace NBodies.Rendering
 
                 if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
-                    newPoints.Add(testPoint);
+                    newBodies.Add(BodyManager.NewBody(testPoint.X, testPoint.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1));
                 }
 
                 Xpos += stepSize;
@@ -492,7 +493,7 @@ namespace NBodies.Rendering
                     Ypos += stepSize - 0.20f;
                 }
 
-                if (newPoints.Count == num || its > num * 4)
+                if (newBodies.Count == num || its > num * 4)
                 {
                     done = true;
                 }
@@ -510,10 +511,8 @@ namespace NBodies.Rendering
             //  float postMass = newMass * newPoints.Count;
             //   Console.WriteLine(num + " - " + newPoints.Count);
 
-            foreach (var pnt in newPoints)
-            {
-                BodyManager.Add(pnt.X, pnt.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1);
-            }
+            BodyManager.Add(newBodies.ToArray());
+
         }
     }
 }
