@@ -133,18 +133,33 @@ namespace NBodies.Rendering
 
             set
             {
-                if (value >= 4 && value <= 8)
+                if (value >= 4 && value <= Math.Log(MaxThreadsPerBlock, 2))
                 {
                     _threadsPBExp = value;
                 }
             }
         }
 
-        public static RenderBase Renderer;
+        public static int MaxThreadsPerBlock
+        {
+            get { return _maxThreadsPB; }
 
-        private static int _cellSizeExp = 4;
+            set
+            {
+                if (value >= 4 && value <= 8192)
+                {
+                    _maxThreadsPB = value;
+                }
+            }
+        }
+
+        public const int DefaultThreadsPerBlock = 256;
+
+        public static RenderBase Renderer;
+        private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
+        private static int _maxThreadsPB = DefaultThreadsPerBlock;
         public static float CurrentFPS = 0;
 
         private static int _targetFPS = 60;

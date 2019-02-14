@@ -81,8 +81,8 @@ namespace NBodies.Physics
         [Key(15)]
         public float Pressure;
 
-        [IgnoreMember]
-        public int HasCollision;
+        //[IgnoreMember]
+        //public int HasCollision;
 
         [IgnoreMember]
         public int IsExplosion;

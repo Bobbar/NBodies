@@ -379,118 +379,6 @@ namespace NBodies.Rendering
 
         /// <summary>
         /// Calculate the orbital path of the specified body by running a low res (large dt) static simulation against the current field. Accurate, but slow.
-        /// </summary>
-        public static List<PointF> CalcPath(Body body)
-        {
-            var points = new List<PointF>();
-            int segs = 500;
-            float dtStep = 0.100f;
-
-            PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF(body.LocX, body.LocY);
-            PointF force = new PointF();
-
-            bool firstLoop = true;
-
-            // Define a circle of influence around the specified body.
-            // Bodies within this SOI are not included in orbit calculation.
-            // This is done to improve accuracy by ignoring the neighbors of
-            // a body within a large clump.
-            var soi = new Ellipse(new PointF(body.LocX, body.LocY), 10);
-
-            // This hashset will be used to cache SOI bodies for faster lookup on later loops.
-            var soiBodies = new HashSet<int>();
-
-            points.Add(loc);
-
-            var bodiesCopy = new Body[Bodies.Length];
-            Array.Copy(Bodies, bodiesCopy, bodiesCopy.Length);
-
-            for (int i = 0; i < segs; i++)
-            {
-                force = new PointF();
-
-                for (int b = 0; b < bodiesCopy.Length; b++)
-                {
-                    var bodyB = bodiesCopy[b];
-
-                    if (bodyB.UID == body.UID)
-                        continue;
-
-                    if (body.HasCollision == 0)
-                    {
-                        var distX = bodyB.LocX - loc.X;
-                        var distY = bodyB.LocY - loc.Y;
-                        var dist = (distX * distX) + (distY * distY);
-                        var distSqrt = (float)Math.Sqrt(dist);
-
-                        var totMass = body.Mass * bodyB.Mass;
-
-                        var f = totMass / (dist + 0.02f);
-
-                        force.X += (f * distX / distSqrt);
-                        force.Y += (f * distY / distSqrt);
-                    }
-                    else
-                    {
-                        // Use a slow "body is inside the circle" calculation on the first loop.
-                        if (firstLoop)
-                        {
-                            // If this body is outside the SOI, calculate the forces.
-                            if (!PointExtensions.PointInsideCircle(soi.Location, soi.Size, (new PointF(bodyB.LocX, bodyB.LocY))))
-                            {
-                                var distX = bodyB.LocX - loc.X;
-                                var distY = bodyB.LocY - loc.Y;
-                                var dist = (distX * distX) + (distY * distY);
-                                var distSqrt = (float)Math.Sqrt(dist);
-
-                                var totMass = body.Mass * bodyB.Mass;
-
-                                var f = totMass / (dist + 0.02f);
-
-                                force.X += (f * distX / distSqrt);
-                                force.Y += (f * distY / distSqrt);
-                            }
-                            else // If it is within the SOI, add to cache for faster lookup on the next loops.
-                            {
-                                soiBodies.Add(b);
-                            }
-                        }
-                        else // After the first loop, use the hashset cache.
-                        {
-                            if (!soiBodies.Contains(b))
-                            {
-                                var distX = bodyB.LocX - loc.X;
-                                var distY = bodyB.LocY - loc.Y;
-                                var dist = (distX * distX) + (distY * distY);
-                                var distSqrt = (float)Math.Sqrt(dist);
-
-                                var totMass = body.Mass * bodyB.Mass;
-
-                                var f = totMass / (dist + 0.02f);
-
-                                force.X += (f * distX / distSqrt);
-                                force.Y += (f * distY / distSqrt);
-                            }
-                        }
-                    }
-                }
-
-                speed.X += dtStep * force.X / body.Mass;
-                speed.Y += dtStep * force.Y / body.Mass;
-                loc.X += dtStep * (speed.X * 0.99f);
-                loc.Y += dtStep * (speed.Y * 0.99f);
-
-                points.Add(loc);
-
-                firstLoop = false;
-            }
-
-            return points;
-        }
-
-        /// <summary>
-        /// Calculate the orbital path of the specified body by running a low res (large dt) static simulation against the current field. Accurate, but slow.
         ///
         /// This variation tries to calculate a complete orbit instead of just advancing an N amount of steps.
         /// </summary>
@@ -1057,7 +945,6 @@ Size: { body.Size }
 InRoche: { body.InRoche }
 Density: { body.Density }
 Pressure: { body.Pressure }
-HasCollision: { body.HasCollision }
 Agg. Speed: { body.AggregateSpeed() }
 Speed (X,Y): { body.SpeedX }, { body.SpeedY }
 Position (X,Y): { body.LocX }, { body.LocY }

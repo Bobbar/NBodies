@@ -58,7 +58,7 @@ namespace NBodies.UI
         {
             RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             RenderVars.ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(RenderVars.ScreenCenter);
-
+            MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
             PhysicsProvider.InitPhysics();
 
             MainLoop.Renderer = new D2DRenderer(RenderBox);
