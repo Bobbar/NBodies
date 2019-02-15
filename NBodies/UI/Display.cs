@@ -778,11 +778,6 @@ namespace NBodies.UI
             MainLoop.RocheLimit = rocheLimitToolStripMenuItem.Checked;
         }
 
-        private void leapfrogIntegratorToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
-        {
-            MainLoop.LeapFrog = leapfrogIntegratorToolStripMenuItem.Checked;
-        }
-
         private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderBase.ShowMesh = showMeshToolStripMenuItem.Checked;
@@ -791,6 +786,11 @@ namespace NBodies.UI
         private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
+        }
+
+        private void sortZOrderToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderBase.SortZOrder = sortZOrderToolStripMenuItem.Checked;
         }
     }
 }

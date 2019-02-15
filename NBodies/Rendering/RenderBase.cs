@@ -20,6 +20,7 @@ namespace NBodies.Rendering
         public static bool ShowAllForce = false;
         public static bool ShowPath = false;
         public static bool ShowMesh = false;
+        public static bool SortZOrder = true;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
@@ -111,20 +112,36 @@ namespace NBodies.Rendering
                 // Collect the index ID, and UIDs into two arrays,
                 // then sort them together to provide an ordered "lookup" array.
 
-                int[] bodyIds = new int[bodies.Length];
-                int[] bodyUids = new int[bodies.Length];
+                int[] bodyIds = new int[0];
+                int[] bodyUids = new int[0];
 
-                for (int i = 0; i < bodies.Length; ++i)
+                if (SortZOrder)
                 {
-                    bodyIds[i] = i;
-                    bodyUids[i] = bodies[i].UID;
-                }
+                    bodyIds = new int[bodies.Length];
+                    bodyUids = new int[bodies.Length];
 
-                Array.Sort(bodyUids, bodyIds);
+                    for (int i = 0; i < bodies.Length; ++i)
+                    {
+                        bodyIds[i] = i;
+                        bodyUids[i] = bodies[i].UID;
+                    }
+
+                    Array.Sort(bodyUids, bodyIds);
+                }
 
                 for (int i = 0; i < bodies.Length; i++)
                 {
-                    var body = bodies[bodyIds[i]];
+                    Body body;
+
+                    if (SortZOrder)
+                    {
+                        body = bodies[bodyIds[i]];
+                    }
+                    else
+                    {
+                        body = bodies[i];
+                    }
+
                     var bodyLoc = new PointF((body.LocX + finalOffset.X), (body.LocY + finalOffset.Y));
 
                     if (body.Visible == 1)

@@ -36,6 +36,7 @@
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -143,6 +144,7 @@
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
+            this.sortZOrderToolStripMenuItem,
             this.showMeshToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
@@ -190,6 +192,16 @@
             this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.rocheLimitToolStripMenuItem.Text = "Roche Limit";
             this.rocheLimitToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rocheLimitToolStripMenuItem_CheckedChanged);
+            // 
+            // sortZOrderToolStripMenuItem
+            // 
+            this.sortZOrderToolStripMenuItem.Checked = true;
+            this.sortZOrderToolStripMenuItem.CheckOnClick = true;
+            this.sortZOrderToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.sortZOrderToolStripMenuItem.Name = "sortZOrderToolStripMenuItem";
+            this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
+            this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
             // 
             // showMeshToolStripMenuItem
             // 
@@ -831,6 +843,7 @@
         private System.Windows.Forms.Label RendererLabel;
         private System.Windows.Forms.Label FrameCountLabel;
         private System.Windows.Forms.ToolStripMenuItem indexToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
     }
 }
 
