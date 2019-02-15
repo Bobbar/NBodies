@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace NBodies.Rendering
 {
@@ -122,7 +123,7 @@ namespace NBodies.Rendering
 
                 // _buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
-                //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+              //  _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
         }
 

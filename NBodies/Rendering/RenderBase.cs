@@ -88,6 +88,7 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
             {
+
                 var finalOffset = CalcFinalOffset();
 
                 CheckScale();
@@ -101,9 +102,29 @@ namespace NBodies.Rendering
 
                 _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / RenderVars.CurrentScale, _viewPortSize.Height / RenderVars.CurrentScale);
 
+
+                // Since the bodies are being sorted by their spatial index
+                // we need to sort them (again) by a persistent value; we will use their UIDs.
+                // This is done because the spatial sorting can rapidly change the resulting
+                // z-order of the bodies, which causes flickering.
+
+                // Collect the index ID, and UIDs into two arrays,
+                // then sort them together to provide an ordered "lookup" array.
+
+                int[] bodyIds = new int[bodies.Length];
+                int[] bodyUids = new int[bodies.Length];
+
+                for (int i = 0; i < bodies.Length; ++i)
+                {
+                    bodyIds[i] = i;
+                    bodyUids[i] = bodies[i].UID;
+                }
+
+                Array.Sort(bodyUids, bodyIds);
+
                 for (int i = 0; i < bodies.Length; i++)
                 {
-                    var body = bodies[i];
+                    var body = bodies[bodyIds[i]];
                     var bodyLoc = new PointF((body.LocX + finalOffset.X), (body.LocY + finalOffset.Y));
 
                     if (body.Visible == 1)

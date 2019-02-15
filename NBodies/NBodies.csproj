@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Physics\MeshCell.cs" />
+    <Compile Include="Physics\SpatialInfo.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />

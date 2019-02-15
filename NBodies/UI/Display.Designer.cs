@@ -36,7 +36,6 @@
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.leapfrogIntegratorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -144,7 +143,6 @@
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
-            this.leapfrogIntegratorToolStripMenuItem,
             this.showMeshToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
@@ -192,14 +190,6 @@
             this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.rocheLimitToolStripMenuItem.Text = "Roche Limit";
             this.rocheLimitToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rocheLimitToolStripMenuItem_CheckedChanged);
-            // 
-            // leapfrogIntegratorToolStripMenuItem
-            // 
-            this.leapfrogIntegratorToolStripMenuItem.CheckOnClick = true;
-            this.leapfrogIntegratorToolStripMenuItem.Name = "leapfrogIntegratorToolStripMenuItem";
-            this.leapfrogIntegratorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.leapfrogIntegratorToolStripMenuItem.Text = "Leapfrog Integrator";
-            this.leapfrogIntegratorToolStripMenuItem.CheckedChanged += new System.EventHandler(this.leapfrogIntegratorToolStripMenuItem_CheckedChanged);
             // 
             // showMeshToolStripMenuItem
             // 
@@ -835,7 +825,6 @@
         private System.Windows.Forms.ToolStripMenuItem drawToolStripMenuItem;
         private System.Windows.Forms.Label RecSizeLabel;
         private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem leapfrogIntegratorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
         private System.Windows.Forms.Label ScaleLabel;
