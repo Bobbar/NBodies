@@ -314,7 +314,11 @@ namespace NBodies.UI
 
                     if (_selectedUid != -1)
                     {
-                        BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
+                        try
+                        {
+                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
+                        }
+                        catch { }
                     }
 
                     break;

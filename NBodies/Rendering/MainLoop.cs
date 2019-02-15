@@ -1,14 +1,13 @@
-﻿using NBodies.Physics;
+﻿using NBodies.Extensions;
+using NBodies.IO;
+using NBodies.Physics;
 using NBodies.Shapes;
-using NBodies.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
-using NBodies.IO;
 
 namespace NBodies.Rendering
 {
@@ -16,6 +15,9 @@ namespace NBodies.Rendering
     {
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
+        public static float CurrentFPS = 0;
+        public const int DefaultThreadsPerBlock = 256;
+        public static RenderBase Renderer;
 
         public static int CellSizeExp
         {
@@ -35,7 +37,6 @@ namespace NBodies.Rendering
 
         public static int TargetFPS
         {
-
             get
             {
                 return _targetFPS;
@@ -49,7 +50,6 @@ namespace NBodies.Rendering
                 }
             }
         }
-
 
         public static float TimeStep
         {
@@ -66,7 +66,6 @@ namespace NBodies.Rendering
                 }
             }
         }
-
 
         public static bool PausePhysics
         {
@@ -149,16 +148,26 @@ namespace NBodies.Rendering
                 }
             }
         }
+        
+        public static int RenderBurstFrames
+        {
+            get { return _burstSkips; }
 
-        public const int DefaultThreadsPerBlock = 256;
-
-        public static RenderBase Renderer;
+            set
+            {
+                if (value >= 0 && value <= 20)
+                {
+                    _burstSkips = value;
+                }
+            }
+        }
+        
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
-        public static float CurrentFPS = 0;
-
+        private static int _burstSkips = 0;
+        private static int _bursts = 0;
         private static int _targetFPS = 60;
         private static int _minFrameTime = 0;
         private static Int64 _frameCount = 0;
@@ -175,11 +184,10 @@ namespace NBodies.Rendering
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static float _recElapTime = 0f;
-        private const float _recFrameTimeSpan = 0.30f;//0.04f;
+        private const float _recFrameTimeSpan = 0.30f;
 
         private static Body[] _bodiesBuffer = new Body[0];
 
-        // private static IRecording _recorder = new IO.ProtoBufRecorder();
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
         private static Stopwatch timer = new Stopwatch();
@@ -246,7 +254,7 @@ namespace NBodies.Rendering
             // 3. Once the drawing thread is finished, copy the new data to the current Bodies buffer.
             // 4. Asyncronously start drawing the current Bodies to the field, and immediately loop to start the next physics calc.
             //
-            // This allows the rendering and the physics calcs to work at the same time. 
+            // This allows the rendering and the physics calcs to work at the same time.
             // This way we can keep the physics thread busy with the next frame while the rendering thread is busy with the current one.
             // The net result is a higher frame rate.
             try
@@ -297,7 +305,6 @@ namespace NBodies.Rendering
                                 }
                                 _recElapTime += TimeStep;
                             }
-
                         }
                     }
 
@@ -328,10 +335,17 @@ namespace NBodies.Rendering
 
                     FPSLimiter();
 
-                    // 4.
-                    // Draw the field asynchronously.
-                    if (DrawBodies)
-                        Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
+                    if (_bursts >= _burstSkips)
+                    {
+                        // 4.
+                        // Draw the field asynchronously.
+                        if (DrawBodies)
+                            Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
+
+                        _bursts = 0;
+                    }
+
+                    _bursts++;
                 }
             }
             catch (OperationCanceledException)
@@ -509,7 +523,6 @@ namespace NBodies.Rendering
             //   Console.WriteLine(num + " - " + newPoints.Count);
 
             BodyManager.Add(newBodies.ToArray());
-
         }
     }
 }

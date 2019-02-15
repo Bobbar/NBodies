@@ -133,7 +133,7 @@ namespace NBodies.Rendering
                 {
                     Body body;
 
-                    if (SortZOrder)
+                    if (SortZOrder && bodyIds.Length > 0)
                     {
                         body = bodies[bodyIds[i]];
                     }
