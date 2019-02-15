@@ -19,15 +19,11 @@ namespace NBodies.Physics
         private MeshCell[] _mesh = new MeshCell[0];
         private int[] _levelIdx = new int[0];
         private int _levels = 4;
-        private int[] _meshBodies = new int[0];
         private int[] _meshNeighbors = new int[0];
         private int[] _meshChilds = new int[0];
 
         private MeshCell[] gpuMesh = new MeshCell[0];
         private int prevMeshLen = 0;
-
-        private int[] gpuMeshBodies = new int[0];
-        private int prevMeshBodLen = 0;
 
         private int[] gpuMeshNeighbors = new int[0];
         private int prevMeshNLen = 0;
@@ -172,15 +168,6 @@ namespace NBodies.Physics
                 prevMeshLen = _mesh.Length;
             }
 
-            if (prevMeshBodLen != _meshBodies.Length)
-            {
-                if (!warmUp)
-                    gpu.Free(gpuMeshBodies);
-
-                gpuMeshBodies = gpu.Allocate(_meshBodies);
-                prevMeshBodLen = _meshBodies.Length;
-            }
-
             if (prevMeshNLen != _meshNeighbors.Length)
             {
                 if (!warmUp)
@@ -217,14 +204,13 @@ namespace NBodies.Physics
             // Copy host arrays to GPU device.
             gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
             gpu.CopyToDevice(_mesh, gpuMesh);
-            gpu.CopyToDevice(_meshBodies, gpuMeshBodies);
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
             gpu.CopyToDevice(_meshChilds, gpuMeshChilds);
             gpu.CopyToDevice(bodies, gpuInBodies);
 
             // Launch force and collision kernels; swapping In and Out pointers.
-            gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
-            gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshBodies, gpuMeshNeighbors, timestep, viscosity, 3);
+            gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
+            gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshNeighbors, timestep, viscosity, 3);
 
             // Copy updated bodies back to host and free memory.
             gpu.CopyFromDevice(gpuInBodies, bodies);
@@ -319,7 +305,7 @@ namespace NBodies.Physics
             // Sorting this data together gives us a massive performance boost in GPU kernel execution.
             Array.Sort(keyCopy, bodies);
             Array.Sort(mortKeys, spatials);
-            
+
             // Compute number of unique morton numbers to determine cell count.
             // Also build the start location of each cell.
             int unique = 0;
@@ -368,10 +354,6 @@ namespace NBodies.Physics
             var meshDict = new Dictionary<int, int>[_levels + 1];
             meshDict[0] = new Dictionary<int, int>();
 
-            // 2D Collection to hold the indexes of bodies contained in each first level cell.
-            var meshBods = new List<List<int>>(cellCount);
-            var meshBodArr = new List<int>[cellCount];
-
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Environment.ProcessorCount;
@@ -401,8 +383,6 @@ namespace NBodies.Physics
                     len = spatialDat.Length;
                 }
 
-                meshBodArr[m] = new List<int>(len - cellStartIdx[m]);
-
                 for (int i = cellStartIdx[m]; i < len; i++)
                 {
                     int id = spatialDat[i].BodyIdx;
@@ -413,18 +393,15 @@ namespace NBodies.Physics
                     newCell.BodyCount++;
 
                     bodies[id].MeshID = m;
-
-                    meshBodArr[m].Add(id);
                 }
 
                 newCell.ID = m;
-                newCell.BodyStartIdx = m;
+                newCell.BodyStartIdx = cellStartIdx[m];
 
                 meshArr[m] = newCell;
             });
 
             meshList = meshArr.ToList();
-            meshBods = meshBodArr.ToList();
 
             // Calculate the final center of mass for each cell.
             for (int m = 0; m < meshList.Count; m++)
@@ -436,9 +413,6 @@ namespace NBodies.Physics
 
                 meshDict[0].Add(cell.Mort, m);
             }
-
-            // Build the mesh-body index for bottom level.
-            _meshBodies = BuildMeshBodyIndex(ref meshList, meshBods, bodies.Length);
 
             // Index to hold the starting indexes for each level.
             int[] levelIdx = new int[_levels + 1];
@@ -564,34 +538,6 @@ namespace NBodies.Physics
             }
         }
 
-        /// <summary>
-        /// Builds a flattened index of mesh bodies.
-        /// </summary>
-        /// <param name="mesh">Particle mesh array.</param>
-        /// <param name="meshBods">List of containing a list of body indexes for each mesh cell.</param>
-        /// <param name="bodyCount">Total number of bodies in the current field.</param>
-        private int[] BuildMeshBodyIndex(ref List<MeshCell> mesh, List<List<int>> meshBods, int bodyCount)
-        {
-            // Collection to store the body indexes.
-            // Initialized with current body count to reduce resizing overhead.
-            var bodList = new List<int>(bodyCount);
-
-            // Iterate the mesh cells.
-            for (int m = 0; m < mesh.Count; m++)
-            {
-                var cell = mesh[m];
-                // Set the body start index to the current body list count.
-                cell.BodyStartIdx = bodList.Count;
-
-                bodList.AddRange(meshBods[m]);
-
-                mesh[m] = cell;
-            }
-
-            // Return the flattened body index array.
-            return bodList.ToArray();
-        }
-
         private int[] BuildMeshChildIndex(ref MeshCell[] mesh, List<int[]> childIdx)
         {
             var childList = new List<int>();
@@ -687,7 +633,7 @@ namespace NBodies.Physics
         /// Calculates the gravitational forces, and SPH density/pressure. Also does initial collision detection.
         /// </summary>
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, int[] meshChilds, float dt, int topLevel, int[] levelIdx)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, int[] meshChilds, float dt, int topLevel, int[] levelIdx)
         {
             float GAS_K = 0.3f;
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -822,13 +768,10 @@ namespace NBodies.Physics
                 int mbLen = cell.BodyCount + mbStart;
                 for (int mb = mbStart; mb < mbLen; mb++)
                 {
-                    // Get the mesh body index, then copy it from memory.
-                    int meshBodId = inMeshBods[mb];
-
                     // Save us from ourselves.
-                    if (meshBodId != a)
+                    if (mb != a)
                     {
-                        Body inBody = inBodies[meshBodId];
+                        Body inBody = inBodies[mb];
 
                         distX = inBody.LocX - outBody.LocX;
                         distY = inBody.LocY - outBody.LocY;
@@ -918,7 +861,7 @@ namespace NBodies.Physics
         /// Calculates elastic and SPH collision forces then integrates movement.
         /// </summary>
         [Cudafy]
-        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] inMeshBods, int[] meshNeighbors, float dt, float viscosity, int drift)
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, float dt, float viscosity, int drift)
         {
             float distX;
             float distY;
@@ -949,13 +892,10 @@ namespace NBodies.Physics
                 int mbLen = cell.BodyCount + mbStart;
                 for (int mb = mbStart; mb < mbLen; mb++)
                 {
-                    // Get the cell body from the index.
-                    int meshBodId = inMeshBods[mb];
-
                     // Double tests are bad.
-                    if (meshBodId != a)
+                    if (mb != a)
                     {
-                        Body inBody = inBodies[meshBodId];
+                        Body inBody = inBodies[mb];
 
                         distX = outBody.LocX - inBody.LocX;
                         distY = outBody.LocY - inBody.LocY;
