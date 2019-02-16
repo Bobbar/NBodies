@@ -347,7 +347,7 @@ namespace NBodies.Physics
             SpatialInfo[] spatialDat = CalcBodySpatials(bodies, cellSizeExp, out cellCount, out cellStartIdx);
 
             // List to hold all new mesh cells.
-            var meshList = new List<MeshCell>();
+            var meshList = new List<MeshCell>(cellCount);
             var meshArr = new MeshCell[cellCount];
 
             // Dictionary to hold mesh cell ids for fast lookups. One for each level.
@@ -780,7 +780,6 @@ namespace NBodies.Physics
                         // If this body is within collision/SPH distance.
                         if (dist <= ksize)
                         {
-
                             // Clamp SPH softening distance.
                             if (dist < FLOAT_EPSILON)
                             {

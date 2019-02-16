@@ -368,7 +368,7 @@ namespace NBodies.UI
                 case Keys.ShiftKey:
 
                     _shiftDown = false;
-                    MainLoop.ResumePhysics();
+                   // MainLoop.ResumePhysics();
 
                     break;
 
@@ -379,9 +379,16 @@ namespace NBodies.UI
 
                     break;
 
-                case Keys.Space:
+                case Keys.P:
 
-                    MainLoop.WaitForPause();
+                    if (MainLoop.PausePhysics)
+                    {
+                        MainLoop.ResumePhysics(true);
+                    }
+                    else
+                    {
+                        MainLoop.WaitForPause();
+                    }
 
                     break;
             }
