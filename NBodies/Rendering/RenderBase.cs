@@ -161,22 +161,25 @@ namespace NBodies.Rendering
                                 break;
 
                             case DisplayStyle.Pressures:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, StyleScaleMax, body.Pressure, true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
+
                                 _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.Speeds:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, StyleScaleMax, body.AggregateSpeed(), true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
+
                                 _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, bodies.Length, i, true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
                                 _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.Forces:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
+
                                 _clearColor = Color.Black;
                                 break;
 
@@ -350,7 +353,6 @@ namespace NBodies.Rendering
             });
         }
 
-
         internal Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
         {
             const int maxIntensity = 255;
@@ -364,6 +366,68 @@ namespace NBodies.Rendering
             r2 = endColor.R;
             g2 = endColor.G;
             b2 = endColor.B;
+
+            if (currentValue > 0)
+            {
+                // Compute the intensity of the end color.
+                intensity = (maxIntensity / (maxValue / currentValue));
+            }
+
+            // Clamp the intensity within the max.
+            if (intensity > maxIntensity) intensity = maxIntensity;
+
+            // Calculate the new RGB values from the intensity.
+            int newR, newG, newB;
+            newR = (int)(r1 + (r2 - r1) / (float)maxIntensity * intensity);
+            newG = (int)(g1 + (g2 - g1) / (float)maxIntensity * intensity);
+            newB = (int)(b1 + (b2 - b1) / (float)maxIntensity * intensity);
+
+            if (translucent)
+            {
+                return Color.FromArgb(BodyAlpha, newR, newG, newB);
+            }
+            else
+            {
+                return Color.FromArgb(newR, newG, newB);
+            }
+        }
+
+        internal Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        {
+            const int maxIntensity = 255;
+            float intensity = 0;
+            long r1 = 0;
+            long g1 = 0;
+            long b1 = 0;
+            long r2 = 0;
+            long g2 = 0;
+            long b2 = 0;
+
+            if (currentValue <= (maxValue / 2f))
+            {
+                r1 = startColor.R;
+                g1 = startColor.G;
+                b1 = startColor.B;
+
+                r2 = midColor.R;
+                g2 = midColor.G;
+                b2 = midColor.B;
+
+                maxValue = maxValue / 2f;
+            }
+            else
+            {
+                r1 = midColor.R;
+                g1 = midColor.G;
+                b1 = midColor.B;
+
+                r2 = endColor.R;
+                g2 = endColor.G;
+                b2 = endColor.B;
+
+                maxValue = maxValue / 2f;
+                currentValue = currentValue - maxValue;
+            }
 
             if (currentValue > 0)
             {
