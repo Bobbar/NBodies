@@ -137,8 +137,10 @@ namespace NBodies.Rendering
             if (Bodies.Length < 1) return;
 
             _bodyStore = Bodies.ToList();
+
             _bodyStore.RemoveAll((b) => b.Visible == 0);
             _bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
+            _bodyStore.RemoveAll((b) => b.ForceTot < 0.05f);
 
             Bodies = _bodyStore.ToArray();
 
@@ -524,7 +526,7 @@ namespace NBodies.Rendering
         //    return lineList.ToArray();
         //}
 
-       
+
         public static void InsertExplosion(PointF location, int count)
         {
             MainLoop.WaitForPause();
@@ -980,7 +982,8 @@ Pressure: { body.Pressure }
 Agg. Speed: { body.AggregateSpeed() }
 Speed (X,Y): { body.SpeedX }, { body.SpeedY }
 Position (X,Y): { body.LocX }, { body.LocY }
-Force (X,Y): { body.ForceX }, { body.ForceX }
+Force (X,Y): { body.ForceX }, { body.ForceY }
+Tot Force: { body.ForceTot }
 ";
             // if (index > -1)
             Console.WriteLine(info);

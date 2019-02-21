@@ -291,7 +291,7 @@ namespace NBodies.Rendering
 
                             // Remove invisible bodies.
                             BodyManager.CullInvisible();
-
+                         
                             // Increment physics frame count.
                             _frameCount++;
 
@@ -483,7 +483,10 @@ namespace NBodies.Rendering
 
                 if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
-                    newBodies.Add(BodyManager.NewBody(testPoint.X, testPoint.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1));
+                    var newbody = BodyManager.NewBody(testPoint.X, testPoint.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1);
+                    newbody.ForceX = body.ForceX;
+                    newbody.ForceY = body.ForceY;
+                    newBodies.Add(newbody);
                 }
 
                 Xpos += stepSize;
