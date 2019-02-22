@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Linq;
+using NBodies.Extensions;
 
 namespace NBodies.Physics
 {
@@ -20,7 +21,6 @@ namespace NBodies.Physics
         private int[] _levelIdx = new int[0];
         private int _levels = 4;
         private int[] _meshNeighbors = new int[0];
-        private int[] _meshChilds = new int[0];
 
         private MeshCell[] gpuMesh = new MeshCell[0];
         private int prevMeshLen = 0;
@@ -28,12 +28,11 @@ namespace NBodies.Physics
         private int[] gpuMeshNeighbors = new int[0];
         private int prevMeshNLen = 0;
 
-        private int[] gpuMeshChilds = new int[0];
-        private int prevMeshChildLen = 0;
-
         private Body[] gpuInBodies = new Body[0];
         private Body[] gpuOutBodies = new Body[0];
         private int prevBodyLen = 0;
+
+        private int totChilds = 0;
 
         private bool warmUp = true;
 
@@ -177,15 +176,6 @@ namespace NBodies.Physics
                 prevMeshNLen = _meshNeighbors.Length;
             }
 
-            if (prevMeshChildLen != _meshChilds.Length)
-            {
-                if (!warmUp)
-                    gpu.Free(gpuMeshChilds);
-
-                gpuMeshChilds = gpu.Allocate(_meshChilds);
-                prevMeshChildLen = _meshChilds.Length;
-            }
-
             if (prevBodyLen != bodies.Length)
             {
                 if (!warmUp)
@@ -205,11 +195,10 @@ namespace NBodies.Physics
             gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
             gpu.CopyToDevice(_mesh, gpuMesh);
             gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
-            gpu.CopyToDevice(_meshChilds, gpuMeshChilds);
             gpu.CopyToDevice(bodies, gpuInBodies);
 
             // Launch force and collision kernels; swapping In and Out pointers.
-            gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshNeighbors, gpuMeshChilds, timestep, _levels, gpuLevelIdx);
+            gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshNeighbors, timestep, _levels, gpuLevelIdx);
             gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshNeighbors, timestep, viscosity, 3);
 
             // Copy updated bodies back to host and free memory.
@@ -429,12 +418,12 @@ namespace NBodies.Physics
             }
 
             // Init the child cell collection.
-            var childCellIdx = new List<int[]>(maxChilds);
+            totChilds = 0;
 
             // Build the upper levels of the mesh.
             for (int level = 1; level <= _levels; level++)
             {
-                BuildNextLevel(ref meshList, ref meshDict, ref childCellIdx, ref levelIdx, cellSizeExp, level);
+                BuildNextLevel(ref meshList, ref meshDict, ref levelIdx, cellSizeExp, level);
             }
 
             // Get the completed mesh and level index.
@@ -443,15 +432,11 @@ namespace NBodies.Physics
 
             // Build mesh neighbor index for all levels.
             _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
-
-            // Build the mesh-child cells index.
-            _meshChilds = BuildMeshChildIndex(ref _mesh, childCellIdx);
         }
 
-        // Static instance for new empty child array.
-        static readonly int[] _emptyChilds = new int[4] { -1, -1, -1, -1 };
 
-        private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref List<int[]> childIdx, ref int[] levelIdx, int cellSizeExp, int level)
+
+        private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int level)
         {
             cellSizeExp += level;
 
@@ -494,14 +479,9 @@ namespace NBodies.Physics
                     newCell.BodyCount = childCell.BodyCount;
                     newCell.ID = cellIdx;
                     newCell.Level = level;
+                    newCell.ChildIdxStart = totChilds;
                     newCell.ChildCount = 1;
-
-                    //  childIdx.Add(new int[4] { childCell.ID, -1, -1, -1 });
-
-                    int[] chlds = new int[4]; // For whatever reason, this is much faster...
-                    Array.Copy(_emptyChilds, chlds, 4);
-                    childIdx.Add(chlds);
-                    childIdx[childIdx.Count - 1][0] = childCell.ID;
+                    totChilds += 1;
 
                     meshDict[level].Add(cellUID, newCell.ID);
                     mesh.Add(newCell);
@@ -519,12 +499,13 @@ namespace NBodies.Physics
                     parentCell.CmY += (float)childCell.Mass * childCell.CmY;
                     parentCell.BodyCount += childCell.BodyCount;
                     parentCell.ChildCount++;
+
+                    totChilds += 1;
+
                     mesh[parentCellId] = parentCell;
 
                     childCell.ParentID = parentCellId;
                     mesh[m] = childCell;
-
-                    childIdx[parentCellId - levelIdx[1]][parentCell.ChildCount - 1] = childCell.ID;
                 }
             }
 
@@ -536,24 +517,6 @@ namespace NBodies.Physics
                 cell.CmY = cell.CmY / (float)cell.Mass;
                 mesh[m] = cell;
             }
-        }
-
-        private int[] BuildMeshChildIndex(ref MeshCell[] mesh, List<int[]> childIdx)
-        {
-            var childList = new List<int>();
-            int levelOffset = _levelIdx[1];
-
-            for (int m = levelOffset; m < mesh.Length; m++)
-            {
-                for (int b = 0; b < mesh[m].ChildCount; b++)
-                {
-                    childList.Add(childIdx[m - levelOffset][b]);
-                }
-
-                mesh[m].ChildIdxStart = childList.Count - mesh[m].ChildCount;
-            }
-
-            return childList.ToArray();
         }
 
         /// <summary>
@@ -606,7 +569,6 @@ namespace NBodies.Physics
 
             });
 
-
             // Build the final index.
             for (int m = 0; m < mesh.Length; m++)
             {
@@ -633,7 +595,7 @@ namespace NBodies.Physics
         /// Calculates the gravitational forces, and SPH density/pressure. Also does initial collision detection.
         /// </summary>
         [Cudafy]
-        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, int[] meshChilds, float dt, int topLevel, int[] levelIdx)
+        public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, float dt, int topLevel, int[] levelIdx)
         {
             float GAS_K = 0.3f;
             float FLOAT_EPSILON = 1.192092896e-07f;
@@ -700,13 +662,11 @@ namespace NBodies.Physics
 
                     for (int c = childStartIdx; c < childLen; c++)
                     {
-                        int cId = meshChilds[c];
-
                         // Make sure the current cell index is not a neighbor or this body's cell.
-                        if (cId != outBody.MeshID)
+                        if (c != outBody.MeshID)
                         {
                             // Calculate the force from the cells center of mass.
-                            MeshCell cell = inMesh[cId];
+                            MeshCell cell = inMesh[c];
 
                             if (IsNear(levelCell, cell) == 0)
                             {

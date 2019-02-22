@@ -20,9 +20,9 @@ namespace NBodies.Extensions
             pi.SetValue(control, setting, null);
         }
 
-        public static void Print(this Stopwatch timer)
+        public static void Print(this Stopwatch timer, string label = "")
         {
-            Console.WriteLine($@"ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
+            Console.WriteLine($@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
         }
     }
 }

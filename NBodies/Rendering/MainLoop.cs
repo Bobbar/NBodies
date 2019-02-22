@@ -484,8 +484,7 @@ namespace NBodies.Rendering
                 if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
                     var newbody = BodyManager.NewBody(testPoint.X, testPoint.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1);
-                    newbody.ForceX = body.ForceX;
-                    newbody.ForceY = body.ForceY;
+                    newbody.ForceTot = body.ForceTot;
                     newBodies.Add(newbody);
                 }
 
