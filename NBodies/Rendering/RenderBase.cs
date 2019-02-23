@@ -21,6 +21,7 @@ namespace NBodies.Rendering
         public static bool ShowPath = false;
         public static bool ShowMesh = false;
         public static bool SortZOrder = true;
+        public static bool FastPrimitives = false;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
@@ -61,6 +62,7 @@ namespace NBodies.Rendering
 
         protected Control _targetControl;
         protected float _prevScale = 0;
+        protected float _currentScale = 0;
         protected Color _clearColor = Color.Black;
         protected RectangleF _cullTangle;
         protected Size _viewPortSize;
@@ -292,19 +294,21 @@ namespace NBodies.Rendering
 
         protected internal void CheckScale()
         {
+            _currentScale = RenderVars.CurrentScale;
+
             if (_targetControl.ClientSize != _viewPortSize)
             {
                 UpdateViewportSize(_targetControl.ClientSize.Width, _targetControl.ClientSize.Height);
-                UpdateGraphicsScale(RenderVars.CurrentScale);
+                UpdateGraphicsScale(_currentScale);
 
                 _viewPortSize = _targetControl.ClientSize;
             }
 
-            if (_prevScale != RenderVars.CurrentScale)
+            if (_prevScale != _currentScale)
             {
-                UpdateGraphicsScale(RenderVars.CurrentScale);
+                UpdateGraphicsScale(_currentScale);
 
-                _prevScale = RenderVars.CurrentScale;
+                _prevScale = _currentScale;
             }
         }
 

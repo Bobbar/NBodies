@@ -61,7 +61,21 @@ namespace NBodies.Rendering
 
             var bodyBrush = _brushCache[brushID];
 
-            _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
+            if (!FastPrimitives)
+            {
+                _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
+            }
+            else
+            {
+                if (size <= 1f)
+                {
+                    _buffer.Graphics.FillRectangle(bodyBrush, X, Y, size, size);
+                }
+                else
+                {
+                    _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
+                }
+            }
 
             if (body.BlackHole == 1)
             {

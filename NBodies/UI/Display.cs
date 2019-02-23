@@ -803,5 +803,10 @@ namespace NBodies.UI
         {
             RenderBase.SortZOrder = sortZOrderToolStripMenuItem.Checked;
         }
+
+        private void fastPrimitivesToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderBase.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
+        }
     }
 }

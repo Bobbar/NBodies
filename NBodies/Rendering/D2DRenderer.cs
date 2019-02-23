@@ -33,6 +33,7 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _massBrush;
 
         private d2.Ellipse _bodyEllipse;
+        private SharpDX.RectangleF _bodyRect;
         private dw.TextFormat _infoText;
         private d2.StrokeStyle _arrowStyle;
 
@@ -62,6 +63,7 @@ namespace NBodies.Rendering
 
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
+            _bodyRect = new SharpDX.RectangleF(0, 0, 0, 0);
             _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 11);
             _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
             _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
@@ -97,17 +99,37 @@ namespace NBodies.Rendering
         public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
         {
             _bodyBrush.Color = ConvertColor(color);
-            _bodyEllipse.Point.X = X; 
+
+            _bodyEllipse.Point.X = X;
             _bodyEllipse.Point.Y = Y;
             _bodyEllipse.RadiusX = body.Size * 0.5f;
             _bodyEllipse.RadiusY = body.Size * 0.5f;
 
-            _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+            float offset = size * 0.5f;
+            _bodyRect.X = X - offset;
+            _bodyRect.Y = Y - offset;
+            _bodyRect.Width = size;
+            _bodyRect.Height = size;
+
+            if (!FastPrimitives)
+            {
+                _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+            }
+            else
+            {
+                if (size <= 1f)
+                {
+                    _wndRender.FillRectangle(_bodyRect, _bodyBrush);
+                }
+                else
+                {
+                    _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+                }
+            } 
 
             if (body.BlackHole == 1)
             {
                 _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
-
             }
         }
 
@@ -136,7 +158,7 @@ namespace NBodies.Rendering
         {
             float pSize = 0.3f;
             float pOffset = pSize / 2f;
-           
+
             foreach (var m in mesh)
             {
                 if (!_cullTangle.Contains(m.LocX, m.LocY))

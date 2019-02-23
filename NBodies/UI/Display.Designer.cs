@@ -83,6 +83,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -145,6 +146,7 @@
             this.clipToViewportToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
             this.sortZOrderToolStripMenuItem,
+            this.fastPrimitivesToolStripMenuItem,
             this.showMeshToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
@@ -754,6 +756,14 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // fastPrimitivesToolStripMenuItem
+            // 
+            this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
+            this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
+            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
+            this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -844,6 +854,7 @@
         private System.Windows.Forms.Label FrameCountLabel;
         private System.Windows.Forms.ToolStripMenuItem indexToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fastPrimitivesToolStripMenuItem;
     }
 }
 
