@@ -138,9 +138,11 @@ namespace NBodies.Rendering
 
             _bodyStore = Bodies.ToList();
 
-            _bodyStore.RemoveAll((b) => b.Visible == 0);
-            _bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
-            _bodyStore.RemoveAll((b) => b.ForceTot < 0.05f);
+            //_bodyStore.RemoveAll((b) => b.Visible == 0);
+            //_bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
+            //_bodyStore.RemoveAll((b) => b.ForceTot < 0.05f);
+
+            _bodyStore.RemoveAll((b) => b.Visible == 0 || b.Age > b.Lifetime || b.ForceTot < 0.05f);
 
             Bodies = _bodyStore.ToArray();
 
