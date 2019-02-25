@@ -1,40 +1,39 @@
 ﻿using Cudafy;
 using Cudafy.Host;
 using Cudafy.Translator;
-using NBodies.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Linq;
-using NBodies.Extensions;
 
 namespace NBodies.Physics
 {
     public class CUDAFloat : IPhysicsCalc
     {
-        private int gpuIndex = 2;
+        private int _gpuIndex = 2;
         private static int _threadsPerBlock = 256;
-        private GPGPU gpu;
+        private GPGPU _gpu;
         private MeshCell[] _mesh = new MeshCell[0];
         private int[] _levelIdx = new int[0];
         private int _levels = 4;
+
+        private MeshCell[] _gpuMesh = new MeshCell[0];
+        private int _prevMeshLen = 0;
+
         private int[] _meshNeighbors = new int[0];
+        private int[] _gpuMeshNeighbors = new int[0];
+        private int _prevNeighborLen = 0;
 
-        private MeshCell[] gpuMesh = new MeshCell[0];
-        private int prevMeshLen = 0;
+        private Body[] _bodies = new Body[0];
+        private Body[] _gpuInBodies = new Body[0];
+        private Body[] _gpuOutBodies = new Body[0];
+        private int _prevBodyLen = 0;
 
-        private int[] gpuMeshNeighbors = new int[0];
-        private int prevMeshNLen = 0;
+        private int _meshChildPosition = 0;
 
-        private Body[] gpuInBodies = new Body[0];
-        private Body[] gpuOutBodies = new Body[0];
-        private int prevBodyLen = 0;
-
-        private int totChilds = 0;
-
-        private bool warmUp = true;
+        private bool _warmUp = true;
 
         public MeshCell[] CurrentMesh
         {
@@ -54,13 +53,13 @@ namespace NBodies.Physics
 
         public CUDAFloat(int gpuIdx)
         {
-            gpuIndex = gpuIdx;
+            _gpuIndex = gpuIdx;
         }
 
         public CUDAFloat(int gpuIdx, int threadsperblock)
         {
             if (gpuIdx != -1)
-                gpuIndex = gpuIdx;
+                _gpuIndex = gpuIdx;
 
             if (threadsperblock != -1)
                 _threadsPerBlock = threadsperblock;
@@ -82,10 +81,10 @@ namespace NBodies.Physics
             cudaModule.SourceCode = cudaModule.SourceCode.Replace("sqrt((double", "half_sqrt((float");
             cudaModule.Serialize();
 
-            gpu = CudafyHost.GetDevice(eGPUType.OpenCL, gpuIndex);
-            gpu.LoadModule(cudaModule);
+            _gpu = CudafyHost.GetDevice(eGPUType.OpenCL, _gpuIndex);
+            _gpu.LoadModule(cudaModule);
 
-            var props = gpu.GetDeviceProperties();
+            var props = _gpu.GetDeviceProperties();
             Console.WriteLine(props.ToString());
         }
 
@@ -146,70 +145,71 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock)
         {
+            _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = meshLevels;
             float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
 
             // Calc number of thread blocks to fit the dataset.
-            threadBlocks = BlockCount(bodies.Length);
+            threadBlocks = BlockCount(_bodies.Length);
 
             // Build the particle mesh, mesh index, mesh child index and mesh neighbors index.
-            BuildMesh(bodies, cellSizeExp);
+            BuildMesh(cellSizeExp);
 
             // Allocate GPU memory as needed.
-            if (prevMeshLen != _mesh.Length)
+            if (_prevMeshLen != _mesh.Length)
             {
-                if (!warmUp)
-                    gpu.Free(gpuMesh);
+                if (!_warmUp)
+                    _gpu.Free(_gpuMesh);
 
-                gpuMesh = gpu.Allocate(_mesh);
-                prevMeshLen = _mesh.Length;
+                _gpuMesh = _gpu.Allocate(_mesh);
+                _prevMeshLen = _mesh.Length;
             }
 
-            if (prevMeshNLen != _meshNeighbors.Length)
+            if (_prevNeighborLen != _meshNeighbors.Length)
             {
-                if (!warmUp)
-                    gpu.Free(gpuMeshNeighbors);
+                if (!_warmUp)
+                    _gpu.Free(_gpuMeshNeighbors);
 
-                gpuMeshNeighbors = gpu.Allocate(_meshNeighbors);
-                prevMeshNLen = _meshNeighbors.Length;
+                _gpuMeshNeighbors = _gpu.Allocate(_meshNeighbors);
+                _prevNeighborLen = _meshNeighbors.Length;
             }
 
-            if (prevBodyLen != bodies.Length)
+            if (_prevBodyLen != _bodies.Length)
             {
-                if (!warmUp)
+                if (!_warmUp)
                 {
-                    gpu.Free(gpuInBodies);
-                    gpu.Free(gpuOutBodies);
+                    _gpu.Free(_gpuInBodies);
+                    _gpu.Free(_gpuOutBodies);
                 }
 
-                gpuInBodies = gpu.Allocate(bodies);
-                gpuOutBodies = gpu.Allocate(bodies);
-                prevBodyLen = bodies.Length;
+                _gpuInBodies = _gpu.Allocate(_bodies);
+                _gpuOutBodies = _gpu.Allocate(_bodies);
+                _prevBodyLen = _bodies.Length;
             }
 
-            int[] gpuLevelIdx = gpu.Allocate(_levelIdx);
+            int[] gpuLevelIdx = _gpu.Allocate(_levelIdx);
 
             // Copy host arrays to GPU device.
-            gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
-            gpu.CopyToDevice(_mesh, gpuMesh);
-            gpu.CopyToDevice(_meshNeighbors, gpuMeshNeighbors);
-            gpu.CopyToDevice(bodies, gpuInBodies);
+            _gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
+            _gpu.CopyToDevice(_mesh, _gpuMesh);
+            _gpu.CopyToDevice(_meshNeighbors, _gpuMeshNeighbors);
+            _gpu.CopyToDevice(_bodies, _gpuInBodies);
 
             // Launch force and collision kernels; swapping In and Out pointers.
-            gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(gpuInBodies, gpuOutBodies, gpuMesh, gpuMeshNeighbors, timestep, _levels, gpuLevelIdx);
-            gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(gpuOutBodies, gpuInBodies, gpuMesh, gpuMeshNeighbors, timestep, viscosity, 3);
+            _gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(_gpuInBodies, _gpuOutBodies, _gpuMesh, _gpuMeshNeighbors, timestep, _levels, gpuLevelIdx);
+            _gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(_gpuOutBodies, _gpuInBodies, _gpuMesh, _gpuMeshNeighbors, timestep, viscosity, 3);
 
             // Copy updated bodies back to host and free memory.
-            gpu.CopyFromDevice(gpuInBodies, bodies);
+            _gpu.CopyFromDevice(_gpuInBodies, bodies);
 
-            if (!warmUp)
+            if (!_warmUp)
             {
-                gpu.Free(gpuLevelIdx);
+                _gpu.Free(gpuLevelIdx);
             }
 
-            warmUp = false;
+            _warmUp = false;
         }
 
         /// <summary>
@@ -266,58 +266,61 @@ namespace NBodies.Physics
         /// <param name="cellCount">Number of unique cell indexes.</param>
         /// <param name="cellStartIdx">Array containing starting indexes of each cell within the returned array.</param>
         /// <returns></returns>
-        private SpatialInfo[] CalcBodySpatials(Body[] bodies, int cellSizeExp, out int cellCount, out int[] cellStartIdx)
+        private SpatialInfo[] CalcBodySpatials(int cellSizeExp, out int cellCount, out int[] cellStartIdx)
         {
-            var spatials = new SpatialInfo[bodies.Length];
+            var spatials = new SpatialInfo[_bodies.Length];
+
             // Array of morton numbers used for sorting.
-            int[] mortKeys = new int[bodies.Length];
+            // Using a key array when sorting is much faster than sorting an array of objects by a field.
+            int[] mortKeys = new int[_bodies.Length];
 
             // Compute the spatial info in parallel.
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Environment.ProcessorCount;
 
-            Parallel.For(0, bodies.Length, options, (b) =>
+            Parallel.For(0, _bodies.Length, options, (b) =>
             {
-                int idxX = (int)bodies[b].LocX >> cellSizeExp;
-                int idxY = (int)bodies[b].LocY >> cellSizeExp;
+                int idxX = (int)_bodies[b].LocX >> cellSizeExp;
+                int idxY = (int)_bodies[b].LocY >> cellSizeExp;
                 int morton = MortonNumber(idxX, idxY);
 
                 spatials[b] = new SpatialInfo(morton, idxX, idxY, b);
                 mortKeys[b] = morton;
             });
 
-            // Copy the keys because we need to sort two arrays... ¯\_(ツ)_/¯
-            int[] keyCopy = new int[mortKeys.Length];
-            Array.Copy(mortKeys, keyCopy, mortKeys.Length);
-
-            // Sort bodies and spatial data by keys.
-            // Sorting this data together gives us a massive performance boost in GPU kernel execution.
-            Array.Sort(keyCopy, bodies);
+            // Sort by morton number to produce a spatially sorted array.
             Array.Sort(mortKeys, spatials);
 
-            // Compute number of unique morton numbers to determine cell count.
-            // Also build the start location of each cell.
-            int unique = 0;
+            // Compute number of unique morton numbers to determine cell count,
+            // and build the start index of each cell.
+            int count = 0;
             int val = 0;
             var mortIdxs = new List<int>();
+            Body[] sortBodies = new Body[_bodies.Length];
 
             for (int i = 0; i < spatials.Length; i++)
             {
-                spatials[i].BodyIdx = i;
+                // Build a new sorted body array from the sorted spatial info.
+                sortBodies[i] = _bodies[spatials[i].BodyIdx];
 
                 if (val != spatials[i].Mort)
                 {
-                    unique++;
+                    count++;
                     val = spatials[i].Mort;
                     mortIdxs.Add(i);
                 }
             }
 
-            cellCount = unique;
+            mortIdxs.Add(spatials.Length);
+
+            // Update the original body array with the sorted one.
+            _bodies = sortBodies;
+
+            // Output count and start index.
+            cellCount = count;
             cellStartIdx = mortIdxs.ToArray();
 
             return spatials;
-
         }
 
         /// <summary>
@@ -325,7 +328,7 @@ namespace NBodies.Physics
         /// </summary>
         /// <param name="bodies">Array of bodies.</param>
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
-        private void BuildMesh(Body[] bodies, int cellSizeExp)
+        private void BuildMesh(int cellSizeExp)
         {
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
@@ -333,7 +336,7 @@ namespace NBodies.Physics
             int[] cellStartIdx;
 
             // Get spatail info for the cells about to be constructed.
-            SpatialInfo[] spatialDat = CalcBodySpatials(bodies, cellSizeExp, out cellCount, out cellStartIdx);
+            SpatialInfo[] spatialDat = CalcBodySpatials(cellSizeExp, out cellCount, out cellStartIdx);
 
             // List to hold all new mesh cells.
             var meshList = new List<MeshCell>(cellCount);
@@ -361,27 +364,15 @@ namespace NBodies.Physics
                 newCell.Mort = spatial.Mort;
 
                 // Iterate the elements between the spatial info cell indexes and add body info.
-                int len = 0;
-
-                if (m < cellStartIdx.Length - 1)
+                for (int i = cellStartIdx[m]; i < cellStartIdx[m + 1]; i++)
                 {
-                    len = cellStartIdx[m + 1];
-                }
-                else
-                {
-                    len = spatialDat.Length;
-                }
-
-                for (int i = cellStartIdx[m]; i < len; i++)
-                {
-                    int id = spatialDat[i].BodyIdx;
-                    var body = bodies[id];
+                    var body = _bodies[i];
                     newCell.Mass += body.Mass;
                     newCell.CmX += body.Mass * body.LocX;
                     newCell.CmY += body.Mass * body.LocY;
                     newCell.BodyCount++;
 
-                    bodies[id].MeshID = m;
+                    _bodies[i].MeshID = m;
                 }
 
                 newCell.ID = m;
@@ -392,7 +383,7 @@ namespace NBodies.Physics
 
             meshList = meshArr.ToList();
 
-            // Calculate the final center of mass for each cell.
+            // Calculate the final center of mass for each cell and populate the mesh dictionary.
             for (int m = 0; m < meshList.Count; m++)
             {
                 var cell = meshList[m];
@@ -407,18 +398,7 @@ namespace NBodies.Physics
             int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
 
-            // Calculate max child cells for all levels.
-            // Use this value to initialize the child cell collection to reduce resizing overhead.
-            int maxChilds = 0;
-            int prevLen = meshList.Count;
-            for (int x = 0; x <= _levels; x++)
-            {
-                maxChilds += (prevLen / 2) * 4;
-                prevLen = prevLen / 2;
-            }
-
-            // Init the child cell collection.
-            totChilds = 0;
+            _meshChildPosition = 0;
 
             // Build the upper levels of the mesh.
             for (int level = 1; level <= _levels; level++)
@@ -433,8 +413,6 @@ namespace NBodies.Physics
             // Build mesh neighbor index for all levels.
             _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
         }
-
-
 
         private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int level)
         {
@@ -479,9 +457,9 @@ namespace NBodies.Physics
                     newCell.BodyCount = childCell.BodyCount;
                     newCell.ID = cellIdx;
                     newCell.Level = level;
-                    newCell.ChildIdxStart = totChilds;
+                    newCell.ChildIdxStart = _meshChildPosition;
                     newCell.ChildCount = 1;
-                    totChilds += 1;
+                    _meshChildPosition += 1;
 
                     meshDict[level].Add(cellUID, newCell.ID);
                     mesh.Add(newCell);
@@ -500,7 +478,7 @@ namespace NBodies.Physics
                     parentCell.BodyCount += childCell.BodyCount;
                     parentCell.ChildCount++;
 
-                    totChilds += 1;
+                    _meshChildPosition += 1;
 
                     mesh[parentCellId] = parentCell;
 
@@ -566,10 +544,9 @@ namespace NBodies.Physics
                 {
                     neighborIdx[i] = -1;
                 }
-
             });
 
-            // Build the final index.
+            // Filter unpopulated childs to build the final index.
             for (int m = 0; m < mesh.Length; m++)
             {
                 int count = 0;
