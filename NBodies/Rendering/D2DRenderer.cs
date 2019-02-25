@@ -34,6 +34,8 @@ namespace NBodies.Rendering
 
         private d2.Ellipse _bodyEllipse;
         private SharpDX.RectangleF _bodyRect;
+        private RawColor4 _bodyColor;
+
         private dw.TextFormat _infoText;
         private d2.StrokeStyle _arrowStyle;
 
@@ -98,7 +100,12 @@ namespace NBodies.Rendering
 
         public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
         {
-            _bodyBrush.Color = ConvertColor(color);
+            _bodyColor.A = color.A / 255f;
+            _bodyColor.R = color.R / 255f;
+            _bodyColor.G = color.G / 255f;
+            _bodyColor.B = color.B / 255f;
+
+            _bodyBrush.Color = _bodyColor;
 
             _bodyEllipse.Point.X = X;
             _bodyEllipse.Point.Y = Y;
