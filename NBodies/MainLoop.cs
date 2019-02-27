@@ -2,6 +2,7 @@
 using NBodies.IO;
 using NBodies.Physics;
 using NBodies.Shapes;
+using NBodies.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NBodies.Rendering
+namespace NBodies
 {
     public static class MainLoop
     {
@@ -300,7 +301,9 @@ namespace NBodies.Rendering
                             {
                                 if (_recElapTime >= _recFrameTimeSpan)
                                 {
+                                    timer.Restart();
                                     _recorder.RecordFrame(BodyManager.Bodies);
+                                    timer.Print("Rec");
                                     _recElapTime = 0f;
                                 }
                                 _recElapTime += TimeStep;
@@ -431,7 +434,7 @@ namespace NBodies.Rendering
             for (int b = 0; b < len; b++)
             {
                 //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
-                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
+                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].Flag != 1 && bodies[b].IsExplosion != 1)
                 {
                     if (bodies[b].Size > 1)
                     {
@@ -459,7 +462,7 @@ namespace NBodies.Rendering
 
             prevMass = body.Mass;
 
-            var ellipse = new Ellipse(new PointF((float)body.LocX, (float)body.LocY), body.Size * 0.5f);
+            var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), body.Size * 0.5f);
 
             bool done = false;
             float stepSize = minSize * 0.98f;
@@ -483,7 +486,7 @@ namespace NBodies.Rendering
 
                 if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
-                    var newbody = BodyManager.NewBody(testPoint.X, testPoint.Y, body.SpeedX, body.SpeedY, minSize, newMass, Color.FromArgb(body.Color), 1);
+                    var newbody = BodyManager.NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, minSize, newMass, Color.FromArgb(body.Color), 1);
                     newbody.ForceTot = body.ForceTot;
                     newBodies.Add(newbody);
                 }

@@ -13,8 +13,8 @@ namespace NBodies.Physics
         public int ID;
         public float LocX;
         public float LocY;
-        public int xID;
-        public int yID;
+        public int IdxX;
+        public int IdxY;
         public int Mort;
         public float CmX;
         public float CmY;
@@ -24,9 +24,9 @@ namespace NBodies.Physics
         public int BodyCount;
         public int NeighborStartIdx;
         public int NeighborCount;
+        public int ChildStartIdx;
+        public int ChildCount;
         public int ParentID;
         public int Level;
-        public int ChildIdxStart;
-        public int ChildCount;
     }
 }

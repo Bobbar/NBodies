@@ -134,7 +134,7 @@ namespace NBodies.Rendering
                 }
             } 
 
-            if (body.BlackHole == 1)
+            if (body.Flag == 1)
             {
                 _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
             }
@@ -146,10 +146,10 @@ namespace NBodies.Rendering
             {
                 var body = bodies[i];
 
-                if (!_cullTangle.Contains(body.LocX, body.LocY))
+                if (!_cullTangle.Contains(body.PosX, body.PosY))
                     continue;
 
-                var bloc = new PointF(body.LocX, body.LocY);
+                var bloc = new PointF(body.PosX, body.PosY);
 
                 var f = new PointF(body.ForceX, body.ForceY);
                 f = f.Normalize();

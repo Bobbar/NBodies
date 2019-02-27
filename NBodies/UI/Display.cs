@@ -2,6 +2,7 @@
 using NBodies.Physics;
 using NBodies.Rendering;
 using NBodies.UI.KeyActions;
+using NBodies.Helpers;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -77,7 +78,6 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new LevelKey());
             InputHandler.AddKeyAction(new ThreadsKey());
 
-
             SetDisplayOptionTags();
 
             MainLoop.StartLoop();
@@ -113,7 +113,7 @@ namespace NBodies.UI
                 for (int i = 0; i < BodyManager.Bodies.Length; i++)
                 {
                     var body = BodyManager.Bodies[i];
-                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).Y - body.LocY, 2));
+                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).X - body.PosX, 2) + Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).Y - body.PosY, 2));
 
                     if (dist < body.Size * 0.5f)
                     {
@@ -190,11 +190,11 @@ namespace NBodies.UI
             {
                 var selectBody = BodyManager.BodyFromUID(_selectedUid);
 
-                VeloXTextBox.Text = selectBody.SpeedX.ToString();
-                VeloYTextBox.Text = selectBody.SpeedY.ToString();
+                VeloXTextBox.Text = selectBody.VeloX.ToString();
+                VeloYTextBox.Text = selectBody.VeloY.ToString();
                 RadiusTextBox.Text = selectBody.Size.ToString();
                 MassTextBox.Text = selectBody.Mass.ToString();
-                FlagsTextBox.Text = selectBody.BlackHole.ToString();
+                FlagsTextBox.Text = selectBody.Flag.ToString();
 
                 DensityLabel.Text = string.Format("Density: {0}", selectBody.Density);
                 PressureLabel.Text = string.Format("Press: {0}", selectBody.Pressure);
@@ -316,7 +316,7 @@ namespace NBodies.UI
                     {
                         try
                         {
-                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
+                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Flag = 2;
                         }
                         catch { }
                     }
@@ -551,8 +551,8 @@ namespace NBodies.UI
                     _flingOver.Location2 = _flingOver.Location.Subtract(deflection);
 
                     // Flip and shorten the vector and apply it to the body speed.
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = -deflection.X / 3f;
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = -deflection.Y / 3f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].VeloX = -deflection.X / 3f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].VeloY = -deflection.Y / 3f;
 
                     // Calculate the true screen position from the body location.
                     var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
@@ -566,7 +566,7 @@ namespace NBodies.UI
                     var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
                     // Update the orbit overlay.
-                    _orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
+                    _orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].PosX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].PosY);
                     _orbitOver.OrbitPath = orbitPath;
                     _orbitOver.Show();
                     RenderBase.AddOverlay(_orbitOver);
@@ -717,11 +717,11 @@ namespace NBodies.UI
         {
             if (_selectedUid != -1)
             {
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedX = Convert.ToSingle(VeloXTextBox.Text.Trim());
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedY = Convert.ToSingle(VeloYTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].VeloX = Convert.ToSingle(VeloXTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].VeloY = Convert.ToSingle(VeloYTextBox.Text.Trim());
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Size = Convert.ToSingle(RadiusTextBox.Text.Trim());
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Mass = Convert.ToSingle(MassTextBox.Text.Trim());
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = Convert.ToInt32(FlagsTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Flag = Convert.ToInt32(FlagsTextBox.Text.Trim());
             }
         }
 

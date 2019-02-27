@@ -199,7 +199,7 @@ namespace NBodies.Physics
 
             // Launch force and collision kernels; swapping In and Out pointers.
             _gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(_gpuInBodies, _gpuOutBodies, _gpuMesh, _gpuMeshNeighbors, timestep, _levels, gpuLevelIdx);
-            _gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(_gpuOutBodies, _gpuInBodies, _gpuMesh, _gpuMeshNeighbors, timestep, viscosity, 3);
+            _gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(_gpuOutBodies, _gpuInBodies, _gpuMesh, _gpuMeshNeighbors, timestep, viscosity);
 
             // Copy updated bodies back to host and free memory.
             _gpu.CopyFromDevice(_gpuInBodies, bodies);
@@ -280,8 +280,8 @@ namespace NBodies.Physics
 
             Parallel.For(0, _bodies.Length, options, (b) =>
             {
-                int idxX = (int)_bodies[b].LocX >> cellSizeExp;
-                int idxY = (int)_bodies[b].LocY >> cellSizeExp;
+                int idxX = (int)_bodies[b].PosX >> cellSizeExp;
+                int idxY = (int)_bodies[b].PosY >> cellSizeExp;
                 int morton = MortonNumber(idxX, idxY);
 
                 spatials[b] = new SpatialInfo(morton, idxX, idxY, b);
@@ -301,7 +301,7 @@ namespace NBodies.Physics
             for (int i = 0; i < spatials.Length; i++)
             {
                 // Build a new sorted body array from the sorted spatial info.
-                sortBodies[i] = _bodies[spatials[i].BodyIdx];
+                sortBodies[i] = _bodies[spatials[i].Index];
 
                 if (val != spatials[i].Mort)
                 {
@@ -358,8 +358,8 @@ namespace NBodies.Physics
                 var newCell = new MeshCell();
                 newCell.LocX = (spatial.IdxX << cellSizeExp) + (cellSize * 0.5f);
                 newCell.LocY = (spatial.IdxY << cellSizeExp) + (cellSize * 0.5f);
-                newCell.xID = spatial.IdxX;
-                newCell.yID = spatial.IdxY;
+                newCell.IdxX = spatial.IdxX;
+                newCell.IdxY = spatial.IdxY;
                 newCell.Size = cellSize;
                 newCell.Mort = spatial.Mort;
 
@@ -368,8 +368,8 @@ namespace NBodies.Physics
                 {
                     var body = _bodies[i];
                     newCell.Mass += body.Mass;
-                    newCell.CmX += body.Mass * body.LocX;
-                    newCell.CmY += body.Mass * body.LocY;
+                    newCell.CmX += body.Mass * body.PosX;
+                    newCell.CmY += body.Mass * body.PosY;
                     newCell.BodyCount++;
 
                     _bodies[i].MeshID = m;
@@ -447,8 +447,8 @@ namespace NBodies.Physics
                     // Convert the grid index to a real location.
                     newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
                     newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
-                    newCell.xID = idxX;
-                    newCell.yID = idxY;
+                    newCell.IdxX = idxX;
+                    newCell.IdxY = idxY;
                     newCell.Size = cellSize;
                     newCell.Mass += childCell.Mass;
                     newCell.CmX += (float)childCell.Mass * childCell.CmX;
@@ -456,7 +456,7 @@ namespace NBodies.Physics
                     newCell.BodyCount = childCell.BodyCount;
                     newCell.ID = cellIdx;
                     newCell.Level = level;
-                    newCell.ChildIdxStart = _meshChildPosition;
+                    newCell.ChildStartIdx = _meshChildPosition;
                     newCell.ChildCount = 1;
                     _meshChildPosition += 1;
 
@@ -523,8 +523,8 @@ namespace NBodies.Physics
                     {
                         // Apply the current X/Y mulipliers to the mesh grid coords to get
                         // the coordinates of a neighboring cell.
-                        int nX = mesh[m].xID + x;
-                        int nY = mesh[m].yID + y;
+                        int nX = mesh[m].IdxX + x;
+                        int nY = mesh[m].IdxY + y;
 
                         // Convert the new coords to a cell UID/Hash and check if the cell exists.
                         var cellUID = MortonNumber(nX, nY);
@@ -631,7 +631,7 @@ namespace NBodies.Physics
                     MeshCell nCell = inMesh[nId];
 
                     // Iterate neighbor child cells.
-                    int childStartIdx = nCell.ChildIdxStart;
+                    int childStartIdx = nCell.ChildStartIdx;
                     int childLen = childStartIdx + nCell.ChildCount;
 
                     for (int c = childStartIdx; c < childLen; c++)
@@ -644,8 +644,8 @@ namespace NBodies.Physics
                             if (IsNear(levelCell, cell) == 0)
                             {
                                 // Calculate the force from the cells center of mass.
-                                distX = cell.CmX - outBody.LocX;
-                                distY = cell.CmY - outBody.LocY;
+                                distX = cell.CmX - outBody.PosX;
+                                distY = cell.CmY - outBody.PosY;
                                 dist = (distX * distX) + (distY * distY);
 
                                 distSqrt = (float)Math.Sqrt(dist);
@@ -673,8 +673,8 @@ namespace NBodies.Physics
 
                 if (IsNear(levelCell, cell) == 0)
                 {
-                    distX = cell.CmX - outBody.LocX;
-                    distY = cell.CmY - outBody.LocY;
+                    distX = cell.CmX - outBody.PosX;
+                    distY = cell.CmY - outBody.PosY;
                     dist = (distX * distX) + (distY * distY);
 
                     distSqrt = (float)Math.Sqrt(dist);
@@ -707,8 +707,8 @@ namespace NBodies.Physics
                     {
                         Body inBody = inBodies[mb];
 
-                        distX = inBody.LocX - outBody.LocX;
-                        distY = inBody.LocY - outBody.LocY;
+                        distX = inBody.PosX - outBody.PosX;
+                        distY = inBody.PosY - outBody.PosY;
                         dist = (distX * distX) + (distY * distY);
 
                         // If this body is within collision/SPH distance.
@@ -750,7 +750,7 @@ namespace NBodies.Physics
             // Calculate pressure from density.
             outBody.Pressure = GAS_K * outBody.Density;
 
-            if (outBody.ForceTot > outBody.Mass * 4 & outBody.BlackHole == 0)
+            if (outBody.ForceTot > outBody.Mass * 4 & outBody.Flag == 0)
             {
                 outBody.InRoche = 1;
             }
@@ -758,12 +758,12 @@ namespace NBodies.Physics
             {
                 outBody.InRoche = 0;
             }
-            else if (outBody.BlackHole == 2 || outBody.IsExplosion == 1)
+            else if (outBody.Flag == 2 || outBody.IsExplosion == 1)
             {
                 outBody.InRoche = 1;
             }
 
-            if (outBody.BlackHole == 2)
+            if (outBody.Flag == 2)
                 outBody.InRoche = 1;
 
             // Write back to memory.
@@ -782,7 +782,7 @@ namespace NBodies.Physics
             {
                 for (int y = -1; y <= 1; y++)
                 {
-                    if (neighborCell.xID == testCell.xID + x && neighborCell.yID == testCell.yID + y)
+                    if (neighborCell.IdxX == testCell.IdxX + x && neighborCell.IdxY == testCell.IdxY + y)
                         match = 1;
                 }
             }
@@ -794,7 +794,7 @@ namespace NBodies.Physics
         /// Calculates elastic and SPH collision forces then integrates movement.
         /// </summary>
         [Cudafy]
-        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, float dt, float viscosity, int drift)
+        public static void CalcCollisions(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, float dt, float viscosity)
         {
             float distX;
             float distY;
@@ -830,8 +830,8 @@ namespace NBodies.Physics
                     {
                         Body inBody = inBodies[mb];
 
-                        distX = outBody.LocX - inBody.LocX;
-                        distY = outBody.LocY - inBody.LocY;
+                        distX = outBody.PosX - inBody.PosX;
+                        distY = outBody.PosY - inBody.PosY;
                         dist = (distX * distX) + (distY * distY);
 
                         // Calc the distance and check for collision.
@@ -874,8 +874,8 @@ namespace NBodies.Physics
                                 float visc_Laplace = 14.323944f * (m_kernelSize - distSqrt);
                                 float visc_scalar = inBody.Mass * visc_Laplace * viscosity * 1.0f / inBody.Density;
 
-                                float viscVelo_diffX = inBody.SpeedX - outBody.SpeedX;
-                                float viscVelo_diffY = inBody.SpeedY - outBody.SpeedY;
+                                float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
+                                float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
 
                                 viscVelo_diffX *= visc_scalar;
                                 viscVelo_diffY *= visc_scalar;
@@ -891,7 +891,7 @@ namespace NBodies.Physics
                             else
                             {
                                 // Calculate elastic collision forces.
-                                float dotProd = distX * (inBody.SpeedX - outBody.SpeedX) + distY * (inBody.SpeedY - outBody.SpeedY);
+                                float dotProd = distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY);
                                 float colScale = dotProd / dist;
                                 float colForceX = distX * colScale;
                                 float colForceY = distY * colScale;
@@ -927,10 +927,10 @@ namespace NBodies.Physics
             gpThread.SyncThreads();
 
             // Integrate.
-            outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
-            outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-            outBody.LocX += dt * outBody.SpeedX;
-            outBody.LocY += dt * outBody.SpeedY;
+            outBody.VeloX += dt * outBody.ForceX / outBody.Mass;
+            outBody.VeloY += dt * outBody.ForceY / outBody.Mass;
+            outBody.PosX += dt * outBody.VeloX;
+            outBody.PosY += dt * outBody.VeloY;
 
             if (outBody.Lifetime > 0.0f)
                 outBody.Age += (dt * 4.0f);
@@ -945,10 +945,10 @@ namespace NBodies.Physics
             Body bodyA = master;
             Body bodyB = slave;
 
-            bodyA.SpeedX += colMass * forceX;
-            bodyA.SpeedY += colMass * forceY;
+            bodyA.VeloX += colMass * forceX;
+            bodyA.VeloY += colMass * forceY;
 
-            if (bodyA.BlackHole != 1)
+            if (bodyA.Flag != 1)
             {
                 float a1 = (float)Math.PI * (float)(Math.Pow(bodyA.Size * 0.5f, 2));
                 float a2 = (float)Math.PI * (float)(Math.Pow(bodyB.Size * 0.5f, 2));

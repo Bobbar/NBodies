@@ -19,11 +19,11 @@ namespace NBodies.Physics
     {
         [ProtoMember(1)]
         [Key(0)]
-        public float LocX;
+        public float PosX;
 
         [ProtoMember(2)]
         [Key(1)]
-        public float LocY;
+        public float PosY;
 
         [ProtoMember(3)]
         [Key(2)]
@@ -31,11 +31,11 @@ namespace NBodies.Physics
 
         [ProtoMember(4)]
         [Key(3)]
-        public float SpeedX;
+        public float VeloX;
 
         [ProtoMember(5)]
         [Key(4)]
-        public float SpeedY;
+        public float VeloY;
 
         [ProtoMember(6)]
         [Key(5)]
@@ -67,7 +67,7 @@ namespace NBodies.Physics
 
         [ProtoMember(13)]
         [Key(12)]
-        public int BlackHole;
+        public int Flag;
 
         [ProtoMember(14)]
         [Key(13)]

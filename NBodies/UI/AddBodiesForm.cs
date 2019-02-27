@@ -1,8 +1,8 @@
 ﻿using NBodies.Extensions;
-using NBodies.Rendering;
 using NBodies.Rules;
 using NBodies.Shapes;
 using NBodies.Physics;
+using NBodies.Helpers;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -233,8 +233,8 @@ namespace NBodies
             for (int i = 0; i < bodies.Count; i++)
             {
                 var body = bodies[i];
-                distX = body.LocX - location.X;
-                distY = body.LocY - location.Y;
+                distX = body.PosX - location.X;
+                distY = body.PosY - location.Y;
                 dist = (distX * distX) + (distY * distY);
                 colDist = (body.Size / 2f) + (diameter / 2f);
 

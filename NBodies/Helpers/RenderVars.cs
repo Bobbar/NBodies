@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Drawing;
+﻿using System.Drawing;
 
-namespace NBodies.Rendering
+namespace NBodies.Helpers
 {
     public static class RenderVars
     {
@@ -28,10 +23,10 @@ namespace NBodies.Rendering
                 }
             }
         }
+
         public static PointF ScaleOffset { get; set; } = new PointF();
 
         public static PointF ViewportOffset = new PointF();
-      
 
         public static PointF ScreenCenter
         {
@@ -44,11 +39,7 @@ namespace NBodies.Rendering
             {
                 _screenCenter = value;
                 ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(_screenCenter);
-
             }
         }
-
-
-
     }
 }

@@ -1,12 +1,13 @@
 ﻿using NBodies.Extensions;
+using NBodies.Helpers;
 using NBodies.Physics;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Diagnostics;
-using System;
 
 namespace NBodies.Rendering
 {
@@ -91,7 +92,6 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
             {
-
                 var finalOffset = CalcFinalOffset();
 
                 CheckScale();
@@ -104,7 +104,6 @@ namespace NBodies.Rendering
                 SetAntiAliasing(AAEnabled);
 
                 _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / RenderVars.CurrentScale, _viewPortSize.Height / RenderVars.CurrentScale);
-
 
                 // Since the bodies are being sorted by their spatial index
                 // we need to sort them (again) by a persistent value; we will use their UIDs.
@@ -144,13 +143,13 @@ namespace NBodies.Rendering
                         body = bodies[i];
                     }
 
-                    var bodyLoc = new PointF((body.LocX + finalOffset.X), (body.LocY + finalOffset.Y));
+                    var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
                     if (body.Visible == 1)
                     {
                         if (ClipView)
                         {
-                            if (!_cullTangle.Contains(body.LocX, body.LocY)) continue;
+                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
                         }
 
                         Color bodyColor = Color.White;
@@ -231,7 +230,7 @@ namespace NBodies.Rendering
                         {
                             var pathArr = _drawPath.ToArray();
 
-                            pathArr[0] = new PointF(followBody.LocX, followBody.LocY);
+                            pathArr[0] = new PointF(followBody.PosX, followBody.PosY);
 
                             DrawOrbit(pathArr, finalOffset);
                         }
@@ -317,8 +316,8 @@ namespace NBodies.Rendering
             if (BodyManager.FollowSelected)
             {
                 Body followBody = BodyManager.FollowBody();
-                RenderVars.ViewportOffset.X = -followBody.LocX;
-                RenderVars.ViewportOffset.Y = -followBody.LocY;
+                RenderVars.ViewportOffset.X = -followBody.PosX;
+                RenderVars.ViewportOffset.Y = -followBody.PosY;
             }
 
             var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);

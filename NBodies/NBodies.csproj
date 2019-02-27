@@ -135,7 +135,7 @@
     <Compile Include="IO\ProtoBufRecorder.cs" />
     <Compile Include="IO\Serializer.cs" />
     <Compile Include="Logger.cs" />
-    <Compile Include="Numbers.cs" />
+    <Compile Include="Helpers\Numbers.cs" />
     <Compile Include="Physics\Body.cs" />
     <Compile Include="Physics\CUDAFloat.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
@@ -160,14 +160,14 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Rendering\BodyManager.cs" />
-    <Compile Include="Rendering\ColorHelper.cs" />
+    <Compile Include="Physics\BodyManager.cs" />
+    <Compile Include="Helpers\ColorHelper.cs" />
     <Compile Include="Rendering\DisplayStyle.cs" />
-    <Compile Include="Rendering\MainLoop.cs" />
+    <Compile Include="MainLoop.cs" />
     <Compile Include="Rendering\OverlayGraphic.cs" />
     <Compile Include="Extensions\PointExtensions.cs" />
-    <Compile Include="Rendering\RenderVars.cs" />
-    <Compile Include="Rendering\ScaleHelpers.cs" />
+    <Compile Include="Helpers\RenderVars.cs" />
+    <Compile Include="Helpers\ScaleHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />
     <Compile Include="Shapes\Ellipse.cs" />
     <EmbeddedResource Include="UI\AddBodiesForm.resx">

@@ -11,14 +11,14 @@ namespace NBodies.Physics
         public int Mort;
         public int IdxX;
         public int IdxY;
-        public int BodyIdx;
+        public int Index;
 
-        public SpatialInfo(int mort, int idX, int idY, int bodyIdx)
+        public SpatialInfo(int mort, int idX, int idY, int index)
         {
             Mort = mort;
             IdxX = idX;
             IdxY = idY;
-            BodyIdx = bodyIdx;
+            Index = index;
         }
     }
 }

@@ -1,19 +1,17 @@
 ﻿using NBodies.Extensions;
-using NBodies.Physics;
+using NBodies.Helpers;
 using NBodies.Rules;
-using NBodies.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 
-namespace NBodies.Rendering
+namespace NBodies.Physics
 {
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
         public static MeshCell[] Mesh = new MeshCell[0];
-        public static int[,] MeshBodies;
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 
@@ -205,7 +203,7 @@ namespace NBodies.Rendering
         public static PointF FollowBodyLoc()
         {
             if (UIDIndex.ContainsKey(FollowBodyUID))
-                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].LocX, (float)Bodies[UIDToIndex(FollowBodyUID)].LocY);
+                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].PosX, (float)Bodies[UIDToIndex(FollowBodyUID)].PosY);
             return new PointF();
         }
 
@@ -299,8 +297,8 @@ namespace NBodies.Rendering
             {
                 var body = Bodies[i];
 
-                cmX += body.Mass * body.LocX;
-                cmY += body.Mass * body.LocY;
+                cmX += body.Mass * body.PosX;
+                cmY += body.Mass * body.PosY;
             }
 
             //cmX = (cmX / totMass) * -1f;
@@ -346,8 +344,8 @@ namespace NBodies.Rendering
             int segs = 500;
             float step = 0.300f;
 
-            PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF(body.LocX, body.LocY);
+            PointF speed = new PointF(body.VeloX, body.VeloY);
+            PointF loc = new PointF(body.PosX, body.PosY);
             PointF force = new PointF();
 
             points.Add(loc);
@@ -401,8 +399,8 @@ namespace NBodies.Rendering
             bool complete = false;
             bool apoapsis = false;
 
-            PointF speed = new PointF(body.SpeedX, body.SpeedY);
-            PointF loc = new PointF(body.LocX, body.LocY);
+            PointF speed = new PointF(body.VeloX, body.VeloY);
+            PointF loc = new PointF(body.PosX, body.PosY);
             PointF force = new PointF();
 
             points.Add(loc);
@@ -444,8 +442,8 @@ namespace NBodies.Rendering
                 if (steps > 10)
                 {
                     // Define a flat "plane" at the test body's Y coord.
-                    var planeA = new PointF(-20000f, body.LocY);
-                    var planeB = new PointF(20000f, body.LocY);
+                    var planeA = new PointF(-20000f, body.PosY);
+                    var planeB = new PointF(20000f, body.PosY);
 
                     if (!apoapsis)
                     {
@@ -528,7 +526,6 @@ namespace NBodies.Rendering
         //    return lineList.ToArray();
         //}
 
-
         public static void InsertExplosion(PointF location, int count)
         {
             MainLoop.WaitForPause();
@@ -574,8 +571,8 @@ namespace NBodies.Rendering
         {
             if (index >= 0)
             {
-                Bodies[index].LocX = location.X;
-                Bodies[index].LocY = location.Y;
+                Bodies[index].PosX = location.X;
+                Bodies[index].PosY = location.Y;
             }
         }
 
@@ -583,8 +580,8 @@ namespace NBodies.Rendering
         {
             for (int i = 0; i < Bodies.Length; i++)
             {
-                Bodies[i].SpeedX = velX;
-                Bodies[i].SpeedY = velY;
+                Bodies[i].VeloX = velX;
+                Bodies[i].VeloY = velY;
             }
         }
 
@@ -592,8 +589,8 @@ namespace NBodies.Rendering
         {
             for (int i = 0; i < Bodies.Length; i++)
             {
-                Bodies[i].LocX += posX;
-                Bodies[i].LocY += posY;
+                Bodies[i].PosX += posX;
+                Bodies[i].PosY += posY;
             }
         }
 
@@ -642,14 +639,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = veloX;
-            b.SpeedY = veloY;
+            b.VeloX = veloX;
+            b.VeloY = veloY;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -659,7 +656,7 @@ namespace NBodies.Rendering
             b.Age = 0.0f;
             b.IsExplosion = 0;
 
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -669,14 +666,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = veloX;
-            b.SpeedY = veloY;
+            b.VeloX = veloX;
+            b.VeloY = veloY;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -686,7 +683,7 @@ namespace NBodies.Rendering
             b.Age = 0.0f;
             b.IsExplosion = 0;
 
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -696,14 +693,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -720,7 +717,7 @@ namespace NBodies.Rendering
 
             //b.DeltaTime = 0.0005f;
 
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -730,14 +727,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = loc.X;
-            b.LocY = loc.Y;
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -746,7 +743,7 @@ namespace NBodies.Rendering
             b.Lifetime = lifetime;
             b.Age = 0.0f;
             b.IsExplosion = isExplosion;
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -756,14 +753,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = loc.X;
-            b.LocY = loc.Y;
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -772,7 +769,7 @@ namespace NBodies.Rendering
             b.Lifetime = 0;
             b.Age = 0.0f;
             b.IsExplosion = 0;
-            b.BlackHole = isBlackhole;
+            b.Flag = isBlackhole;
             b.UID = NextUID();
 
             return b;
@@ -782,14 +779,14 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
@@ -797,7 +794,7 @@ namespace NBodies.Rendering
             b.InRoche = 0;
             b.Lifetime = lifetime;
             b.Age = 0.0f;
-            b.BlackHole = blackhole;
+            b.Flag = blackhole;
             b.UID = -1;
 
             Add(b);
@@ -836,20 +833,20 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = velX;
-            b.SpeedY = velY;
+            b.VeloX = velX;
+            b.VeloY = velY;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = -1;
 
             Add(b);
@@ -859,20 +856,20 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = locX;
-            b.LocY = locY;
+            b.PosX = locX;
+            b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = velX;
-            b.SpeedY = velY;
+            b.VeloX = velX;
+            b.VeloY = velY;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = inRoche;
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = -1;
 
             Add(b);
@@ -882,20 +879,20 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = loc.X;
-            b.LocY = loc.Y;
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
-            b.BlackHole = blackhole;
+            b.Flag = blackhole;
             b.UID = -1;
 
             Add(b);
@@ -905,20 +902,20 @@ namespace NBodies.Rendering
         {
             var b = new Body();
 
-            b.LocX = loc.X;
-            b.LocY = loc.Y;
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
             b.Mass = CalcMass(size);
             b.Size = size;
             b.Color = color.ToArgb();
 
-            b.SpeedX = 0;
-            b.SpeedY = 0;
+            b.VeloX = 0;
+            b.VeloY = 0;
             b.ForceX = 0;
             b.ForceY = 0;
             b.ForceTot = 0;
             b.Visible = 1;
             b.InRoche = 0;
-            b.BlackHole = 0;
+            b.Flag = 0;
             b.UID = -1;
             b.MeshID = -1;
 
@@ -927,13 +924,11 @@ namespace NBodies.Rendering
 
         public static float CalcMass(float size)
         {
-            //return (float)Math.Sqrt(Math.PI * (float)(Math.Pow(size, 2))) * Matter.Density;
             return (float)(Math.PI * (float)(Math.Pow(size / 2.0f, 2))) * Matter.Density;
         }
 
         public static float CalcMass(float size, float density)
         {
-            //return (float)Math.Sqrt(Math.PI * (Math.Pow(size, 2))) * density;
             return (float)(Math.PI * (Math.Pow(size / 2.0f, 2))) * density;
         }
 
@@ -944,17 +939,17 @@ namespace NBodies.Rendering
 
         public static float AggregateSpeed(this Body body)
         {
-            return (float)Math.Sqrt(Math.Pow(body.SpeedX, 2) + Math.Pow(body.SpeedY, 2));
+            return (float)Math.Sqrt(Math.Pow(body.VeloX, 2) + Math.Pow(body.VeloY, 2));
         }
 
         public static PointF Velocity(this Body body)
         {
-            return new PointF(body.SpeedX, body.SpeedY);
+            return new PointF(body.VeloX, body.VeloY);
         }
 
         public static PointF Position(this Body body)
         {
-            return new PointF((float)body.LocX, (float)body.LocY);
+            return new PointF((float)body.PosX, (float)body.PosY);
         }
 
         public static void PrintInfo(this Body body)
@@ -982,8 +977,8 @@ InRoche: { body.InRoche }
 Density: { body.Density }
 Pressure: { body.Pressure }
 Agg. Speed: { body.AggregateSpeed() }
-Speed (X,Y): { body.SpeedX }, { body.SpeedY }
-Position (X,Y): { body.LocX }, { body.LocY }
+Speed (X,Y): { body.VeloX }, { body.VeloY }
+Position (X,Y): { body.PosX }, { body.PosY }
 Force (X,Y): { body.ForceX }, { body.ForceY }
 Tot Force: { body.ForceTot }
 ";
