@@ -324,7 +324,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Builds the particle mesh, mesh-body index and mesh-neighbor index for the current field.
+        /// Builds the particle mesh and mesh-neighbor index for the current field.
         /// </summary>
         /// <param name="bodies">Array of bodies.</param>
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
@@ -425,13 +425,12 @@ namespace NBodies.Physics
             // Current cell index.
             int cellIdx = mesh.Count;
             levelIdx[level] = cellIdx;
-            int start = cellIdx;
 
-            for (int m = levelIdx[level - 1]; m < start; m++)
+            for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
             {
                 var childCell = mesh[m];
 
-                // Calculate the cell position from the current body position.
+                // Calculate the parent cell position from the child body position.
                 // Right bit-shift to get the x/y grid indexes.
                 int idxX = (int)childCell.LocX >> cellSizeExp;
                 int idxY = (int)childCell.LocY >> cellSizeExp;
@@ -569,7 +568,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Calculates the gravitational forces, and SPH density/pressure. Also does initial collision detection.
+        /// Calculates the gravitational forces, and SPH density/pressure.
         /// </summary>
         [Cudafy]
         public static void CalcForce(GThread gpThread, Body[] inBodies, Body[] outBodies, MeshCell[] inMesh, int[] meshNeighbors, float dt, int topLevel, int[] levelIdx)
@@ -607,7 +606,6 @@ namespace NBodies.Physics
             outBody.ForceTot = 0;
             outBody.ForceX = 0;
             outBody.ForceY = 0;
-
             outBody.Density = 0;
             outBody.Pressure = 0;
 
@@ -616,8 +614,7 @@ namespace NBodies.Physics
             ksizeSq = 1.0f;
             factor = 1.566682f;
 
-            fac = 1.566681f;
-            outBody.Density = (outBody.Mass * fac);
+            outBody.Density = (outBody.Mass * factor);
 
             for (int level = 0; level < topLevel; level++)
             {
@@ -642,11 +639,11 @@ namespace NBodies.Physics
                         // Make sure the current cell index is not a neighbor or this body's cell.
                         if (c != outBody.MeshID)
                         {
-                            // Calculate the force from the cells center of mass.
                             MeshCell cell = inMesh[c];
 
                             if (IsNear(levelCell, cell) == 0)
                             {
+                                // Calculate the force from the cells center of mass.
                                 distX = cell.CmX - outBody.LocX;
                                 distY = cell.CmY - outBody.LocY;
                                 dist = (distX * distX) + (distY * distY);
@@ -751,7 +748,7 @@ namespace NBodies.Physics
             gpThread.SyncThreads();
 
             // Calculate pressure from density.
-            outBody.Pressure = GAS_K * (outBody.Density);
+            outBody.Pressure = GAS_K * outBody.Density;
 
             if (outBody.ForceTot > outBody.Mass * 4 & outBody.BlackHole == 0)
             {
@@ -929,48 +926,14 @@ namespace NBodies.Physics
 
             gpThread.SyncThreads();
 
-            // Leap frog integration.
-            float dt2;
-            float accelX;
-            float accelY;
+            // Integrate.
+            outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
+            outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
+            outBody.LocX += dt * outBody.SpeedX;
+            outBody.LocY += dt * outBody.SpeedY;
 
-            // Drift
-            if (drift == 1)
-            {
-                dt2 = dt * 0.5f;
-
-                accelX = outBody.ForceX / outBody.Mass;
-                accelY = outBody.ForceY / outBody.Mass;
-
-                outBody.SpeedX += (accelX * dt2);
-                outBody.SpeedY += (accelY * dt2);
-
-                outBody.LocX += outBody.SpeedX * dt;
-                outBody.LocY += outBody.SpeedY * dt;
-
-                if (outBody.Lifetime > 0.0f)
-                    outBody.Age += (dt * 4.0f);
-            }
-            else if (drift == 0) // Kick
-            {
-                dt2 = dt * 0.5f;
-
-                accelX = outBody.ForceX / outBody.Mass;
-                accelY = outBody.ForceY / outBody.Mass;
-
-                outBody.SpeedX += accelX * dt2;
-                outBody.SpeedY += accelY * dt2;
-            }
-            else if (drift == 3)  // Euler
-            {
-                outBody.SpeedX += dt * outBody.ForceX / outBody.Mass;
-                outBody.SpeedY += dt * outBody.ForceY / outBody.Mass;
-                outBody.LocX += dt * outBody.SpeedX;
-                outBody.LocY += dt * outBody.SpeedY;
-
-                if (outBody.Lifetime > 0.0f)
-                    outBody.Age += (dt * 4.0f);
-            }
+            if (outBody.Lifetime > 0.0f)
+                outBody.Age += (dt * 4.0f);
 
             // Write back to memory.
             outBodies[a] = outBody;
