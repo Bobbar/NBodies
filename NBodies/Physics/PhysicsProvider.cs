@@ -14,7 +14,9 @@ namespace NBodies.Physics
 
         public static void InitPhysics()
         {
-            PhysicsCalc = new  CUDAFloat(Program.DeviceID, MainLoop.MaxThreadsPerBlock); 
+            //PhysicsCalc = new  CUDAFloat(Program.DeviceID, MainLoop.MaxThreadsPerBlock); 
+            PhysicsCalc = new OpenCLPhysics(Program.DeviceID, MainLoop.MaxThreadsPerBlock);
+
             PhysicsCalc.Init();
         }
     }

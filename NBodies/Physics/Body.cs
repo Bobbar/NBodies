@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Cudafy;
-using Cudafy.Host;
-using Cudafy.Translator;
+//using Cudafy;
+//using Cudafy.Host;
+//using Cudafy.Translator;
 using ProtoBuf;
 using MessagePack;
 
 namespace NBodies.Physics
 {
 
-    [Cudafy(eCudafyType.Struct)]
+   // [Cudafy(eCudafyType.Struct)]
     [ProtoContract]
     [MessagePackObject]
     public struct Body
