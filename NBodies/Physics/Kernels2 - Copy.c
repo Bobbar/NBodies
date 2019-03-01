@@ -62,39 +62,30 @@ struct Body CollideBodies(struct Body master, struct Body slave, float colMass, 
 // NBodies.Physics.CUDAFloat
 __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
 {
-	float GAS_K = 0.3f;
-	float FLOAT_EPSILON = 1.192093E-07f;
-
-	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
-
-	if (a > inBodiesLen0 - 1)
+	float num = 0.3f;
+	float num2 = 1.192093E-07f;
+	int num3 = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	if (num3 > inBodiesLen0 - 1)
 	{
 		return;
 	}
-
-	// Copy current body and mesh cell from memory.
-	struct Body body = inBodies[(a)];
-	struct MeshCell bodyCell = inMesh[(body.MeshID)];
-	struct MeshCell levelCell = bodyCell;
-	struct MeshCell levelCellParent = inMesh[(bodyCell.ParentID)];
-
-	// Reset forces.
+	struct Body body = inBodies[(num3)];
+	struct MeshCell meshCell = inMesh[(body.MeshID)];
+	struct MeshCell testCell = meshCell;
+	struct MeshCell meshCell2 = inMesh[(meshCell.ParentID)];
 	body.ForceTot = 0.0f;
 	body.ForceX = 0.0f;
 	body.ForceY = 0.0f;
 	body.Density = 0.0f;
 	body.Pressure = 0.0f;
-
-
-	float ksize = 1.0f;
-	float ksizeSq = 1.0f;
-	float factor = 1.566682f;
-
-	body.Density = body.Mass * factor;
+	float num4 = 1.0f;
+	float num5 = 1.0f;
+	float num6 = 1.566682f;
+	body.Density = body.Mass * num6;
 	for (int i = 0; i < topLevel; i++)
 	{
-		int expr_D9 = levelCellParent.NeighborStartIdx;
-		int num7 = expr_D9 + levelCellParent.NeighborCount;
+		int expr_D9 = meshCell2.NeighborStartIdx;
+		int num7 = expr_D9 + meshCell2.NeighborCount;
 		for (int j = expr_D9; j < num7; j++)
 		{
 			int num8 = meshNeighbors[(j)];
@@ -106,7 +97,7 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 				if (k != body.MeshID)
 				{
 					struct MeshCell meshCell4 = inMesh[(k)];
-					if (IsNear(levelCell, meshCell4) == 0)
+					if (IsNear(testCell, meshCell4) == 0)
 					{
 						float num10 = meshCell4.CmX - body.PosX;
 						float num11 = meshCell4.CmY - body.PosY;
@@ -120,13 +111,13 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 				}
 			}
 		}
-		levelCell = levelCellParent;
-		levelCellParent = inMesh[(levelCellParent.ParentID)];
+		testCell = meshCell2;
+		meshCell2 = inMesh[(meshCell2.ParentID)];
 	}
 	for (int l = levelIdx[(topLevel)]; l < inMeshLen0; l++)
 	{
 		struct MeshCell meshCell5 = inMesh[(l)];
-		if (IsNear(levelCell, meshCell5) == 0)
+		if (IsNear(testCell, meshCell5) == 0)
 		{
 			float num10 = meshCell5.CmX - body.PosX;
 			float num11 = meshCell5.CmY - body.PosY;
@@ -138,7 +129,7 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 			body.ForceY += num14 * num11 / num13;
 		}
 	}
-	for (int m = bodyCell.NeighborStartIdx; m < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; m++)
+	for (int m = meshCell.NeighborStartIdx; m < meshCell.NeighborStartIdx + meshCell.NeighborCount; m++)
 	{
 		int num15 = meshNeighbors[(m)];
 		struct MeshCell expr_2D0 = inMesh[(num15)];
@@ -146,20 +137,20 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 		int num16 = expr_2D0.BodyCount + bodyStartIdx;
 		for (int n = bodyStartIdx; n < num16; n++)
 		{
-			if (n != a)
+			if (n != num3)
 			{
 				struct Body expr_2FC = inBodies[(n)];
 				float num10 = expr_2FC.PosX - body.PosX;
 				float num11 = expr_2FC.PosY - body.PosY;
 				float num12 = num10 * num10 + num11 * num11;
-				if (num12 <= ksize)
+				if (num12 <= num4)
 				{
-					if (num12 < FLOAT_EPSILON)
+					if (num12 < num2)
 					{
-						num12 = FLOAT_EPSILON;
+						num12 = num2;
 					}
-					float num17 = ksizeSq - num12;
-					float num18 = factor * num17 * num17 * num17;
+					float num17 = num5 - num12;
+					float num18 = num6 * num17 * num17 * num17;
 					body.Density += body.Mass * num18;
 				}
 				if (num12 < 0.04f)
@@ -175,7 +166,7 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 		}
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
-	body.Pressure = GAS_K * body.Density;
+	body.Pressure = num * body.Density;
 	if (body.ForceTot > body.Mass * 4.0f & body.Flag == 0)
 	{
 		body.InRoche = 1;
@@ -198,7 +189,7 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 	{
 		body.InRoche = 1;
 	}
-	outBodies[(a)] = body;
+	outBodies[(num3)] = body;
 }
 // NBodies.Physics.CUDAFloat
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell)

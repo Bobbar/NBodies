@@ -290,9 +290,9 @@ namespace NBodies
                             if (RocheLimit)
                                 ProcessRoche(ref BodyManager.Bodies);
 
-                            //// Remove invisible bodies.
-                            //BodyManager.CullInvisible();
-                         
+                            // Remove invisible bodies.
+                            BodyManager.CullInvisible();
+
                             // Increment physics frame count.
                             _frameCount++;
 
