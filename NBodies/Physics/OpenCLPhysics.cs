@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Cloo;
 using Cloo.Bindings;
+using Cloo.Extensions;
 using System.IO;
 using NBodies.Extensions;
 using System.Runtime.InteropServices;
@@ -42,6 +43,7 @@ namespace NBodies.Physics
 
 
         private ComputeContext context;
+        private CLCommandQueueHandle Handle;
         private ComputeCommandQueue queue;
         private ComputeKernel forceKernel;
         private ComputeKernel collisionKernel;
@@ -102,6 +104,9 @@ namespace NBodies.Physics
             // program.Build(null, null, null, IntPtr.Zero);
 
             // program.Build(new List<ComputeDevice>() { platform.Devices[0] }, null, null, IntPtr.Zero);
+
+            ComputeErrorCode error;
+            Handle = CL10.CreateCommandQueue(context.Handle, device.Handle, ComputeCommandQueueFlags.None, out error);
 
             Console.WriteLine(program.GetBuildLog(device));
 
@@ -376,11 +381,17 @@ namespace NBodies.Physics
             //queue.WriteToBuffer<int>(_meshNeighbors, _gpuMeshNeighbors, true, null);
             //queue.WriteToBuffer<Body>(_bodies, _gpuInBodies, true, null);
 
-            queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
-            queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
-            queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
-            queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
-            queue.Finish();
+            //queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
+            //queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
+            //queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
+            //queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
+            Console.WriteLine(_gpuLevelIdx.Handle.Value.ToString());
+
+            WriteToBufferEx(_levelIdx, _gpuLevelIdx, true, 0, 0, (long)_levelIdx.Length, null);
+            WriteToBufferEx(_mesh, _gpuMesh, true, 0, 0, (long)_mesh.Length, null);
+            WriteToBufferEx(_meshNeighbors, _gpuMeshNeighbors, true, 0, 0, (long)_meshNeighbors.Length, null);
+            WriteToBufferEx(_bodies, _gpuInBodies, true, 0, 0, (long)_bodies.Length, null);
+
 
             timer.Print("Write");
 
@@ -462,6 +473,31 @@ namespace NBodies.Physics
             }
 
 
+        }
+
+        public void WriteToBufferEx<T>(Array source, ComputeBufferBase<T> destination, bool blocking, long sourceOffset, long destinationOffset, long region, IList<ComputeEventBase> events) where T : struct
+        {
+            GCHandle sourceGCHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
+            IntPtr sourceOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(source, (int)sourceOffset);
+
+            WriteEx<T>(destination.Handle, blocking, destinationOffset, region, sourceOffsetPtr, events);
+            sourceGCHandle.Free();
+        }
+
+        public void WriteEx<T>(CLMemoryHandle destinationHandle, bool blocking, long destinationOffset, long region, IntPtr source, ICollection<ComputeEventBase> events) where T : struct
+        {
+            int sizeofT = Marshal.SizeOf(typeof(T));
+
+            int eventWaitListSize;
+            CLEventHandle[] eventHandles = ComputeTools.ExtractHandles(events, out eventWaitListSize);
+            bool eventsWritable = (events != null && !events.IsReadOnly);
+            CLEventHandle[] newEventHandle = (eventsWritable) ? new CLEventHandle[1] : null;
+
+            ComputeErrorCode error = CL10.EnqueueWriteBuffer(Handle, destinationHandle, blocking, new IntPtr(destinationOffset * sizeofT), new IntPtr(region * sizeofT), source, eventWaitListSize, eventHandles, newEventHandle);
+            ComputeException.ThrowOnError(error);
+
+            //if (eventsWritable)
+            //    events.Add(new ComputeEvent(newEventHandle[0], this));
         }
 
         /// <summary>
