@@ -189,7 +189,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <None Include="packages.config" />
-    <Content Include="Physics\Kernels2.c" />
     <Content Include="Physics\Kernels.c" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

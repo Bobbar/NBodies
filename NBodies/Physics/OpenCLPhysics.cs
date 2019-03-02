@@ -19,31 +19,29 @@ namespace NBodies.Physics
     public class OpenCLPhysics : IPhysicsCalc
     {
         private int _gpuIndex = 2;
-        private static int _threadsPerBlock = 256;
-        //  private GPGPU _gpu;
-        private MeshCell[] _mesh = new MeshCell[0];
-        private int[] _levelIdx = new int[0];
         private int _levels = 4;
+        private static int _threadsPerBlock = 256;
 
-        //  private MeshCell[] _gpuMesh = new MeshCell[0];
+        private int[] _levelIdx = new int[0];
+        private ComputeBuffer<int> _gpuLevelIdx;
+
+        private MeshCell[] _mesh = new MeshCell[0];
+        private ComputeBuffer<MeshCell> _gpuMesh;
         private int _prevMeshLen = 0;
 
         private int[] _meshNeighbors = new int[0];
-        // private int[] _gpuMeshNeighbors = new int[0];
+        private ComputeBuffer<int> _gpuMeshNeighbors;
         private int _prevNeighborLen = 0;
 
         private Body[] _bodies = new Body[0];
-        //private Body[] _gpuInBodies = new Body[0];
-        // //private Body[] _gpuOutBodies = new Body[0];
+        private ComputeBuffer<Body> _gpuInBodies;
+        private ComputeBuffer<Body> _gpuOutBodies;
         private int _prevBodyLen = 0;
 
         private int _meshChildPosition = 0;
-
         private bool _warmUp = true;
 
-
         private ComputeContext context;
-        private CLCommandQueueHandle Handle;
         private ComputeCommandQueue queue;
         private ComputeKernel forceKernel;
         private ComputeKernel collisionKernel;
@@ -82,18 +80,12 @@ namespace NBodies.Physics
         public void Init()
         {
             var platform = ComputePlatform.Platforms[1];
-
-            //context = new ComputeContext(ComputeDeviceTypes.Gpu, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            // queue = new ComputeCommandQueue(context, context.Devices[0], ComputeCommandQueueFlags.None);
-
             var device = platform.Devices[0];
 
             context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.None);
 
-
-            //StreamReader streamReader = new StreamReader("../../Physics/Kernels.c");
-            StreamReader streamReader = new StreamReader("../../Physics/Kernels2.c");
+            StreamReader streamReader = new StreamReader("../../Physics/Kernels.c");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -101,129 +93,14 @@ namespace NBodies.Physics
 
             program.Build(null, "-cl-std=CL1.2", null, IntPtr.Zero);
 
-            // program.Build(null, null, null, IntPtr.Zero);
-
-            // program.Build(new List<ComputeDevice>() { platform.Devices[0] }, null, null, IntPtr.Zero);
-
-            ComputeErrorCode error;
-            Handle = CL10.CreateCommandQueue(context.Handle, device.Handle, ComputeCommandQueueFlags.None, out error);
-
             Console.WriteLine(program.GetBuildLog(device));
-
-            //    Console.WriteLine(program.Source[0]);
 
             forceKernel = program.CreateKernel("CalcForce");
             collisionKernel = program.CreateKernel("CalcCollisions");
-
-
-
-            //var cudaModule = CudafyModule.TryDeserialize();
-
-            //if (cudaModule == null || !cudaModule.TryVerifyChecksums(ePlatform.x64, eArchitecture.OpenCL12))
-            //{
-            //    CudafyTranslator.Language = eLanguage.OpenCL;
-            //    cudaModule = CudafyTranslator.Cudafy(ePlatform.x64, eArchitecture.OpenCL12, new Type[] { typeof(Body), typeof(MeshCell), typeof(CUDAFloat) });
-            //    cudaModule.Serialize();
-            //}
-
-            ////Add missing 'struct' strings to generated code.
-            //cudaModule.SourceCode = FixCode(cudaModule.SourceCode, nameof(Body), nameof(MeshCell));
-            //cudaModule.SourceCode = cudaModule.SourceCode.Replace("sqrt((double", "half_sqrt((float");
-            //cudaModule.Serialize();
-
-            //_gpu = CudafyHost.GetDevice(eGPUType.OpenCL, _gpuIndex);
-            //_gpu.LoadModule(cudaModule);
-
-            //var props = _gpu.GetDeviceProperties();
-            //Console.WriteLine(props.ToString());
-        }
-
-        //public void Init()
-        //{
-        //    var cudaModule = CudafyModule.TryDeserialize();
-
-        //    if (cudaModule == null || !cudaModule.TryVerifyChecksums(ePlatform.x64, eArchitecture.OpenCL12))
-        //    {
-        //        CudafyTranslator.Language = eLanguage.OpenCL;
-        //        cudaModule = CudafyTranslator.Cudafy(ePlatform.x64, eArchitecture.OpenCL12, new Type[] { typeof(Body), typeof(MeshCell), typeof(CUDAFloat) });
-        //        cudaModule.Serialize();
-        //    }
-
-        //    //Add missing 'struct' strings to generated code.
-        //    cudaModule.SourceCode = FixCode(cudaModule.SourceCode, nameof(Body), nameof(MeshCell));
-        //    cudaModule.SourceCode = cudaModule.SourceCode.Replace("sqrt((double", "half_sqrt((float");
-        //    cudaModule.Serialize();
-
-        //    _gpu = CudafyHost.GetDevice(eGPUType.OpenCL, _gpuIndex);
-        //    _gpu.LoadModule(cudaModule);
-
-        //    var props = _gpu.GetDeviceProperties();
-        //    Console.WriteLine(props.ToString());
-        //}
-
-        /// <summary>
-        /// Fixes missing 'struct' strings for each function and variable declaration.
-        ///
-        /// Cudafy doesn't seem to support structs correctly within functions and local variables.
-        /// </summary>
-        private string FixCode(string code, params string[] targets)
-        {
-            var rgx = new Regex("[^a-zA-Z0-9 -]");
-            string newcode = string.Copy(code);
-
-            foreach (string target in targets)
-            {
-                bool missingDec = true;
-                int position = 0;
-
-                // Body structs
-                while (missingDec)
-                {
-                    // Search for target string.
-                    int idx = newcode.IndexOf(target, position);
-
-                    // Stop if no match found.
-                    if (idx == -1)
-                    {
-                        missingDec = false;
-                        continue;
-                    }
-
-                    // Move the position past the current match.
-                    position = idx + target.Length;
-
-                    // Check both sides of the located string to make sure it's a match.
-                    string check = newcode.Substring(idx - 1, target.Length + 2);
-                    check = rgx.Replace(check, "").Trim(); // Remove non-alpha and spaces.
-
-                    if (check == target)
-                    {
-                        // Make sure 'struct' isn't already present.
-                        string sub = newcode.Substring(idx - 7, 7);
-
-                        if (!sub.Contains("struct"))
-                        {
-                            // Add 'struct' before the target string.
-                            newcode = newcode.Insert(idx, "struct ");
-                        }
-                    }
-                }
-            }
-
-            return newcode;
         }
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
-
-
-        private ComputeBuffer<MeshCell> _gpuMesh;
-        private ComputeBuffer<int> _gpuMeshNeighbors;
-        private ComputeBuffer<Body> _gpuInBodies;
-        private ComputeBuffer<Body> _gpuOutBodies;
-        private ComputeBuffer<int> _gpuLevelIdx;
-
-
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock)
         {
@@ -239,69 +116,14 @@ namespace NBodies.Physics
             // Build the particle mesh, mesh index, mesh child index and mesh neighbors index.
             BuildMesh(cellSizeExp);
 
-            //// Allocate GPU memory as needed.
-            //if (_prevMeshLen != _mesh.Length)
-            //{
-            //    if (!_warmUp)
-            //        _gpu.Free(_gpuMesh);
-
-            //    _gpuMesh = _gpu.Allocate(_mesh);
-            //    _prevMeshLen = _mesh.Length;
-            //}
-
-            //if (_prevNeighborLen != _meshNeighbors.Length)
-            //{
-            //    if (!_warmUp)
-            //        _gpu.Free(_gpuMeshNeighbors);
-
-            //    _gpuMeshNeighbors = _gpu.Allocate(_meshNeighbors);
-            //    _prevNeighborLen = _meshNeighbors.Length;
-            //}
-
-            //if (_prevBodyLen != _bodies.Length)
-            //{
-            //    if (!_warmUp)
-            //    {
-            //        _gpu.Free(_gpuInBodies);
-            //        _gpu.Free(_gpuOutBodies);
-            //    }
-
-            //    _gpuInBodies = _gpu.Allocate(_bodies);
-            //    _gpuOutBodies = _gpu.Allocate(_bodies);
-            //    _prevBodyLen = _bodies.Length;
-            //}
-
-            //int[] gpuLevelIdx = _gpu.Allocate(_levelIdx);
-
-            //// Copy host arrays to GPU device.
-            //_gpu.CopyToDevice(_levelIdx, gpuLevelIdx);
-            //_gpu.CopyToDevice(_mesh, _gpuMesh);
-            //_gpu.CopyToDevice(_meshNeighbors, _gpuMeshNeighbors);
-            //_gpu.CopyToDevice(_bodies, _gpuInBodies);
-
-            //// Launch force and collision kernels; swapping In and Out pointers.
-            //_gpu.Launch(threadBlocks, threadsPerBlock).CalcForce(_gpuInBodies, _gpuOutBodies, _gpuMesh, _gpuMeshNeighbors, timestep, _levels, gpuLevelIdx);
-            //_gpu.Launch(threadBlocks, threadsPerBlock).CalcCollisions(_gpuOutBodies, _gpuInBodies, _gpuMesh, _gpuMeshNeighbors, timestep, viscosity);
-
-            //// Copy updated bodies back to host and free memory.
-            //_gpu.CopyFromDevice(_gpuInBodies, bodies);
-
-            //if (!_warmUp)
-            //{
-            //    _gpu.Free(gpuLevelIdx);
-            //}
-
-            //_warmUp = false;
-
-            timer.Restart();
-
             // Allocate GPU memory as needed.
             if (_prevMeshLen != _mesh.Length)
             {
                 if (!_warmUp)
                     _gpuMesh.Dispose();
 
-                _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _mesh);
+                _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite, _mesh.Length, IntPtr.Zero);
+
                 _prevMeshLen = _mesh.Length;
             }
 
@@ -310,7 +132,7 @@ namespace NBodies.Physics
                 if (!_warmUp)
                     _gpuMeshNeighbors.Dispose();
 
-                _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _meshNeighbors);
+                _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, _meshNeighbors.Length, IntPtr.Zero);
                 _prevNeighborLen = _meshNeighbors.Length;
             }
 
@@ -322,79 +144,18 @@ namespace NBodies.Physics
                     _gpuOutBodies.Dispose();
                 }
 
-                _gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
-                _gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
+                _gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
+                _gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
                 _prevBodyLen = _bodies.Length;
             }
 
 
-            _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _levelIdx);
+            _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, _levelIdx.Length, IntPtr.Zero);
 
-
-            //var _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.UseHostPointer, _mesh);
-            //var _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.UseHostPointer, _meshNeighbors);
-            //var _gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
-            //var _gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
-            //var _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.UseHostPointer, _levelIdx);
-
-            //_gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _mesh);
-            //_gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _meshNeighbors);
-            //_gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
-            //_gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
-            //_gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _levelIdx);
-
-
-            //_gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, _mesh);
-            //_gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, _meshNeighbors);
-            //_gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
-            //_gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.CopyHostPointer, _bodies);
-            //_gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, _levelIdx);
-
-
-
-
-            timer.Print("Alloc");
-
-            // var _gpuDt = new ComputeBuffer<float>(context, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.UseHostPointer, timestep);
-
-
-            //var memObjs = new List<ComputeMemory>();
-
-            //memObjs.Add(_gpuMesh);
-            //memObjs.Add(_gpuMeshNeighbors);
-            //memObjs.Add(_gpuInBodies);
-            //memObjs.Add(_gpuOutBodies);
-            //memObjs.Add(_gpuLevelIdx);
-
-
-
-
-
-
-            //queue.ExecuteTask(forceKernel, null);
-            //queue.ExecuteTask(collisionKernel, null);
-
-            timer.Restart();
-
-            //queue.WriteToBuffer<int>(_levelIdx, _gpuLevelIdx, true, null);
-            //queue.WriteToBuffer<MeshCell>(_mesh, _gpuMesh, true, null);
-            //queue.WriteToBuffer<int>(_meshNeighbors, _gpuMeshNeighbors, true, null);
-            //queue.WriteToBuffer<Body>(_bodies, _gpuInBodies, true, null);
-
-            //queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
-            //queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
-            //queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
-            //queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
-            Console.WriteLine(_gpuLevelIdx.Handle.Value.ToString());
-
-            WriteToBufferEx(_levelIdx, _gpuLevelIdx, true, 0, 0, (long)_levelIdx.Length, null);
-            WriteToBufferEx(_mesh, _gpuMesh, true, 0, 0, (long)_mesh.Length, null);
-            WriteToBufferEx(_meshNeighbors, _gpuMeshNeighbors, true, 0, 0, (long)_meshNeighbors.Length, null);
-            WriteToBufferEx(_bodies, _gpuInBodies, true, 0, 0, (long)_bodies.Length, null);
-
-
-            timer.Print("Write");
-
+            queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
+            queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
+            queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
+            queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
 
             var gridSize = new dim3(threadBlocks);
             var blockSize = new dim3(threadsPerBlock);
@@ -408,7 +169,6 @@ namespace NBodies.Physics
             for (int i = 0; i < maxDims; i++)
                 gridSizeArray[i] *= blockSizeArray[i];
 
-            timer.Restart();
 
             forceKernel.SetMemoryArgument(0, _gpuInBodies);
             forceKernel.SetValueArgument(1, _bodies.Length);
@@ -431,9 +191,6 @@ namespace NBodies.Physics
             queue.Execute(forceKernel, null, gridSizeArray, blockSizeArray, null);
             queue.Finish();
 
-            timer.Print("Force");
-
-            timer.Restart();
 
             collisionKernel.SetMemoryArgument(0, _gpuOutBodies);
             collisionKernel.SetValueArgument(1, _bodies.Length);
@@ -453,51 +210,15 @@ namespace NBodies.Physics
             queue.Execute(collisionKernel, null, gridSizeArray, blockSizeArray, null);
             queue.Finish();
 
-            timer.Print("Col");
-
-            //GCHandle destinationGCHandle = GCHandle.Alloc(bodies, GCHandleType.Pinned);
-            //IntPtr destinationOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(bodies, (int)0);
-            //queue.Read(_gpuInBodies, false, 0, bodies.Length, destinationOffsetPtr, null);
-            //destinationGCHandle.Free();
-
-            timer.Restart();
-
             queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             queue.Finish();
 
-            timer.Print("Copy");
 
             if (!_warmUp)
             {
                 _gpuLevelIdx.Dispose();
             }
 
-
-        }
-
-        public void WriteToBufferEx<T>(Array source, ComputeBufferBase<T> destination, bool blocking, long sourceOffset, long destinationOffset, long region, IList<ComputeEventBase> events) where T : struct
-        {
-            GCHandle sourceGCHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
-            IntPtr sourceOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(source, (int)sourceOffset);
-
-            WriteEx<T>(destination.Handle, blocking, destinationOffset, region, sourceOffsetPtr, events);
-            sourceGCHandle.Free();
-        }
-
-        public void WriteEx<T>(CLMemoryHandle destinationHandle, bool blocking, long destinationOffset, long region, IntPtr source, ICollection<ComputeEventBase> events) where T : struct
-        {
-            int sizeofT = Marshal.SizeOf(typeof(T));
-
-            int eventWaitListSize;
-            CLEventHandle[] eventHandles = ComputeTools.ExtractHandles(events, out eventWaitListSize);
-            bool eventsWritable = (events != null && !events.IsReadOnly);
-            CLEventHandle[] newEventHandle = (eventsWritable) ? new CLEventHandle[1] : null;
-
-            ComputeErrorCode error = CL10.EnqueueWriteBuffer(Handle, destinationHandle, blocking, new IntPtr(destinationOffset * sizeofT), new IntPtr(region * sizeofT), source, eventWaitListSize, eventHandles, newEventHandle);
-            ComputeException.ThrowOnError(error);
-
-            //if (eventsWritable)
-            //    events.Add(new ComputeEvent(newEventHandle[0], this));
         }
 
         /// <summary>

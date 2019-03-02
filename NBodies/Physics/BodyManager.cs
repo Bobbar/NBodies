@@ -187,17 +187,35 @@ namespace NBodies.Physics
         {
             UIDIndex.Clear();
 
-            try
+            for (int i = 0; i < Bodies.Length; i++)
             {
-                for (int i = 0; i < Bodies.Length; i++)
+                if (!UIDIndex.ContainsKey(Bodies[i].UID))
                 {
                     UIDIndex.Add(Bodies[i].UID, i);
                 }
+                else
+                {
+                    PurgeUIDs();
+
+                    break;
+                }
             }
-            catch
+        }
+
+        /// <summary>
+        /// Replace all body UIDs with a new ones to fix duplicates.
+        /// </summary>
+        private static void PurgeUIDs()
+        {
+            _currentUID = -1;
+
+            for (int i = 0; i < Bodies.Length; i++)
             {
-                // Occational 'already added' race condition.
+                Bodies[i].UID = NextUID();
             }
+
+            RebuildUIDIndex();
+
         }
 
         public static PointF FollowBodyLoc()
@@ -213,6 +231,7 @@ namespace NBodies.Physics
             {
                 if (FollowSelected)
                 {
+                    Console.WriteLine(FollowBodyUID);
                     if (UIDIndex.ContainsKey(FollowBodyUID))
                     {
                         return Bodies[UIDIndex[FollowBodyUID]];
@@ -224,7 +243,7 @@ namespace NBodies.Physics
                 // Sometimes a race condition occurs, and the key won't be found even though we passed the condition.
                 // Fail silently and try again on the next frame.
             }
-
+            Console.WriteLine("Not found.");
             return new Body();
         }
 
