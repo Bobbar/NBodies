@@ -3,6 +3,7 @@
 #elif defined(cl_amd_fp64)
 #pragma OPENCL EXTENSION cl_amd_fp64: enable
 #endif
+
 struct Body
 {
 	float PosX;
@@ -50,17 +51,16 @@ struct MeshCell
 };
 
 
-// NBodies.Physics.CUDAFloat
-__kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0);
-// NBodies.Physics.CUDAFloat
+__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0);
+
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
-// NBodies.Physics.CUDAFloat
-__kernel  void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity);
-// NBodies.Physics.CUDAFloat
+
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity);
+
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
 
-// NBodies.Physics.CUDAFloat
-__kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
+
+__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
@@ -73,239 +73,305 @@ __kernel  void CalcForce(global struct Body* inBodies, int inBodiesLen0, global 
 	}
 
 	// Copy current body and mesh cell from memory.
-	struct Body body = inBodies[(a)];
-	struct MeshCell bodyCell = inMesh[(body.MeshID)];
+	struct Body outBody = inBodies[(a)];
+	struct MeshCell bodyCell = inMesh[(outBody.MeshID)];
 	struct MeshCell levelCell = bodyCell;
 	struct MeshCell levelCellParent = inMesh[(bodyCell.ParentID)];
 
 	// Reset forces.
-	body.ForceTot = 0.0f;
-	body.ForceX = 0.0f;
-	body.ForceY = 0.0f;
-	body.Density = 0.0f;
-	body.Pressure = 0.0f;
-
+	outBody.ForceTot = 0.0f;
+	outBody.ForceX = 0.0f;
+	outBody.ForceY = 0.0f;
+	outBody.Density = 0.0f;
+	outBody.Pressure = 0.0f;
 
 	float ksize = 1.0f;
 	float ksizeSq = 1.0f;
 	float factor = 1.566682f;
 
-	body.Density = body.Mass * factor;
-	for (int i = 0; i < topLevel; i++)
+	outBody.Density = outBody.Mass * factor;
+
+	for (int level = 0; level < topLevel; level++)
 	{
-		int expr_D9 = levelCellParent.NeighborStartIdx;
-		int num7 = expr_D9 + levelCellParent.NeighborCount;
-		for (int j = expr_D9; j < num7; j++)
+		// Iterate parent cell neighbors.
+		int start = levelCellParent.NeighborStartIdx;
+		int len = start + levelCellParent.NeighborCount;
+
+		for (int nc = start; nc < len; nc++)
 		{
-			int num8 = meshNeighbors[(j)];
-			struct MeshCell meshCell3 = inMesh[(num8)];
-			int expr_103 = meshCell3.ChildStartIdx;
-			int num9 = expr_103 + meshCell3.ChildCount;
-			for (int k = expr_103; k < num9; k++)
+			int nId = meshNeighbors[(nc)];
+			struct MeshCell nCell = inMesh[(nId)];
+
+			// Iterate neighbor child cells.
+			int childStartIdx = nCell.ChildStartIdx;
+			int childLen = childStartIdx + nCell.ChildCount;
+			for (int c = childStartIdx; c < childLen; c++)
 			{
-				if (k != body.MeshID)
+				// Make sure the current cell index is not a neighbor or this body's cell.
+				if (c != outBody.MeshID)
 				{
-					struct MeshCell meshCell4 = inMesh[(k)];
-					if (IsNear(levelCell, meshCell4) == 0)
+					struct MeshCell cell = inMesh[(c)];
+
+					if (IsNear(levelCell, cell) == 0)
 					{
-						float num10 = meshCell4.CmX - body.PosX;
-						float num11 = meshCell4.CmY - body.PosY;
-						float num12 = num10 * num10 + num11 * num11;
-						float num13 = (float)half_sqrt((float)num12);
-						float num14 = (float)meshCell4.Mass * body.Mass / num12;
-						body.ForceTot += num14;
-						body.ForceX += num14 * num10 / num13;
-						body.ForceY += num14 * num11 / num13;
+						// Calculate the force from the cells center of mass.
+						float distX = cell.CmX - outBody.PosX;
+						float distY = cell.CmY - outBody.PosY;
+						float dist = distX * distX + distY * distY;
+						float distSqrt = (float)half_sqrt((float)dist);
+						float force = (float)cell.Mass * outBody.Mass / dist;
+
+						outBody.ForceTot += force;
+						outBody.ForceX += force * distX / distSqrt;
+						outBody.ForceY += force * distY / distSqrt;
 					}
 				}
 			}
 		}
+
+		// Move up to next level.
 		levelCell = levelCellParent;
 		levelCellParent = inMesh[(levelCellParent.ParentID)];
 	}
-	for (int l = levelIdx[(topLevel)]; l < inMeshLen0; l++)
+
+	 // Iterate the top level cells.
+	for (int top = levelIdx[(topLevel)]; top < inMeshLen0; top++)
 	{
-		struct MeshCell meshCell5 = inMesh[(l)];
-		if (IsNear(levelCell, meshCell5) == 0)
+		struct MeshCell cell = inMesh[(top)];
+
+		if (IsNear(levelCell, cell) == 0)
 		{
-			float num10 = meshCell5.CmX - body.PosX;
-			float num11 = meshCell5.CmY - body.PosY;
-			float num12 = num10 * num10 + num11 * num11;
-			float num13 = (float)half_sqrt((float)num12);
-			float num14 = (float)meshCell5.Mass * body.Mass / num12;
-			body.ForceTot += num14;
-			body.ForceX += num14 * num10 / num13;
-			body.ForceY += num14 * num11 / num13;
+			float distX = cell.CmX - outBody.PosX;
+			float distY = cell.CmY - outBody.PosY;
+			float dist = distX * distX + distY * distY;
+			float distSqrt = (float)half_sqrt((float)dist);
+			float force = (float)cell.Mass * outBody.Mass / dist;
+
+			outBody.ForceTot += force;
+			outBody.ForceX += force * distX / distSqrt;
+			outBody.ForceY += force * distY / distSqrt;
 		}
 	}
-	for (int m = bodyCell.NeighborStartIdx; m < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; m++)
+
+	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
+	// Read from the flattened mesh-neighbor index at the correct location.
+	for (int n = bodyCell.NeighborStartIdx; n < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; n++)
 	{
-		int num15 = meshNeighbors[(m)];
-		struct MeshCell expr_2D0 = inMesh[(num15)];
-		int bodyStartIdx = expr_2D0.BodyStartIdx;
-		int num16 = expr_2D0.BodyCount + bodyStartIdx;
-		for (int n = bodyStartIdx; n < num16; n++)
+		// Get the mesh cell index, then copy it from memory.
+		int nId = meshNeighbors[(n)];
+		struct MeshCell cell = inMesh[(nId)];
+
+		// Iterate the bodies within the cell.
+		// Read from the flattened mesh-body index at the correct location.
+		int mbStart = cell.BodyStartIdx;
+		int mbLen = cell.BodyCount + mbStart;
+		for (int mb = mbStart; mb < mbLen; mb++)
 		{
-			if (n != a)
+			// Save us from ourselves.
+			if (mb != a)
 			{
-				struct Body expr_2FC = inBodies[(n)];
-				float num10 = expr_2FC.PosX - body.PosX;
-				float num11 = expr_2FC.PosY - body.PosY;
-				float num12 = num10 * num10 + num11 * num11;
-				if (num12 <= ksize)
+				struct Body inBody = inBodies[(mb)];
+
+				float distX = inBody.PosX - outBody.PosX;
+				float distY = inBody.PosY - outBody.PosY;
+				float dist = distX * distX + distY * distY;
+
+				// If this body is within collision/SPH distance.
+				if (dist <= ksize)
 				{
-					if (num12 < FLOAT_EPSILON)
+					// Clamp SPH softening distance.
+					if (dist < FLOAT_EPSILON)
 					{
-						num12 = FLOAT_EPSILON;
+						dist = FLOAT_EPSILON;
 					}
-					float num17 = ksizeSq - num12;
-					float num18 = factor * num17 * num17 * num17;
-					body.Density += body.Mass * num18;
+
+					// Accumulate density.
+					float diff = ksizeSq - dist;
+					float fac = factor * diff * diff * diff;
+					outBody.Density += outBody.Mass * fac;
 				}
-				if (num12 < 0.04f)
+
+				// Clamp gravity softening distance.
+				if (dist < 0.04f)
 				{
-					num12 = 0.04f;
+					dist = 0.04f;
 				}
-				float num13 = (float)half_sqrt((float)num12);
-				float num14 = expr_2FC.Mass * body.Mass / num12;
-				body.ForceTot += num14;
-				body.ForceX += num14 * num10 / num13;
-				body.ForceY += num14 * num11 / num13;
+
+				// Accumulate body-to-body force.
+				float distSqrt = (float)half_sqrt((float)dist);
+				float force = inBody.Mass * outBody.Mass / dist;
+
+				outBody.ForceTot += force;
+				outBody.ForceX += force * distX / distSqrt;
+				outBody.ForceY += force * distY / distSqrt;
 			}
 		}
 	}
+
 	barrier(CLK_LOCAL_MEM_FENCE);
-	body.Pressure = GAS_K * body.Density;
-	if (body.ForceTot > body.Mass * 4.0f & body.Flag == 0)
+
+	// Calculate pressure from density.
+	outBody.Pressure = GAS_K * outBody.Density;
+
+	if (outBody.ForceTot > outBody.Mass * 4.0f & outBody.Flag == 0)
 	{
-		body.InRoche = 1;
+		outBody.InRoche = 1;
 	}
-	else
+	else if (outBody.ForceTot * 2.0f < outBody.Mass * 4.0f)
 	{
-		if (body.ForceTot * 2.0f < body.Mass * 4.0f)
-		{
-			body.InRoche = 0;
-		}
-		else
-		{
-			if (body.Flag == 2 || body.IsExplosion == 1)
-			{
-				body.InRoche = 1;
-			}
-		}
+		outBody.InRoche = 0;
 	}
-	if (body.Flag == 2)
+	else if (outBody.Flag == 2 || outBody.IsExplosion == 1)
 	{
-		body.InRoche = 1;
+		outBody.InRoche = 1;
 	}
-	outBodies[(a)] = body;
+	
+	if (outBody.Flag == 2)
+	{
+		outBody.InRoche = 1;
+	}
+
+	// Write back to memory.
+	outBodies[(a)] = outBody;
 }
-// NBodies.Physics.CUDAFloat
-int IsNear(struct MeshCell testCell, struct MeshCell neighborCell)
+
+// Is the specified cell a neighbor of the test cell?
+int IsNear(struct MeshCell cell, struct MeshCell testCell)
 {
 	int result = 0;
-	for (int i = -1; i <= 1; i++)
+
+	for (int x = -1; x <= 1; x++)
 	{
-		for (int j = -1; j <= 1; j++)
+		for (int y = -1; y <= 1; y++)
 		{
-			if (neighborCell.IdxX == testCell.IdxX + i && neighborCell.IdxY == testCell.IdxY + j)
+			if (testCell.IdxX == cell.IdxX + x && testCell.IdxY == cell.IdxY + y)
 			{
 				result = 1;
 			}
 		}
 	}
+
 	return result;
 }
-// NBodies.Physics.CUDAFloat
-__kernel  void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity)
+
+
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity)
 {
-	int num = get_local_size(0) * get_group_id(0) + get_local_id(0);
-	if (num > inBodiesLen0 - 1)
+	// Get index for the current body.
+	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (a > inBodiesLen0 - 1)
 	{
 		return;
 	}
-	struct Body body = inBodies[(num)];
-	struct MeshCell meshCell = inMesh[(body.MeshID)];
-	for (int i = meshCell.NeighborStartIdx; i < meshCell.NeighborStartIdx + meshCell.NeighborCount; i++)
+	// Copy current body from memory.
+	struct Body outBody = inBodies[(a)];
+
+	// Copy this body's mesh cell from memory.
+	struct MeshCell bodyCell = inMesh[(outBody.MeshID)];
+
+	// Iterate neighbor cells.
+	for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
 	{
-		int num2 = meshNeighbors[(i)];
-		struct MeshCell expr_65 = inMesh[(num2)];
-		int bodyStartIdx = expr_65.BodyStartIdx;
-		int num3 = expr_65.BodyCount + bodyStartIdx;
-		for (int j = bodyStartIdx; j < num3; j++)
+		// Get the neighbor cell from the index.
+		int nId = meshNeighbors[(i)];
+		struct MeshCell cell = inMesh[(nId)];
+
+		// Iterate the neighbor cell bodies.
+		int mbStart = cell.BodyStartIdx;
+		int mbLen = cell.BodyCount + mbStart;
+		for (int mb = mbStart; mb < mbLen; mb++)
 		{
-			if (j != num)
+			// Double tests are bad.
+			if (mb != a)
 			{
-				struct Body body2 = inBodies[(j)];
-				float num4 = body.PosX - body2.PosX;
-				float num5 = body.PosY - body2.PosY;
-				float num6 = num4 * num4 + num5 * num5;
-				float num7 = body.Size * 0.5f + body2.Size * 0.5f;
-				if (num6 <= num7 * num7)
+				struct Body inBody = inBodies[(mb)];
+
+				float distX = outBody.PosX - inBody.PosX;
+				float distY = outBody.PosY - inBody.PosY;
+				float dist = distX * distX + distY * distY;
+
+				// Calc the distance and check for collision.
+				float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+				if (dist <= colDist * colDist)
 				{
-					float num8 = (float)half_sqrt((float)num6);
-					if (body.InRoche == 1 && body2.InRoche == 1)
+					// We know we have a collision, so go ahead and do the expensive square root now.
+					float distSqrt = (float)half_sqrt((float)dist);
+
+					// If both bodies are in Roche, we do SPH physics.
+					// Otherwise, an elastic collision and merge is done.
+
+					// SPH collision.
+					if (outBody.InRoche == 1 && inBody.InRoche == 1)
 					{
-						float num9 = 1.192093E-07f;
-						float num10 = 3.45267E-11f;
-						float num11 = 1.0f;
-						if (num6 < num9)
+						float FLOAT_EPSILON = 1.192092896e-07f;//1.192093E-07f;
+						float FLOAT_EPSILONSQRT = 3.45267E-11f;
+						float kernelSize = 1.0f;
+
+						if (dist < FLOAT_EPSILON)
 						{
-							num8 = num10;
+							distSqrt = FLOAT_EPSILONSQRT;
 						}
-						float num12 = body.Mass * (body.Pressure + body2.Pressure) / (2.0f * body.Density);
-						float num13 = -10442.16f * (num11 - num8) * (num11 - num8) / num8;
-						float num14 = num4 * num13;
-						float num15 = num5 * num13;
-						num14 *= num12;
-						num15 *= num12;
-						body.ForceX -= num14;
-						body.ForceY -= num15;
-						float num16 = 14.32394f * (num11 - num8);
-						float num17 = body2.Mass * num16 * viscosity * 1.0f / body2.Density;
-						float num18 = body2.VeloX - body.VeloX;
-						float num19 = body2.VeloY - body.VeloY;
-						num18 *= num17;
-						num19 *= num17;
-						body.ForceX += num18;
-						body.ForceY += num19;
+
+						// Pressure force
+						float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+						float gradFactor = -10442.157f * (kernelSize - distSqrt) * (kernelSize - distSqrt) / distSqrt;
+
+						float gradX = distX * gradFactor;
+						float gradY = distY * gradFactor;
+
+						gradX *= scalar;
+						gradY *= scalar;
+
+						outBody.ForceX -= gradX;
+						outBody.ForceY -= gradY;
+
+						// Viscosity force
+						float visc_laplace = 14.323944f * (kernelSize - distSqrt);
+						float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
+
+						float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
+						float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
+
+						viscVelo_diffX *= visc_scalar;
+						viscVelo_diffY *= visc_scalar;
+
+						outBody.ForceX += viscVelo_diffX;
+						outBody.ForceY += viscVelo_diffY;
+
+					}
+					// Elastic collision.
+					else if (outBody.InRoche == 1 && inBody.InRoche == 0)
+					{
+						outBody.Visible = 0;
 					}
 					else
 					{
-						if (body.InRoche == 1 && body2.InRoche == 0)
+						// Calculate elastic collision forces.
+						float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
+						float forceX = distX * colScale;
+						float forceY = distY * colScale;
+						float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+
+						// If we're the bigger one, eat the other guy.
+						if (outBody.Mass > inBody.Mass)
 						{
-							body.Visible = 0;
+							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 						}
-						else
+						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 						{
-							float num20 = (num4 * (body2.VeloX - body.VeloX) + num5 * (body2.VeloY - body.VeloY)) / num6;
-							float forceX = num4 * num20;
-							float forceY = num5 * num20;
-							float colMass = body2.Mass / (body2.Mass + body.Mass);
-							if (body.Mass > body2.Mass)
+							outBody.Visible = 0;
+						}
+						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+						{
+							// Our UID is more gooder, eat the other guy.
+							if (outBody.UID > inBody.UID)
 							{
-								body = CollideBodies(body, body2, colMass, forceX, forceY);
+								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 							}
-							else
+							else // Our UID is inferior, we must go away.
 							{
-								if (body.Mass < body2.Mass)
-								{
-									body.Visible = 0;
-								}
-								else
-								{
-									if (body.Mass == body2.Mass)
-									{
-										if (body.UID > body2.UID)
-										{
-											body = CollideBodies(body, body2, colMass, forceX, forceY);
-										}
-										else
-										{
-											body.Visible = 0;
-										}
-									}
-								}
+								outBody.Visible = 0;
 							}
 						}
 					}
@@ -313,18 +379,24 @@ __kernel  void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, gl
 			}
 		}
 	}
+
 	barrier(CLK_LOCAL_MEM_FENCE);
-	body.VeloX += dt * body.ForceX / body.Mass;
-	body.VeloY += dt * body.ForceY / body.Mass;
-	body.PosX += dt * body.VeloX;
-	body.PosY += dt * body.VeloY;
-	if (body.Lifetime > 0.0f)
+
+	// Integrate.
+	outBody.VeloX += dt * outBody.ForceX / outBody.Mass;
+	outBody.VeloY += dt * outBody.ForceY / outBody.Mass;
+	outBody.PosX += dt * outBody.VeloX;
+	outBody.PosY += dt * outBody.VeloY;
+
+	if (outBody.Lifetime > 0.0f)
 	{
-		body.Age += dt * 4.0f;
+		outBody.Age += dt * 4.0f;
 	}
-	outBodies[(num)] = body;
+
+	// Write back to memory.
+	outBodies[(a)] = outBody;
 }
-// NBodies.Physics.CUDAFloat
+
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY)
 {
 	struct Body body = master;

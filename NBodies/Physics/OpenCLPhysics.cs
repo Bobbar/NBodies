@@ -219,6 +219,7 @@ namespace NBodies.Physics
                 _gpuLevelIdx.Dispose();
             }
 
+            //   queue.Finish();
         }
 
         /// <summary>
