@@ -151,13 +151,14 @@ namespace NBodies.Physics
 
             _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
+
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
             queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
             queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
             queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
             queue.Finish();
 
-            
+
             forceKernel.SetMemoryArgument(0, _gpuInBodies);
             forceKernel.SetValueArgument(1, _bodies.Length);
 
@@ -198,8 +199,10 @@ namespace NBodies.Physics
             queue.Execute(collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             queue.Finish();
 
+
             queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             queue.Finish();
+
 
             if (!_warmUp)
             {
@@ -235,8 +238,8 @@ namespace NBodies.Physics
         }
 
         // Calculate dimensionless morton number from X/Y coords.
-        private static int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
-        private static int[] S = new int[] { 1, 2, 4, 8 };
+        private static readonly int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
+        private static readonly int[] S = new int[] { 1, 2, 4, 8 };
 
         private int MortonNumber(int x, int y)
         {
@@ -292,7 +295,7 @@ namespace NBodies.Physics
             // and build the start index of each cell.
             int count = 0;
             int val = 0;
-            var mortIdxs = new List<int>();
+            var mortIdxs = new List<int>(_bodies.Length);
             Body[] sortBodies = new Body[_bodies.Length];
 
             for (int i = 0; i < spatials.Length; i++)
