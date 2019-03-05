@@ -254,7 +254,6 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
-
 __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity)
 {
 	// Get index for the current body.

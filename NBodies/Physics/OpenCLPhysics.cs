@@ -122,7 +122,7 @@ namespace NBodies.Physics
                 if (!_warmUp)
                     _gpuMesh.Dispose();
 
-                _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite, _mesh.Length, IntPtr.Zero);
+                _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadOnly, _mesh.Length, IntPtr.Zero);
 
                 _prevMeshLen = _mesh.Length;
             }
@@ -132,7 +132,7 @@ namespace NBodies.Physics
                 if (!_warmUp)
                     _gpuMeshNeighbors.Dispose();
 
-                _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, _meshNeighbors.Length, IntPtr.Zero);
+                _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _meshNeighbors.Length, IntPtr.Zero);
                 _prevNeighborLen = _meshNeighbors.Length;
             }
 
@@ -149,27 +149,15 @@ namespace NBodies.Physics
                 _prevBodyLen = _bodies.Length;
             }
 
-
-            _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, _levelIdx.Length, IntPtr.Zero);
+            _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
             queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
             queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
             queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
+            queue.Finish();
 
-            var gridSize = new dim3(threadBlocks);
-            var blockSize = new dim3(threadsPerBlock);
-
-            int gridDims = gridSize.ToArray().Length;
-            int blockDims = blockSize.ToArray().Length;
-            int maxDims = Math.Max(gridDims, blockDims);
-
-            long[] blockSizeArray = blockSize.ToFixedSizeArray(maxDims);
-            long[] gridSizeArray = gridSize.ToFixedSizeArray(maxDims);
-            for (int i = 0; i < maxDims; i++)
-                gridSizeArray[i] *= blockSizeArray[i];
-
-
+            
             forceKernel.SetMemoryArgument(0, _gpuInBodies);
             forceKernel.SetValueArgument(1, _bodies.Length);
 
@@ -188,7 +176,7 @@ namespace NBodies.Physics
             forceKernel.SetMemoryArgument(10, _gpuLevelIdx);
             forceKernel.SetValueArgument(11, _levelIdx.Length);
 
-            queue.Execute(forceKernel, null, gridSizeArray, blockSizeArray, null);
+            queue.Execute(forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             queue.Finish();
 
 
@@ -207,19 +195,18 @@ namespace NBodies.Physics
             collisionKernel.SetValueArgument(8, timestep);
             collisionKernel.SetValueArgument(9, viscosity);
 
-            queue.Execute(collisionKernel, null, gridSizeArray, blockSizeArray, null);
+            queue.Execute(collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             queue.Finish();
 
             queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             queue.Finish();
-
 
             if (!_warmUp)
             {
                 _gpuLevelIdx.Dispose();
             }
 
-            //   queue.Finish();
+            _warmUp = false;
         }
 
         /// <summary>
