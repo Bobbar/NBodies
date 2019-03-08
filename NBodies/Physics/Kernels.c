@@ -258,6 +258,7 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 	{
 		return;
 	}
+
 	// Copy current body from memory.
 	struct Body outBody = inBodies[(a)];
 
@@ -391,18 +392,22 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 	outBodies[(a)] = outBody;
 }
 
-struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY)
+struct Body CollideBodies(struct Body bodyA, struct Body bodyB, float colMass, float forceX, float forceY)
 {
-	struct Body body = master;
-	body.VeloX += colMass * forceX;
-	body.VeloY += colMass * forceY;
-	if (body.Flag != 1)
+	struct Body outBody = bodyA;
+
+	outBody.VeloX += colMass * forceX;
+	outBody.VeloY += colMass * forceY;
+
+	if (outBody.Flag != 1)
 	{
-		float arg_70_0 = 3.141593f * (float)pow((double)(body.Size * 0.5f), 2.0);
-		float num = 3.141593f * (float)pow((double)(slave.Size * 0.5f), 2.0);
-		float num2 = arg_70_0 + num;
-		body.Size = (float)half_sqrt((float)((float)((double)num2 / 3.14159265358979))) * 2.0f;
+		float a1 = 3.141593f * (float)pow((double)(outBody.Size * 0.5f), 2.0);
+		float a2 = 3.141593f * (float)pow((double)(bodyB.Size * 0.5f), 2.0);
+		float area = a1 + a2;
+		outBody.Size = (float)half_sqrt((float)(((area / 3.141593f)) * 2.0f));
 	}
-	body.Mass += slave.Mass;
-	return body;
+
+	outBody.Mass += bodyB.Mass;
+
+	return outBody;
 }
