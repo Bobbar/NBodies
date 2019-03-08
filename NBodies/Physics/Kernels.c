@@ -51,16 +51,11 @@ struct MeshCell
 };
 
 
-__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0);
-
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
-
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity);
-
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
 
 
-__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
+__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
@@ -254,7 +249,7 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, int outBodiesLen0, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, int meshNeighborsLen0, float dt, float viscosity)
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);

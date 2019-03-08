@@ -91,7 +91,16 @@ namespace NBodies.Physics
 
             ComputeProgram program = new ComputeProgram(context, clSource);
 
-            program.Build(null, "-cl-std=CL1.2", null, IntPtr.Zero);
+            try
+            {
+                program.Build(null, "-cl-std=CL1.2", null, IntPtr.Zero);
+            }
+            catch (BuildProgramFailureComputeException ex)
+            {
+                string buildLog = program.GetBuildLog(device);
+                Console.WriteLine(buildLog);
+                throw;
+            }
 
             Console.WriteLine(program.GetBuildLog(device));
 
@@ -151,50 +160,44 @@ namespace NBodies.Physics
 
             _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
-
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
             queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
             queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
             queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
             queue.Finish();
 
+            int argi = 0;
+            forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            forceKernel.SetValueArgument(argi++, _bodies.Length);
 
-            forceKernel.SetMemoryArgument(0, _gpuInBodies);
-            forceKernel.SetValueArgument(1, _bodies.Length);
+            forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
 
-            forceKernel.SetMemoryArgument(2, _gpuOutBodies);
-            forceKernel.SetValueArgument(3, _bodies.Length);
+            forceKernel.SetMemoryArgument(argi++, _gpuMesh);
+            forceKernel.SetValueArgument(argi++, _mesh.Length);
 
-            forceKernel.SetMemoryArgument(4, _gpuMesh);
-            forceKernel.SetValueArgument(5, _mesh.Length);
+            forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
 
-            forceKernel.SetMemoryArgument(6, _gpuMeshNeighbors);
-            forceKernel.SetValueArgument(7, _meshNeighbors.Length);
+            forceKernel.SetValueArgument(argi++, timestep);
+            forceKernel.SetValueArgument(argi++, _levels);
 
-            forceKernel.SetValueArgument(8, timestep);
-            forceKernel.SetValueArgument(9, _levels);
-
-            forceKernel.SetMemoryArgument(10, _gpuLevelIdx);
-            forceKernel.SetValueArgument(11, _levelIdx.Length);
+            forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
+            forceKernel.SetValueArgument(argi++, _levelIdx.Length);
 
             queue.Execute(forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             queue.Finish();
 
+            argi = 0;
+            collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            collisionKernel.SetValueArgument(argi++, _bodies.Length);
 
-            collisionKernel.SetMemoryArgument(0, _gpuOutBodies);
-            collisionKernel.SetValueArgument(1, _bodies.Length);
+            collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
 
-            collisionKernel.SetMemoryArgument(2, _gpuInBodies);
-            collisionKernel.SetValueArgument(3, _bodies.Length);
+            collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
 
-            collisionKernel.SetMemoryArgument(4, _gpuMesh);
-            collisionKernel.SetValueArgument(5, _mesh.Length);
+            collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
 
-            collisionKernel.SetMemoryArgument(6, _gpuMeshNeighbors);
-            collisionKernel.SetValueArgument(7, _meshNeighbors.Length);
-
-            collisionKernel.SetValueArgument(8, timestep);
-            collisionKernel.SetValueArgument(9, viscosity);
+            collisionKernel.SetValueArgument(argi++, timestep);
+            collisionKernel.SetValueArgument(argi++, viscosity);
 
             queue.Execute(collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             queue.Finish();
