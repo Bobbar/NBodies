@@ -417,17 +417,20 @@ namespace NBodies.Physics
             _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
         }
 
+
         private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int level)
         {
             cellSizeExp += level;
 
             meshDict[level] = new Dictionary<int, int>();
-
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             // Current cell index.
             int cellIdx = mesh.Count;
             levelIdx[level] = cellIdx;
+
+            int prevUID = 0;
+            MeshCell newCell = new MeshCell();
 
             for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
             {
@@ -441,12 +444,23 @@ namespace NBodies.Physics
                 // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
                 var cellUID = MortonNumber(idxX, idxY);
 
-                // Add cell to new parent cell.
-                int parentCellId;
-                if (!meshDict[level].TryGetValue(cellUID, out parentCellId))
+                // If the UID doesn't match the previous, we have a new cell.
+                if (prevUID != cellUID)
                 {
-                    var newCell = new MeshCell();
+                    prevUID = cellUID;
 
+                    // Set the previous completed parent cell center of mass.
+                    if (newCell.ID != 0)
+                    {
+                        newCell.CmX = newCell.CmX / (float)newCell.Mass;
+                        newCell.CmY = newCell.CmY / (float)newCell.Mass;
+                        mesh[newCell.ID] = newCell;
+                    }
+
+                    // Create a new parent cell.
+                    newCell = new MeshCell();
+
+                    // Add initial values.
                     // Convert the grid index to a real location.
                     newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
                     newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
@@ -461,7 +475,9 @@ namespace NBodies.Physics
                     newCell.Level = level;
                     newCell.ChildStartIdx = _meshChildPosition;
                     newCell.ChildCount = 1;
-                    _meshChildPosition += 1;
+
+                    // Increment to global child index position.
+                    _meshChildPosition++;
 
                     meshDict[level].Add(cellUID, newCell.ID);
                     mesh.Add(newCell);
@@ -471,31 +487,21 @@ namespace NBodies.Physics
 
                     cellIdx++;
                 }
-                else
+                else // If UID matches previous, add a child to the parent cell.
                 {
-                    var parentCell = mesh[parentCellId];
-                    parentCell.Mass += childCell.Mass;
-                    parentCell.CmX += (float)childCell.Mass * childCell.CmX;
-                    parentCell.CmY += (float)childCell.Mass * childCell.CmY;
-                    parentCell.BodyCount += childCell.BodyCount;
-                    parentCell.ChildCount++;
+                    newCell.Mass += childCell.Mass;
+                    newCell.CmX += (float)childCell.Mass * childCell.CmX;
+                    newCell.CmY += (float)childCell.Mass * childCell.CmY;
+                    newCell.BodyCount += childCell.BodyCount;
+                    newCell.ChildCount++;
 
                     _meshChildPosition += 1;
 
-                    mesh[parentCellId] = parentCell;
+                    mesh[newCell.ID] = newCell;
 
-                    childCell.ParentID = parentCellId;
+                    childCell.ParentID = newCell.ID;
                     mesh[m] = childCell;
                 }
-            }
-
-            // Calculate the final center of mass for each cell.
-            for (int m = levelIdx[level]; m < mesh.Count; m++)
-            {
-                var cell = mesh[m];
-                cell.CmX = cell.CmX / (float)cell.Mass;
-                cell.CmY = cell.CmY / (float)cell.Mass;
-                mesh[m] = cell;
             }
         }
 
