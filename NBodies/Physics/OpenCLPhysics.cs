@@ -404,10 +404,7 @@ namespace NBodies.Physics
             _meshChildPosition = 0;
 
             // Build the upper levels of the mesh.
-            for (int level = 1; level <= _levels; level++)
-            {
-                BuildNextLevel(ref meshList, ref meshDict, ref levelIdx, cellSizeExp, level);
-            }
+            BuildTopLevels(ref meshList, ref meshDict, ref levelIdx, cellSizeExp, _levels);
 
             // Get the completed mesh and level index.
             _mesh = meshList.ToArray();
@@ -417,90 +414,92 @@ namespace NBodies.Physics
             _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
         }
 
-
-        private void BuildNextLevel(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int level)
+        private void BuildTopLevels(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int levels)
         {
-            cellSizeExp += level;
-
-            meshDict[level] = new Dictionary<int, int>();
-            int cellSize = (int)Math.Pow(2, cellSizeExp);
-
-            // Current cell index.
-            int cellIdx = mesh.Count;
-            levelIdx[level] = cellIdx;
-
-            int prevUID = 0;
-            MeshCell newCell = new MeshCell();
-
-            for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
+            for (int level = 1; level <= levels; level++)
             {
-                var childCell = mesh[m];
+                int cellSizeExpLevel = cellSizeExp + level;
 
-                // Calculate the parent cell position from the child body position.
-                // Right bit-shift to get the x/y grid indexes.
-                int idxX = (int)childCell.LocX >> cellSizeExp;
-                int idxY = (int)childCell.LocY >> cellSizeExp;
+                meshDict[level] = new Dictionary<int, int>();
+                int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
 
-                // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
-                var cellUID = MortonNumber(idxX, idxY);
+                // Current cell index.
+                int cellIdx = mesh.Count;
+                levelIdx[level] = cellIdx;
 
-                // If the UID doesn't match the previous, we have a new cell.
-                if (prevUID != cellUID)
+                int prevUID = 0;
+                MeshCell newCell = new MeshCell();
+
+                for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
                 {
-                    prevUID = cellUID;
+                    var childCell = mesh[m];
 
-                    // Set the previous completed parent cell center of mass.
-                    if (newCell.ID != 0)
+                    // Calculate the parent cell position from the child body position.
+                    // Right bit-shift to get the x/y grid indexes.
+                    int idxX = (int)childCell.LocX >> cellSizeExpLevel;
+                    int idxY = (int)childCell.LocY >> cellSizeExpLevel;
+
+                    // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
+                    var cellUID = MortonNumber(idxX, idxY);
+
+                    // If the UID doesn't match the previous, we have a new cell.
+                    if (prevUID != cellUID)
                     {
-                        newCell.CmX = newCell.CmX / (float)newCell.Mass;
-                        newCell.CmY = newCell.CmY / (float)newCell.Mass;
-                        mesh[newCell.ID] = newCell;
+                        prevUID = cellUID;
+
+                        // Set the previous completed parent cell center of mass.
+                        if (newCell.ID != 0)
+                        {
+                            newCell.CmX = newCell.CmX / (float)newCell.Mass;
+                            newCell.CmY = newCell.CmY / (float)newCell.Mass;
+                            mesh[newCell.ID] = newCell;
+                        }
+
+                        // Create a new parent cell.
+                        newCell = new MeshCell();
+
+                        // Add initial values.
+                        // Convert the grid index to a real location.
+                        newCell.LocX = (idxX << cellSizeExpLevel) + (cellSize * 0.5f);
+                        newCell.LocY = (idxY << cellSizeExpLevel) + (cellSize * 0.5f);
+                        newCell.IdxX = idxX;
+                        newCell.IdxY = idxY;
+                        newCell.Size = cellSize;
+                        newCell.Mass += childCell.Mass;
+                        newCell.CmX += (float)childCell.Mass * childCell.CmX;
+                        newCell.CmY += (float)childCell.Mass * childCell.CmY;
+                        newCell.BodyCount = childCell.BodyCount;
+                        newCell.ID = cellIdx;
+                        newCell.Level = level;
+                        newCell.ChildStartIdx = _meshChildPosition;
+                        newCell.ChildCount = 1;
+
+                        // Increment to global child index position.
+                        _meshChildPosition++;
+
+                        meshDict[level].Add(cellUID, newCell.ID);
+                        mesh.Add(newCell);
+
+                        childCell.ParentID = cellIdx;
+                        mesh[m] = childCell;
+
+                        cellIdx++;
                     }
+                    else // If UID matches previous, add a child to the parent cell.
+                    {
+                        newCell.Mass += childCell.Mass;
+                        newCell.CmX += (float)childCell.Mass * childCell.CmX;
+                        newCell.CmY += (float)childCell.Mass * childCell.CmY;
+                        newCell.BodyCount += childCell.BodyCount;
+                        newCell.ChildCount++;
 
-                    // Create a new parent cell.
-                    newCell = new MeshCell();
+                        _meshChildPosition += 1;
 
-                    // Add initial values.
-                    // Convert the grid index to a real location.
-                    newCell.LocX = (idxX << cellSizeExp) + (cellSize * 0.5f);
-                    newCell.LocY = (idxY << cellSizeExp) + (cellSize * 0.5f);
-                    newCell.IdxX = idxX;
-                    newCell.IdxY = idxY;
-                    newCell.Size = cellSize;
-                    newCell.Mass += childCell.Mass;
-                    newCell.CmX += (float)childCell.Mass * childCell.CmX;
-                    newCell.CmY += (float)childCell.Mass * childCell.CmY;
-                    newCell.BodyCount = childCell.BodyCount;
-                    newCell.ID = cellIdx;
-                    newCell.Level = level;
-                    newCell.ChildStartIdx = _meshChildPosition;
-                    newCell.ChildCount = 1;
+                        mesh[newCell.ID] = newCell;
 
-                    // Increment to global child index position.
-                    _meshChildPosition++;
-
-                    meshDict[level].Add(cellUID, newCell.ID);
-                    mesh.Add(newCell);
-
-                    childCell.ParentID = cellIdx;
-                    mesh[m] = childCell;
-
-                    cellIdx++;
-                }
-                else // If UID matches previous, add a child to the parent cell.
-                {
-                    newCell.Mass += childCell.Mass;
-                    newCell.CmX += (float)childCell.Mass * childCell.CmX;
-                    newCell.CmY += (float)childCell.Mass * childCell.CmY;
-                    newCell.BodyCount += childCell.BodyCount;
-                    newCell.ChildCount++;
-
-                    _meshChildPosition += 1;
-
-                    mesh[newCell.ID] = newCell;
-
-                    childCell.ParentID = newCell.ID;
-                    mesh[m] = childCell;
+                        childCell.ParentID = newCell.ID;
+                        mesh[m] = childCell;
+                    }
                 }
             }
         }
