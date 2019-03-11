@@ -501,6 +501,12 @@ namespace NBodies.Physics
                         mesh[m] = childCell;
                     }
                 }
+
+                // Calc CM for last cell.
+                var lastCell = mesh.Last();
+                lastCell.CmX = lastCell.CmX / (float)lastCell.Mass;
+                lastCell.CmY = lastCell.CmY / (float)lastCell.Mass;
+                mesh[lastCell.ID] = lastCell;
             }
         }
 
