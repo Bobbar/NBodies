@@ -137,7 +137,6 @@
     <Compile Include="Logger.cs" />
     <Compile Include="Helpers\Numbers.cs" />
     <Compile Include="Physics\Body.cs" />
-    <Compile Include="Physics\CUDAFloat.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
     <Compile Include="Physics\PhysicsProvider.cs" />
     <Compile Include="UI\InputHandler.cs" />
