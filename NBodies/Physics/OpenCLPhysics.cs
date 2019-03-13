@@ -36,7 +36,6 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuOutBodies;
         private int _prevBodyLen = 0;
 
-        private int _meshChildPosition = 0;
         private bool _warmUp = true;
 
         private ComputeContext context;
@@ -142,26 +141,12 @@ namespace NBodies.Physics
                 _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _meshNeighbors.Length, IntPtr.Zero);
                 _prevNeighborLen = _meshNeighbors.Length;
             }
-
-            if (_prevBodyLen != _bodies.Length)
-            {
-                if (!_warmUp)
-                {
-                    _gpuInBodies.Dispose();
-                    _gpuOutBodies.Dispose();
-                }
-
-                _gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
-                _gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
-                _prevBodyLen = _bodies.Length;
-            }
-
+           
             _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
             queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
             queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
-            queue.WriteToBuffer(_bodies, _gpuInBodies, true, null);
             queue.Finish();
 
             int argi = 0;
@@ -211,6 +196,24 @@ namespace NBodies.Physics
             }
 
             _warmUp = false;
+        }
+
+        private void WriteBodiesToGPU()
+        {
+            if (_prevBodyLen != _bodies.Length)
+            {
+                if (!_warmUp)
+                {
+                    _gpuInBodies.Dispose();
+                    _gpuOutBodies.Dispose();
+                }
+
+                _gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
+                _gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, _bodies.Length, IntPtr.Zero);
+                _prevBodyLen = _bodies.Length;
+            }
+
+            queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
         }
 
         /// <summary>
@@ -329,7 +332,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Builds the particle mesh and mesh-neighbor index for the current field.
+        /// Builds the particle mesh and mesh-neighbor index for the current field.  Also begins writing the body array to GPU...
         /// </summary>
         /// <param name="bodies">Array of bodies.</param>
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
@@ -389,6 +392,10 @@ namespace NBodies.Physics
                 }
             });
 
+            // At this point we are done modifying the body array,
+            // so go ahead and start writing it to the GPU with a non-blocking call.
+            WriteBodiesToGPU();
+           
             // Calculate the final center of mass for each cell and populate the mesh dictionary.
             for (int m = 0; m < meshArr.Length; m++)
             {
@@ -402,14 +409,14 @@ namespace NBodies.Physics
 
             meshList = new List<MeshCell>(meshArr);
 
+            // Set the mesh list capacity to slightly larger than the previous size.
+            // This will reduce large reallocations from the list resizing.
             if (_mesh.Length > 0 & (_mesh.Length * 1.5) > meshList.Capacity)
                 meshList.Capacity = (int)(_mesh.Length * 1.5);
 
             // Index to hold the starting indexes for each level.
             int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
-
-            _meshChildPosition = 0;
 
             // Build the upper levels of the mesh.
             BuildTopLevels(ref meshList, ref meshDict, ref levelIdx, cellSizeExp, _levels);
@@ -424,6 +431,8 @@ namespace NBodies.Physics
 
         private void BuildTopLevels(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int levels)
         {
+            int meshChildIndexPosition = 0;
+
             for (int level = 1; level <= levels; level++)
             {
                 int cellSizeExpLevel = cellSizeExp + level;
@@ -435,7 +444,7 @@ namespace NBodies.Physics
                 int cellIdx = mesh.Count;
                 levelIdx[level] = cellIdx;
 
-                int prevUID = 0;
+                int prevUID = int.MinValue;
                 MeshCell newCell = new MeshCell();
 
                 for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
@@ -479,11 +488,11 @@ namespace NBodies.Physics
                         newCell.BodyCount = childCell.BodyCount;
                         newCell.ID = cellIdx;
                         newCell.Level = level;
-                        newCell.ChildStartIdx = _meshChildPosition;
+                        newCell.ChildStartIdx = meshChildIndexPosition;
                         newCell.ChildCount = 1;
 
-                        // Increment to global child index position.
-                        _meshChildPosition++;
+                        // Increment the child index position.
+                        meshChildIndexPosition++;
 
                         meshDict[level].Add(cellUID, newCell.ID);
 
@@ -502,7 +511,7 @@ namespace NBodies.Physics
                         newCell.BodyCount += childCell.BodyCount;
                         newCell.ChildCount++;
 
-                        _meshChildPosition += 1;
+                        meshChildIndexPosition++;
 
                         mesh[newCell.ID] = newCell;
 
@@ -520,10 +529,10 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Builds a flattened index of mesh neighbors.
+        /// Builds a flattened/compressed index of mesh neighbors.
         /// </summary>
         /// <param name="mesh">Particle mesh array.</param>
-        /// <param name="meshDict">Mesh cell and cell UID/Hash collection.</param>
+        /// <param name="meshDict">Mesh cell ID and cell UID/Hash collection.</param>
         /// <param name="cellSize">Size of mesh cells.</param>
         private int[] BuildMeshNeighborIndex(MeshCell[] mesh, Dictionary<int, int>[] meshDict)
         {
@@ -572,7 +581,7 @@ namespace NBodies.Physics
             });
 
 
-            // Filter unpopulated childs to build the final index.
+            // Filter unpopulated childs to build the final mesh.
             for (int m = 0; m < mesh.Length; m++)
             {
                 int count = 0;
