@@ -55,9 +55,9 @@ namespace NBodies.Physics
         private static int _currentUID = -1;
         private static double _totalMass = 0;
 
-        private static List<Body[]> _states = new List<Body[]>();
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
+        private static List<Body[]> _states = new List<Body[]>(_maxStates + 1);
         private const float _timeSpan = 0.04f;
         private static float _elap = _timeSpan;
 
@@ -130,7 +130,10 @@ namespace NBodies.Physics
             _elap = _timeSpan;
         }
 
-        public static void CullInvisible()
+        /// <summary>
+        /// Removes invisible, expired, and some distant bodies from the body array.
+        /// </summary>
+        public static void CullBodies()
         {
             if (Bodies.Length < 1) return;
 

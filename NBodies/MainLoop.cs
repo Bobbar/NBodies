@@ -291,7 +291,7 @@ namespace NBodies
                                 ProcessRoche(ref BodyManager.Bodies);
 
                             // Remove invisible bodies.
-                            BodyManager.CullInvisible();
+                            BodyManager.CullBodies();
 
                             // Increment physics frame count.
                             _frameCount++;
