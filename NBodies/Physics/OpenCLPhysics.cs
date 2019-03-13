@@ -43,6 +43,7 @@ namespace NBodies.Physics
         private ComputeKernel forceKernel;
         private ComputeKernel collisionKernel;
 
+        private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         public MeshCell[] CurrentMesh
         {
@@ -141,7 +142,7 @@ namespace NBodies.Physics
                 _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _meshNeighbors.Length, IntPtr.Zero);
                 _prevNeighborLen = _meshNeighbors.Length;
             }
-           
+
             _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
@@ -279,10 +280,7 @@ namespace NBodies.Physics
             int[] mortKeys = new int[_bodies.Length];
 
             // Compute the spatial info in parallel.
-            var options = new ParallelOptions();
-            options.MaxDegreeOfParallelism = Environment.ProcessorCount;
-
-            Parallel.ForEach(Partitioner.Create(0, _bodies.Length), (range) =>
+            Parallel.ForEach(Partitioner.Create(0, _bodies.Length), _parallelOptions, (range) =>
             {
                 for (int b = range.Item1; b < range.Item2; b++)
                 {
@@ -355,10 +353,7 @@ namespace NBodies.Physics
             meshDict[0] = new Dictionary<int, int>(cellCount);
 
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
-            var options = new ParallelOptions();
-            options.MaxDegreeOfParallelism = Environment.ProcessorCount;
-
-            Parallel.ForEach(Partitioner.Create(0, cellCount), (range) =>
+            Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
             {
                 for (int m = range.Item1; m < range.Item2; m++)
                 {
@@ -395,7 +390,7 @@ namespace NBodies.Physics
             // At this point we are done modifying the body array,
             // so go ahead and start writing it to the GPU with a non-blocking call.
             WriteBodiesToGPU();
-           
+
             // Calculate the final center of mass for each cell and populate the mesh dictionary.
             for (int m = 0; m < meshArr.Length; m++)
             {
@@ -541,10 +536,7 @@ namespace NBodies.Physics
             var neighborIdxList = new List<int>(mesh.Length * 9);
             var neighborIdx = new int[mesh.Length * 9];
 
-            var options = new ParallelOptions();
-            options.MaxDegreeOfParallelism = Environment.ProcessorCount;
-
-            Parallel.ForEach(Partitioner.Create(0, mesh.Length), (range) =>
+            Parallel.ForEach(Partitioner.Create(0, mesh.Length), _parallelOptions, (range) =>
             {
                 for (int m = range.Item1; m < range.Item2; m++)
                 {
