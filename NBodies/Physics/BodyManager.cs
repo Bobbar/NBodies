@@ -134,15 +134,47 @@ namespace NBodies.Physics
         {
             if (Bodies.Length < 1) return;
 
-            _bodyStore = Bodies.ToList();
+            Body[] culled = new Body[0];
+            bool realloc = false;
+            int position = 0;
+            int newSize = 0;
 
-            //_bodyStore.RemoveAll((b) => b.Visible == 0);
-            //_bodyStore.RemoveAll((b) => b.Age > b.Lifetime);
-            //_bodyStore.RemoveAll((b) => b.ForceTot < 0.05f);
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                var body = Bodies[i];
 
-            _bodyStore.RemoveAll((b) => b.Visible == 0 || b.Age > b.Lifetime || b.ForceTot < 0.05f);
+                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f)
+                {
+                    if (!realloc)
+                    {
+                        culled = new Body[Bodies.Length];
 
-            Bodies = _bodyStore.ToArray();
+                        for (int x = 0; x < position; x++)
+                        {
+                            culled[x] = Bodies[x];
+                        }
+
+                        realloc = true;
+                        newSize = position;
+                    }
+                }
+                else
+                {
+                    if (realloc)
+                    {
+                        culled[position] = body;
+                        newSize++;
+                    }
+
+                    position++;
+                }
+            }
+
+            if (realloc)
+            {
+                Array.Resize(ref culled, newSize);
+                Bodies = culled;
+            }
 
             RebuildUIDIndex();
         }
@@ -215,7 +247,6 @@ namespace NBodies.Physics
             }
 
             RebuildUIDIndex();
-
         }
 
         public static PointF FollowBodyLoc()

@@ -275,13 +275,11 @@ namespace NBodies.Physics
             // Using a key array when sorting is much faster than sorting an array of objects by a field.
             int[] mortKeys = new int[_bodies.Length];
 
-            var rangePart = Partitioner.Create(0, _bodies.Length);
-
             // Compute the spatial info in parallel.
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Environment.ProcessorCount;
 
-            Parallel.ForEach(rangePart, (range) =>
+            Parallel.ForEach(Partitioner.Create(0, _bodies.Length), (range) =>
             {
                 for (int b = range.Item1; b < range.Item2; b++)
                 {
@@ -346,19 +344,18 @@ namespace NBodies.Physics
             SpatialInfo[] spatialDat = CalcBodySpatials(cellSizeExp, out cellCount, out cellStartIdx);
 
             // List to hold all new mesh cells.
-            var meshList = new List<MeshCell>(cellCount);
+            var meshList = new List<MeshCell>();
             var meshArr = new MeshCell[cellCount];
 
             // Dictionary to hold mesh cell ids for fast lookups. One for each level.
             var meshDict = new Dictionary<int, int>[_levels + 1];
-            meshDict[0] = new Dictionary<int, int>();
+            meshDict[0] = new Dictionary<int, int>(cellCount);
 
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
-            var rangePart = Partitioner.Create(0, cellCount);
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Environment.ProcessorCount;
 
-            Parallel.ForEach(rangePart, (range) =>
+            Parallel.ForEach(Partitioner.Create(0, cellCount), (range) =>
             {
                 for (int m = range.Item1; m < range.Item2; m++)
                 {
@@ -392,18 +389,21 @@ namespace NBodies.Physics
                 }
             });
 
-            meshList = meshArr.ToList();
-
             // Calculate the final center of mass for each cell and populate the mesh dictionary.
-            for (int m = 0; m < meshList.Count; m++)
+            for (int m = 0; m < meshArr.Length; m++)
             {
-                var cell = meshList[m];
+                var cell = meshArr[m];
                 cell.CmX = cell.CmX / (float)cell.Mass;
                 cell.CmY = cell.CmY / (float)cell.Mass;
-                meshList[m] = cell;
+                meshArr[m] = cell;
 
                 meshDict[0].Add(cell.Mort, m);
             }
+
+            meshList = new List<MeshCell>(meshArr);
+
+            if (_mesh.Length > 0 & (_mesh.Length * 1.5) > meshList.Capacity)
+                meshList.Capacity = (int)(_mesh.Length * 1.5);
 
             // Index to hold the starting indexes for each level.
             int[] levelIdx = new int[_levels + 1];
@@ -486,6 +486,7 @@ namespace NBodies.Physics
                         _meshChildPosition++;
 
                         meshDict[level].Add(cellUID, newCell.ID);
+
                         mesh.Add(newCell);
 
                         childCell.ParentID = cellIdx;
@@ -531,12 +532,10 @@ namespace NBodies.Physics
             var neighborIdxList = new List<int>(mesh.Length * 9);
             var neighborIdx = new int[mesh.Length * 9];
 
-            var rangePart = Partitioner.Create(0, mesh.Length);
-
             var options = new ParallelOptions();
             options.MaxDegreeOfParallelism = Environment.ProcessorCount;
 
-            Parallel.ForEach(rangePart, (range) =>
+            Parallel.ForEach(Partitioner.Create(0, mesh.Length), (range) =>
             {
                 for (int m = range.Item1; m < range.Item2; m++)
                 {

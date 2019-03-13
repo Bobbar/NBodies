@@ -106,6 +106,9 @@ namespace NBodies.Rendering
 
         public override void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY)
         {
+            if (mesh.Length < 1)
+                return;
+
             float pSize = 0.6f;
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
@@ -113,8 +116,10 @@ namespace NBodies.Rendering
             Font tinyFont = new Font("Tahoma", 2, FontStyle.Regular);
             var finalOffset = new PointF(offsetX, offsetY);
 
-            foreach (var m in mesh)
+            for (int i = 0; i < mesh.Length; i++)
             {
+                var m = mesh[i];
+
                 if (!_cullTangle.Contains(m.LocX, m.LocY))
                     continue;
 
@@ -125,6 +130,13 @@ namespace NBodies.Rendering
 
                 _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
                 _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
+
+
+                //if (m.ID < PhysicsProvider.PhysicsCalc.LevelIndex[1])
+                //{
+                //    if ((i + 1) < mesh.Length)
+                //        _buffer.Graphics.DrawLine(Pens.LimeGreen, m.Location().Add(finalOffset), mesh[i + 1].Location().Add(finalOffset));
+                //}
 
                 //  _buffer.Graphics.DrawString($@"{m.ID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 

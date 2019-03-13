@@ -4,12 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
+using NBodies.Physics;
 
 
 namespace NBodies.Extensions
 {
     public static class PointExtensions
     {
+        public static PointF Location(this MeshCell cell)
+        {
+            return new PointF(cell.LocX, cell.LocY);
+        }
+
         public static SharpDX.Vector2 ToVector(this PointF point)
         {
             return new SharpDX.Vector2(point.X, point.Y);
