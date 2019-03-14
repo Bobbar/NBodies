@@ -8,7 +8,7 @@ namespace NBodies.IO
 {
     public class ProtoBufRecorder : IRecording
     {
-        private Stream _stream;
+        private FileStream _fileStream;
         private bool _playbackComplete = false;
         private int _frameCount = 0;
         private int _currentFrameIdx = 0;
@@ -78,9 +78,9 @@ namespace NBodies.IO
         {
             get
             {
-                if (_stream != null)
+                if (_fileStream != null)
                 {
-                    return _stream.Length;
+                    return _fileStream.Length;
                 }
                 return 0;
             }
@@ -99,21 +99,8 @@ namespace NBodies.IO
 
             lock (_lockObject)
             {
-                _stream = dest.Open(FileMode.OpenOrCreate);
-                _stream.Position = 0;
-            }
-
-            _recordingActive = true;
-        }
-
-        public void CreateRecording(Stream stream)
-        {
-            StopAll();
-
-            lock (_lockObject)
-            {
-                _stream = stream;
-                _stream.Position = 0;
+                _fileStream = dest.Open(FileMode.OpenOrCreate);
+                _fileStream.Position = 0;
             }
 
             _recordingActive = true;
@@ -130,17 +117,8 @@ namespace NBodies.IO
         {
             lock (_lockObject)
             {
-                _stream.Position = _frameIndex[index];
-                return ProtoBuf.Serializer.DeserializeWithLengthPrefix<Body[]>(_stream, _prefixStyle, 0);
-            }
-        }
-
-        public Body[] GetFrameAtPosition(long pos)
-        {
-            lock (_lockObject)
-            {
-                _stream.Position = pos;
-                return ProtoBuf.Serializer.DeserializeWithLengthPrefix<Body[]>(_stream, _prefixStyle, 0);
+                _fileStream.Position = _frameIndex[index];
+                return ProtoBuf.Serializer.DeserializeWithLengthPrefix<Body[]>(_fileStream, _prefixStyle, 0);
             }
         }
 
@@ -148,7 +126,7 @@ namespace NBodies.IO
         {
             Body[] newFrame;
 
-            if (_stream == null || !_stream.CanRead)
+            if (_fileStream == null || !_fileStream.CanRead)
                 return null;
 
             // If paused, return the current frame.
@@ -160,7 +138,7 @@ namespace NBodies.IO
             {
                 lock (_lockObject)
                 {
-                    newFrame = ProtoBuf.Serializer.DeserializeWithLengthPrefix<Body[]>(_stream, _prefixStyle, 0);
+                    newFrame = ProtoBuf.Serializer.DeserializeWithLengthPrefix<Body[]>(_fileStream, _prefixStyle, 0);
                 }
 
                 _currentFrame = newFrame;
@@ -185,8 +163,8 @@ namespace NBodies.IO
             StopAll();
 
             var source = new FileInfo(file);
-            _stream = source.OpenRead();
-            _stream.Position = 0;
+            _fileStream = source.OpenRead();
+            _fileStream.Position = 0;
 
             _currentFrameIdx = 0;
 
@@ -201,7 +179,7 @@ namespace NBodies.IO
         {
             lock (_lockObject)
             {
-                ProtoBuf.Serializer.SerializeWithLengthPrefix(_stream, frame, _prefixStyle, 0);
+                ProtoBuf.Serializer.SerializeWithLengthPrefix(_fileStream, frame, _prefixStyle, 0);
             }
         }
 
@@ -212,7 +190,7 @@ namespace NBodies.IO
             _recordingActive = false;
             _currentFrame = new Body[0];
             _currentFrameIdx = 0;
-            _stream?.Close();
+            _fileStream?.Close();
         }
 
         private void GetFrameCount()
@@ -224,14 +202,14 @@ namespace NBodies.IO
             // Used for fast lookups when seeking.
             var frameIdxList = new List<long>();
 
-            while (ProtoBuf.Serializer.TryReadLengthPrefix(_stream, _prefixStyle, out len))
+            while (ProtoBuf.Serializer.TryReadLengthPrefix(_fileStream, _prefixStyle, out len))
             {
                 count++;
-                _stream.Seek(len, SeekOrigin.Current);
-                frameIdxList.Add(_stream.Position);
+                _fileStream.Seek(len, SeekOrigin.Current);
+                frameIdxList.Add(_fileStream.Position);
             }
 
-            _stream.Position = 0;
+            _fileStream.Position = 0;
 
             _frameIndex = frameIdxList.ToArray();
            
