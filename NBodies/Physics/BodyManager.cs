@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using MessagePack;
+using System.Threading.Tasks;
 
 namespace NBodies.Physics
 {
@@ -57,7 +59,9 @@ namespace NBodies.Physics
 
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
-        private static List<Body[]> _states = new List<Body[]>(_maxStates + 1);
+        private static List<byte[]> _states = new List<byte[]>(_maxStates + 1);
+        private static List<Body[]> _statesBuffer = new List<Body[]>(_maxStates + 1);
+        private static bool _serializerRunning = false;
         private const float _timeSpan = 0.04f;
         private static float _elap = _timeSpan;
 
@@ -68,17 +72,41 @@ namespace NBodies.Physics
             // Don't save every frame to cut back on memory usage while also increasing length of time stored.
             if (_elap >= _timeSpan)
             {
-                _states.Add(frame);
+                _statesBuffer.Add(frame);
 
-                if (_states.Count - 1 > _maxStates)
-                    _states.RemoveAt(0);
-
-                _stateIdx = _states.Count - 1;
+                if (!_serializerRunning)
+                    SerializeBufferAsync();
 
                 _elap = 0f;
             }
 
             _elap += MainLoop.TimeStep;
+        }
+
+        private async static void SerializeBufferAsync()
+        {
+            await Task.Run(() =>
+            {
+                _serializerRunning = true;
+
+                while (_statesBuffer.Count > 0)
+                {
+                    var state = _statesBuffer.First();
+
+                    _states.Add(LZ4MessagePackSerializer.Serialize(state));
+
+                    if (_states.Count - 1 > _maxStates)
+                        _states.RemoveAt(0);
+
+                    _stateIdx = _states.Count - 1;
+
+                    if (_statesBuffer.Count > 0)
+                        _statesBuffer.RemoveAt(0);
+                }
+
+                _serializerRunning = false;
+
+            });
         }
 
         public static void PushState()
@@ -93,7 +121,7 @@ namespace NBodies.Physics
                 if (_stateIdx - 1 >= 0)
                     _stateIdx--;
 
-                Bodies = _states[_stateIdx];
+                Bodies = LZ4MessagePackSerializer.Deserialize<Body[]>(_states[_stateIdx]);
 
                 RebuildUIDIndex();
             }
@@ -108,7 +136,7 @@ namespace NBodies.Physics
                 if (_stateIdx + 1 <= _states.Count - 1)
                     _stateIdx++;
 
-                Bodies = _states[_stateIdx];
+                Bodies = LZ4MessagePackSerializer.Deserialize<Body[]>(_states[_stateIdx]);
 
                 RebuildUIDIndex();
             }
