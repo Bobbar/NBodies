@@ -1,6 +1,5 @@
 ﻿using NBodies.Physics;
 using System;
-using System.IO;
 
 namespace NBodies.IO
 {
@@ -20,11 +19,7 @@ namespace NBodies.IO
 
         void CreateRecording(string file);
 
-        void CreateRecording(Stream stream);
-
         Body[] GetNextFrame();
-
-        Body[] GetFrameAtPosition(long pos);
 
         void OpenRecording(string file);
 
