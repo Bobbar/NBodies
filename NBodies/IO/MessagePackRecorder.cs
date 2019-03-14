@@ -8,7 +8,7 @@ namespace NBodies.IO
 {
     public class MessagePackRecorder : IRecording
     {
-        private FileStream _fileStream;
+        private Stream _stream;
         private bool _playbackComplete = false;
         private int _frameCount = 0;
         private int _currentFrameIdx = 0;
@@ -76,9 +76,9 @@ namespace NBodies.IO
         {
             get
             {
-                if (_fileStream != null)
+                if (_stream != null)
                 {
-                    return _fileStream.Length;
+                    return _stream.Length;
                 }
                 return 0;
             }
@@ -97,8 +97,21 @@ namespace NBodies.IO
 
             lock (_lockObject)
             {
-                _fileStream = dest.Open(FileMode.OpenOrCreate);
-                _fileStream.Position = 0;
+                _stream = dest.Open(FileMode.OpenOrCreate);
+                _stream.Position = 0;
+            }
+
+            _recordingActive = true;
+        }
+
+        public void CreateRecording(Stream stream)
+        {
+          //  StopAll();
+
+            lock (_lockObject)
+            {
+                _stream = stream;
+                _stream.Position = 0;
             }
 
             _recordingActive = true;
@@ -115,8 +128,17 @@ namespace NBodies.IO
         {
             lock (_lockObject)
             {
-                _fileStream.Position = _frameIndex[index];
-                return LZ4MessagePackSerializer.Deserialize<Body[]>(_fileStream, true);
+                _stream.Position = _frameIndex[index];
+                return LZ4MessagePackSerializer.Deserialize<Body[]>(_stream, true);
+            }
+        }
+
+        public Body[] GetFrameAtPosition(long pos)
+        {
+            lock (_lockObject)
+            {
+                _stream.Position = pos;
+                return LZ4MessagePackSerializer.Deserialize<Body[]>(_stream, true);
             }
         }
 
@@ -124,7 +146,7 @@ namespace NBodies.IO
         {
             Body[] newFrame = new Body[0];
 
-            if (_fileStream == null || !_fileStream.CanRead)
+            if (_stream == null || !_stream.CanRead)
                 return null;
 
             // If paused, return the current frame.
@@ -134,11 +156,12 @@ namespace NBodies.IO
             }
             else // Otherwise, get the next frame in the stream.
             {
-                if (_fileStream.Position < _fileStream.Length)
+                if (_stream.Position < _stream.Length)
                 {
                     lock (_lockObject)
                     {
-                        newFrame = LZ4MessagePackSerializer.Deserialize<Body[]>(_fileStream, true);
+                       
+                        newFrame = LZ4MessagePackSerializer.Deserialize<Body[]>(_stream, true);
                     }
                 }
 
@@ -164,8 +187,8 @@ namespace NBodies.IO
             StopAll();
 
             var source = new FileInfo(file);
-            _fileStream = source.OpenRead();
-            _fileStream.Position = 0;
+            _stream = source.OpenRead();
+            _stream.Position = 0;
 
             _currentFrameIdx = 0;
 
@@ -180,7 +203,7 @@ namespace NBodies.IO
         {
             lock (_lockObject)
             {
-                LZ4MessagePackSerializer.Serialize(_fileStream, frame);
+                LZ4MessagePackSerializer.Serialize(_stream, frame);
             }
         }
 
@@ -191,7 +214,7 @@ namespace NBodies.IO
             _recordingActive = false;
             _currentFrame = new Body[0];
             _currentFrameIdx = 0;
-            _fileStream?.Close();
+            _stream?.Close();
         }
 
         private void GetFrameCount()
@@ -201,15 +224,15 @@ namespace NBodies.IO
             // List which contains the positions of each frame.
             // Used for fast lookups when seeking.
             var frameIdxList = new List<long>();
-            
-            while (_fileStream.Position < _fileStream.Length)
+
+            while (_stream.Position < _stream.Length)
             {
-                frameIdxList.Add(_fileStream.Position);
-                MessagePackBinary.ReadNextBlock(_fileStream);
+                frameIdxList.Add(_stream.Position);
+                MessagePackBinary.ReadNextBlock(_stream);
                 count++;
             }
 
-            _fileStream.Position = 0;
+            _stream.Position = 0;
 
             _frameIndex = frameIdxList.ToArray();
 

@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.IO;
+using NBodies.IO;
 
 namespace NBodies.Physics
 {
@@ -46,7 +48,7 @@ namespace NBodies.Physics
         {
             get
             {
-                return _states.Count - 1;
+                return _frames.Count - 1;
             }
         }
 
@@ -57,9 +59,12 @@ namespace NBodies.Physics
 
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
-        private static List<Body[]> _states = new List<Body[]>(_maxStates + 1);
+        private static List<long> _frames = new List<long>();
+        private static MemoryStream _stream = new MemoryStream();
+        private static IRecording _recorder = new MessagePackRecorder();
         private const float _timeSpan = 0.04f;
         private static float _elap = _timeSpan;
+        private static bool _started = false;
 
         public static void PushState(Body[] frame)
         {
@@ -68,12 +73,19 @@ namespace NBodies.Physics
             // Don't save every frame to cut back on memory usage while also increasing length of time stored.
             if (_elap >= _timeSpan)
             {
-                _states.Add(frame);
+                if (!_started)
+                {
+                    _recorder.CreateRecording(_stream);
+                    _started = true;
+                }
 
-                if (_states.Count - 1 > _maxStates)
-                    _states.RemoveAt(0);
+                _frames.Add(_stream.Position);
+                _recorder.RecordFrame(frame);
 
-                _stateIdx = _states.Count - 1;
+                if (_frames.Count - 1 > _maxStates)
+                    RemoveFrames(0, 1);
+
+                _stateIdx = _frames.Count - 1;
 
                 _elap = 0f;
             }
@@ -88,12 +100,12 @@ namespace NBodies.Physics
 
         public static void RewindState()
         {
-            if (_states.Count > 0)
+            if (_frames.Count > 0)
             {
                 if (_stateIdx - 1 >= 0)
                     _stateIdx--;
 
-                Bodies = _states[_stateIdx];
+                Bodies = _recorder.GetFrameAtPosition(_frames[_stateIdx]);
 
                 RebuildUIDIndex();
             }
@@ -103,12 +115,12 @@ namespace NBodies.Physics
 
         public static void FastForwardState()
         {
-            if (_states.Count > 0)
+            if (_frames.Count > 0)
             {
-                if (_stateIdx + 1 <= _states.Count - 1)
+                if (_stateIdx + 1 <= _frames.Count - 1)
                     _stateIdx++;
 
-                Bodies = _states[_stateIdx];
+                Bodies = _recorder.GetFrameAtPosition(_frames[_stateIdx]);
 
                 RebuildUIDIndex();
             }
@@ -116,18 +128,47 @@ namespace NBodies.Physics
 
         public static void ResumeStates()
         {
-            if (_stateIdx < _states.Count - 1 && _stateIdx != -1)
+            if (_stateIdx < _frames.Count - 1 && _stateIdx != -1)
             {
-                _states.RemoveRange(_stateIdx, _states.Count - _stateIdx);
+                RemoveFrames(_stateIdx, _frames.Count - _stateIdx);
                 _stateIdx = -1;
             }
         }
 
         public static void ClearStates()
         {
-            _states.Clear();
+            _frames.Clear();
+            _stream?.Dispose();
+            _stream = new MemoryStream();
             _stateIdx = -1;
             _elap = _timeSpan;
+            _started = false;
+        }
+
+        private static void RemoveFrames(int start, int len)
+        {
+            if (start + len > _frames.Count)
+                return;
+
+            if (len == _frames.Count)
+            {
+                _stream.Close();
+                _stream.Dispose();
+                _stream = new MemoryStream();
+                _recorder.CreateRecording(_stream);
+            }
+            else
+            {
+                long startByte = _frames[start];
+                long endByte = _frames[(start + len) - 1];
+                long length = endByte - startByte;
+
+                byte[] buf = _stream.GetBuffer();
+                Buffer.BlockCopy(buf, 0, buf, 0, (int)_stream.Length - (int)length);
+                _stream.SetLength(_stream.Length - length);
+            }
+
+            _frames.RemoveRange(start, len);
         }
 
         /// <summary>

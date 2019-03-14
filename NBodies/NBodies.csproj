@@ -110,6 +110,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IO\MemoryTributary.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\MeshCell.cs" />
     <Compile Include="Physics\SpatialInfo.cs" />
