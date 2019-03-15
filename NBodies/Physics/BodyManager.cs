@@ -293,7 +293,6 @@ namespace NBodies.Physics
             {
                 if (FollowSelected)
                 {
-                    Console.WriteLine(FollowBodyUID);
                     if (UIDIndex.ContainsKey(FollowBodyUID))
                     {
                         return Bodies[UIDIndex[FollowBodyUID]];
@@ -305,7 +304,7 @@ namespace NBodies.Physics
                 // Sometimes a race condition occurs, and the key won't be found even though we passed the condition.
                 // Fail silently and try again on the next frame.
             }
-            Console.WriteLine("Not found.");
+
             return new Body();
         }
 
