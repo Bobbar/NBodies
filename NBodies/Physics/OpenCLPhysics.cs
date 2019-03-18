@@ -77,8 +77,10 @@ namespace NBodies.Physics
 
         public void Init()
         {
-            var platform = ComputePlatform.Platforms[1];
-            var device = platform.Devices[0];
+            var devices = GetDevices();
+
+            var device = devices[_gpuIndex];
+            var platform = device.Platform;
 
             context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.None);
@@ -108,6 +110,21 @@ namespace NBodies.Physics
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
+
+        private List<ComputeDevice> GetDevices()
+        {
+            var devices = new List<ComputeDevice>();
+
+            foreach (var platform in ComputePlatform.Platforms)
+            {
+                foreach(var device in platform.Devices)
+                {
+                    devices.Add(device); 
+                }
+            }
+
+            return devices;
+        }
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock)
         {
