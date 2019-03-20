@@ -16,7 +16,7 @@ namespace NBodies.Physics
 {
     public class OpenCLPhysics : IPhysicsCalc
     {
-        private int _gpuIndex = 2;
+        private int _gpuIndex = 4;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
 
@@ -400,6 +400,9 @@ namespace NBodies.Physics
                     newCell.ID = m;
                     newCell.BodyStartIdx = cellStartIdx[m];
 
+                    newCell.CmX = newCell.CmX / (float)newCell.Mass;
+                    newCell.CmY = newCell.CmY / (float)newCell.Mass;
+
                     meshArr[m] = newCell;
                 }
             });
@@ -412,9 +415,9 @@ namespace NBodies.Physics
             for (int m = 0; m < meshArr.Length; m++)
             {
                 var cell = meshArr[m];
-                cell.CmX = cell.CmX / (float)cell.Mass;
-                cell.CmY = cell.CmY / (float)cell.Mass;
-                meshArr[m] = cell;
+                //cell.CmX = cell.CmX / (float)cell.Mass;
+                //cell.CmY = cell.CmY / (float)cell.Mass;
+                //meshArr[m] = cell;
 
                 meshDict[0].Add(cell.Mort, m);
             }
