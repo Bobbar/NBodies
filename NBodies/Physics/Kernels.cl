@@ -48,11 +48,173 @@ struct MeshCell
 	int ChildCount;
 	int ParentID;
 	int Level;
+	int GridIdx;
+};
+
+struct GridInfo
+{
+	int OffsetX;
+	int OffsetY;
+	int MinX;
+	int MinY;
+	int MaxX;
+	int MaxY;
+	int Columns;
+	int Rows;
+	int Size;
+	int IndexOffset;
 };
 
 
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
+
+__kernel void ClearGrid(global int* gridIdx, global struct MeshCell* mesh, int meshLen)
+{
+	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (m >= meshLen)
+	{
+		return;
+	}
+
+	gridIdx[mesh[m].GridIdx] = 0;
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+__kernel void ClearNewGrid(global int* gridIdx, int len)
+{
+	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (m >= len)
+	{
+		return;
+	}
+
+	gridIdx[m] = 0;
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+__kernel void PopGrid(global int* gridIdx, global struct GridInfo* gridInfo, global struct MeshCell* mesh, int meshLen)
+{
+	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (m >= meshLen)
+	{
+		return;
+	}
+
+	struct MeshCell cell = mesh[m];
+
+	int level = cell.Level;
+
+	struct GridInfo grid = gridInfo[level];
+
+	int column = cell.IdxX + grid.OffsetX;
+	int row = cell.IdxY + grid.OffsetY;
+
+	int idx = (row * grid.Columns) + column + row;
+
+	idx += grid.IndexOffset;
+
+	cell.GridIdx = idx;
+
+	if (cell.ID == 0)
+	{
+		gridIdx[idx] = -1;
+	}
+	else
+	{
+		gridIdx[idx] = cell.ID;
+	}
+
+	mesh[m] = cell;
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+}
+
+__kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global struct GridInfo* gridInfo, global int* gridIdx, int gridIdxLen, global int* neighborIndex)
+{
+	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (m >= meshLen)
+	{
+		return;
+	}
+
+	int count = 0;
+	struct MeshCell cell = mesh[m];
+	int offset = m * 9; // ??
+	struct GridInfo gInfo = gridInfo[cell.Level];
+	int columns = gInfo.Columns;
+	int gridOff = gInfo.IndexOffset;
+
+	for (int x = -1; x <= 1; x++)
+	{
+		for (int y = -1; y <= 1; y++)
+		{
+			//int nIdx = cell.GridIdx + ((x * columns) + (y + x));
+			int offIdx = cell.GridIdx - gInfo.IndexOffset;
+			int localIdx = offIdx + ((x * columns) + (y + x));
+
+			//if (localIdx > 0 && localIdx < gInfo.Size)
+			if (localIdx > 0 && localIdx < gInfo.Size)
+			{
+				int globalIdx = localIdx + gInfo.IndexOffset;
+
+				if (gridIdx[globalIdx] > 0)
+				{
+					neighborIndex[(offset + count)] = gridIdx[globalIdx];
+					count++;
+				}
+				else if (gridIdx[globalIdx] == -1)
+				{
+					neighborIndex[(offset + count)] = 0;
+					count++;
+				}
+			}
+
+			//if (nIdx > 0 && nIdx < gridIdxLen)
+			//{
+
+			//	if (gridIdx[nIdx] > 0)
+			//	{
+			//		//	neighborIdx[(idx * 9) + count] = gridIdx[nIdx];
+			//		neighborIndex[(offset + count)] = gridIdx[nIdx];
+			//		// nList.Add(gridIDx[column][row]);
+			//		count++;
+			//	}
+			//	else if (gridIdx[nIdx] == -1)
+			//	{
+			//		//	neighborIdx[(idx * 9) + count] = 0;
+			//		neighborIndex[(offset + count)] = 0;
+
+			//		//  nList.Add(0);
+			//		count++;
+			//	}
+			//}
+		}
+	}
+
+
+
+	for (int i = (offset + count); i < offset + 9; i++)
+	{
+		neighborIndex[i] = -1;
+	}
+
+	cell.NeighborStartIdx = offset;
+	cell.NeighborCount = count;
+
+	mesh[m] = cell;
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+}
 
 
 __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
@@ -95,30 +257,34 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 		for (int nc = start; nc < len; nc++)
 		{
 			int nId = meshNeighbors[(nc)];
-			struct MeshCell nCell = inMesh[(nId)];
 
-			// Iterate neighbor child cells.
-			int childStartIdx = nCell.ChildStartIdx;
-			int childLen = childStartIdx + nCell.ChildCount;
-			for (int c = childStartIdx; c < childLen; c++)
+			if (nId != -1)
 			{
-				// Make sure the current cell index is not a neighbor or this body's cell.
-				if (c != outBody.MeshID)
+				struct MeshCell nCell = inMesh[(nId)];
+
+				// Iterate neighbor child cells.
+				int childStartIdx = nCell.ChildStartIdx;
+				int childLen = childStartIdx + nCell.ChildCount;
+				for (int c = childStartIdx; c < childLen; c++)
 				{
-					struct MeshCell cell = inMesh[(c)];
-
-					if (IsNear(levelCell, cell) == 0)
+					// Make sure the current cell index is not a neighbor or this body's cell.
+					if (c != outBody.MeshID)
 					{
-						// Calculate the force from the cells center of mass.
-						float distX = cell.CmX - outBody.PosX;
-						float distY = cell.CmY - outBody.PosY;
-						float dist = distX * distX + distY * distY;
-						float distSqrt = (float)half_sqrt((float)dist);
-						float force = (float)cell.Mass * outBody.Mass / dist;
+						struct MeshCell cell = inMesh[(c)];
 
-						outBody.ForceTot += force;
-						outBody.ForceX += force * distX / distSqrt;
-						outBody.ForceY += force * distY / distSqrt;
+						if (IsNear(levelCell, cell) == 0)
+						{
+							// Calculate the force from the cells center of mass.
+							float distX = cell.CmX - outBody.PosX;
+							float distY = cell.CmY - outBody.PosY;
+							float dist = distX * distX + distY * distY;
+							float distSqrt = (float)half_sqrt((float)dist);
+							float force = (float)cell.Mass * outBody.Mass / dist;
+
+							outBody.ForceTot += force;
+							outBody.ForceX += force * distX / distSqrt;
+							outBody.ForceY += force * distY / distSqrt;
+						}
 					}
 				}
 			}
@@ -154,51 +320,55 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 	{
 		// Get the mesh cell index, then copy it from memory.
 		int nId = meshNeighbors[(n)];
-		struct MeshCell cell = inMesh[(nId)];
-
-		// Iterate the bodies within the cell.
-		// Read from the flattened mesh-body index at the correct location.
-		int mbStart = cell.BodyStartIdx;
-		int mbLen = cell.BodyCount + mbStart;
-		for (int mb = mbStart; mb < mbLen; mb++)
+		
+		if (nId != -1)
 		{
-			// Save us from ourselves.
-			if (mb != a)
+			struct MeshCell cell = inMesh[(nId)];
+
+			// Iterate the bodies within the cell.
+			// Read from the flattened mesh-body index at the correct location.
+			int mbStart = cell.BodyStartIdx;
+			int mbLen = cell.BodyCount + mbStart;
+			for (int mb = mbStart; mb < mbLen; mb++)
 			{
-				struct Body inBody = inBodies[(mb)];
-
-				float distX = inBody.PosX - outBody.PosX;
-				float distY = inBody.PosY - outBody.PosY;
-				float dist = distX * distX + distY * distY;
-
-				// If this body is within collision/SPH distance.
-				if (dist <= ksize)
+				// Save us from ourselves.
+				if (mb != a)
 				{
-					// Clamp SPH softening distance.
-					if (dist < FLOAT_EPSILON)
+					struct Body inBody = inBodies[(mb)];
+
+					float distX = inBody.PosX - outBody.PosX;
+					float distY = inBody.PosY - outBody.PosY;
+					float dist = distX * distX + distY * distY;
+
+					// If this body is within collision/SPH distance.
+					if (dist <= ksize)
 					{
-						dist = FLOAT_EPSILON;
+						// Clamp SPH softening distance.
+						if (dist < FLOAT_EPSILON)
+						{
+							dist = FLOAT_EPSILON;
+						}
+
+						// Accumulate density.
+						float diff = ksizeSq - dist;
+						float fac = factor * diff * diff * diff;
+						outBody.Density += outBody.Mass * fac;
 					}
 
-					// Accumulate density.
-					float diff = ksizeSq - dist;
-					float fac = factor * diff * diff * diff;
-					outBody.Density += outBody.Mass * fac;
+					// Clamp gravity softening distance.
+					if (dist < 0.04f)
+					{
+						dist = 0.04f;
+					}
+
+					// Accumulate body-to-body force.
+					float distSqrt = (float)half_sqrt((float)dist);
+					float force = inBody.Mass * outBody.Mass / dist;
+
+					outBody.ForceTot += force;
+					outBody.ForceX += force * distX / distSqrt;
+					outBody.ForceY += force * distY / distSqrt;
 				}
-
-				// Clamp gravity softening distance.
-				if (dist < 0.04f)
-				{
-					dist = 0.04f;
-				}
-
-				// Accumulate body-to-body force.
-				float distSqrt = (float)half_sqrt((float)dist);
-				float force = inBody.Mass * outBody.Mass / dist;
-
-				outBody.ForceTot += force;
-				outBody.ForceX += force * distX / distSqrt;
-				outBody.ForceY += force * distY / distSqrt;
 			}
 		}
 	}

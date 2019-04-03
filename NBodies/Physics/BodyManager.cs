@@ -174,7 +174,7 @@ namespace NBodies.Physics
             {
                 var body = Bodies[i];
 
-                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f)
+                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f || Math.Abs(body.PosX) > 10000 || Math.Abs(body.PosY) > 10000 || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
                 {
                     if (!realloc)
                     {
@@ -242,6 +242,8 @@ namespace NBodies.Physics
             _currentUID = bodies.Max((b) => b.UID);
 
             Bodies = bodies;
+
+            CullBodies();
 
             RebuildUIDIndex();
         }

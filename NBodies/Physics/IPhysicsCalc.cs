@@ -16,5 +16,6 @@ namespace NBodies.Physics
 
         void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock);
 
+        void Flush();
     }
 }

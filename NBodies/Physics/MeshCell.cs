@@ -26,5 +26,6 @@ namespace NBodies.Physics
         public int ChildCount;
         public int ParentID;
         public int Level;
+        public int GridIdx;
     }
 }

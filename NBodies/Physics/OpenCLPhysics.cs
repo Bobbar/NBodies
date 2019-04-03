@@ -21,27 +21,42 @@ namespace NBodies.Physics
         private static int _threadsPerBlock = 256;
 
         private int[] _levelIdx = new int[0];
-        private ComputeBuffer<int> _gpuLevelIdx;
 
         private MeshCell[] _mesh = new MeshCell[0];
-        private ComputeBuffer<MeshCell> _gpuMesh;
         private int _prevMeshLen = 0;
 
         private int[] _meshNeighbors = new int[0];
-        private ComputeBuffer<int> _gpuMeshNeighbors;
         private int _prevNeighborLen = 0;
 
         private Body[] _bodies = new Body[0];
-        private ComputeBuffer<Body> _gpuInBodies;
-        private ComputeBuffer<Body> _gpuOutBodies;
         private int _prevBodyLen = 0;
+
+        private GridInfo[] _gridInfo = new GridInfo[0];
 
         private bool _warmUp = true;
 
+        private int _gridIndexSize = 0;
+        private int _meshLen = 0;
+        private int _neighborLen = 0;
+
         private ComputeContext context;
         private ComputeCommandQueue queue;
+
         private ComputeKernel forceKernel;
         private ComputeKernel collisionKernel;
+        private ComputeKernel popGridKernel;
+        private ComputeKernel clearGridKernel;
+        private ComputeKernel clearNewGridKernel;
+        private ComputeKernel buildNeighborsKernel;
+
+        private ComputeBuffer<int> _gpuLevelIdx;
+        private ComputeBuffer<MeshCell> _gpuMesh;
+        private ComputeBuffer<int> _gpuMeshNeighbors;
+        private ComputeBuffer<Body> _gpuInBodies;
+        private ComputeBuffer<Body> _gpuOutBodies;
+        private ComputeBuffer<int> _gpuGridIndex;
+
+        private static Dictionary<string, BufferDims> _bufferInfo = new Dictionary<string, BufferDims>();
 
         private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -85,7 +100,7 @@ namespace NBodies.Physics
             context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.None);
 
-            StreamReader streamReader = new StreamReader("../../Physics/Kernels.c");
+            StreamReader streamReader = new StreamReader("../../Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -106,6 +121,13 @@ namespace NBodies.Physics
 
             forceKernel = program.CreateKernel("CalcForce");
             collisionKernel = program.CreateKernel("CalcCollisions");
+
+            popGridKernel = program.CreateKernel("PopGrid");
+            clearNewGridKernel = program.CreateKernel("ClearNewGrid");
+            buildNeighborsKernel = program.CreateKernel("BuildNeighbors");
+            clearGridKernel = program.CreateKernel("ClearGrid");
+
+            InitBuffers();
         }
 
         private Stopwatch timer = new Stopwatch();
@@ -117,13 +139,66 @@ namespace NBodies.Physics
 
             foreach (var platform in ComputePlatform.Platforms)
             {
-                foreach(var device in platform.Devices)
+                foreach (var device in platform.Devices)
                 {
-                    devices.Add(device); 
+                    devices.Add(device);
                 }
             }
 
             return devices;
+        }
+
+        public void Flush()
+        {
+            if (!_warmUp)
+            {
+                FreeBuffers();
+            }
+
+            _gpuGridIndex.Dispose();
+            _gpuMeshNeighbors.Dispose();
+            _bufferInfo.Clear();
+
+            InitBuffers();
+
+            _warmUp = true;
+        }
+
+        private void InitBuffers()
+        {
+
+            _gpuGridIndex = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), 0);
+
+            _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            Allocate(ref _gpuMeshNeighbors, nameof(_gpuMeshNeighbors), 0);
+
+            //_gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite, _meshBufferSize, IntPtr.Zero);
+            //Allocate(ref _gpuMesh, nameof(_gpuMesh), _meshBufferSize);
+
+
+            //_gpuCellBodyIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            //Allocate(ref _gpuCellBodyIdx, nameof(_gpuCellBodyIdx), 0, true);
+
+            //_gpuInBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            //Allocate(ref _gpuInBodies, nameof(_gpuInBodies), 0, true);
+
+            //_gpuOutBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            //Allocate(ref _gpuOutBodies, nameof(_gpuOutBodies), 0, true);
+
+        }
+
+        private void FreeBuffers()
+        {
+            // _gpuCellBodyIdx.Dispose();
+            // _gpuGridIndex.Dispose();
+            // _gpuGridInfo.Dispose();
+            _gpuMesh.Dispose();
+            //_gpuMeshNeighbors.Dispose();
+            _gpuLevelIdx.Dispose();
+            //_gpuInBodies.Dispose();
+            //_gpuOutBodies.Dispose();
+
         }
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, int meshLevels, int threadsPerBlock)
@@ -140,31 +215,31 @@ namespace NBodies.Physics
             // Build the particle mesh, mesh index, mesh child index and mesh neighbors index.
             BuildMesh(cellSizeExp);
 
-            // Allocate GPU memory as needed.
-            if (_prevMeshLen != _mesh.Length)
-            {
-                if (!_warmUp)
-                    _gpuMesh.Dispose();
+            //// Allocate GPU memory as needed.
+            //if (_prevMeshLen != _mesh.Length)
+            //{
+            //    if (!_warmUp)
+            //        _gpuMesh.Dispose();
 
-                _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadOnly, _mesh.Length, IntPtr.Zero);
+            //    _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadOnly, _mesh.Length, IntPtr.Zero);
 
-                _prevMeshLen = _mesh.Length;
-            }
+            //    _prevMeshLen = _mesh.Length;
+            //}
 
-            if (_prevNeighborLen != _meshNeighbors.Length)
-            {
-                if (!_warmUp)
-                    _gpuMeshNeighbors.Dispose();
+            //if (_prevNeighborLen != _meshNeighbors.Length)
+            //{
+            //    if (!_warmUp)
+            //        _gpuMeshNeighbors.Dispose();
 
-                _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _meshNeighbors.Length, IntPtr.Zero);
-                _prevNeighborLen = _meshNeighbors.Length;
-            }
+            //    _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _meshNeighbors.Length, IntPtr.Zero);
+            //    _prevNeighborLen = _meshNeighbors.Length;
+            //}
 
             _gpuLevelIdx = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadOnly, _levelIdx.Length, IntPtr.Zero);
 
             queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, true, null);
-            queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
-            queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
+            //queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
+            //queue.WriteToBuffer(_meshNeighbors, _gpuMeshNeighbors, true, null);
             queue.Finish();
 
             int argi = 0;
@@ -208,10 +283,12 @@ namespace NBodies.Physics
             queue.Finish();
 
 
-            if (!_warmUp)
-            {
-                _gpuLevelIdx.Dispose();
-            }
+            //if (!_warmUp)
+            //{
+            //    _gpuLevelIdx.Dispose();
+            //}
+
+            FreeBuffers();
 
             _warmUp = false;
         }
@@ -278,6 +355,40 @@ namespace NBodies.Physics
             y = (y | (y << S[0])) & B[0];
 
             return x | (y << 1);
+        }
+
+        private void AddGridDims(MinMax minMax, int level)
+        {
+            int minXAbs = Math.Abs(minMax.MinX - 1);
+            int minYAbs = Math.Abs(minMax.MinY - 1);
+
+            int columns = minXAbs + minMax.MaxX;
+            int rows = minYAbs + minMax.MaxY;
+
+            //int columns = minMax.MaxX - (minMax.MinX - 1);
+            //int rows = minMax.MaxY - (minMax.MinY - 1);
+
+            int idxOff = 0;
+            int size = ((columns + 1) * (rows + 1));
+
+            if (minMax.MinX < -40000 || minMax.MinY < -40000)
+            {
+                Debugger.Break();
+            }
+
+
+            if (level == 1)
+            {
+                idxOff = _gridInfo[level - 1].Size;
+            }
+            else if (level > 1)
+            {
+                idxOff = _gridInfo[level - 1].IndexOffset + _gridInfo[level - 1].Size;
+            }
+
+            _gridInfo[level] = new GridInfo(minXAbs, minYAbs, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
+
+           // Console.WriteLine($@"[{level}] {_gridInfo[level].Size}");
         }
 
         /// <summary>
@@ -369,9 +480,20 @@ namespace NBodies.Physics
             var meshDict = new Dictionary<int, int>[_levels + 1];
             meshDict[0] = new Dictionary<int, int>(cellCount);
 
+            var part = Partitioner.Create(0, cellCount);
+            var partCount = part.GetDynamicPartitions().Count();
+
+            object lockObj = new object();
+
+            MinMax minMax = new MinMax();
+
+            _gridInfo = new GridInfo[_levels + 1];
+
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
-            Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
+            Parallel.ForEach(part, _parallelOptions, (range) =>
             {
+                var mm = new MinMax();
+              
                 for (int m = range.Item1; m < range.Item2; m++)
                 {
                     // Get the spatial info from the first cell index; there may only be one cell.
@@ -384,6 +506,9 @@ namespace NBodies.Physics
                     newCell.IdxY = spatial.IdxY;
                     newCell.Size = cellSize;
                     newCell.Mort = spatial.Mort;
+
+
+                    mm.Update(spatial.IdxX, spatial.IdxY);
 
                     // Iterate the elements between the spatial info cell indexes and add body info.
                     for (int i = cellStartIdx[m]; i < cellStartIdx[m + 1]; i++)
@@ -405,7 +530,15 @@ namespace NBodies.Physics
 
                     meshArr[m] = newCell;
                 }
+
+                lock (lockObj)
+                {
+                    minMax.Update(mm);
+                }
+
             });
+
+            AddGridDims(minMax, 0);
 
             // At this point we are done modifying the body array,
             // so go ahead and start writing it to the GPU with a non-blocking call.
@@ -440,8 +573,19 @@ namespace NBodies.Physics
             _mesh = meshList.ToArray();
             _levelIdx = levelIdx;
 
-            // Build mesh neighbor index for all levels.
-            _meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
+          // timer.Restart();
+
+            _gpuMesh = new ComputeBuffer<MeshCell>(context, ComputeMemoryFlags.ReadWrite, _mesh.Length);
+
+            queue.WriteToBuffer(_mesh, _gpuMesh, true, null);
+            queue.Finish();
+
+            PopGridGPU(_gridInfo, _mesh.Length);
+
+            //// Build mesh neighbor index for all levels.
+            //_meshNeighbors = BuildMeshNeighborIndex(_mesh, meshDict);
+
+           // timer.Print("Neighbors");
         }
 
         private void BuildTopLevels(ref List<MeshCell> mesh, ref Dictionary<int, int>[] meshDict, ref int[] levelIdx, int cellSizeExp, int levels)
@@ -450,6 +594,8 @@ namespace NBodies.Physics
 
             for (int level = 1; level <= levels; level++)
             {
+                var minMax = new MinMax();
+
                 int cellSizeExpLevel = cellSizeExp + level;
 
                 meshDict[level] = new Dictionary<int, int>();
@@ -470,6 +616,8 @@ namespace NBodies.Physics
                     // Right bit-shift to get the x/y grid indexes.
                     int idxX = (int)childCell.LocX >> cellSizeExpLevel;
                     int idxY = (int)childCell.LocY >> cellSizeExpLevel;
+
+                    minMax.Update(idxX, idxY);
 
                     // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
                     var cellUID = MortonNumber(idxX, idxY);
@@ -540,6 +688,8 @@ namespace NBodies.Physics
                 lastCell.CmX = lastCell.CmX / (float)lastCell.Mass;
                 lastCell.CmY = lastCell.CmY / (float)lastCell.Mass;
                 mesh[lastCell.ID] = lastCell;
+
+                AddGridDims(minMax, level);
             }
         }
 
@@ -614,5 +764,144 @@ namespace NBodies.Physics
             // Return the flattened mesh neighbor index.
             return neighborIdxList.ToArray();
         }
+
+        private void PopGridGPU(GridInfo[] gridInfo, int meshSize)
+        {
+            int gridSize = 0;
+            foreach (var g in gridInfo)
+            {
+                gridSize += g.Size;
+            }
+
+            _gridIndexSize = gridSize;
+            _meshLen = meshSize;
+
+            bool resized = Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), gridSize);
+            if (resized)
+            {
+                clearNewGridKernel.SetMemoryArgument(0, _gpuGridIndex);
+                clearNewGridKernel.SetValueArgument(1, gridSize);
+
+                queue.Execute(clearNewGridKernel, null, new long[] { BlockCount(gridSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Finish();
+
+                //queue.FillBuffer<int>(_gpuGridIndex, new int[1] { 0 }, 0, gridSize, null);
+                //queue.Finish();
+            }
+
+            //queue.FillBuffer<int>(_gpuGridIndex, new int[1] { 0 }, 0, gridSize, null);
+            //queue.Finish();
+
+
+            int neighborLen = meshSize * 9;
+            _neighborLen = neighborLen;
+
+            Allocate(ref _gpuMeshNeighbors, nameof(_gpuMeshNeighbors), neighborLen);
+
+            using (var _gpuGridInfo = new ComputeBuffer<GridInfo>(context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
+            {
+                queue.WriteToBuffer(gridInfo, _gpuGridInfo, true, null);
+                queue.Finish();
+
+                int argi = 0;
+                popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
+                popGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
+                popGridKernel.SetValueArgument(argi++, meshSize);
+
+                queue.Execute(popGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Finish();
+
+                argi = 0;
+                buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMesh);
+                buildNeighborsKernel.SetValueArgument(argi++, meshSize);
+                buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
+                buildNeighborsKernel.SetValueArgument(argi++, _gridIndexSize);
+                buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+
+                int blocks = BlockCount(meshSize);
+                queue.Execute(buildNeighborsKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Finish();
+
+                // We're done with the grid index, so undo what we added to clear it for the next frame.
+                clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
+                clearGridKernel.SetMemoryArgument(1, _gpuMesh);
+                clearGridKernel.SetValueArgument(2, meshSize);
+
+                blocks = BlockCount(meshSize);
+                queue.Execute(clearGridKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Finish();
+
+            }
+
+        }
+
+        private bool Allocate<T>(ref ComputeBuffer<T> buffer, string name, int size, bool exactSize = false) where T : struct
+        {
+            if (!_bufferInfo.ContainsKey(name))
+            {
+                _bufferInfo.Add(name, new BufferDims(name, size, size, exactSize));
+            }
+
+            var dims = _bufferInfo[name];
+            var flags = buffer.Flags;
+
+
+
+            if (!dims.ExactSize)
+            {
+                //if (dims.Capacity < size || size < (dims.Size * dims.ShrinkFactor))
+                if (dims.Capacity < size)
+                // if (dims.Capacity < size || (size * dims.ShrinkFactor) < dims.Size)
+                {
+                    //if (!_warmUp)
+                    buffer.Dispose();
+
+                    int newCapacity = (int)(size * dims.GrowFactor);
+
+                    dims.Capacity = newCapacity;
+                    dims.Size = size;
+
+                    buffer = new ComputeBuffer<T>(context, flags, newCapacity, IntPtr.Zero);
+
+                    Console.WriteLine($@"[{dims.Name}]  {dims.Capacity}");
+
+                    return true;
+                }
+            }
+            else
+            {
+                if (dims.Size != size)
+                {
+
+                    //  if (!_warmUp)
+                    buffer.Dispose();
+
+                    dims.Capacity = size;
+                    dims.Size = size;
+
+                    buffer = new ComputeBuffer<T>(context, flags, size, IntPtr.Zero);
+
+                    //  Console.WriteLine($@"[{dims.Name}]  {dims.Capacity}");
+
+                    return true;
+                }
+
+            }
+
+            return false;
+        }
+
+        private T[] ReadBuffer<T>(ComputeBuffer<T> buffer) where T : struct
+        {
+            T[] buf = new T[buffer.Count];
+
+            queue.ReadFromBuffer(buffer, ref buf, true, null);
+            queue.Finish();
+
+            return buf;
+        }
+
     }
 }
