@@ -243,8 +243,6 @@ namespace NBodies.Physics
 
             Bodies = bodies;
 
-            CullBodies();
-
             RebuildUIDIndex();
         }
 
