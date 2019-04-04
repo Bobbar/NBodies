@@ -98,7 +98,7 @@ namespace NBodies.Physics
             var platform = device.Platform;
 
             context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.None);
+            queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.Profiling);
 
             StreamReader streamReader = new StreamReader("../../Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -177,7 +177,6 @@ namespace NBodies.Physics
         {
             _gpuMesh.Dispose();
             _gpuLevelIdx.Dispose();
-
         }
 
         public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock)
@@ -642,17 +641,17 @@ namespace NBodies.Physics
             _meshLen = meshSize;
 
             // Reallocate and resize GPU buffer as needed.
-            bool resized = Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), gridSize);
-            if (resized)
+            int newCap = Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), gridSize);
+            if (newCap > 0)
             {
-                clearNewGridKernel.SetMemoryArgument(0, _gpuGridIndex);
-                clearNewGridKernel.SetValueArgument(1, gridSize);
+                //clearNewGridKernel.SetMemoryArgument(0, _gpuGridIndex);
+                //clearNewGridKernel.SetValueArgument(1, gridSize);
 
-                queue.Execute(clearNewGridKernel, null, new long[] { BlockCount(gridSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-                queue.Finish();
-
-                //queue.FillBuffer<int>(_gpuGridIndex, new int[1] { 0 }, 0, gridSize, null);
+                //queue.Execute(clearNewGridKernel, null, new long[] { BlockCount(gridSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 //queue.Finish();
+
+                queue.FillBuffer<int>(_gpuGridIndex, new int[1] { 0 }, 0, newCap, null);
+                queue.Finish();
             }
 
             // Calulate total size of 1D mesh neighbor index.
@@ -661,16 +660,16 @@ namespace NBodies.Physics
 
             Allocate(ref _gpuMeshNeighbors, nameof(_gpuMeshNeighbors), neighborLen);
 
-            using (var _gpuGridInfo = new ComputeBuffer<GridInfo>(context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
+            using (var gpuGridInfo = new ComputeBuffer<GridInfo>(context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
             {
                 // Write Grid info.
-                queue.WriteToBuffer(gridInfo, _gpuGridInfo, true, null);
+                queue.WriteToBuffer(gridInfo, gpuGridInfo, true, null);
                 queue.Finish();
 
                 // Pop grid.
                 int argi = 0;
                 popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                popGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                popGridKernel.SetMemoryArgument(argi++, gpuGridInfo);
                 popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                 popGridKernel.SetValueArgument(argi++, meshSize);
 
@@ -681,7 +680,7 @@ namespace NBodies.Physics
                 argi = 0;
                 buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMesh);
                 buildNeighborsKernel.SetValueArgument(argi++, meshSize);
-                buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                buildNeighborsKernel.SetMemoryArgument(argi++, gpuGridInfo);
                 buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
                 buildNeighborsKernel.SetValueArgument(argi++, _gridIndexSize);
                 buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
@@ -703,7 +702,7 @@ namespace NBodies.Physics
 
         }
 
-        private bool Allocate<T>(ref ComputeBuffer<T> buffer, string name, int size, bool exactSize = false) where T : struct
+        private int Allocate<T>(ref ComputeBuffer<T> buffer, string name, int size, bool exactSize = false) where T : struct
         {
             if (!_bufferInfo.ContainsKey(name))
             {
@@ -731,7 +730,7 @@ namespace NBodies.Physics
 
                     Console.WriteLine($@"[{dims.Name}]  {dims.Capacity}");
 
-                    return true;
+                    return newCapacity;
                 }
             }
             else
@@ -749,12 +748,12 @@ namespace NBodies.Physics
 
                     //  Console.WriteLine($@"[{dims.Name}]  {dims.Capacity}");
 
-                    return true;
+                    return size;
                 }
 
             }
 
-            return false;
+            return 0;
         }
 
         private T[] ReadBuffer<T>(ComputeBuffer<T> buffer) where T : struct

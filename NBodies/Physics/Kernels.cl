@@ -224,7 +224,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
-	if (a > inBodiesLen0 - 1)
+	if (a >= inBodiesLen0)
 	{
 		return;
 	}
@@ -374,7 +374,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 		}
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	//barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Calculate pressure from density.
 	outBody.Pressure = GAS_K * outBody.Density;
@@ -546,7 +546,7 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 		}
 	}
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+//	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Integrate.
 	outBody.VeloX += dt * outBody.ForceX / outBody.Mass;
