@@ -37,6 +37,7 @@
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -83,7 +84,6 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -204,6 +204,14 @@
             this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
             this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
+            // 
+            // fastPrimitivesToolStripMenuItem
+            // 
+            this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
+            this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
+            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
+            this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
             // 
             // showMeshToolStripMenuItem
             // 
@@ -755,14 +763,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // fastPrimitivesToolStripMenuItem
-            // 
-            this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
-            this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
-            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
-            this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 

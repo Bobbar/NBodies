@@ -157,7 +157,7 @@ namespace NBodies
                 }
             }
         }
-        
+
         public static int RenderBurstFrames
         {
             get { return _burstSkips; }
@@ -171,6 +171,20 @@ namespace NBodies
             }
         }
 
+        public static float Viscosity
+        {
+            get { return _viscosity; }
+
+            set
+            {
+                if (value >= 0 && value <= 1000)
+                {
+                    _viscosity = value;
+                }
+            }
+        }
+
+        private static float _viscosity = 10.0f;
         private static float _cullDistance = 8000;
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
@@ -284,7 +298,7 @@ namespace NBodies
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _viscosity, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

@@ -174,7 +174,7 @@ namespace NBodies.Physics
             {
                 var body = Bodies[i];
 
-                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f)// || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
+                if (body.Visible == 0 || body.Age > body.Lifetime)// || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
                 {
                     if (!realloc)
                     {

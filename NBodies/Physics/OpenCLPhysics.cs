@@ -179,12 +179,12 @@ namespace NBodies.Physics
             _gpuLevelIdx.Dispose();
         }
 
-        public void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock)
+        public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = meshLevels;
-            float viscosity = 10.0f; // Viscosity for SPH particles in the collisions kernel.
+          //  float viscosity = 30.0f;//10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
 
             // Calc number of thread blocks to fit the dataset.

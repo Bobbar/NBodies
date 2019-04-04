@@ -296,7 +296,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 		levelCellParent = inMesh[(levelCellParent.ParentID)];
 	}
 
-	 // Iterate the top level cells.
+	// Iterate the top level cells.
 	for (int top = levelIdx[(topLevel)]; top < inMeshLen0; top++)
 	{
 		struct MeshCell cell = inMesh[(top)];
@@ -321,7 +321,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 	{
 		// Get the mesh cell index, then copy it from memory.
 		int nId = meshNeighbors[(n)];
-		
+
 		if (nId != -1)
 		{
 			struct MeshCell cell = inMesh[(nId)];
@@ -391,7 +391,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 	{
 		outBody.InRoche = 1;
 	}
-	
+
 	if (outBody.Flag == 2)
 	{
 		outBody.InRoche = 1;
@@ -493,6 +493,27 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 						outBody.ForceY -= gradY;
 
 						// Viscosity force
+
+					/*	float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
+						float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
+
+						float2 dist2 = (float2)(distX, distY);
+
+						float2 veloDiff = (float2)(viscVelo_diffX, viscVelo_diffY);
+
+						float2 normDist = dist2 / distSqrt;
+
+						float2 top = veloDiff * dist;
+						float2 bot = (normDist * normDist) + 0.01;
+
+
+						float2 v1 = 2 * (2 + 2) * (inBody.Mass / inBody.Density) * (top / bot) * viscosity;
+
+						outBody.ForceX += v1.X;
+						outBody.ForceY += v1.Y;*/
+
+
+
 						float visc_laplace = 14.323944f * (kernelSize - distSqrt);
 						float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
 
@@ -546,9 +567,9 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 		}
 	}
 
-//	barrier(CLK_LOCAL_MEM_FENCE);
+	//	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Integrate.
+		// Integrate.
 	outBody.VeloX += dt * outBody.ForceX / outBody.Mass;
 	outBody.VeloY += dt * outBody.ForceY / outBody.Mass;
 	outBody.PosX += dt * outBody.VeloX;
@@ -566,7 +587,7 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 
 	if (dist > cullDistance * cullDistance)
 		outBody.Visible = 0;
-	
+
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
