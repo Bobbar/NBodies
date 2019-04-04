@@ -20,6 +20,14 @@ namespace NBodies
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
 
+        public static float CullDistance
+        {
+            get
+            {
+                return _cullDistance;
+            }
+        }
+
         public static int CellSizeExp
         {
             get
@@ -162,7 +170,8 @@ namespace NBodies
                 }
             }
         }
-        
+
+        private static float _cullDistance = 8000;
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
@@ -275,7 +284,7 @@ namespace NBodies
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

@@ -245,6 +245,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 	float ksize = 1.0f;
 	float ksizeSq = 1.0f;
 	float factor = 1.566682f;
+	float softening = 0.04;
 
 	outBody.Density = outBody.Mass * factor;
 
@@ -356,9 +357,9 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 					}
 
 					// Clamp gravity softening distance.
-					if (dist < 0.04f)
+					if (dist < softening)
 					{
-						dist = 0.04f;
+						dist = softening;
 					}
 
 					// Accumulate body-to-body force.
@@ -419,7 +420,7 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity)
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
@@ -558,6 +559,14 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 		outBody.Age += dt * 4.0f;
 	}
 
+	// Cull distant bodies.
+	float distX = centerMass.X - outBody.PosX;
+	float distY = centerMass.Y - outBody.PosY;
+	float dist = distX * distX + distY * distY;
+
+	if (dist > cullDistance * cullDistance)
+		outBody.Visible = 0;
+	
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }

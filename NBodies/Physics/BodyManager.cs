@@ -174,7 +174,7 @@ namespace NBodies.Physics
             {
                 var body = Bodies[i];
 
-                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f || Math.Abs(body.PosX) > 10000 || Math.Abs(body.PosY) > 10000 || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
+                if (body.Visible == 0 || body.Age > body.Lifetime || body.ForceTot < 0.005f)// || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
                 {
                     if (!realloc)
                     {
@@ -210,6 +210,27 @@ namespace NBodies.Physics
             RebuildUIDIndex();
         }
 
+        public static void CullDistant()
+        {
+            var cm = CenterOfMass();
+
+            var bList = new List<Body>(Bodies);
+            bList.RemoveAll(b => 
+            {
+                float distX = cm.X - b.PosX;
+                float distY = cm.Y - b.PosY;
+                float dist = distX * distX + distY * distY;
+
+                if (dist > MainLoop.CullDistance * MainLoop.CullDistance)
+                    return true;
+
+                return false;
+
+            });
+
+            Bodies = bList.ToArray();
+        }
+
         public static double UpdateTotMass()
         {
             double tMass = 0;
@@ -242,6 +263,8 @@ namespace NBodies.Physics
             _currentUID = bodies.Max((b) => b.UID);
 
             Bodies = bodies;
+
+            CullDistant();
 
             RebuildUIDIndex();
         }
