@@ -581,8 +581,8 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 	}
 
 	// Cull distant bodies.
-	float distX = centerMass.X - outBody.PosX;
-	float distY = centerMass.Y - outBody.PosY;
+	float distX = centerMass.x - outBody.PosX;
+	float distY = centerMass.y - outBody.PosY;
 	float dist = distX * distX + distY * distY;
 
 	if (dist > cullDistance * cullDistance)

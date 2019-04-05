@@ -100,7 +100,7 @@ namespace NBodies.Physics
             context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             queue = new ComputeCommandQueue(context, device, ComputeCommandQueueFlags.Profiling);
 
-            StreamReader streamReader = new StreamReader("../../Physics/Kernels.cl");
+            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -113,6 +113,7 @@ namespace NBodies.Physics
             catch (BuildProgramFailureComputeException ex)
             {
                 string buildLog = program.GetBuildLog(device);
+                System.IO.File.WriteAllText("build_error.txt", buildLog);
                 Console.WriteLine(buildLog);
                 throw;
             }
@@ -184,7 +185,7 @@ namespace NBodies.Physics
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = meshLevels;
-          //  float viscosity = 30.0f;//10.0f; // Viscosity for SPH particles in the collisions kernel.
+            //  float viscosity = 30.0f;//10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
 
             // Calc number of thread blocks to fit the dataset.
@@ -239,23 +240,23 @@ namespace NBodies.Physics
 
         private Vector2 CalcCenterMass()
         {
-            var cm = new Vector2();
-            float mass = 0;
+            double cmX = 0;
+            double cmY = 0;
+            double mass = 0;
 
             for (int i = _levelIdx[_levels]; i < _mesh.Length; i++)
             {
                 var cell = _mesh[i];
 
-                mass += (float)cell.Mass;
-                cm.X += (float)cell.Mass * cell.LocX;
-                cm.Y += (float)cell.Mass * cell.LocY;
-
+                mass += cell.Mass;
+                cmX += cell.Mass * cell.CmX;
+                cmY += cell.Mass * cell.CmY;
             }
 
-            cm.X = cm.X / mass;
-            cm.Y = cm.Y / mass;
+            cmX = cmX / mass;
+            cmY = cmY / mass;
 
-            return cm;
+            return new Vector2((float)cmX, (float)cmY);
         }
 
         private void WriteBodiesToGPU()

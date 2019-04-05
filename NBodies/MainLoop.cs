@@ -44,6 +44,22 @@ namespace NBodies
             }
         }
 
+        public static int MeshLevels
+        {
+            get
+            {
+                return _meshLevels;
+            }
+
+            set
+            {
+                if (value >= 1 & value <= 10)
+                {
+                    _meshLevels = value;
+                }
+            }
+        }
+
         public static int TargetFPS
         {
             get
@@ -110,22 +126,6 @@ namespace NBodies
             get
             {
                 return _recorder;
-            }
-        }
-
-        public static int MeshLevels
-        {
-            get
-            {
-                return _meshLevels;
-            }
-
-            set
-            {
-                if (value >= 1 & value <= 10)
-                {
-                    _meshLevels = value;
-                }
             }
         }
 

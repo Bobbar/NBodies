@@ -352,28 +352,16 @@ namespace NBodies.Physics
         public static PointF MeshCenterOfMass()
         {
             double totMass = 0;
+            double cmX = 0, cmY = 0;
 
-            for (int i = 0; i < Mesh.Length; i++)
+            for (int i = PhysicsProvider.PhysicsCalc.LevelIndex[MainLoop.MeshLevels]; i < Mesh.Length; i++)
             {
                 var mesh = Mesh[i];
 
                 totMass += mesh.Mass;
-            }
-
-            //_totalMass = totMass;
-
-            double cmX = 0, cmY = 0;
-
-            for (int i = 0; i < Mesh.Length; i++)
-            {
-                var mesh = Mesh[i];
-
                 cmX += mesh.Mass * mesh.CmX;
                 cmY += mesh.Mass * mesh.CmY;
             }
-
-            //cmX = (cmX / totMass) * -1f;
-            //cmY = (cmY / totMass) * -1f;
 
             cmX = (cmX / totMass);
             cmY = (cmY / totMass);
