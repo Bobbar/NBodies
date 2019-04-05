@@ -585,22 +585,24 @@ namespace NBodies.Physics
 
         private void BuildTopLevels(MeshCell[] mesh, ref int[] levelIdx, LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
-            int offset = 0;
+            int meshOffset = 0;
             for (int level = 1; level <= levels; level++)
             {
                 int cellSizeExpLevel = cellSizeExp + level;
                 int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
+              
+                meshOffset += levelInfo[level - 1].CellCount;
+                levelIdx[level] = meshOffset;
 
-                object lockObj = new object();
-                MinMax minMax = new MinMax();
+                int levelOffset = 0;
+
+                if (level > 1)
+                    levelOffset = levelIdx[level - 1];
 
                 LevelInfo current = levelInfo[level];
-                offset += levelInfo[level - 1].CellCount;
-
-                levelIdx[level] = offset; 
-
-                int prevLevelStart = levelIdx[level - 1];
                 int cellCount = current.CellCount;
+                object lockObj = new object();
+                MinMax minMax = new MinMax();
 
                 Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
                 {
@@ -610,7 +612,7 @@ namespace NBodies.Physics
                     {
                         // Get the spatial info from the first cell index; there may only be one cell.
                         var spatial = current.Spatials[current.CellIndex[m]];
-                        int newIdx = m + offset;
+                        int newIdx = m + meshOffset;
 
                         var newCell = new MeshCell();
                         newCell.LocX = (spatial.IdxX << cellSizeExpLevel) + (cellSize * 0.5f);
@@ -619,7 +621,7 @@ namespace NBodies.Physics
                         newCell.IdxY = spatial.IdxY;
                         newCell.Size = cellSize;
                         newCell.Mort = spatial.Mort;
-                        newCell.ChildStartIdx = current.CellIndex[m] + ((level > 1) ? prevLevelStart : 0);
+                        newCell.ChildStartIdx = current.CellIndex[m] + levelOffset;
                         newCell.ChildCount = 0;
                         newCell.ID = newIdx;
                         newCell.Level = level;
@@ -631,14 +633,14 @@ namespace NBodies.Physics
                         // Iterate the elements between the spatial info cell indexes and add child info.
                         for (int i = current.CellIndex[m]; i < current.CellIndex[m + 1]; i++)
                         {
-                            var child = mesh[i + ((level > 1) ? prevLevelStart : 0)];
+                            var child = mesh[i + levelOffset];
                             newCell.Mass += child.Mass;
                             newCell.CmX += (float)child.Mass * child.CmX;
                             newCell.CmY += (float)child.Mass * child.CmY;
                             newCell.BodyCount += child.BodyCount;
                             newCell.ChildCount++;
                             child.ParentID = newIdx;
-                            mesh[i + ((level > 1) ? prevLevelStart : 0)] = child;
+                            mesh[i + levelOffset] = child;
                         }
 
                         newCell.CmX = newCell.CmX / (float)newCell.Mass;
