@@ -113,7 +113,7 @@ namespace NBodies.Rendering
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
             var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));
-            Font tinyFont = new Font("Tahoma", 2, FontStyle.Regular);
+            Font tinyFont = new Font("Tahoma", 1, FontStyle.Regular);
             var finalOffset = new PointF(offsetX, offsetY);
 
             for (int i = 0; i < mesh.Length; i++)
@@ -149,7 +149,7 @@ namespace NBodies.Rendering
 
                 //_buffer.Graphics.DrawString($@"{m.xID * m.Size},{m.yID * m.Size}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
-                // _buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                //_buffer.Graphics.DrawString($@"{m.IdxX},{m.IdxY}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
                 //  _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }

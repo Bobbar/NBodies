@@ -113,6 +113,7 @@
   <ItemGroup>
     <Compile Include="Physics\BufferDims.cs" />
     <Compile Include="Physics\GridInfo.cs" />
+    <Compile Include="Physics\LevelInfo.cs" />
     <Compile Include="Physics\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\MeshCell.cs" />

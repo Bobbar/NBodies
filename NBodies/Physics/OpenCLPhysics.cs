@@ -185,7 +185,6 @@ namespace NBodies.Physics
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = meshLevels;
-            //  float viscosity = 30.0f;//10.0f; // Viscosity for SPH particles in the collisions kernel.
             int threadBlocks = 0;
 
             // Calc number of thread blocks to fit the dataset.
@@ -364,7 +363,7 @@ namespace NBodies.Physics
         /// <param name="cellCount">Number of unique cell indexes.</param>
         /// <param name="cellStartIdx">Array containing starting indexes of each cell within the returned array.</param>
         /// <returns></returns>
-        private SpatialInfo[] CalcBodySpatials(int cellSizeExp, out int cellCount, out int[] cellStartIdx)
+        private LevelInfo CalcBodySpatials(int cellSizeExp)
         {
             var spatials = new SpatialInfo[_bodies.Length];
 
@@ -394,7 +393,7 @@ namespace NBodies.Physics
             // and build the start index of each cell.
             int count = 0;
             int val = 0;
-            var mortIdxs = new List<int>(_bodies.Length);
+            var cellIdx = new List<int>(_bodies.Length);
             Body[] sortBodies = new Body[_bodies.Length];
 
             for (int i = 0; i < spatials.Length; i++)
@@ -409,20 +408,81 @@ namespace NBodies.Physics
                 {
                     count++;
                     val = spatials[i].Mort;
-                    mortIdxs.Add(i);
+                    cellIdx.Add(i);
                 }
             }
 
-            mortIdxs.Add(spatials.Length);
+            cellIdx.Add(spatials.Length);
 
             // Update the original body array with the sorted one.
             _bodies = sortBodies;
 
-            // Output count and start index.
-            cellCount = count;
-            cellStartIdx = mortIdxs.ToArray();
+            var output = new LevelInfo();
+            output.Spatials = spatials;
+            output.CellCount = count;
+            output.CellIndex = cellIdx.ToArray();
 
-            return spatials;
+            return output;
+        }
+
+
+        private LevelInfo[] CalcTopSpatials(LevelInfo bottom)
+        {
+            LevelInfo[] output = new LevelInfo[_levels + 1];
+
+            output[0] = bottom;
+
+            for (int level = 1; level <= _levels; level++)
+            {
+                LevelInfo current;
+
+                if (level == 1)
+                {
+                    current = bottom;
+                }
+                else
+                {
+                    current = output[level - 1];
+                }
+
+                output[level] = new LevelInfo();
+                output[level].Spatials = new SpatialInfo[current.CellCount];
+
+                Parallel.ForEach(Partitioner.Create(0, current.CellCount), _parallelOptions, (range) =>
+                {
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        var spatial = current.Spatials[current.CellIndex[i]];
+                        int idxX = spatial.IdxX >> 1;
+                        int idxY = spatial.IdxY >> 1;
+                        int morton = MortonNumber(idxX, idxY);
+
+                        output[level].Spatials[i] = new SpatialInfo(morton, idxX, idxY, spatial.Index + i);
+                    }
+
+                });
+
+                int count = 0;
+                int val = int.MaxValue;
+                var cellIdx = new List<int>(output[level].Spatials.Length);
+                for (int i = 0; i < output[level].Spatials.Length; i++)
+                {
+                    if (val != output[level].Spatials[i].Mort)
+                    {
+                        count++;
+                        val = output[level].Spatials[i].Mort;
+                        cellIdx.Add(i);
+                    }
+                }
+
+                cellIdx.Add(output[level].Spatials.Length);
+
+                output[level].CellCount = count;
+                output[level].CellIndex = cellIdx.ToArray();
+
+            }
+
+            return output;
         }
 
         /// <summary>
@@ -432,22 +492,24 @@ namespace NBodies.Physics
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
         private void BuildMesh(int cellSizeExp)
         {
-            int cellSize = (int)Math.Pow(2, cellSizeExp);
+            // Get spatial info for the cells about to be constructed.
+            LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
+            var topLevels = CalcTopSpatials(botLevel);
 
-            int cellCount;
-            int[] cellStartIdx;
+            int totCells = 0;
+            foreach (var lvl in topLevels)
+            {
+                totCells += lvl.CellCount;
+            }
 
-            // Get spatail info for the cells about to be constructed.
-            SpatialInfo[] spatialDat = CalcBodySpatials(cellSizeExp, out cellCount, out cellStartIdx);
-
-            // List to hold all new mesh cells.
-            var meshList = new List<MeshCell>(_bodies.Length);
-            var meshArr = new MeshCell[cellCount];
-
+            var meshArr = new MeshCell[totCells];
             _gridInfo = new GridInfo[_levels + 1];
-
             object lockObj = new object();
             MinMax minMax = new MinMax();
+
+            int cellCount = botLevel.CellCount;
+            int[] cellStartIdx = botLevel.CellIndex;
+            int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
             Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
@@ -457,7 +519,7 @@ namespace NBodies.Physics
                 for (int m = range.Item1; m < range.Item2; m++)
                 {
                     // Get the spatial info from the first cell index; there may only be one cell.
-                    var spatial = spatialDat[cellStartIdx[m]];
+                    var spatial = botLevel.Spatials[cellStartIdx[m]];
 
                     var newCell = new MeshCell();
                     newCell.LocX = (spatial.IdxX << cellSizeExp) + (cellSize * 0.5f);
@@ -503,22 +565,14 @@ namespace NBodies.Physics
             // so go ahead and start writing it to the GPU with a non-blocking call.
             WriteBodiesToGPU();
 
-            meshList = new List<MeshCell>(meshArr);
-
-            // Set the mesh list capacity to slightly larger than the previous size.
-            // This will reduce large reallocations from the list resizing.
-            if (_mesh.Length > 0 & (_mesh.Length * 1.5) > meshList.Capacity)
-                meshList.Capacity = (int)(_mesh.Length * 1.5);
-
             // Index to hold the starting indexes for each level.
             int[] levelIdx = new int[_levels + 1];
             levelIdx[0] = 0;
 
-            // Build the upper levels of the mesh.
-            BuildTopLevels(ref meshList, ref levelIdx, cellSizeExp, _levels);
+            BuildTopLevels(meshArr, ref levelIdx, topLevels, cellSizeExp, _levels);
 
             // Get the completed mesh and level index.
-            _mesh = meshList.ToArray();
+            _mesh = meshArr;
             _levelIdx = levelIdx;
 
             // Allocate and begin writing mesh to GPU.
@@ -529,101 +583,76 @@ namespace NBodies.Physics
             PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
-        private void BuildTopLevels(ref List<MeshCell> mesh, ref int[] levelIdx, int cellSizeExp, int levels)
+        private void BuildTopLevels(MeshCell[] mesh, ref int[] levelIdx, LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
-            int meshChildIndexPosition = 0;
-
+            int offset = 0;
             for (int level = 1; level <= levels; level++)
             {
-                var minMax = new MinMax();
                 int cellSizeExpLevel = cellSizeExp + level;
                 int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
 
-                // Current cell index.
-                int cellIdx = mesh.Count;
-                levelIdx[level] = cellIdx;
+                object lockObj = new object();
+                MinMax minMax = new MinMax();
 
-                int prevUID = int.MinValue;
-                MeshCell newCell = new MeshCell();
+                LevelInfo current = levelInfo[level];
+                offset += levelInfo[level - 1].CellCount;
 
-                for (int m = levelIdx[level - 1]; m < levelIdx[level]; m++)
+                levelIdx[level] = offset; 
+
+                int prevLevelStart = levelIdx[level - 1];
+                int cellCount = current.CellCount;
+
+                Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
                 {
-                    var childCell = mesh[m];
+                    var mm = new MinMax();
 
-                    // Calculate the parent cell position from the child body position.
-                    // Right bit-shift to get the x/y grid indexes.
-                    int idxX = (int)childCell.LocX >> cellSizeExpLevel;
-                    int idxY = (int)childCell.LocY >> cellSizeExpLevel;
-
-                    minMax.Update(idxX, idxY);
-
-                    // Interleave the x/y indexes to create a morton number; use this for cell UID/Hash.
-                    var cellUID = MortonNumber(idxX, idxY);
-
-                    // If the UID doesn't match the previous, we have a new cell.
-                    if (prevUID != cellUID)
+                    for (int m = range.Item1; m < range.Item2; m++)
                     {
-                        prevUID = cellUID;
+                        // Get the spatial info from the first cell index; there may only be one cell.
+                        var spatial = current.Spatials[current.CellIndex[m]];
+                        int newIdx = m + offset;
 
-                        // Set the previous completed parent cell center of mass.
-                        if (newCell.ID != 0)
+                        var newCell = new MeshCell();
+                        newCell.LocX = (spatial.IdxX << cellSizeExp) + (cellSize * 0.5f);
+                        newCell.LocY = (spatial.IdxY << cellSizeExp) + (cellSize * 0.5f);
+                        newCell.IdxX = spatial.IdxX;
+                        newCell.IdxY = spatial.IdxY;
+                        newCell.Size = cellSize;
+                        newCell.Mort = spatial.Mort;
+                        newCell.ChildStartIdx = current.CellIndex[m] + ((level > 1) ? prevLevelStart : 0);
+                        newCell.ChildCount = 0;
+                        newCell.ID = newIdx;
+                        newCell.Level = level;
+                        newCell.BodyStartIdx = 0;
+                        newCell.BodyCount = 0;
+
+                        mm.Update(spatial.IdxX, spatial.IdxY);
+
+                        // Iterate the elements between the spatial info cell indexes and add child info.
+                        for (int i = current.CellIndex[m]; i < current.CellIndex[m + 1]; i++)
                         {
-                            newCell.CmX = newCell.CmX / (float)newCell.Mass;
-                            newCell.CmY = newCell.CmY / (float)newCell.Mass;
-                            mesh[newCell.ID] = newCell;
+                            var child = mesh[i + ((level > 1) ? prevLevelStart : 0)];
+                            newCell.Mass += child.Mass;
+                            newCell.CmX += (float)child.Mass * child.CmX;
+                            newCell.CmY += (float)child.Mass * child.CmY;
+                            newCell.BodyCount += child.BodyCount;
+                            newCell.ChildCount++;
+                            child.ParentID = newIdx;
+                            mesh[i + ((level > 1) ? prevLevelStart : 0)] = child;
                         }
 
-                        // Create a new parent cell.
-                        newCell = new MeshCell();
+                        newCell.CmX = newCell.CmX / (float)newCell.Mass;
+                        newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
-                        // Add initial values.
-                        // Convert the grid index to a real location.
-                        newCell.LocX = (idxX << cellSizeExpLevel) + (cellSize * 0.5f);
-                        newCell.LocY = (idxY << cellSizeExpLevel) + (cellSize * 0.5f);
-                        newCell.IdxX = idxX;
-                        newCell.IdxY = idxY;
-                        newCell.Size = cellSize;
-                        newCell.Mass += childCell.Mass;
-                        newCell.CmX += (float)childCell.Mass * childCell.CmX;
-                        newCell.CmY += (float)childCell.Mass * childCell.CmY;
-                        newCell.BodyCount = childCell.BodyCount;
-                        newCell.ID = cellIdx;
-                        newCell.Level = level;
-                        newCell.ChildStartIdx = meshChildIndexPosition;
-                        newCell.ChildCount = 1;
-
-                        // Increment the child index position.
-                        meshChildIndexPosition++;
-
-                        mesh.Add(newCell);
-
-                        childCell.ParentID = cellIdx;
-                        mesh[m] = childCell;
-
-                        cellIdx++;
+                        mesh[newIdx] = newCell;
                     }
-                    else // If UID matches previous, add a child to the parent cell.
+
+                    lock (lockObj)
                     {
-                        newCell.Mass += childCell.Mass;
-                        newCell.CmX += (float)childCell.Mass * childCell.CmX;
-                        newCell.CmY += (float)childCell.Mass * childCell.CmY;
-                        newCell.BodyCount += childCell.BodyCount;
-                        newCell.ChildCount++;
-
-                        meshChildIndexPosition++;
-
-                        mesh[newCell.ID] = newCell;
-
-                        childCell.ParentID = newCell.ID;
-                        mesh[m] = childCell;
+                        minMax.Update(mm);
                     }
-                }
 
-                // Calc CM for last cell.
-                var lastCell = mesh.Last();
-                lastCell.CmX = lastCell.CmX / (float)lastCell.Mass;
-                lastCell.CmY = lastCell.CmY / (float)lastCell.Mass;
-                mesh[lastCell.ID] = lastCell;
+                });
 
                 AddGridDims(minMax, level);
             }
