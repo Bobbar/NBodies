@@ -613,8 +613,8 @@ namespace NBodies.Physics
                         int newIdx = m + offset;
 
                         var newCell = new MeshCell();
-                        newCell.LocX = (spatial.IdxX << cellSizeExp) + (cellSize * 0.5f);
-                        newCell.LocY = (spatial.IdxY << cellSizeExp) + (cellSize * 0.5f);
+                        newCell.LocX = (spatial.IdxX << cellSizeExpLevel) + (cellSize * 0.5f);
+                        newCell.LocY = (spatial.IdxY << cellSizeExpLevel) + (cellSize * 0.5f);
                         newCell.IdxX = spatial.IdxX;
                         newCell.IdxY = spatial.IdxY;
                         newCell.Size = cellSize;
