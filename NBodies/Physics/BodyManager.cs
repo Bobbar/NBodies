@@ -215,7 +215,7 @@ namespace NBodies.Physics
             var cm = CenterOfMass();
 
             var bList = new List<Body>(Bodies);
-            bList.RemoveAll(b => 
+            bList.RemoveAll(b =>
             {
                 float distX = cm.X - b.PosX;
                 float distY = cm.Y - b.PosY;
@@ -489,81 +489,123 @@ namespace NBodies.Physics
             float dtStep = 0.200f;
             bool complete = false;
             bool apoapsis = false;
+            int start = 0;
+            int end = 0;
+            int meshLevel = 1;
+            int[] levelIndex = PhysicsProvider.PhysicsCalc.LevelIndex;
+
+            start = levelIndex[meshLevel];
+            end = (meshLevel + 1 >= levelIndex.Length) ? Mesh.Length : levelIndex[meshLevel + 1];
 
             PointF speed = new PointF(body.VeloX, body.VeloY);
             PointF loc = new PointF(body.PosX, body.PosY);
-            PointF force = new PointF();
+            PointF startLoc = loc;
+            PointF planeA = new PointF();
+            PointF planeB = new PointF();
 
             points.Add(loc);
 
-            while (!complete)
+            try
             {
-                force = new PointF();
-
-                for (int c = 0; c < PhysicsProvider.PhysicsCalc.LevelIndex[1]; c++)
+                while (!complete)
                 {
-                    var cell = Mesh[c];
+                    float forceX = 0;
+                    float forceY = 0;
 
-                    if (cell.ID == body.MeshID)
-                        continue;
-
-                    var distX = cell.CmX - loc.X;
-                    var distY = cell.CmY - loc.Y;
-                    var dist = (distX * distX) + (distY * distY);
-                    var distSqrt = (float)Math.Sqrt(dist);
-
-                    if (distSqrt > (cell.Size * 2))
+                    for (int c = start; c < end; c++)
                     {
-                        var totMass = body.Mass * cell.Mass;
+                        if (end > Mesh.Length)
+                            break;
 
-                        var f = totMass / (dist + 0.02f);
+                        var cell = Mesh[c];
 
-                        force.X += (float)(f * distX / distSqrt);
-                        force.Y += (float)(f * distY / distSqrt);
-                    }
-                }
+                        if (cell.ID == body.MeshID)
+                            continue;
 
-                speed.X += dtStep * force.X / body.Mass;
-                speed.Y += dtStep * force.Y / body.Mass;
-                loc.X += dtStep * (speed.X);
-                loc.Y += dtStep * (speed.Y);
+                        var distX = cell.CmX - loc.X;
+                        var distY = cell.CmY - loc.Y;
+                        var dist = (distX * distX) + (distY * distY);
+                        var distSqrt = (float)Math.Sqrt(dist);
 
-                points.Add(loc);
-
-                if (steps > 10)
-                {
-                    // Define a flat "plane" at the test body's Y coord.
-                    var planeA = new PointF(-20000f, body.PosY);
-                    var planeB = new PointF(20000f, body.PosY);
-
-                    if (!apoapsis)
-                    {
-                        // Test for the first intersection of the plane.  This will be the apoapsis.
-                        if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        if (distSqrt > (cell.Size * 3))
                         {
-                            apoapsis = true;
+                            var totMass = body.Mass * cell.Mass;
+
+                            var f = totMass / (dist + 0.02f);
+
+                            forceX += (float)(f * distX / distSqrt);
+                            forceY += (float)(f * distY / distSqrt);
                         }
+
                     }
-                    else
+
+                    speed.X += dtStep * forceX / body.Mass;
+                    speed.Y += dtStep * forceY / body.Mass;
+                    loc.X += dtStep * (speed.X);
+                    loc.Y += dtStep * (speed.Y);
+
+                    points.Add(loc);
+
+                    if (steps == 0)
                     {
-                        // If we intersect the plane again after the apoapsis, we should now have a complete orbit.
-                        if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                        // Define a flat "plane" perpendicular to the first 2 points.
+                        var len = 20000;
+                        planeA = TangentPoint(startLoc, points[1], -len);
+                        planeB = TangentPoint(startLoc, points[1], len);
+                    }
+
+                    if (steps > 10)
+                    {
+                        if (!apoapsis)
+                        {
+                            // Test for the first intersection of the plane.  This will be the apoapsis.
+                            if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                            {
+                                apoapsis = true;
+                            }
+                        }
+                        else
+                        {
+                            // If we intersect the plane again after the apoapsis, we should now have a complete orbit.
+                            if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
+                            {
+                                complete = true;
+                            }
+                        }
+
+                        // If we haven't found an expected orbit after the maximum steps, end the loop to display what was calculated.
+                        if (steps >= maxSteps)
                         {
                             complete = true;
                         }
                     }
 
-                    // If we haven't found an expected orbit after the maximum steps, end the loop to display what was calculated.
-                    if (steps >= maxSteps)
-                    {
-                        complete = true;
-                    }
+                    steps++;
                 }
-
-                steps++;
+            }
+            catch
+            {
+                return new List<PointF>();
             }
 
+
             return points;
+        }
+
+        private static PointF TangentPoint(PointF a, PointF b, float len)
+        {
+            var l1 = a;
+            var l2 = b;
+
+            double slope = (l2.Y - l1.Y) / (l2.X - l1.X);
+            slope = -1 / slope;
+
+            float midX = (l1.X + l2.X) / 2;
+            float midY = (l1.Y + l2.Y) / 2;
+
+            double c = -slope * midX + midY;
+
+            return new PointF(midX + len, (float)(slope * (midX + len) + c));
         }
 
         //public static ColoredLine[] GetInteractions(Body body)
