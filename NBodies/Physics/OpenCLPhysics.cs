@@ -45,6 +45,7 @@ namespace NBodies.Physics
         private ComputeKernel clearGridKernel;
         private ComputeKernel clearNewGridKernel;
         private ComputeKernel buildNeighborsKernel;
+        private ComputeKernel fixOverlapKernel;
 
         private ComputeBuffer<int> _gpuLevelIdx;
         private ComputeBuffer<MeshCell> _gpuMesh;
@@ -126,6 +127,7 @@ namespace NBodies.Physics
             clearNewGridKernel = program.CreateKernel("ClearNewGrid");
             buildNeighborsKernel = program.CreateKernel("BuildNeighbors");
             clearGridKernel = program.CreateKernel("ClearGrid");
+            fixOverlapKernel = program.CreateKernel("FixOverlaps");
 
             InitBuffers();
         }
@@ -178,6 +180,25 @@ namespace NBodies.Physics
         {
             _gpuMesh.Dispose();
             _gpuLevelIdx.Dispose();
+        }
+
+        public void FixOverLaps(ref Body[] bodies)
+        {
+            using (var inBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
+            using (var outBodies = new ComputeBuffer<Body>(context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
+            {
+                queue.WriteToBuffer(bodies, inBodies, true, null);
+                queue.Finish();
+
+                fixOverlapKernel.SetMemoryArgument(0, inBodies);
+                fixOverlapKernel.SetValueArgument(1, bodies.Length);
+                fixOverlapKernel.SetMemoryArgument(2, outBodies);
+
+                queue.Execute(fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Finish();
+
+                bodies = ReadBuffer(outBodies);
+            }
         }
 
         public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock)

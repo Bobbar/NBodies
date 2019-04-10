@@ -12,8 +12,6 @@ namespace NBodies
 {
     public partial class AddBodiesForm : Form
     {
-        private float _solarMass = 30000;
-
         public AddBodiesForm()
         {
             InitializeComponent();
@@ -87,7 +85,7 @@ namespace NBodies
 
                 PointF newLoc = new PointF(px, py);
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || IntersectsExisting(newBodies, newLoc, bodySize))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -130,7 +128,10 @@ namespace NBodies
                 newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color)));
             }
 
-            BodyManager.Add(newBodies.ToArray());
+            var bodyArr = newBodies.ToArray();
+            FixOverlaps(ref bodyArr, 3);
+
+            BodyManager.Add(bodyArr);
 
             MainLoop.ResumePhysics(true);
         }
@@ -149,7 +150,6 @@ namespace NBodies
             int nGas = (count / 8) * 7;
             int nMinerals = (count / 8);
             int bodyCount = 0;
-
 
             for (int i = 0; i < count; i++)
             {
@@ -177,7 +177,7 @@ namespace NBodies
 
                 PointF newLoc = new PointF(px, py);
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || IntersectsExisting(newBodies, newLoc, bodySize))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -218,7 +218,10 @@ namespace NBodies
                 newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim())));
             }
 
-            BodyManager.Add(newBodies.ToArray());
+            var bodyArr = newBodies.ToArray();
+            FixOverlaps(ref bodyArr, 3);
+
+            BodyManager.Add(bodyArr);
 
             MainLoop.ResumePhysics(true);
         }
@@ -245,6 +248,18 @@ namespace NBodies
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// OpenCL accelerated overlap correcting.
+        /// </summary>
+        private void FixOverlaps(ref Body[] bodies, int passes)
+        {
+            for (int i = 0; i < passes; i++)
+            {
+                PhysicsProvider.PhysicsCalc.FixOverLaps(ref bodies);
+            }
+
         }
 
         private void AddOrbitButton_Click(object sender, EventArgs e)

@@ -69,6 +69,43 @@ struct GridInfo
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
 
+__kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies)
+{
+	int i = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (i >= inBodiesLen0)
+	{
+		return;
+	}
+
+	struct Body bodyA = inBodies[i];
+
+	for (int j = 0; j < inBodiesLen0; j++)
+	{
+		if (i != j)
+		{
+			struct Body bodyB = inBodies[j];
+			float aRad = bodyA.Size * 0.5f;
+			float bRad = bodyB.Size * 0.5f;
+			float distX = bodyA.PosX - bodyB.PosX;
+			float distY = bodyA.PosY - bodyB.PosY;
+			float dist = (distX * distX) + (distY * distY);
+			float colDist = aRad + bRad;
+
+			if (dist <= (colDist * colDist))
+			{
+				float distSqrt = (float)half_sqrt((float)dist);
+				float overlap = 0.5f * (distSqrt - aRad - bRad);
+
+				bodyA.PosX -= overlap * (distX) / distSqrt;
+				bodyA.PosY -= overlap * (distY) / distSqrt;
+			}
+		}
+	}
+
+	outBodies[i] = bodyA;
+}
+
 __kernel void ClearGrid(global int* gridIdx, global struct MeshCell* mesh, int meshLen)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
