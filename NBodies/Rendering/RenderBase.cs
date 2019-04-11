@@ -64,7 +64,8 @@ namespace NBodies.Rendering
         protected Control _targetControl;
         protected float _prevScale = 0;
         protected float _currentScale = 0;
-        protected Color _clearColor = Color.Black;
+        protected static Color _defaultClearColor = Color.FromArgb(255, 23, 23, 25);//Color.Black;
+        protected Color _clearColor = _defaultClearColor;
         protected RectangleF _cullTangle;
         protected Size _viewPortSize;
 
@@ -158,35 +159,38 @@ namespace NBodies.Rendering
                         {
                             case DisplayStyle.Normal:
                                 bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
-                                _clearColor = Color.Black;
+                                _clearColor = _defaultClearColor;
+
                                 break;
 
                             case DisplayStyle.Pressures:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
+                                _clearColor = _defaultClearColor;
 
-                                _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.Speeds:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
+                                _clearColor = _defaultClearColor;
 
-                                _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.Index:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
-                                _clearColor = Color.Black;
+                                _clearColor = _defaultClearColor;
+
                                 break;
 
                             case DisplayStyle.Forces:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                                _clearColor = _defaultClearColor;
 
-                                _clearColor = Color.Black;
                                 break;
 
                             case DisplayStyle.HighContrast:
                                 bodyColor = Color.Black;
                                 _clearColor = Color.White;
+
                                 break;
                         }
 
