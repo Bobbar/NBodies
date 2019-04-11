@@ -43,7 +43,6 @@ namespace NBodies.Physics
         private ComputeKernel collisionKernel;
         private ComputeKernel popGridKernel;
         private ComputeKernel clearGridKernel;
-        private ComputeKernel clearNewGridKernel;
         private ComputeKernel buildNeighborsKernel;
         private ComputeKernel fixOverlapKernel;
 
@@ -124,7 +123,6 @@ namespace NBodies.Physics
             forceKernel = program.CreateKernel("CalcForce");
             collisionKernel = program.CreateKernel("CalcCollisions");
             popGridKernel = program.CreateKernel("PopGrid");
-            clearNewGridKernel = program.CreateKernel("ClearNewGrid");
             buildNeighborsKernel = program.CreateKernel("BuildNeighbors");
             clearGridKernel = program.CreateKernel("ClearGrid");
             fixOverlapKernel = program.CreateKernel("FixOverlaps");
@@ -508,7 +506,7 @@ namespace NBodies.Physics
         {
             // Get spatial info for the cells about to be constructed.
             LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
-            var topLevels = CalcTopSpatials(botLevel);
+            LevelInfo[] topLevels = CalcTopSpatials(botLevel);
 
             int totCells = 0;
             foreach (var lvl in topLevels)
@@ -604,7 +602,7 @@ namespace NBodies.Physics
             {
                 int cellSizeExpLevel = cellSizeExp + level;
                 int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
-              
+
                 meshOffset += levelInfo[level - 1].CellCount;
                 levelIdx[level] = meshOffset;
 
@@ -690,12 +688,6 @@ namespace NBodies.Physics
             int newCap = Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), gridSize);
             if (newCap > 0)
             {
-                //clearNewGridKernel.SetMemoryArgument(0, _gpuGridIndex);
-                //clearNewGridKernel.SetValueArgument(1, gridSize);
-
-                //queue.Execute(clearNewGridKernel, null, new long[] { BlockCount(gridSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-                //queue.Finish();
-
                 queue.FillBuffer<int>(_gpuGridIndex, new int[1] { 0 }, 0, newCap, null);
                 queue.Finish();
             }
@@ -704,6 +696,7 @@ namespace NBodies.Physics
             int neighborLen = meshSize * 9;
             _neighborLen = neighborLen;
 
+            // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, nameof(_gpuMeshNeighbors), neighborLen);
 
             using (var gpuGridInfo = new ComputeBuffer<GridInfo>(context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
@@ -731,8 +724,7 @@ namespace NBodies.Physics
                 buildNeighborsKernel.SetValueArgument(argi++, _gridIndexSize);
                 buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
 
-                int blocks = BlockCount(meshSize);
-                queue.Execute(buildNeighborsKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Execute(buildNeighborsKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 queue.Finish();
 
                 // We're done with the grid index, so undo what we added to clear it for the next frame.
@@ -740,11 +732,9 @@ namespace NBodies.Physics
                 clearGridKernel.SetMemoryArgument(1, _gpuMesh);
                 clearGridKernel.SetValueArgument(2, meshSize);
 
-                blocks = BlockCount(meshSize);
-                queue.Execute(clearGridKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                queue.Execute(clearGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 queue.Finish();
             }
-
         }
 
         private int Allocate<T>(ref ComputeBuffer<T> buffer, string name, int size, bool exactSize = false) where T : struct
