@@ -49,10 +49,6 @@ namespace NBodies
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            int nGas = (count / 8) * 7;
-            int nMinerals = (count / 8);
-            int bodyCount = 0;
-
             var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
 
             if (includeCenterMass)
@@ -62,18 +58,7 @@ namespace NBodies
 
             for (int i = 0; i < count; i++)
             {
-                MatterType matter = Matter.Types[0];
-
-                if (bodyCount <= nGas)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
-                }
-                else if (bodyCount >= nMinerals)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
-                }
-
-                bodyCount++;
+                MatterType matter = Matter.GetRandom();
 
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
@@ -147,25 +132,9 @@ namespace NBodies
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
 
-            int nGas = (count / 8) * 7;
-            int nMinerals = (count / 8);
-            int bodyCount = 0;
-
             for (int i = 0; i < count; i++)
             {
-                MatterType matter = Matter.Types[0];
-
-                if (bodyCount <= nGas)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
-                }
-                else if (bodyCount >= nMinerals)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
-                }
-
-
-                bodyCount++;
+                MatterType matter = Matter.GetRandom();
 
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);

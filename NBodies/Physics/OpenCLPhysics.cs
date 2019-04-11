@@ -132,8 +132,6 @@ namespace NBodies.Physics
             InitBuffers();
         }
 
-
-
         private List<ComputeDevice> GetDevices()
         {
             var devices = new List<ComputeDevice>();
@@ -167,13 +165,11 @@ namespace NBodies.Physics
 
         private void InitBuffers()
         {
-
             _gpuGridIndex = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
             Allocate(ref _gpuGridIndex, nameof(_gpuGridIndex), 0);
 
             _gpuMeshNeighbors = new ComputeBuffer<int>(context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
             Allocate(ref _gpuMeshNeighbors, nameof(_gpuMeshNeighbors), 0);
-
         }
 
         private void FreeBuffers()
@@ -350,9 +346,6 @@ namespace NBodies.Physics
 
             int columns = minXAbs + minMax.MaxX;
             int rows = minYAbs + minMax.MaxY;
-
-            //int columns = minMax.MaxX - (minMax.MinX - 1);
-            //int rows = minMax.MaxY - (minMax.MinY - 1);
 
             int idxOff = 0;
             int size = ((columns + 1) * (rows + 1));
@@ -741,7 +734,6 @@ namespace NBodies.Physics
                 int blocks = BlockCount(meshSize);
                 queue.Execute(buildNeighborsKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 queue.Finish();
-
 
                 // We're done with the grid index, so undo what we added to clear it for the next frame.
                 clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
