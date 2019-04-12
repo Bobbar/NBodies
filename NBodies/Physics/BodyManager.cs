@@ -159,7 +159,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Removes invisible, expired, and some distant bodies from the body array.
+        /// Removes all invisible bodies.
         /// </summary>
         public static void CullBodies()
         {
@@ -174,7 +174,7 @@ namespace NBodies.Physics
             {
                 var body = Bodies[i];
 
-                if (body.Visible == 0 || body.Age > body.Lifetime)// || float.IsNaN(body.PosX) || float.IsNaN(body.PosY))
+                if (body.Visible == 0)
                 {
                     if (!realloc)
                     {

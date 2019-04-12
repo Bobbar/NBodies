@@ -533,6 +533,10 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, glob
 	if (dist > cullDistance * cullDistance)
 		outBody.Visible = 0;
 
+	// Cull expired bodies.
+	if (outBody.Age > outBody.Lifetime)
+		outBody.Visible = 0;
+
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
