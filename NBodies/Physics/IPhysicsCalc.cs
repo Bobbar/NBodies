@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NBodies.Physics
 {
-    public interface IPhysicsCalc
+    public interface IPhysicsCalc : IDisposable
     {
         MeshCell[] CurrentMesh { get; }
 

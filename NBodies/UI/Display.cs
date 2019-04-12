@@ -761,7 +761,7 @@ namespace NBodies.UI
 
         private void DisplayForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            MainLoop.Stop();
+            MainLoop.End();
         }
 
         private void LoadRecordingButton_Click(object sender, EventArgs e)

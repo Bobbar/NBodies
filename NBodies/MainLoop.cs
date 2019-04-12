@@ -231,6 +231,19 @@ namespace NBodies
             _cancelTokenSource.Cancel();
             _stopLoopWait.Reset();
             _stopLoopWait.WaitOne(2000);
+            _loopTask.Wait();
+            _loopTask.Dispose();
+            PhysicsProvider.PhysicsCalc.Flush();
+        }
+
+        public static void End()
+        {
+            _cancelTokenSource.Cancel();
+            _stopLoopWait.Reset();
+            _stopLoopWait.WaitOne(2000);
+            _loopTask.Wait();
+            _loopTask.Dispose();
+            PhysicsProvider.PhysicsCalc.Dispose();
         }
 
         /// <summary>
