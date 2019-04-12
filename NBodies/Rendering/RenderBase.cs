@@ -22,7 +22,7 @@ namespace NBodies.Rendering
         public static bool ShowPath = false;
         public static bool ShowMesh = false;
         public static bool SortZOrder = true;
-        public static bool FastPrimitives = false;
+        public static bool FastPrimitives = true;
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 

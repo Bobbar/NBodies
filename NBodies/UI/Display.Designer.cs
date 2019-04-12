@@ -207,7 +207,9 @@
             // 
             // fastPrimitivesToolStripMenuItem
             // 
+            this.fastPrimitivesToolStripMenuItem.Checked = true;
             this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
+            this.fastPrimitivesToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
             this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
