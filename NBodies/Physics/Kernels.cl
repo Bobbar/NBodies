@@ -89,7 +89,7 @@ __kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen0, global
 
 			if (dist <= (colDist * colDist))
 			{
-				float distSqrt = (float)half_sqrt((float)dist);
+				float distSqrt = (float)native_sqrt(dist);
 				float overlap = 0.5f * (distSqrt - aRad - bRad);
 
 				bodyA.PosX -= overlap * (distX) / distSqrt;
@@ -258,7 +258,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 						float distX = cell.CmX - outBody.PosX;
 						float distY = cell.CmY - outBody.PosY;
 						float dist = distX * distX + distY * distY;
-						float distSqrt = (float)half_sqrt((float)dist);
+						float distSqrt = (float)native_sqrt(dist);
 						float force = (float)cell.Mass * outBody.Mass / dist;
 
 						outBody.ForceTot += force;
@@ -284,7 +284,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 			float distX = cell.CmX - outBody.PosX;
 			float distY = cell.CmY - outBody.PosY;
 			float dist = distX * distX + distY * distY;
-			float distSqrt = (float)half_sqrt((float)dist);
+			float distSqrt = (float)native_sqrt(dist);
 			float force = (float)cell.Mass * outBody.Mass / dist;
 
 			outBody.ForceTot += force;
@@ -302,7 +302,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 		struct MeshCell cell = inMesh[(nId)];
 
 		// Iterate the bodies within the cell.
-		// Read from the flattened mesh-body index at the correct location.
+		// Read from body array at the correct location.
 		int mbStart = cell.BodyStartIdx;
 		int mbLen = cell.BodyCount + mbStart;
 		for (int mb = mbStart; mb < mbLen; mb++)
@@ -338,7 +338,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 				}
 
 				// Accumulate body-to-body force.
-				float distSqrt = (float)half_sqrt((float)dist);
+				float distSqrt = (float)native_sqrt(dist);
 				float force = inBody.Mass * outBody.Mass / dist;
 
 				outBody.ForceTot += force;
@@ -434,7 +434,7 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, glo
 				if (dist <= colDist * colDist)
 				{
 					// We know we have a collision, so go ahead and do the expensive square root now.
-					float distSqrt = (float)half_sqrt((float)dist);
+					float distSqrt = (float)native_sqrt(dist);
 
 					// If both bodies are in Roche, we do SPH physics.
 					// Otherwise, an elastic collision and merge is done.
@@ -553,7 +553,7 @@ struct Body CollideBodies(struct Body bodyA, struct Body bodyB, float colMass, f
 		float a1 = 3.141593f * (float)pow((double)(outBody.Size * 0.5f), 2.0);
 		float a2 = 3.141593f * (float)pow((double)(bodyB.Size * 0.5f), 2.0);
 		float area = a1 + a2;
-		outBody.Size = (float)half_sqrt((float)(((area / 3.141593f)) * 2.0f));
+		outBody.Size = (float)native_sqrt((((area / 3.141593f)) * 2.0f));
 	}
 
 	outBody.Mass += bodyB.Mass;
