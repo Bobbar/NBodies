@@ -64,18 +64,18 @@ struct GridInfo
 int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
 
-__kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies)
+__kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies)
 {
 	int i = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
-	if (i >= inBodiesLen0)
+	if (i >= inBodiesLen)
 	{
 		return;
 	}
 
 	struct Body bodyA = inBodies[i];
 
-	for (int j = 0; j < inBodiesLen0; j++)
+	for (int j = 0; j < inBodiesLen; j++)
 	{
 		if (i != j)
 		{
@@ -199,17 +199,15 @@ __kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global s
 }
 
 
-__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
+__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
 
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
-	if (a >= inBodiesLen0)
-	{
+	if (a >= inBodiesLen)
 		return;
-	}
 
 	// Copy current body and mesh cell from memory.
 	struct Body outBody = inBodies[(a)];
@@ -359,7 +357,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen0, global s
 	{
 		outBody.InRoche = 0;
 	}
-	else if (outBody.Flag == 2 || outBody.IsExplosion == 1)
+	else if (outBody.IsExplosion == 1)
 	{
 		outBody.InRoche = 1;
 	}
@@ -392,15 +390,13 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen0, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance)
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
-	if (a > inBodiesLen0 - 1)
-	{
+	if (a >= inBodiesLen)
 		return;
-	}
 
 	// Copy current body from memory.
 	struct Body outBody = inBodies[(a)];
