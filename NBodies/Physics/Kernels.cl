@@ -33,7 +33,7 @@ struct MeshCell
 	int Mort;
 	float CmX;
 	float CmY;
-	double Mass;
+	float Mass;
 	int Size;
 	int BodyStartIdx;
 	int BodyCount;
@@ -199,7 +199,7 @@ __kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global s
 }
 
 
-__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen0, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
+__kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx, int levelIdxLen0)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
@@ -225,7 +225,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global st
 	float ksize = 1.0f;
 	float ksizeSq = 1.0f;
 	float factor = 1.566682f;
-	float softening = 0.04;
+	float softening = 0.04f;
 
 	outBody.Density = outBody.Mass * factor;
 
@@ -273,7 +273,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global st
 	}
 
 	// Iterate the top level cells.
-	for (int top = levelIdx[(topLevel)]; top < inMeshLen0; top++)
+	for (int top = levelIdx[(topLevel)]; top < inMeshLen; top++)
 	{
 		struct MeshCell cell = inMesh[(top)];
 
@@ -535,7 +535,10 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, glob
 
 	// Cull expired bodies.
 	if (outBody.Age > outBody.Lifetime)
+	{
 		outBody.Visible = 0;
+		//printf("%s\n", "this is a test string\n");
+	}
 
 	// Write back to memory.
 	outBodies[(a)] = outBody;
@@ -550,8 +553,8 @@ struct Body CollideBodies(struct Body bodyA, struct Body bodyB, float colMass, f
 
 	if (outBody.Flag != 1)
 	{
-		float a1 = 3.141593f * (float)pow((double)(outBody.Size * 0.5f), 2.0);
-		float a2 = 3.141593f * (float)pow((double)(bodyB.Size * 0.5f), 2.0);
+		float a1 = 3.141593f * (float)pow((outBody.Size * 0.5f), 2.0f);
+		float a2 = 3.141593f * (float)pow((bodyB.Size * 0.5f), 2.0f);
 		float area = a1 + a2;
 		outBody.Size = (float)native_sqrt((((area / 3.141593f)) * 2.0f));
 	}

@@ -16,7 +16,7 @@ namespace NBodies.Physics
         public int Mort;
         public float CmX;
         public float CmY;
-        public double Mass;
+        public float Mass;
         public int Size;
         public int BodyStartIdx;
         public int BodyCount;
