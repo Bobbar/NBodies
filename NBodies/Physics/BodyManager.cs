@@ -205,9 +205,10 @@ namespace NBodies.Physics
             {
                 Array.Resize(ref culled, newSize);
                 Bodies = culled;
+
+                RebuildUIDIndex();
             }
 
-            RebuildUIDIndex();
         }
 
         public static void CullDistant()
