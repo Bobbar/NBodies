@@ -322,12 +322,8 @@ namespace NBodies
                             BodyManager.Bodies = _bodiesBuffer;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
-                            // Process and fracture roche bodies.
-                            if (RocheLimit)
-                                ProcessRoche(ref BodyManager.Bodies);
-
-                            // Remove invisible bodies.
-                            BodyManager.CullBodies();
+                            // Do some final host-side processing.
+                            BodyManager.PostProcess(RocheLimit);
 
                             // Increment physics frame count.
                             _frameCount++;
@@ -464,106 +460,6 @@ namespace NBodies
             }
         }
 
-        private static void ProcessRoche(ref Body[] bodies)
-        {
-            int len = bodies.Length;
-            for (int b = 0; b < len; b++)
-            {
-                //if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].BlackHole != 2 && bodies[b].BlackHole != 1 && bodies[b].IsExplosion != 1)
-                if (bodies[b].Visible == 1 && bodies[b].InRoche == 1 && bodies[b].Flag != 1 && bodies[b].IsExplosion != 1)
-                {
-                    if (bodies[b].Size > 1)
-                    {
-                        bodies[b].Visible = 0;
 
-                        FractureBody(bodies[b]);
-                    }
-                }
-            }
-        }
-
-        public static void FractureBody(Body body)
-        {
-            float minSize = 1.0f;
-            float newMass;
-            float prevMass;
-
-            bool flipflop = true;
-
-            float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
-
-            newMass = BodyManager.CalcMass(1, density);
-
-            int num = (int)(body.Mass / newMass);
-
-            prevMass = body.Mass;
-
-            var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), body.Size * 0.5f);
-
-            bool done = false;
-            float stepSize = minSize * 0.98f;
-
-            //float startXpos = ellipse.Location.X - (ellipse.Size / 2) + stepSize;
-            //float startYpos = ellipse.Location.Y - (ellipse.Size / 2) + stepSize;
-
-            float startXpos = ellipse.Location.X - ellipse.Size;
-            float startYpos = ellipse.Location.Y - ellipse.Size;
-
-            float Xpos = startXpos;
-            float Ypos = startYpos;
-
-            var newBodies = new List<Body>();
-
-            int its = 0;
-
-            while (!done)
-            {
-                var testPoint = new PointF(Xpos, Ypos);
-
-                if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
-                {
-                    var newbody = BodyManager.NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, minSize, newMass, Color.FromArgb(body.Color), 1);
-                    newbody.ForceTot = body.ForceTot;
-                    newBodies.Add(newbody);
-                }
-
-                Xpos += stepSize;
-
-                if (Xpos > ellipse.Location.X + (ellipse.Size))
-                {
-                    if (flipflop)
-                    {
-                        Xpos = startXpos + (minSize / 2f);
-                        flipflop = false;
-                    }
-                    else
-                    {
-                        Xpos = startXpos;
-                        flipflop = true;
-                    }
-
-                    Ypos += stepSize - 0.20f;
-                }
-
-                if (newBodies.Count == num || its > num * 4)
-                {
-                    done = true;
-                }
-
-                its++;
-
-                //if (Ypos > ellipse.Location.Y + (ellipse.Size))
-                //{
-                //    done = true;
-                //}
-            }
-
-            // newMass = prevMass / newPoints.Count;
-
-            //  float postMass = newMass * newPoints.Count;
-            //   Console.WriteLine(num + " - " + newPoints.Count);
-
-            BodyManager.Add(newBodies.ToArray());
-        }
     }
 }

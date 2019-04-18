@@ -1,6 +1,7 @@
 ﻿using NBodies.Extensions;
 using NBodies.Helpers;
 using NBodies.Rules;
+using NBodies.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -52,11 +53,10 @@ namespace NBodies.Physics
             }
         }
 
-        private static Dictionary<int, int> UIDIndex = new Dictionary<int, int>();
-        private static List<Body> _bodyStore = new List<Body>();
+      
+        private static List<int> UIDBuckets = new List<int>(50000);
         private static int _currentUID = -1;
         private static double _totalMass = 0;
-
         private static int _stateIdx = -1;
         private const int _maxStates = 200;
         private static List<byte[]> _states = new List<byte[]>(_maxStates + 1);
@@ -159,55 +159,112 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Removes all invisible bodies.
+        /// Preallocated storage for culled bodies. Reduces one potentially large reallocation.
         /// </summary>
-        public static void CullBodies()
+        private static Body[] _cullStore = new Body[500000];
+
+        /// <summary>
+        /// Culls invisible bodies, processes roche factures, rebuilds UID index.
+        /// </summary>
+        public static void PostProcess(bool processRoche)
         {
             if (Bodies.Length < 1) return;
 
-            Body[] culled = new Body[0];
             bool realloc = false;
             int position = 0;
             int newSize = 0;
+            int maxUID = -1;
+            List<Body> fractures = new List<Body>(0);
+
+            // Make sure the preallocated store is large enough.
+            if (_cullStore.Length < Bodies.Length)
+                _cullStore = new Body[Bodies.Length];
+
 
             for (int i = 0; i < Bodies.Length; i++)
             {
                 var body = Bodies[i];
 
+                // Fracture large bodies in roche.
+                if (processRoche)
+                {
+                    if (body.Visible == 1 && body.InRoche == 1 && body.Flag != 1 && body.IsExplosion != 1)
+                    {
+                        if (body.Size > 1)
+                        {
+                            body.Visible = 0;
+
+                            if (fractures.Count == 0)
+                                fractures = new List<Body>(2000);
+
+                            fractures.AddRange(FractureBody(Bodies[i]));
+                        }
+                    }
+                }
+
                 if (body.Visible == 0)
                 {
+                    // Only start to reallocate if we find an invisible body.
                     if (!realloc)
                     {
-                        culled = new Body[Bodies.Length];
-
-                        for (int x = 0; x < position; x++)
-                        {
-                            culled[x] = Bodies[x];
-                        }
+                        Array.Copy(Bodies, 0, _cullStore, 0, position);
 
                         realloc = true;
                         newSize = position;
                     }
+
+                    // Stop following invisible bodies.
+                    if (body.UID == FollowBodyUID)
+                    {
+                        FollowSelected = false;
+                        FollowBodyUID = -1;
+                    }
+
                 }
                 else
                 {
+                    // Store visible bodies in the a preallocated array.
                     if (realloc)
                     {
-                        culled[position] = body;
+                        _cullStore[position] = body;
                         newSize++;
                     }
 
+                    // Update the max UID.
+                    maxUID = Math.Max(maxUID, body.UID);
+
+
+                    // Update UID buckets and resize as needed.
+                    if (body.UID < UIDBuckets.Count)
+                    {
+                        UIDBuckets[body.UID] = position;
+                    }
+                    else
+                    {
+                        int inc = (body.UID - UIDBuckets.Count) + 1;
+
+                        UIDBuckets.AddRange(new int[inc]);
+                        UIDBuckets[body.UID] = position;
+                    }
+
+                    // Update our current position for the cull store.
                     position++;
                 }
             }
 
+            // Set current UID to the determined max.
+            _currentUID = maxUID;
+
+            // Resize the main body array and copy from the cull store.
             if (realloc)
             {
-                Array.Resize(ref culled, newSize);
-                Bodies = culled;
-
-                RebuildUIDIndex();
+                Array.Resize(ref Bodies, newSize);
+                Array.Copy(_cullStore, 0, Bodies, 0, newSize);
             }
+
+            // Add fractured bodies after to be processed on the following frame.
+            if (fractures.Count > 0)
+                Add(fractures.ToArray());
 
         }
 
@@ -232,6 +289,77 @@ namespace NBodies.Physics
             Bodies = bList.ToArray();
         }
 
+        private static Body[] FractureBody(Body body)
+        {
+            float minSize = 1.0f;
+            float newMass;
+            float prevMass;
+
+            bool flipflop = true;
+
+            float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
+
+            newMass = CalcMass(1, density);
+
+            int num = (int)(body.Mass / newMass);
+
+            prevMass = body.Mass;
+
+            var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), body.Size * 0.5f);
+
+            bool done = false;
+            float stepSize = minSize * 0.98f;
+
+            float startXpos = ellipse.Location.X - ellipse.Size;
+            float startYpos = ellipse.Location.Y - ellipse.Size;
+
+            float Xpos = startXpos;
+            float Ypos = startYpos;
+
+            var newBodies = new List<Body>();
+
+            int its = 0;
+
+            while (!done)
+            {
+                var testPoint = new PointF(Xpos, Ypos);
+
+                if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
+                {
+                    var newbody = NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, minSize, newMass, Color.FromArgb(body.Color), 1);
+                    newbody.ForceTot = body.ForceTot;
+                    newBodies.Add(newbody);
+                }
+
+                Xpos += stepSize;
+
+                if (Xpos > ellipse.Location.X + (ellipse.Size))
+                {
+                    if (flipflop)
+                    {
+                        Xpos = startXpos + (minSize / 2f);
+                        flipflop = false;
+                    }
+                    else
+                    {
+                        Xpos = startXpos;
+                        flipflop = true;
+                    }
+
+                    Ypos += stepSize - 0.20f;
+                }
+
+                if (newBodies.Count == num || its > num * 4)
+                {
+                    done = true;
+                }
+
+                its++;
+            }
+
+            return newBodies.ToArray();
+        }
+
         public static double UpdateTotMass()
         {
             double tMass = 0;
@@ -251,8 +379,9 @@ namespace NBodies.Physics
             FollowSelected = false;
             FollowBodyUID = -1;
             Bodies = new Body[0];
-            UIDIndex.Clear();
-            _bodyStore.Clear();
+
+            UIDBuckets.Clear();
+
             _currentUID = -1;
             ClearStates();
         }
@@ -272,44 +401,23 @@ namespace NBodies.Physics
 
         public static void RebuildUIDIndex()
         {
-            UIDIndex.Clear();
-
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                if (!UIDIndex.ContainsKey(Bodies[i].UID))
-                {
-                    UIDIndex.Add(Bodies[i].UID, i);
-                }
-                else
-                {
-                    PurgeUIDs();
-
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Replace all body UIDs with a new ones to fix duplicates.
-        /// </summary>
-        private static void PurgeUIDs()
-        {
+            UIDBuckets = new List<int>(new int[Bodies.Length + 1]);
             _currentUID = -1;
 
             for (int i = 0; i < Bodies.Length; i++)
             {
                 Bodies[i].UID = NextUID();
+                UIDBuckets[Bodies[i].UID] = i;
             }
-
-            RebuildUIDIndex();
         }
 
-        public static PointF FollowBodyLoc()
-        {
-            if (UIDIndex.ContainsKey(FollowBodyUID))
-                return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].PosX, (float)Bodies[UIDToIndex(FollowBodyUID)].PosY);
-            return new PointF();
-        }
+
+        //public static PointF FollowBodyLoc()
+        //{
+        //    if (UIDIndex.ContainsKey(FollowBodyUID))
+        //        return new PointF((float)Bodies[UIDToIndex(FollowBodyUID)].PosX, (float)Bodies[UIDToIndex(FollowBodyUID)].PosY);
+        //    return new PointF();
+        //}
 
         public static Body FollowBody()
         {
@@ -317,10 +425,7 @@ namespace NBodies.Physics
             {
                 if (FollowSelected)
                 {
-                    if (UIDIndex.ContainsKey(FollowBodyUID))
-                    {
-                        return Bodies[UIDIndex[FollowBodyUID]];
-                    }
+                    return Bodies[UIDToIndex(FollowBodyUID)];
                 }
             }
             catch
@@ -334,20 +439,32 @@ namespace NBodies.Physics
 
         public static int UIDToIndex(int uid)
         {
-            if (UIDIndex.ContainsKey(uid))
-                return UIDIndex[uid];
+            if (uid < UIDBuckets.Count)
+                return UIDBuckets[uid];
 
-            return -1;
+            return 0;
         }
 
         public static Body BodyFromUID(int uid)
         {
-            if (UIDIndex.ContainsKey(uid))
-            {
-                return Bodies[UIDIndex[uid]];
-            }
+            int idx = UIDToIndex(uid);
 
-            return new Body();
+            if (idx < Bodies.Length)
+                return Bodies[idx];
+
+            return Bodies[0];
+        }
+
+        public static void AddUID(int uid, int idx)
+        {
+            if (uid < UIDBuckets.Count)
+            {
+                UIDBuckets[uid] = idx;
+            }
+            else
+            {
+                RebuildUIDIndex();
+            }
         }
 
         public static PointF MeshCenterOfMass()
@@ -733,7 +850,7 @@ namespace NBodies.Physics
             body.UID = NextUID();
             Bodies = Bodies.Add(body);
 
-            UIDIndex.Add(body.UID, Bodies.Length - 1);
+            AddUID(body.UID, Bodies.Length - 1);
 
             return body.UID;
         }
