@@ -16,6 +16,7 @@ namespace NBodies
     {
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
+        public static bool RewindBuffer = false;
         public static float CurrentFPS = 0;
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
@@ -303,7 +304,8 @@ namespace NBodies
                         if (BodyManager.Bodies.Length > 1)
                         {
                             // Push the current field to rewind collection.
-                            BodyManager.PushState();
+                            if (RewindBuffer)
+                                BodyManager.PushState();
 
                             // 1.
                             // Copy the current bodies to another array.

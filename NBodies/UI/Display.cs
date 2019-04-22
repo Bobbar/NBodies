@@ -810,5 +810,10 @@ namespace NBodies.UI
         {
             RenderBase.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
         }
+
+        private void rewindBufferToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.RewindBuffer = rewindBufferToolStripMenuItem.Checked;
+        }
     }
 }

@@ -84,6 +84,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
+            this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -147,6 +148,7 @@
             this.rocheLimitToolStripMenuItem,
             this.sortZOrderToolStripMenuItem,
             this.fastPrimitivesToolStripMenuItem,
+            this.rewindBufferToolStripMenuItem,
             this.showMeshToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
@@ -766,6 +768,14 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // rewindBufferToolStripMenuItem
+            // 
+            this.rewindBufferToolStripMenuItem.CheckOnClick = true;
+            this.rewindBufferToolStripMenuItem.Name = "rewindBufferToolStripMenuItem";
+            this.rewindBufferToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.rewindBufferToolStripMenuItem.Text = "Rewind Buffer (High RAM Usage!)";
+            this.rewindBufferToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rewindBufferToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -857,6 +867,7 @@
         private System.Windows.Forms.ToolStripMenuItem indexToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem fastPrimitivesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem rewindBufferToolStripMenuItem;
     }
 }
 
