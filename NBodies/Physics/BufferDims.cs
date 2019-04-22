@@ -13,7 +13,7 @@ namespace NBodies.Physics
         public long HandleVal;
         public int Capacity;
         public int Size;
-        public float GrowFactor = 2.0f;
+        public float GrowFactor = 1.4f;//2.0f;
         public float ShrinkFactor = 4f;
         public bool ExactSize = false;
 

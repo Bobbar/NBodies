@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Threading;
 using Cloo;
 using Cloo.Bindings;
 using Cloo.Extensions;
@@ -24,6 +25,10 @@ namespace NBodies.Physics
         private MeshCell[] _mesh = new MeshCell[0];
         private GridInfo[] _gridInfo = new GridInfo[0];
         private Body[] _bodies = new Body[0];
+        private static Body[] _sortBodies = new Body[0];
+        private static SpatialInfo[] _spatials = new SpatialInfo[0];
+        private static int[] _mortKeys = new int[0];
+        private static int[] _cellIdx = new int[0];
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
@@ -44,7 +49,6 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuGridIndex;
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
-
         private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         private Stopwatch timer = new Stopwatch();
@@ -83,7 +87,7 @@ namespace NBodies.Physics
             var platform = device.Platform;
 
             _context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, device, ComputeCommandQueueFlags.Profiling);
+            _queue = new ComputeCommandQueue(_context, device, ComputeCommandQueueFlags.None);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -102,7 +106,6 @@ namespace NBodies.Physics
                 Console.WriteLine(buildLog);
                 throw;
             }
-
 
 
             Console.WriteLine(_program.GetBuildLog(device));
@@ -219,6 +222,7 @@ namespace NBodies.Physics
 
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             _queue.Finish();
+
 
             argi = 0;
             _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
@@ -346,18 +350,16 @@ namespace NBodies.Physics
         /// <summary>
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all bodies.
         /// </summary>
-        /// <param name="bodies">Current field.</param>
         /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
-        /// <param name="cellCount">Number of unique cell indexes.</param>
-        /// <param name="cellStartIdx">Array containing starting indexes of each cell within the returned array.</param>
-        /// <returns></returns>
         private LevelInfo CalcBodySpatials(int cellSizeExp)
         {
-            var spatials = new SpatialInfo[_bodies.Length];
+            if (_spatials.Length != _bodies.Length)
+                _spatials = new SpatialInfo[_bodies.Length];
 
             // Array of morton numbers used for sorting.
             // Using a key array when sorting is much faster than sorting an array of objects by a field.
-            int[] mortKeys = new int[_bodies.Length];
+            if (_mortKeys.Length != _bodies.Length)
+                _mortKeys = new int[_bodies.Length];
 
             // Compute the spatial info in parallel.
             Parallel.ForEach(Partitioner.Create(0, _bodies.Length), _parallelOptions, (range) =>
@@ -368,52 +370,62 @@ namespace NBodies.Physics
                     int idxY = (int)_bodies[b].PosY >> cellSizeExp;
                     int morton = MortonNumber(idxX, idxY);
 
-                    spatials[b] = new SpatialInfo(morton, idxX, idxY, b);
-                    mortKeys[b] = morton;
+                    _spatials[b] = new SpatialInfo(morton, idxX, idxY, b);
+                    _mortKeys[b] = morton;
                 }
 
             });
 
             // Sort by morton number to produce a spatially sorted array.
-            Array.Sort(mortKeys, spatials);
+            Array.Sort(_mortKeys, _spatials);
 
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
             int val = 0;
-            var cellIdx = new List<int>(_bodies.Length);
-            Body[] sortBodies = new Body[_bodies.Length];
 
-            for (int i = 0; i < spatials.Length; i++)
+            if (_cellIdx.Length != _bodies.Length + 1)
+                _cellIdx = new int[_bodies.Length + 1];
+
+            if (_sortBodies.Length != _bodies.Length)
+                _sortBodies = new Body[_bodies.Length];
+
+
+            for (int i = 0; i < _spatials.Length; i++)
             {
                 // Build a new sorted body array from the sorted spatial info.
-                sortBodies[i] = _bodies[spatials[i].Index];
+                _sortBodies[i] = _bodies[_spatials[i].Index];
 
                 // Update spatials index to match new sorted bodies.
-                spatials[i].Index = i;
+                _spatials[i].Index = i;
 
-                if (val != spatials[i].Mort)
+                if (val != _spatials[i].Mort)
                 {
+                    _cellIdx[count] = i;
+                    val = _spatials[i].Mort;
+
                     count++;
-                    val = spatials[i].Mort;
-                    cellIdx.Add(i);
                 }
             }
 
-            cellIdx.Add(spatials.Length);
+            _cellIdx[count] = _spatials.Length;
 
             // Update the original body array with the sorted one.
-            _bodies = sortBodies;
+            _bodies = _sortBodies;
 
             var output = new LevelInfo();
-            output.Spatials = spatials;
+            output.Spatials = _spatials;
             output.CellCount = count;
-            output.CellIndex = cellIdx.ToArray();
+            output.CellIndex = new int[count + 1];
+            Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
 
             return output;
         }
 
-
+        /// <summary>
+        /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.
+        /// </summary>
+        /// <param name="bottom">LevelInfo for bottom-most mesh level.</param>
         private LevelInfo[] CalcTopSpatials(LevelInfo bottom)
         {
             LevelInfo[] output = new LevelInfo[_levels + 1];
@@ -422,16 +434,7 @@ namespace NBodies.Physics
 
             for (int level = 1; level <= _levels; level++)
             {
-                LevelInfo current;
-
-                if (level == 1)
-                {
-                    current = bottom;
-                }
-                else
-                {
-                    current = output[level - 1];
-                }
+                LevelInfo current = output[level - 1];
 
                 output[level] = new LevelInfo();
                 output[level].Spatials = new SpatialInfo[current.CellCount];
@@ -452,22 +455,24 @@ namespace NBodies.Physics
 
                 int count = 0;
                 int val = int.MaxValue;
-                var cellIdx = new List<int>(output[level].Spatials.Length);
+
                 for (int i = 0; i < output[level].Spatials.Length; i++)
                 {
                     if (val != output[level].Spatials[i].Mort)
                     {
-                        count++;
+                        _cellIdx[count] = i;
                         val = output[level].Spatials[i].Mort;
-                        cellIdx.Add(i);
+
+                        count++;
+
                     }
                 }
 
-                cellIdx.Add(output[level].Spatials.Length);
+                _cellIdx[count] = output[level].Spatials.Length;
 
                 output[level].CellCount = count;
-                output[level].CellIndex = cellIdx.ToArray();
-
+                output[level].CellIndex = new int[count + 1];
+                Array.Copy(_cellIdx, 0, output[level].CellIndex, 0, count + 1);
             }
 
             return output;
@@ -476,7 +481,6 @@ namespace NBodies.Physics
         /// <summary>
         /// Builds the particle mesh and mesh-neighbor index for the current field.  Also begins writing the body array to GPU...
         /// </summary>
-        /// <param name="bodies">Array of bodies.</param>
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
         private void BuildMesh(int cellSizeExp)
         {
@@ -490,7 +494,9 @@ namespace NBodies.Physics
                 totCells += lvl.CellCount;
             }
 
-            var meshArr = new MeshCell[totCells];
+            if (_mesh.Length != totCells)
+                _mesh = new MeshCell[totCells];
+
             _gridInfo = new GridInfo[_levels + 1];
             object lockObj = new object();
             MinMax minMax = new MinMax();
@@ -537,7 +543,7 @@ namespace NBodies.Physics
                     newCell.CmX = newCell.CmX / (float)newCell.Mass;
                     newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
-                    meshArr[m] = newCell;
+                    _mesh[m] = newCell;
                 }
 
                 lock (lockObj)
@@ -554,15 +560,11 @@ namespace NBodies.Physics
             WriteBodiesToGPU();
 
             // Index to hold the starting indexes for each level.
-            int[] levelIdx = new int[_levels + 1];
-            levelIdx[0] = 0;
+            _levelIdx = new int[_levels + 1];
+            _levelIdx[0] = 0;
 
-            BuildTopLevels(meshArr, ref levelIdx, topLevels, cellSizeExp, _levels);
-
-            // Get the completed mesh and level index.
-            _mesh = meshArr;
-            _levelIdx = levelIdx;
-
+            BuildTopLevels(topLevels, cellSizeExp, _levels);
+           
             // Allocate and begin writing mesh to GPU.
             Allocate(ref _gpuMesh, _mesh.Length, true);
             _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
@@ -571,7 +573,7 @@ namespace NBodies.Physics
             PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
-        private void BuildTopLevels(MeshCell[] mesh, ref int[] levelIdx, LevelInfo[] levelInfo, int cellSizeExp, int levels)
+        private void BuildTopLevels(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
             int meshOffset = 0;
             for (int level = 1; level <= levels; level++)
@@ -580,12 +582,12 @@ namespace NBodies.Physics
                 int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
 
                 meshOffset += levelInfo[level - 1].CellCount;
-                levelIdx[level] = meshOffset;
+                _levelIdx[level] = meshOffset;
 
                 int levelOffset = 0;
 
                 if (level > 1)
-                    levelOffset = levelIdx[level - 1];
+                    levelOffset = _levelIdx[level - 1];
 
                 LevelInfo current = levelInfo[level];
                 int cellCount = current.CellCount;
@@ -621,20 +623,20 @@ namespace NBodies.Physics
                         // Iterate the elements between the spatial info cell indexes and add child info.
                         for (int i = current.CellIndex[m]; i < current.CellIndex[m + 1]; i++)
                         {
-                            var child = mesh[i + levelOffset];
+                            var child = _mesh[i + levelOffset];
                             newCell.Mass += child.Mass;
                             newCell.CmX += (float)child.Mass * child.CmX;
                             newCell.CmY += (float)child.Mass * child.CmY;
                             newCell.BodyCount += child.BodyCount;
                             newCell.ChildCount++;
                             child.ParentID = newIdx;
-                            mesh[i + levelOffset] = child;
+                            _mesh[i + levelOffset] = child;
                         }
 
                         newCell.CmX = newCell.CmX / (float)newCell.Mass;
                         newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
-                        mesh[newIdx] = newCell;
+                        _mesh[newIdx] = newCell;
                     }
 
                     lock (lockObj)
