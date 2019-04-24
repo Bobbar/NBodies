@@ -729,7 +729,7 @@ namespace NBodies.UI
 
         private void PressureScaleUpDown_ValueChanged(object sender, EventArgs e)
         {
-            RenderBase.StyleScaleMax = (float)PressureScaleUpDown.Value;
+            RenderBase.StyleScaleMax = (int)PressureScaleUpDown.Value;
         }
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)

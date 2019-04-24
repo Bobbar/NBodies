@@ -249,7 +249,7 @@ namespace NBodies.Rendering
             _wndRender.EndDraw();
         }
 
-        public override void Destroy()
+        public override void DoDestroy()
         {
             _wndRender.Dispose();
 

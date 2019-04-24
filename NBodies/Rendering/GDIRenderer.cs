@@ -218,7 +218,7 @@ namespace NBodies.Rendering
                 _buffer.Render();
         }
 
-        public override void Destroy()
+        public override void DoDestroy()
         {
             _buffer.Dispose();
             _currentContext.Dispose();
