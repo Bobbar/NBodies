@@ -26,7 +26,7 @@ namespace NBodies.Rendering
 
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
-        public static int StyleScaleMax
+        public static float StyleScaleMax
         {
             get
             {
@@ -58,7 +58,7 @@ namespace NBodies.Rendering
             }
         }
 
-        private static int _styleScaleMax = 210;
+        private static float _styleScaleMax = 210;
         private static int _bodyAlpha = 210;
 
         protected Control _targetControl;
@@ -68,12 +68,6 @@ namespace NBodies.Rendering
         protected Color _clearColor = _defaultClearColor;
         protected RectangleF _cullTangle;
         protected Size _viewPortSize;
-        protected Body[] _bodies;
-        protected Task _drawTask;
-        protected ManualResetEventSlim _completeCallback;
-        protected ManualResetEventSlim _startDrawWait = new ManualResetEventSlim(false);
-        protected ManualResetEventSlim _loopEndedWait = new ManualResetEventSlim(false);
-        protected CancellationTokenSource _stopLoopSource = new CancellationTokenSource();
 
         private ManualResetEventSlim _orbitReadyWait = new ManualResetEventSlim(false);
         private bool _orbitOffloadRunning = false;
@@ -90,29 +84,15 @@ namespace NBodies.Rendering
         protected void Init(Control targetControl)
         {
             _targetControl = targetControl;
-            _drawTask = new Task(DoDrawBodiesAsync, _stopLoopSource.Token);
             InitGraphics();
         }
 
-        public async void DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
+        public async Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
         {
-            _bodies = bodies;
-            _completeCallback = completeCallback;
+            completeCallback.Reset();
 
-            _startDrawWait.Set();
-
-            if (_drawTask.Status == TaskStatus.Created)
-                _drawTask.Start();
-        }
-
-        private async void DoDrawBodiesAsync()
-        {
-            while (!_stopLoopSource.IsCancellationRequested)
+            await Task.Run(() =>
             {
-                _startDrawWait.Wait();
-
-                _completeCallback.Reset();
-
                 var finalOffset = CalcFinalOffset();
 
                 CheckScale();
@@ -139,29 +119,29 @@ namespace NBodies.Rendering
 
                 if (SortZOrder)
                 {
-                    bodyIds = new int[_bodies.Length];
-                    bodyUids = new int[_bodies.Length];
+                    bodyIds = new int[bodies.Length];
+                    bodyUids = new int[bodies.Length];
 
-                    for (int i = 0; i < _bodies.Length; ++i)
+                    for (int i = 0; i < bodies.Length; ++i)
                     {
                         bodyIds[i] = i;
-                        bodyUids[i] = _bodies[i].UID;
+                        bodyUids[i] = bodies[i].UID;
                     }
 
                     Array.Sort(bodyUids, bodyIds);
                 }
 
-                for (int i = 0; i < _bodies.Length; i++)
+                for (int i = 0; i < bodies.Length; i++)
                 {
                     Body body;
 
                     if (SortZOrder && bodyIds.Length > 0)
                     {
-                        body = _bodies[bodyIds[i]];
+                        body = bodies[bodyIds[i]];
                     }
                     else
                     {
-                        body = _bodies[i];
+                        body = bodies[i];
                     }
 
                     var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
@@ -196,7 +176,7 @@ namespace NBodies.Rendering
                                 break;
 
                             case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, _bodies.Length, i, true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
                                 _clearColor = _defaultClearColor;
 
                                 break;
@@ -221,7 +201,7 @@ namespace NBodies.Rendering
 
                 if (ShowAllForce)
                 {
-                    DrawForceVectors(_bodies, finalOffset.X, finalOffset.Y);
+                    DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
                 }
 
                 if (BodyManager.FollowSelected)
@@ -270,23 +250,9 @@ namespace NBodies.Rendering
                     DrawOverlays(finalOffset.X, finalOffset.Y);
 
                 EndDraw();
+            });
 
-                _startDrawWait.Reset();
-                _completeCallback.Set();
-            }
-
-            _loopEndedWait.Set();
-
-        }
-
-        public void Destroy()
-        {
-            _stopLoopSource.Cancel();
-            _startDrawWait.Set();
-
-            _loopEndedWait.Wait(5000);
-
-            DoDestroy();
+            completeCallback.Set();
         }
 
         public abstract void InitGraphics();
@@ -313,7 +279,7 @@ namespace NBodies.Rendering
 
         public abstract void EndDraw();
 
-        public abstract void DoDestroy();
+        public abstract void Destroy();
 
         protected internal bool OverlaysVisible()
         {
@@ -443,9 +409,8 @@ namespace NBodies.Rendering
             long r2 = 0;
             long g2 = 0;
             long b2 = 0;
-            float maxHalf = maxValue / 2f;
 
-            if (currentValue <= (maxHalf))
+            if (currentValue <= (maxValue / 2f))
             {
                 r1 = startColor.R;
                 g1 = startColor.G;
@@ -455,7 +420,7 @@ namespace NBodies.Rendering
                 g2 = midColor.G;
                 b2 = midColor.B;
 
-                maxValue = maxHalf;
+                maxValue = maxValue / 2f;
             }
             else
             {
@@ -467,7 +432,7 @@ namespace NBodies.Rendering
                 g2 = endColor.G;
                 b2 = endColor.B;
 
-                maxValue = maxHalf;
+                maxValue = maxValue / 2f;
                 currentValue = currentValue - maxValue;
             }
 

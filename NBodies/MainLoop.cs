@@ -186,7 +186,7 @@ namespace NBodies
         }
 
         private static float _viscosity = 10.0f;
-        private static float _cullDistance = 12000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
+        private static float _cullDistance = 8000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
@@ -287,10 +287,10 @@ namespace NBodies
         {
             // Double-buffered body array:
             //
-            // 1. The physics methods calculate the next frame.
+            // 1. Make a copy of the body data and pass that to the physics methods to calculate the next frame.
             // 2. Wait for the drawing thread to finish rendering the previous frame.
-            // 3. Make a copy of the current field to pass to the renderer.
-            // 4. Asyncronously start rendering the current field, and immediately loop to start the next physics calc.
+            // 3. Once the drawing thread is finished, copy the new data to the current Bodies buffer.
+            // 4. Asyncronously start drawing the current Bodies to the field, and immediately loop to start the next physics calc.
             //
             // This allows the rendering and the physics calcs to work at the same time.
             // This way we can keep the physics thread busy with the next frame while the rendering thread is busy with the current one.
@@ -308,10 +308,20 @@ namespace NBodies
                                 BodyManager.PushState();
 
                             // 1.
-                            // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref BodyManager.Bodies, _timeStep, _viscosity, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+                            // Copy the current bodies to another array.
+                            _bodiesBuffer = new Body[BodyManager.Bodies.Length];
+                            Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
-                            // Update the current mesh.
+                            // Calc all physics and movements.
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _viscosity, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+
+                            // 2.
+                            // Wait for the drawing thread to complete if needed.
+                            _drawingDoneWait.Wait(5000);
+
+                            // 3.
+                            // Copy the new data to the current body collection.
+                            BodyManager.Bodies = _bodiesBuffer;
                             BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
                             // Do some final host-side processing.
@@ -320,19 +330,21 @@ namespace NBodies
                             // Increment physics frame count.
                             _frameCount++;
 
-                            // Send the field to the recorder if we are recording.
+                            // Send the data to the recorder if we are recording.
                             if (_recorder.RecordingActive && BodyManager.Bodies.Length > 0)
                             {
                                 if (_recElapTime >= _recFrameTimeSpan)
                                 {
+                                    timer.Restart();
                                     _recorder.RecordFrame(BodyManager.Bodies);
+                                    timer.Print("Rec");
                                     _recElapTime = 0f;
                                 }
                                 _recElapTime += TimeStep;
                             }
                         }
                     }
-                   
+
                     // If the wait handle is nonsignaled, a pause has been requested.
                     if (!_pausePhysicsWait.Wait(0))
                     {
@@ -342,8 +354,7 @@ namespace NBodies
                         _pausePhysicsWait.Set();
                     }
 
-                    // 2.
-                    // Make sure the rendering thread is finished.
+                    // Make sure the drawing thread is finished.
                     _drawingDoneWait.Wait(5000);
 
                     // If we are playing back a recording, get the current field frame
@@ -363,20 +374,10 @@ namespace NBodies
 
                     if (_bursts >= _burstSkips)
                     {
+                        // 4.
+                        // Draw the field asynchronously.
                         if (DrawBodies)
-                        {
-                            // 3.
-                            // Make a copy of the current field for the renderer to use
-                            // while the physics methods work on the next frame.
-                            if (_bodiesBuffer.Length != BodyManager.Bodies.Length)
-                                _bodiesBuffer = new Body[BodyManager.Bodies.Length];
-                           
-                            Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
-                            
-                            // 4.
-                            // Render the field asynchronously.
-                            Renderer.DrawBodiesAsync(_bodiesBuffer, _drawingDoneWait);
-                        }
+                            Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
 
                         _bursts = 0;
                     }
