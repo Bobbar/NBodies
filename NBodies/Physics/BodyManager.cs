@@ -53,7 +53,7 @@ namespace NBodies.Physics
             }
         }
 
-      
+
         private static List<int> UIDBuckets = new List<int>(50000);
         private static int _currentUID = -1;
         private static double _totalMass = 0;
@@ -401,16 +401,16 @@ namespace NBodies.Physics
 
         public static void RebuildUIDIndex()
         {
-            UIDBuckets = new List<int>(new int[Bodies.Length + 1]);
-            _currentUID = -1;
+            var maxUID = Bodies.Max(b => b.UID);
+
+            UIDBuckets = new List<int>(new int[maxUID + 1]);
+            _currentUID = maxUID;
 
             for (int i = 0; i < Bodies.Length; i++)
             {
-                Bodies[i].UID = NextUID();
                 UIDBuckets[Bodies[i].UID] = i;
             }
         }
-
 
         //public static PointF FollowBodyLoc()
         //{
@@ -460,6 +460,10 @@ namespace NBodies.Physics
             if (uid < UIDBuckets.Count)
             {
                 UIDBuckets[uid] = idx;
+            }
+            else if (uid == UIDBuckets.Count)
+            {
+                UIDBuckets.Add(idx);
             }
             else
             {

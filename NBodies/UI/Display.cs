@@ -202,7 +202,7 @@ namespace NBodies.UI
                 PressureLabel.Text = string.Format("Press: {0}", selectBody.Pressure);
                 SpeedLabel.Text = string.Format("Agg. Speed: {0}", selectBody.AggregateSpeed());
 
-                selectBody.PrintInfo();
+                // selectBody.PrintInfo();
             }
         }
 
@@ -370,7 +370,7 @@ namespace NBodies.UI
                 case Keys.ShiftKey:
 
                     _shiftDown = false;
-                   // MainLoop.ResumePhysics();
+                    // MainLoop.ResumePhysics();
 
                     break;
 
@@ -406,6 +406,8 @@ namespace NBodies.UI
 
                 if (!_mouseRightDown)
                 {
+                    _mouseRightDown = true;
+
                     MainLoop.WaitForPause();
 
                     var mUid = MouseOverUID(e.Location);
@@ -432,8 +434,6 @@ namespace NBodies.UI
                     _orbitOver.Show();
 
                     RenderBase.AddOverlay(_orbitOver);
-
-                    _mouseRightDown = true;
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -506,14 +506,9 @@ namespace NBodies.UI
 
             if (e.Button == MouseButtons.Left)
             {
-                if (_selectedUid == -1 && _shiftDown)
+                if (_selectedUid != -1 && _shiftDown)
                 {
-                    var mId = MouseOverUID(e.Location);
-                    if (mId != -1)
-                    {
-                        _bodyMovin = true;
-                        _selectedUid = mId;
-                    }
+                    _bodyMovin = true;
                 }
 
                 if (_bodyMovin)
