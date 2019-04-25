@@ -21,6 +21,8 @@ namespace NBodies.Physics
         private int _gpuIndex = 2;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
+        private int _parts = 24;
+
         private int[] _levelIdx = new int[0];
         private MeshCell[] _mesh = new MeshCell[0];
         private GridInfo[] _gridInfo = new GridInfo[0];
@@ -53,6 +55,7 @@ namespace NBodies.Physics
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
+
 
         public MeshCell[] CurrentMesh
         {
@@ -361,10 +364,19 @@ namespace NBodies.Physics
             if (_mortKeys.Length != _bodies.Length)
                 _mortKeys = new int[_bodies.Length];
 
+            int pLen, pRem, pCount;
+            Partition(_bodies.Length, _parts, out pLen, out pRem, out pCount);
+
             // Compute the spatial info in parallel.
-            Parallel.ForEach(Partitioner.Create(0, _bodies.Length), _parallelOptions, (range) =>
+            Parallel.For(0, pCount, (p) =>
             {
-                for (int b = range.Item1; b < range.Item2; b++)
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                for (int b = offset; b < len; b++)
                 {
                     int idxX = (int)_bodies[b].PosX >> cellSizeExp;
                     int idxY = (int)_bodies[b].PosY >> cellSizeExp;
@@ -439,16 +451,25 @@ namespace NBodies.Physics
                 output[level] = new LevelInfo();
                 output[level].Spatials = new SpatialInfo[current.CellCount];
 
-                Parallel.ForEach(Partitioner.Create(0, current.CellCount), _parallelOptions, (range) =>
+                int pLen, pRem, pCount;
+                Partition(current.CellCount, _parts, out pLen, out pRem, out pCount);
+
+                Parallel.For(0, pCount, (p) =>
                 {
-                    for (int i = range.Item1; i < range.Item2; i++)
+                    int offset = p * pLen;
+                    int len = offset + pLen;
+
+                    if (p == pCount - 1)
+                        len += pRem;
+
+                    for (int b = offset; b < len; b++)
                     {
-                        var spatial = current.Spatials[current.CellIndex[i]];
+                        var spatial = current.Spatials[current.CellIndex[b]];
                         int idxX = spatial.IdxX >> 1;
                         int idxY = spatial.IdxY >> 1;
                         int morton = MortonNumber(idxX, idxY);
 
-                        output[level].Spatials[i] = new SpatialInfo(morton, idxX, idxY, spatial.Index + i);
+                        output[level].Spatials[b] = new SpatialInfo(morton, idxX, idxY, spatial.Index + b);
                     }
 
                 });
@@ -505,12 +526,21 @@ namespace NBodies.Physics
             int[] cellStartIdx = botLevel.CellIndex;
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
+            int pLen, pRem, pCount;
+            Partition(cellCount, _parts, out pLen, out pRem, out pCount);
+
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
-            Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
+            Parallel.For(0, pCount, (p) =>
             {
                 var mm = new MinMax();
 
-                for (int m = range.Item1; m < range.Item2; m++)
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                for (int m = offset; m < len; m++)
                 {
                     // Get the spatial info from the first cell index; there may only be one cell.
                     var spatial = botLevel.Spatials[cellStartIdx[m]];
@@ -564,7 +594,7 @@ namespace NBodies.Physics
             _levelIdx[0] = 0;
 
             BuildTopLevels(topLevels, cellSizeExp, _levels);
-           
+
             // Allocate and begin writing mesh to GPU.
             Allocate(ref _gpuMesh, _mesh.Length, true);
             _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
@@ -594,11 +624,20 @@ namespace NBodies.Physics
                 object lockObj = new object();
                 MinMax minMax = new MinMax();
 
-                Parallel.ForEach(Partitioner.Create(0, cellCount), _parallelOptions, (range) =>
+                int pLen, pRem, pCount;
+                Partition(cellCount, _parts, out pLen, out pRem, out pCount);
+
+                Parallel.For(0, pCount, (p) =>
                 {
                     var mm = new MinMax();
 
-                    for (int m = range.Item1; m < range.Item2; m++)
+                    int offset = p * pLen;
+                    int len = offset + pLen;
+
+                    if (p == pCount - 1)
+                        len += pRem;
+
+                    for (int m = offset; m < len; m++)
                     {
                         // Get the spatial info from the first cell index; there may only be one cell.
                         var spatial = current.Spatials[current.CellIndex[m]];
@@ -709,6 +748,28 @@ namespace NBodies.Physics
                 _queue.Execute(_clearGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 _queue.Finish();
             }
+        }
+
+        private void Partition(int length, int parts, out int pLen, out int rem, out int count)
+        {
+            int outpLen, outRem;
+
+            outpLen = length / parts;
+            outRem = length % parts;
+
+            if (parts >= length || outpLen <= 1)
+            {
+                pLen = length;
+                rem = 0;
+                count = 1;
+            }
+            else
+            {
+                pLen = outpLen;
+                rem = outRem;
+                count = parts;
+            }
+
         }
 
         private int Allocate<T>(ref ComputeBuffer<T> buffer, int size, bool exactSize = false) where T : struct

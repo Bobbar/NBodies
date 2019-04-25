@@ -335,9 +335,7 @@ namespace NBodies
                             {
                                 if (_recElapTime >= _recFrameTimeSpan)
                                 {
-                                    timer.Restart();
                                     _recorder.RecordFrame(BodyManager.Bodies);
-                                    timer.Print("Rec");
                                     _recElapTime = 0f;
                                 }
                                 _recElapTime += TimeStep;
