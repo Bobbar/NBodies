@@ -21,7 +21,7 @@ namespace NBodies.Physics
         private int _gpuIndex = 2;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
-        private int _parts = 24;
+        private int _parallelPartitions = 12;//24;
 
         private int[] _levelIdx = new int[0];
         private MeshCell[] _mesh = new MeshCell[0];
@@ -366,7 +366,7 @@ namespace NBodies.Physics
                 _mortKeys = new int[_bodies.Length];
 
             int pLen, pRem, pCount;
-            Partition(_bodies.Length, _parts, out pLen, out pRem, out pCount);
+            Partition(_bodies.Length, _parallelPartitions, out pLen, out pRem, out pCount);
 
             // Compute the spatial info in parallel.
             Parallel.For(0, pCount, (p) =>
@@ -453,7 +453,7 @@ namespace NBodies.Physics
                 output[level].Spatials = new SpatialInfo[current.CellCount];
 
                 int pLen, pRem, pCount;
-                Partition(current.CellCount, _parts, out pLen, out pRem, out pCount);
+                Partition(current.CellCount, _parallelPartitions, out pLen, out pRem, out pCount);
 
                 Parallel.For(0, pCount, (p) =>
                 {
@@ -528,7 +528,7 @@ namespace NBodies.Physics
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             int pLen, pRem, pCount;
-            Partition(cellCount, _parts, out pLen, out pRem, out pCount);
+            Partition(cellCount, _parallelPartitions, out pLen, out pRem, out pCount);
 
             // Use the spatial info to quickly construct the first level of mesh cells in parallel.
             Parallel.For(0, pCount, (p) =>
@@ -626,7 +626,7 @@ namespace NBodies.Physics
                 MinMax minMax = new MinMax();
 
                 int pLen, pRem, pCount;
-                Partition(cellCount, _parts, out pLen, out pRem, out pCount);
+                Partition(cellCount, _parallelPartitions, out pLen, out pRem, out pCount);
 
                 Parallel.For(0, pCount, (p) =>
                 {
