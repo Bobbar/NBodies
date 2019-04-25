@@ -192,7 +192,7 @@ namespace NBodies.Physics
             }
         }
 
-        public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock)
+        public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, bool collisions, int meshLevels, int threadsPerBlock)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
@@ -237,6 +237,7 @@ namespace NBodies.Physics
             _collisionKernel.SetValueArgument(argi++, viscosity);
             _collisionKernel.SetValueArgument(argi++, centerMass);
             _collisionKernel.SetValueArgument(argi++, cullDistance);
+            _collisionKernel.SetValueArgument(argi++, Convert.ToInt32(collisions));
 
             _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             _queue.Finish();

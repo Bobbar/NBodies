@@ -16,6 +16,7 @@ namespace NBodies
     {
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
+        public static bool Collisions = true;
         public static bool RewindBuffer = false;
         public static float CurrentFPS = 0;
         public const int DefaultThreadsPerBlock = 256;
@@ -313,7 +314,7 @@ namespace NBodies
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _viscosity, _cellSizeExp, _cullDistance, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _viscosity, _cellSizeExp, _cullDistance, Collisions, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.

@@ -810,5 +810,10 @@ namespace NBodies.UI
         {
             MainLoop.RewindBuffer = rewindBufferToolStripMenuItem.Checked;
         }
+
+        private void collisionsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.Collisions = collisionsToolStripMenuItem.Checked;
+        }
     }
 }

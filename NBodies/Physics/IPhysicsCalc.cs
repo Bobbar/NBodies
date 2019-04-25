@@ -14,7 +14,7 @@ namespace NBodies.Physics
 
         void Init();
 
-        void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, int meshLevels, int threadsPerBlock);
+        void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, bool collisions, int meshLevels, int threadsPerBlock);
 
         void FixOverLaps(ref Body[] bodies);
 

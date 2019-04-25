@@ -38,6 +38,7 @@
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -84,7 +85,7 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.collisionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -145,6 +146,7 @@
             this.drawToolStripMenuItem,
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
+            this.collisionsToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
             this.sortZOrderToolStripMenuItem,
             this.fastPrimitivesToolStripMenuItem,
@@ -163,7 +165,7 @@
             this.drawToolStripMenuItem.CheckOnClick = true;
             this.drawToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.drawToolStripMenuItem.Name = "drawToolStripMenuItem";
-            this.drawToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.drawToolStripMenuItem.Text = "Draw";
             this.drawToolStripMenuItem.CheckedChanged += new System.EventHandler(this.drawToolStripMenuItem_CheckedChanged);
             // 
@@ -173,7 +175,7 @@
             this.antiAliasingToolStripMenuItem.CheckOnClick = true;
             this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
             this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
             // 
@@ -183,7 +185,7 @@
             this.clipToViewportToolStripMenuItem.CheckOnClick = true;
             this.clipToViewportToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.clipToViewportToolStripMenuItem.Name = "clipToViewportToolStripMenuItem";
-            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
             // 
@@ -193,7 +195,7 @@
             this.rocheLimitToolStripMenuItem.CheckOnClick = true;
             this.rocheLimitToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.rocheLimitToolStripMenuItem.Name = "rocheLimitToolStripMenuItem";
-            this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.rocheLimitToolStripMenuItem.Text = "Roche Limit";
             this.rocheLimitToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rocheLimitToolStripMenuItem_CheckedChanged);
             // 
@@ -203,7 +205,7 @@
             this.sortZOrderToolStripMenuItem.CheckOnClick = true;
             this.sortZOrderToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sortZOrderToolStripMenuItem.Name = "sortZOrderToolStripMenuItem";
-            this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
             this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
             // 
@@ -213,15 +215,23 @@
             this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
             this.fastPrimitivesToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
-            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
             this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
+            // 
+            // rewindBufferToolStripMenuItem
+            // 
+            this.rewindBufferToolStripMenuItem.CheckOnClick = true;
+            this.rewindBufferToolStripMenuItem.Name = "rewindBufferToolStripMenuItem";
+            this.rewindBufferToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.rewindBufferToolStripMenuItem.Text = "Rewind Buffer (High RAM Usage!)";
+            this.rewindBufferToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rewindBufferToolStripMenuItem_CheckedChanged);
             // 
             // showMeshToolStripMenuItem
             // 
             this.showMeshToolStripMenuItem.CheckOnClick = true;
             this.showMeshToolStripMenuItem.Name = "showMeshToolStripMenuItem";
-            this.showMeshToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.showMeshToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.showMeshToolStripMenuItem.Text = "Show Mesh";
             this.showMeshToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showMeshToolStripMenuItem_CheckedChanged);
             // 
@@ -229,7 +239,7 @@
             // 
             this.allForceVectorsToolStripMenuItem.CheckOnClick = true;
             this.allForceVectorsToolStripMenuItem.Name = "allForceVectorsToolStripMenuItem";
-            this.allForceVectorsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.allForceVectorsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.allForceVectorsToolStripMenuItem.Text = "All Force Vectors";
             this.allForceVectorsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.allForceVectorsToolStripMenuItem_CheckedChanged);
             // 
@@ -243,7 +253,7 @@
             this.forcesToolStripMenuItem,
             this.highContrastToolStripMenuItem});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
-            this.displayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.displayToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.displayToolStripMenuItem.Text = "Display";
             // 
             // normalToolStripMenuItem
@@ -302,14 +312,14 @@
             this.showFollowBodyForce,
             this.showPredictOrbit});
             this.followingBodyToolStripMenuItem.Name = "followingBodyToolStripMenuItem";
-            this.followingBodyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.followingBodyToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.followingBodyToolStripMenuItem.Text = "Follow Body Display";
             // 
             // showFollowBodyForce
             // 
             this.showFollowBodyForce.CheckOnClick = true;
             this.showFollowBodyForce.Name = "showFollowBodyForce";
-            this.showFollowBodyForce.Size = new System.Drawing.Size(139, 22);
+            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
             this.showFollowBodyForce.Text = "Force Vector";
             this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
             // 
@@ -317,7 +327,7 @@
             // 
             this.showPredictOrbit.CheckOnClick = true;
             this.showPredictOrbit.Name = "showPredictOrbit";
-            this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
+            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
             this.showPredictOrbit.Text = "Orbit (Slow)";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
@@ -768,13 +778,15 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // rewindBufferToolStripMenuItem
+            // collisionsToolStripMenuItem
             // 
-            this.rewindBufferToolStripMenuItem.CheckOnClick = true;
-            this.rewindBufferToolStripMenuItem.Name = "rewindBufferToolStripMenuItem";
-            this.rewindBufferToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.rewindBufferToolStripMenuItem.Text = "Rewind Buffer (High RAM Usage!)";
-            this.rewindBufferToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rewindBufferToolStripMenuItem_CheckedChanged);
+            this.collisionsToolStripMenuItem.Checked = true;
+            this.collisionsToolStripMenuItem.CheckOnClick = true;
+            this.collisionsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.collisionsToolStripMenuItem.Name = "collisionsToolStripMenuItem";
+            this.collisionsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.collisionsToolStripMenuItem.Text = "Collisions";
+            this.collisionsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.collisionsToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 
@@ -868,6 +880,7 @@
         private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem fastPrimitivesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rewindBufferToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem collisionsToolStripMenuItem;
     }
 }
 

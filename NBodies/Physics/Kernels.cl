@@ -390,7 +390,7 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance)
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance, int collisions)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
@@ -404,108 +404,111 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, glob
 	// Copy this body's mesh cell from memory.
 	struct MeshCell bodyCell = inMesh[(outBody.MeshID)];
 
-	// Iterate neighbor cells.
-	for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
+	if (collisions == 1)
 	{
-		// Get the neighbor cell from the index.
-		int nId = meshNeighbors[(i)];
-		struct MeshCell cell = inMesh[(nId)];
-
-		// Iterate the neighbor cell bodies.
-		int mbStart = cell.BodyStartIdx;
-		int mbLen = cell.BodyCount + mbStart;
-		for (int mb = mbStart; mb < mbLen; mb++)
+		// Iterate neighbor cells.
+		for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
 		{
-			// Double tests are bad.
-			if (mb != a)
+			// Get the neighbor cell from the index.
+			int nId = meshNeighbors[(i)];
+			struct MeshCell cell = inMesh[(nId)];
+
+			// Iterate the neighbor cell bodies.
+			int mbStart = cell.BodyStartIdx;
+			int mbLen = cell.BodyCount + mbStart;
+			for (int mb = mbStart; mb < mbLen; mb++)
 			{
-				struct Body inBody = inBodies[(mb)];
-
-				float distX = outBody.PosX - inBody.PosX;
-				float distY = outBody.PosY - inBody.PosY;
-				float dist = distX * distX + distY * distY;
-
-				// Calc the distance and check for collision.
-				float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
-				if (dist <= colDist * colDist)
+				// Double tests are bad.
+				if (mb != a)
 				{
-					// We know we have a collision, so go ahead and do the expensive square root now.
-					float distSqrt = (float)native_sqrt(dist);
+					struct Body inBody = inBodies[(mb)];
 
-					// If both bodies are in Roche, we do SPH physics.
-					// Otherwise, an elastic collision and merge is done.
+					float distX = outBody.PosX - inBody.PosX;
+					float distY = outBody.PosY - inBody.PosY;
+					float dist = distX * distX + distY * distY;
 
-					// SPH collision.
-					if (outBody.InRoche == 1 && inBody.InRoche == 1)
+					// Calc the distance and check for collision.
+					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+					if (dist <= colDist * colDist)
 					{
-						float FLOAT_EPSILON = 1.192092896e-07f;
-						float FLOAT_EPSILONSQRT = 3.45267E-11f;
-						float kernelSize = 1.0f;
+						// We know we have a collision, so go ahead and do the expensive square root now.
+						float distSqrt = (float)native_sqrt(dist);
 
-						if (dist < FLOAT_EPSILON)
+						// If both bodies are in Roche, we do SPH physics.
+						// Otherwise, an elastic collision and merge is done.
+
+						// SPH collision.
+						if (outBody.InRoche == 1 && inBody.InRoche == 1)
 						{
-							distSqrt = FLOAT_EPSILONSQRT;
+							float FLOAT_EPSILON = 1.192092896e-07f;
+							float FLOAT_EPSILONSQRT = 3.45267E-11f;
+							float kernelSize = 1.0f;
+
+							if (dist < FLOAT_EPSILON)
+							{
+								distSqrt = FLOAT_EPSILONSQRT;
+							}
+
+							// Pressure force
+							float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+							float gradFactor = -10442.157f * (kernelSize - distSqrt) * (kernelSize - distSqrt) / distSqrt;
+
+							float gradX = distX * gradFactor;
+							float gradY = distY * gradFactor;
+
+							gradX *= scalar;
+							gradY *= scalar;
+
+							outBody.ForceX -= gradX;
+							outBody.ForceY -= gradY;
+
+							// Viscosity force
+							float visc_laplace = 14.323944f * (kernelSize - distSqrt);
+							float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
+
+							float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
+							float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
+
+							viscVelo_diffX *= visc_scalar;
+							viscVelo_diffY *= visc_scalar;
+
+							outBody.ForceX += viscVelo_diffX;
+							outBody.ForceY += viscVelo_diffY;
+
 						}
-
-						// Pressure force
-						float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
-						float gradFactor = -10442.157f * (kernelSize - distSqrt) * (kernelSize - distSqrt) / distSqrt;
-
-						float gradX = distX * gradFactor;
-						float gradY = distY * gradFactor;
-
-						gradX *= scalar;
-						gradY *= scalar;
-
-						outBody.ForceX -= gradX;
-						outBody.ForceY -= gradY;
-
-						// Viscosity force
-						float visc_laplace = 14.323944f * (kernelSize - distSqrt);
-						float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
-
-						float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
-						float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
-
-						viscVelo_diffX *= visc_scalar;
-						viscVelo_diffY *= visc_scalar;
-
-						outBody.ForceX += viscVelo_diffX;
-						outBody.ForceY += viscVelo_diffY;
-
-					}
-					// Elastic collision.
-					else if (outBody.InRoche == 1 && inBody.InRoche == 0)
-					{
-						outBody.Visible = 0;
-					}
-					else
-					{
-						// Calculate elastic collision forces.
-						float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
-						float forceX = distX * colScale;
-						float forceY = distY * colScale;
-						float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
-
-						// If we're the bigger one, eat the other guy.
-						if (outBody.Mass > inBody.Mass)
-						{
-							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-						}
-						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
+						// Elastic collision.
+						else if (outBody.InRoche == 1 && inBody.InRoche == 0)
 						{
 							outBody.Visible = 0;
 						}
-						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+						else
 						{
-							// Our UID is more gooder, eat the other guy.
-							if (outBody.UID > inBody.UID)
+							// Calculate elastic collision forces.
+							float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
+							float forceX = distX * colScale;
+							float forceY = distY * colScale;
+							float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+
+							// If we're the bigger one, eat the other guy.
+							if (outBody.Mass > inBody.Mass)
 							{
 								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 							}
-							else // Our UID is inferior, we must go away.
+							else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 							{
 								outBody.Visible = 0;
+							}
+							else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+							{
+								// Our UID is more gooder, eat the other guy.
+								if (outBody.UID > inBody.UID)
+								{
+									outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+								}
+								else // Our UID is inferior, we must go away.
+								{
+									outBody.Visible = 0;
+								}
 							}
 						}
 					}
