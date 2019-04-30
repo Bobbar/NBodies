@@ -161,35 +161,31 @@ __kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global s
 	struct MeshCell cell = mesh[m];
 	struct GridInfo gInfo = gridInfo[cell.Level];
 	int columns = gInfo.Columns;
+	int offIdx = cell.GridIdx - gInfo.IndexOffset;
 
 	for (int x = -1; x <= 1; x++)
 	{
 		for (int y = -1; y <= 1; y++)
 		{
-			int offIdx = cell.GridIdx - gInfo.IndexOffset;
 			int localIdx = offIdx + ((x * columns) + (y + x));
 
 			if (localIdx > 0 && localIdx < gInfo.Size)
 			{
 				int globalIdx = localIdx + gInfo.IndexOffset;
+				int idx = gridIdx[globalIdx];
 
-				if (gridIdx[globalIdx] > 0)
+				if (idx > 0)
 				{
-					neighborIndex[(offset + count)] = gridIdx[globalIdx];
+					neighborIndex[(offset + count)] = idx;
 					count++;
 				}
-				else if (gridIdx[globalIdx] == -1)
+				else if (idx == -1)
 				{
 					neighborIndex[(offset + count)] = 0;
 					count++;
 				}
 			}
 		}
-	}
-
-	for (int i = (offset + count); i < offset + 9; i++)
-	{
-		neighborIndex[i] = -1;
 	}
 
 	cell.NeighborStartIdx = offset;
