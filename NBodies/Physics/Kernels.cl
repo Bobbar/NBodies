@@ -386,6 +386,108 @@ int IsNear(struct MeshCell cell, struct MeshCell testCell)
 	return result;
 }
 
+// Collision pass for bodies larger than thier parent cells.
+__kernel void CalcCollisionsLarge(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, int collisions)
+{ 
+	// Get index for the current body.
+	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
+
+	if (a >= inBodiesLen)
+		return;
+
+	// Copy current body from memory.
+	struct Body outBody = inBodies[(a)];
+
+	// Only proceed for bodies larger than 1 unit.
+	if (outBody.Size <= 1)
+	{
+		outBodies[a] = outBody;
+		return;
+	}
+
+	// Get the current parent cell.
+	struct MeshCell parentCell = inMesh[(outBody.MeshID)];
+	int pcellSize = parentCell.Size;
+
+	// Move up through parent cells until we find one
+	// whose size is atleast as big as the target body.
+	while (pcellSize < outBody.Size)
+	{ 
+		// Stop if we reach the top-most level.
+		if (parentCell.ParentID == -1)
+			break;
+
+		parentCell = inMesh[parentCell.ParentID];
+		pcellSize = parentCell.Size;
+	}
+
+	// Itereate the neighboring cells of the selected parent.
+	for (int i = parentCell.NeighborStartIdx; i < parentCell.NeighborStartIdx + parentCell.NeighborCount; i++)
+	{
+		// Get the neighbor cell from the index.
+		int nId = meshNeighbors[(i)];
+		struct MeshCell nCell = inMesh[(nId)];
+		
+		// Iterate all the bodies within each neighboring cell.
+		int mbStart = nCell.BodyStartIdx;
+		int mbLen = nCell.BodyCount + mbStart;
+		for (int mb = mbStart; mb < mbLen; mb++)
+		{
+			// Save us from ourselves.
+			if (mb != a)
+			{
+				struct Body inBody = inBodies[(mb)];
+
+				// Calc the distance and check for collision.
+				float distX = outBody.PosX - inBody.PosX;
+				float distY = outBody.PosY - inBody.PosY;
+				float dist = distX * distX + distY * distY;
+				float distSqrt = (float)native_sqrt(dist);
+				
+				float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+				if (distSqrt <= colDist)
+				{
+					// Calculate elastic collision forces.
+					float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
+					float forceX = distX * colScale;
+					float forceY = distY * colScale;
+					float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+
+					// If we're the bigger one, eat the other guy.
+					if (outBody.Mass > inBody.Mass)
+					{
+						outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+						outBodies[(mb)].Visible = 0;
+
+					}
+					else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
+					{
+						outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+						outBody.Visible = 0;
+					}
+					else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+					{
+						// Our UID is more gooder, eat the other guy.
+						if (outBody.UID > inBody.UID)
+						{
+							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+							inBodies[(mb)].Visible = 0;
+						}
+						else // Our UID is inferior, we must go away.
+						{
+							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+							outBody.Visible = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	outBodies[(a)] = outBody;
+
+}
+
 __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance, int collisions)
 {
 	// Get index for the current body.

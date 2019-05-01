@@ -38,6 +38,7 @@ namespace NBodies.Physics
 
         private ComputeKernel _forceKernel;
         private ComputeKernel _collisionKernel;
+        private ComputeKernel _collisionLargeKernel;
         private ComputeKernel _popGridKernel;
         private ComputeKernel _clearGridKernel;
         private ComputeKernel _buildNeighborsKernel;
@@ -115,6 +116,7 @@ namespace NBodies.Physics
 
             _forceKernel = _program.CreateKernel("CalcForce");
             _collisionKernel = _program.CreateKernel("CalcCollisions");
+            _collisionLargeKernel = _program.CreateKernel("CalcCollisionsLarge");
             _popGridKernel = _program.CreateKernel("PopGrid");
             _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
@@ -226,11 +228,21 @@ namespace NBodies.Physics
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             _queue.Finish();
 
+            argi = 0;
+            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            _collisionLargeKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(collisions));
+
+            _queue.Execute(_collisionLargeKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Finish();
 
             argi = 0;
-            _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _collisionKernel.SetValueArgument(argi++, _bodies.Length);
             _collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _collisionKernel.SetValueArgument(argi++, timestep);
@@ -242,7 +254,7 @@ namespace NBodies.Physics
             _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             _queue.Finish();
 
-            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
+            _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, null);
             _queue.Finish();
         }
 
@@ -657,6 +669,7 @@ namespace NBodies.Physics
                         newCell.Level = level;
                         newCell.BodyStartIdx = 0;
                         newCell.BodyCount = 0;
+                        newCell.ParentID = -1;
 
                         mm.Update(spatial.IdxX, spatial.IdxY);
 
@@ -667,8 +680,12 @@ namespace NBodies.Physics
                             newCell.Mass += child.Mass;
                             newCell.CmX += (float)child.Mass * child.CmX;
                             newCell.CmY += (float)child.Mass * child.CmY;
-                            newCell.BodyCount += child.BodyCount;
                             newCell.ChildCount++;
+                            newCell.BodyCount += child.BodyCount;
+
+                            if (newCell.ChildCount == 1)
+                                newCell.BodyStartIdx = child.BodyStartIdx;
+
                             child.ParentID = newIdx;
                             _mesh[i + levelOffset] = child;
                         }
