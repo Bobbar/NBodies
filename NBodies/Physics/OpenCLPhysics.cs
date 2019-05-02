@@ -369,6 +369,7 @@ namespace NBodies.Physics
         /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
         private LevelInfo CalcBodySpatials(int cellSizeExp)
         {
+            // Spatial info to be computed.
             if (_spatials.Length != _bodies.Length)
                 _spatials = new SpatialInfo[_bodies.Length];
 
@@ -404,6 +405,29 @@ namespace NBodies.Physics
             // Sort by morton number to produce a spatially sorted array.
             Array.Sort(_mortKeys, _spatials);
 
+            // Build a new sorted body array from the sorted spatial info.
+            if (_sortBodies.Length != _bodies.Length)
+                _sortBodies = new Body[_bodies.Length];
+
+            Partition(_spatials.Length, _parallelPartitions, out pLen, out pRem, out pCount);
+            Parallel.For(0, pCount, (p) =>
+            {
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                for (int b = offset; b < len; b++)
+                {
+                    _sortBodies[b] = _bodies[_spatials[b].Index];
+                }
+
+            });
+
+            // Update the original body array with the sorted one.
+            _bodies = _sortBodies;
+
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
@@ -412,18 +436,12 @@ namespace NBodies.Physics
             if (_cellIdx.Length != _bodies.Length + 1)
                 _cellIdx = new int[_bodies.Length + 1];
 
-            if (_sortBodies.Length != _bodies.Length)
-                _sortBodies = new Body[_bodies.Length];
-
-
             for (int i = 0; i < _spatials.Length; i++)
             {
-                // Build a new sorted body array from the sorted spatial info.
-                _sortBodies[i] = _bodies[_spatials[i].Index];
-
                 // Update spatials index to match new sorted bodies.
                 _spatials[i].Index = i;
 
+                // Find the start of each new morton number and record location to build cell index.
                 if (val != _spatials[i].Mort)
                 {
                     _cellIdx[count] = i;
@@ -434,9 +452,6 @@ namespace NBodies.Physics
             }
 
             _cellIdx[count] = _spatials.Length;
-
-            // Update the original body array with the sorted one.
-            _bodies = _sortBodies;
 
             var output = new LevelInfo();
             output.Spatials = _spatials;
