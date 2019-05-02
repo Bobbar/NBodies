@@ -17,7 +17,7 @@ namespace NBodies.Rendering
         private Pen _forcePen = new Pen(Color.FromArgb(150, Color.Chartreuse), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
         private Pen _blackHoleStroke = new Pen(Color.Red);
-
+        private SolidBrush _blurBrush = new SolidBrush(Color.FromArgb(10, Color.Black));
         private Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
 
         public GDIRenderer(Control targetControl) : base(targetControl)
@@ -205,6 +205,17 @@ namespace NBodies.Rendering
             }
 
             _buffer.Graphics.DrawLines(_orbitPen, points);
+        }
+
+        public override void DrawBlur(Color color)
+        {
+            var ogSt = _buffer.Graphics.Save();
+            _buffer.Graphics.ResetTransform();
+
+            _blurBrush.Color = color;
+            _buffer.Graphics.FillRectangle(_blurBrush, new RectangleF(0, 0, _viewPortSize.Width, _viewPortSize.Height));
+
+            _buffer.Graphics.Restore(ogSt);
         }
 
         public override void BeginDraw()

@@ -676,6 +676,9 @@ namespace NBodies.UI
         private void RemoveAllButton_Click(object sender, EventArgs e)
         {
             MainLoop.WaitForPause();
+            _selectedUid = -1;
+            _mouseId = -1;
+            _bodyMovin = false;
             BodyManager.ClearBodies();
             MainLoop.ResumePhysics();
         }

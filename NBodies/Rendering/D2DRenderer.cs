@@ -27,6 +27,7 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _orbitBrush;
         private d2.SolidColorBrush _redBrush;
         private d2.SolidColorBrush _forceBrush;
+        private d2.SolidColorBrush _blurBrush;
 
         private d2.SolidColorBrush _meshBrush;
         private d2.SolidColorBrush _centerBrush;
@@ -34,6 +35,7 @@ namespace NBodies.Rendering
 
         private d2.Ellipse _bodyEllipse;
         private SharpDX.RectangleF _bodyRect;
+        private SharpDX.RectangleF _blurRect;
         private RawColor4 _bodyColor;
 
         private dw.TextFormat _infoText;
@@ -62,10 +64,11 @@ namespace NBodies.Rendering
             InitProperties(_targetControl);
 
             _wndRender = new d2.WindowRenderTarget(_fact, _rndTargProperties, _hwndProperties);
-
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
             _bodyRect = new SharpDX.RectangleF(0, 0, 0, 0);
+            _blurRect = new SharpDX.RectangleF(0, 0, 0, 0);
+            _blurBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(10, System.Drawing.Color.Black)));
             _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 11);
             _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
             _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
@@ -132,7 +135,7 @@ namespace NBodies.Rendering
                 {
                     _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
                 }
-            } 
+            }
 
             if (body.Flag == 1)
             {
@@ -237,6 +240,21 @@ namespace NBodies.Rendering
             {
                 _wndRender.DrawLine(points[a - 1].Add(finalOffset).ToVector(), points[a].Add(finalOffset).ToVector(), _orbitBrush, 0.4f, _arrowStyle);
             }
+        }
+
+        public override void DrawBlur(System.Drawing.Color color)
+        {
+            var ogSt = _wndRender.Transform;
+            _wndRender.Transform = new Matrix3x2(1, 0, 0, 1, 0, 0);
+
+            _blurBrush.Color = ConvertColor(color);
+            _blurRect.X = 0;
+            _blurRect.Y = 0;
+
+            _blurRect.Size = new Size2F(_viewPortSize.Width, _viewPortSize.Height);
+            _wndRender.FillRectangle(_blurRect, _blurBrush);
+
+            _wndRender.Transform = ogSt;
         }
 
         public override void BeginDraw()

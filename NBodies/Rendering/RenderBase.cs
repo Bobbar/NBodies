@@ -64,7 +64,7 @@ namespace NBodies.Rendering
         protected Control _targetControl;
         protected float _prevScale = 0;
         protected float _currentScale = 0;
-        protected static Color _defaultClearColor = Color.FromArgb(255, 23, 23, 25);//Color.Black;
+        protected static Color _defaultClearColor = Color.Black;//Color.FromArgb(255, 23, 23, 25);//Color.Black;
         protected Color _clearColor = _defaultClearColor;
         protected RectangleF _cullTangle;
         protected Size _viewPortSize;
@@ -93,13 +93,14 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
             {
+                bool overlayVisible = OverlaysVisible();
                 var finalOffset = CalcFinalOffset();
 
                 CheckScale();
 
                 BeginDraw();
 
-                if (!Trails)
+                if (!Trails || overlayVisible)
                     Clear(_clearColor);
 
                 SetAntiAliasing(AAEnabled);
@@ -199,6 +200,9 @@ namespace NBodies.Rendering
                     }
                 }
 
+                if (Trails && !overlayVisible)
+                    DrawBlur(Color.FromArgb(10, _clearColor));
+
                 if (ShowAllForce)
                 {
                     DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
@@ -246,7 +250,7 @@ namespace NBodies.Rendering
                     DrawMesh(BodyManager.Mesh, finalOffset.X, finalOffset.Y);
                 }
 
-                if (OverlaysVisible())
+                if (overlayVisible)
                     DrawOverlays(finalOffset.X, finalOffset.Y);
 
                 EndDraw();
@@ -274,6 +278,8 @@ namespace NBodies.Rendering
         public abstract void DrawOverlays(float offsetX, float offsetY);
 
         public abstract void DrawOrbit(PointF[] points, PointF finalOffset);
+
+        public abstract void DrawBlur(Color color);
 
         public abstract void BeginDraw();
 
