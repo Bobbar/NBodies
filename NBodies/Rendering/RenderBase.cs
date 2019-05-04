@@ -73,6 +73,7 @@ namespace NBodies.Rendering
         private bool _orbitOffloadRunning = false;
         private List<PointF> _orbitPath = new List<PointF>();
         private List<PointF> _drawPath = new List<PointF>();
+        private bool _blurClearHack = false;
 
         private Stopwatch timer = new Stopwatch();
 
@@ -101,7 +102,23 @@ namespace NBodies.Rendering
                 BeginDraw();
 
                 if (!Trails || overlayVisible)
+                {
                     Clear(_clearColor);
+                    _blurClearHack = false;
+                }
+
+                // If trails are enabled, clear one frame with a slightly 
+                // off-black color to try to hide persistent artifacts
+                // left by the lame blur technique.
+                if (Trails && !_blurClearHack)
+                {
+                    Clear(Color.FromArgb(12, 12, 12));
+                    _blurClearHack = true;
+                }
+                else if (!Trails && _blurClearHack)
+                {
+                    _blurClearHack = false;
+                }
 
                 SetAntiAliasing(AAEnabled);
 
@@ -309,7 +326,7 @@ namespace NBodies.Rendering
             {
                 UpdateViewportSize(_targetControl.ClientSize.Width, _targetControl.ClientSize.Height);
                 UpdateGraphicsScale(_currentScale);
-
+                _blurClearHack = false;
                 _viewPortSize = _targetControl.ClientSize;
             }
 
