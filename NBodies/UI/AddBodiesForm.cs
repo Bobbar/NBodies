@@ -49,7 +49,7 @@ namespace NBodies
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
 
             if (includeCenterMass)
             {
@@ -130,7 +130,7 @@ namespace NBodies
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
-            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
 
             for (int i = 0; i < count; i++)
             {

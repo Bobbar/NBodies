@@ -57,8 +57,8 @@ namespace NBodies.UI
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
-            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
-            RenderVars.ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(RenderVars.ScreenCenter);
+            ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
+            ViewportOffsets.ScaleOffset = ViewportHelpers.FieldPointToScreenNoOffset(ViewportOffsets.ScreenCenter);
             MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
             PhysicsProvider.InitPhysics();
 
@@ -115,7 +115,7 @@ namespace NBodies.UI
                 for (int i = 0; i < BodyManager.Bodies.Length; i++)
                 {
                     var body = BodyManager.Bodies[i];
-                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).X - body.PosX, 2) + Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).Y - body.PosY, 2));
+                    var dist = Math.Sqrt(Math.Pow(ViewportHelpers.ScreenPointToField(mouseLoc).X - body.PosX, 2) + Math.Pow(ViewportHelpers.ScreenPointToField(mouseLoc).Y - body.PosY, 2));
 
                     if (dist < body.Size * 0.5f)
                     {
@@ -147,8 +147,8 @@ namespace NBodies.UI
             FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
             FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
             BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
-            TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
-            ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
+            TotalMassLabel.Text = string.Format("Tot Mass: {0}", Math.Round(BodyManager.TotalMass,2));
+            ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(ViewportOffsets.CurrentScale, 2));
             AlphaUpDown.Value = RenderBase.BodyAlpha;
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
             SetDisplayStyle(RenderBase.DisplayStyle);
@@ -418,10 +418,10 @@ namespace NBodies.UI
                     }
                     else
                     {
-                        _mouseId = BodyManager.Add(ScaleHelpers.ScreenPointToField(e.Location), 1f, ColorHelper.RandomColor());
+                        _mouseId = BodyManager.Add(ViewportHelpers.ScreenPointToField(e.Location), 1f, ColorHelper.RandomColor());
                     }
 
-                    var bodyPos = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                    var bodyPos = ViewportHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
 
                     _flingOver.Location = bodyPos;
                     _flingOver.Location2 = bodyPos;
@@ -513,12 +513,12 @@ namespace NBodies.UI
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScreenPointToField(e.Location));
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ViewportHelpers.ScreenPointToField(e.Location));
                 }
                 else
                 {
                     var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
-                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.FieldPointToScreenUnscaled(moveDiff));
+                    ViewportOffsets.ViewportOffset = ViewportOffsets.ViewportOffset.Add(ViewportHelpers.FieldPointToScreenNoOffset(moveDiff));
                     _mouseMoveDownLoc = e.Location;
                 }
             }
@@ -552,7 +552,7 @@ namespace NBodies.UI
                     BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].VeloY = -deflection.Y / 3f;
 
                     // Calculate the true screen position from the body location.
-                    var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                    var clientPosition = ViewportHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
                     var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
 
                     // Lock the cursor in place above the body.
@@ -576,8 +576,8 @@ namespace NBodies.UI
                 _distLine.Location2 = _mouseLocation;
                 _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
 
-                var loc1 = ScaleHelpers.ScreenPointToField(_distLine.Location);
-                var loc2 = ScaleHelpers.ScreenPointToField(_distLine.Location2);
+                var loc1 = ViewportHelpers.ScreenPointToField(_distLine.Location);
+                var loc2 = ViewportHelpers.ScreenPointToField(_distLine.Location2);
 
                 _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
             }
@@ -587,12 +587,15 @@ namespace NBodies.UI
         {
             InputHandler.MouseWheel(e.Delta);
 
-            var scaleChange = 0.05f * RenderVars.CurrentScale;
+            var scaleChange = 0.05f * ViewportOffsets.CurrentScale;
+            float newScale = ViewportOffsets.CurrentScale;
 
             if (e.Delta > 0)
             {
+                newScale += scaleChange;
+
                 if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
-                    RenderVars.CurrentScale += scaleChange;
+                    ViewportOffsets.Zoom(newScale, e.Location);
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -602,8 +605,10 @@ namespace NBodies.UI
             }
             else
             {
+                newScale -= scaleChange;
+
                 if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
-                    RenderVars.CurrentScale -= scaleChange;
+                    ViewportOffsets.Zoom(newScale, e.Location);
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -618,7 +623,7 @@ namespace NBodies.UI
 
         private void RenderBox_Resize(object sender, EventArgs e)
         {
-            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width * 0.5f, this.RenderBox.Height * 0.5f);
+            ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width * 0.5f, this.RenderBox.Height * 0.5f);
         }
 
         private void AddBodiesButton_Click(object sender, EventArgs e)
@@ -734,7 +739,7 @@ namespace NBodies.UI
         {
             var cm = BodyManager.CenterOfMass().Multi(-1.0f);
 
-            RenderVars.ViewportOffset = cm;
+            ViewportOffsets.ViewportOffset = cm;
         }
 
         private void ToggleRendererButton_Click(object sender, EventArgs e)

@@ -122,7 +122,7 @@ namespace NBodies.Rendering
 
                 SetAntiAliasing(AAEnabled);
 
-                _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / RenderVars.CurrentScale, _viewPortSize.Height / RenderVars.CurrentScale);
+                _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / ViewportOffsets.CurrentScale, _viewPortSize.Height / ViewportOffsets.CurrentScale);
 
                 // Since the bodies are being sorted by their spatial index
                 // we need to sort them (again) by a persistent value; we will use their UIDs.
@@ -320,7 +320,7 @@ namespace NBodies.Rendering
 
         protected internal void CheckScale()
         {
-            _currentScale = RenderVars.CurrentScale;
+            _currentScale = ViewportOffsets.CurrentScale;
 
             if (_targetControl.ClientSize != _viewPortSize)
             {
@@ -343,11 +343,11 @@ namespace NBodies.Rendering
             if (BodyManager.FollowSelected)
             {
                 Body followBody = BodyManager.FollowBody();
-                RenderVars.ViewportOffset.X = -followBody.PosX;
-                RenderVars.ViewportOffset.Y = -followBody.PosY;
+                ViewportOffsets.ViewportOffset.X = -followBody.PosX;
+                ViewportOffsets.ViewportOffset.Y = -followBody.PosY;
             }
 
-            var finalOffset = RenderVars.ViewportOffset.Add(RenderVars.ScaleOffset);
+            var finalOffset = ViewportOffsets.ViewportOffset.Add(ViewportOffsets.ScaleOffset);
 
             return finalOffset;
         }

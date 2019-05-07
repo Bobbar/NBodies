@@ -28,7 +28,7 @@ namespace NBodies.UI.KeyActions
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
             if (KeyDownStates[Keys.E])
-                BodyManager.InsertExplosion(ScaleHelpers.ScreenPointToField(mouseLoc), 2500);
+                BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
         }
 
         public override void DoMouseMove(PointF mouseLoc)

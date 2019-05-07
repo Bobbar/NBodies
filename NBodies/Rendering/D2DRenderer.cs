@@ -145,6 +145,8 @@ namespace NBodies.Rendering
 
         public override void DrawForceVectors(Body[] bodies, float offsetX, float offsetY)
         {
+            var finalOffset = new PointF(offsetX, offsetY);
+
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
@@ -159,7 +161,7 @@ namespace NBodies.Rendering
                 f = f.Multi(2f);
 
                 var floc = bloc.Add(f);
-                var finalOffset = new PointF(offsetX, offsetY);
+                
                 _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _forceBrush, 0.2f, _arrowStyle);
             }
         }

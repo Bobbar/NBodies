@@ -191,8 +191,8 @@
     <Compile Include="MainLoop.cs" />
     <Compile Include="Rendering\OverlayGraphic.cs" />
     <Compile Include="Extensions\PointExtensions.cs" />
-    <Compile Include="Helpers\RenderVars.cs" />
-    <Compile Include="Helpers\ScaleHelpers.cs" />
+    <Compile Include="Helpers\ViewportOffsets.cs" />
+    <Compile Include="Helpers\ViewportHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />
     <Compile Include="Shapes\Ellipse.cs" />
     <EmbeddedResource Include="UI\AddBodiesForm.resx">

@@ -35,6 +35,7 @@
             this.drawToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.collisionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -85,7 +86,6 @@
             this.BodyCountLabel = new System.Windows.Forms.Label();
             this.FPSLabel = new System.Windows.Forms.Label();
             this.RenderBox = new System.Windows.Forms.PictureBox();
-            this.collisionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -188,6 +188,16 @@
             this.clipToViewportToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
+            // 
+            // collisionsToolStripMenuItem
+            // 
+            this.collisionsToolStripMenuItem.Checked = true;
+            this.collisionsToolStripMenuItem.CheckOnClick = true;
+            this.collisionsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.collisionsToolStripMenuItem.Name = "collisionsToolStripMenuItem";
+            this.collisionsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.collisionsToolStripMenuItem.Text = "Collisions";
+            this.collisionsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.collisionsToolStripMenuItem_CheckedChanged);
             // 
             // rocheLimitToolStripMenuItem
             // 
@@ -319,7 +329,7 @@
             // 
             this.showFollowBodyForce.CheckOnClick = true;
             this.showFollowBodyForce.Name = "showFollowBodyForce";
-            this.showFollowBodyForce.Size = new System.Drawing.Size(152, 22);
+            this.showFollowBodyForce.Size = new System.Drawing.Size(139, 22);
             this.showFollowBodyForce.Text = "Force Vector";
             this.showFollowBodyForce.CheckedChanged += new System.EventHandler(this.showFollowBodyForce_CheckedChanged);
             // 
@@ -327,7 +337,7 @@
             // 
             this.showPredictOrbit.CheckOnClick = true;
             this.showPredictOrbit.Name = "showPredictOrbit";
-            this.showPredictOrbit.Size = new System.Drawing.Size(152, 22);
+            this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
             this.showPredictOrbit.Text = "Orbit (Slow)";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
             // 
@@ -777,16 +787,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // collisionsToolStripMenuItem
-            // 
-            this.collisionsToolStripMenuItem.Checked = true;
-            this.collisionsToolStripMenuItem.CheckOnClick = true;
-            this.collisionsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.collisionsToolStripMenuItem.Name = "collisionsToolStripMenuItem";
-            this.collisionsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.collisionsToolStripMenuItem.Text = "Collisions";
-            this.collisionsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.collisionsToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 
