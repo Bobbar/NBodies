@@ -1,4 +1,5 @@
 ﻿using NBodies.Extensions;
+using NBodies.Physics;
 using System.Drawing;
 
 namespace NBodies.Helpers
@@ -24,6 +25,12 @@ namespace NBodies.Helpers
             PointF convertedPos = new PointF((point.X / ViewportOffsets.CurrentScale), (point.Y / ViewportOffsets.CurrentScale));
 
             return convertedPos;
+        }
+
+        public static void CenterCurrentField()
+        {
+            var cm = BodyManager.CenterOfMass().Multi(-1.0f);
+            ViewportOffsets.ViewportOffset = cm;
         }
     }
 }

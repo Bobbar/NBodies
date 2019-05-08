@@ -497,28 +497,17 @@ namespace NBodies.Physics
         public static PointF CenterOfMass()
         {
             double totMass = 0;
-
-            for (int i = 0; i < Bodies.Length; i++)
-            {
-                var body = Bodies[i];
-
-                totMass += body.Mass;
-            }
-
-            _totalMass = totMass;
-
             double cmX = 0, cmY = 0;
 
             for (int i = 0; i < Bodies.Length; i++)
             {
                 var body = Bodies[i];
 
+                totMass += body.Mass;
+
                 cmX += body.Mass * body.PosX;
                 cmY += body.Mass * body.PosY;
             }
-
-            //cmX = (cmX / totMass) * -1f;
-            //cmY = (cmY / totMass) * -1f;
 
             cmX = (cmX / totMass);
             cmY = (cmY / totMass);

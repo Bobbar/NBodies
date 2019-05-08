@@ -504,6 +504,9 @@ namespace NBodies.UI
 
             _mouseLocation = e.Location;
 
+            if (!InputHandler.MouseIsDown)
+                return;
+
             if (e.Button == MouseButtons.Left)
             {
                 if (_selectedUid != -1 && _shiftDown)
@@ -656,11 +659,13 @@ namespace NBodies.UI
         private void loadStateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadState();
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void reloadPreviousToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadPreviousState();
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
@@ -737,9 +742,7 @@ namespace NBodies.UI
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
         {
-            var cm = BodyManager.CenterOfMass().Multi(-1.0f);
-
-            ViewportOffsets.ViewportOffset = cm;
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void ToggleRendererButton_Click(object sender, EventArgs e)
