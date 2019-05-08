@@ -12,13 +12,16 @@ namespace NBodies.Rendering
     {
         private BufferedGraphicsContext _currentContext;
         private BufferedGraphics _buffer;
-        private Dictionary<int, SolidBrush> _brushCache = new Dictionary<int, SolidBrush>();
 
         private Pen _forcePen = new Pen(Color.FromArgb(150, Color.Chartreuse), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
         private Pen _blackHoleStroke = new Pen(Color.Red);
         private SolidBrush _blurBrush = new SolidBrush(Color.FromArgb(10, Color.Black));
+        private SolidBrush _statsBrush = new SolidBrush(Color.FromArgb(255, Color.Black));
+        private SolidBrush _bodyBrush = new SolidBrush(Color.FromArgb(255, Color.White));
+
         private Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
+        private Font _statsFont = new Font("Microsoft Sans Serif", 11, GraphicsUnit.Pixel);
 
         public GDIRenderer(Control targetControl) : base(targetControl)
         {
@@ -38,7 +41,7 @@ namespace NBodies.Rendering
             //_buffer.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
             //_buffer.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             //_buffer.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
-
+            
             _viewPortSize = _targetControl.Size;
         }
 
@@ -52,28 +55,21 @@ namespace NBodies.Rendering
             X -= size * 0.5f;
             Y -= size * 0.5f;
 
-            int brushID = color.ToArgb();
-
-            if (!_brushCache.ContainsKey(brushID))
-            {
-                _brushCache.Add(brushID, new SolidBrush(color));
-            }
-
-            var bodyBrush = _brushCache[brushID];
+            _bodyBrush.Color = color;
 
             if (!FastPrimitives)
             {
-                _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
+                _buffer.Graphics.FillEllipse(_bodyBrush, X, Y, size, size);
             }
             else
             {
                 if (size <= 1f)
                 {
-                    _buffer.Graphics.FillRectangle(bodyBrush, X, Y, size, size);
+                    _buffer.Graphics.FillRectangle(_bodyBrush, X, Y, size, size);
                 }
                 else
                 {
-                    _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
+                    _buffer.Graphics.FillEllipse(_bodyBrush, X, Y, size, size);
                 }
             }
 
@@ -214,6 +210,17 @@ namespace NBodies.Rendering
 
             _blurBrush.Color = color;
             _buffer.Graphics.FillRectangle(_blurBrush, new RectangleF(0, 0, _viewPortSize.Width, _viewPortSize.Height));
+
+            _buffer.Graphics.Restore(ogSt);
+        }
+
+        public override void DrawStats(string stats, System.Drawing.Color color)
+        {
+            var ogSt = _buffer.Graphics.Save();
+            _buffer.Graphics.ResetTransform();
+           
+            _statsBrush.Color = color;
+            _buffer.Graphics.DrawString(stats, _statsFont, _statsBrush, new PointF(5, 5));
 
             _buffer.Graphics.Restore(ogSt);
         }

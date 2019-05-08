@@ -42,14 +42,14 @@ namespace NBodies.UI
         {
             InitializeComponent();
 
-            _UIUpdateTimer.Interval = 100;
+            _UIUpdateTimer.Interval = 250;
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
             _UIUpdateTimer.Start();
 
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
-            PressureScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
+            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             AlphaUpDown.Value = RenderBase.BodyAlpha;
 
             RenderBox.DoubleBuffered(true);
@@ -144,30 +144,11 @@ namespace NBodies.UI
                 PauseButton.BackColor = Color.DarkGreen;
             }
 
-            FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
-            FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
-            BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
-            TotalMassLabel.Text = string.Format("Tot Mass: {0}", Math.Round(BodyManager.TotalMass,2));
-            ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(ViewportOffsets.CurrentScale, 2));
             AlphaUpDown.Value = RenderBase.BodyAlpha;
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
+            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             SetDisplayStyle(RenderBase.DisplayStyle);
-
-            RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
-
-            if (BodyManager.FollowSelected)
-            {
-                DensityLabel.Visible = true;
-                PressureLabel.Visible = true;
-                SpeedLabel.Visible = true;
-            }
-            else
-            {
-                DensityLabel.Visible = false;
-                PressureLabel.Visible = false;
-                SpeedLabel.Visible = false;
-            }
-
+           
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {
                 SetSelectedInfo();
@@ -176,12 +157,9 @@ namespace NBodies.UI
             if (MainLoop.Recorder.RecordingActive)
             {
                 RecordButton.BackColor = Color.DarkGreen;
-                RecSizeLabel.Visible = true;
-                RecSizeLabel.Text = $@"Rec Size (MB): { Math.Round((MainLoop.RecordedSize() / (float)1000000), 2) }";
             }
             else
             {
-                RecSizeLabel.Visible = false;
                 RecordButton.BackColor = DefaultBackColor;
             }
         }
@@ -197,10 +175,6 @@ namespace NBodies.UI
                 RadiusTextBox.Text = selectBody.Size.ToString();
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
-
-                DensityLabel.Text = string.Format("Density: {0}", selectBody.Density);
-                PressureLabel.Text = string.Format("Press: {0}", selectBody.Pressure);
-                SpeedLabel.Text = string.Format("Agg. Speed: {0}", selectBody.AggregateSpeed());
 
                 // selectBody.PrintInfo();
             }
@@ -735,9 +709,9 @@ namespace NBodies.UI
             }
         }
 
-        private void PressureScaleUpDown_ValueChanged(object sender, EventArgs e)
+        private void StyleScaleUpDown_ValueChanged(object sender, EventArgs e)
         {
-            RenderBase.StyleScaleMax = (float)PressureScaleUpDown.Value;
+            RenderBase.StyleScaleMax = (float)StyleScaleUpDown.Value;
         }
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)

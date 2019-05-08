@@ -28,10 +28,13 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _redBrush;
         private d2.SolidColorBrush _forceBrush;
         private d2.SolidColorBrush _blurBrush;
+        private d2.SolidColorBrush _statsBrush;
 
         private d2.SolidColorBrush _meshBrush;
         private d2.SolidColorBrush _centerBrush;
         private d2.SolidColorBrush _massBrush;
+
+        private dw.TextFormat _statsFont;
 
         private d2.Ellipse _bodyEllipse;
         private SharpDX.RectangleF _bodyRect;
@@ -79,6 +82,9 @@ namespace NBodies.Rendering
             _meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.Red)));
             _centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
             _massBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.GreenYellow)));
+            _statsBrush = new d2.SolidColorBrush(_wndRender, new RawColor4(255, 0, 0, 0));
+
+            _statsFont = new dw.TextFormat(_dwFact, "Microsoft Sans Serif", 11);
 
             var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
             _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
@@ -161,7 +167,7 @@ namespace NBodies.Rendering
                 f = f.Multi(2f);
 
                 var floc = bloc.Add(f);
-                
+
                 _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _forceBrush, 0.2f, _arrowStyle);
             }
         }
@@ -255,6 +261,17 @@ namespace NBodies.Rendering
 
             _blurRect.Size = new Size2F(_viewPortSize.Width, _viewPortSize.Height);
             _wndRender.FillRectangle(_blurRect, _blurBrush);
+
+            _wndRender.Transform = ogSt;
+        }
+
+        public override void DrawStats(string stats, System.Drawing.Color color)
+        {
+            var ogSt = _wndRender.Transform;
+            _wndRender.Transform = new Matrix3x2(1, 0, 0, 1, 0, 0);
+
+            _statsBrush.Color = ConvertColor(color);
+            _wndRender.DrawText(stats, _statsFont, new SharpDX.RectangleF(5, 5, 150, 150), _statsBrush, SharpDX.Direct2D1.DrawTextOptions.None);
 
             _wndRender.Transform = ogSt;
         }

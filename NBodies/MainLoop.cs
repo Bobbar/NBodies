@@ -113,6 +113,11 @@ namespace NBodies
             {
                 return _frameCount;
             }
+
+            set
+            {
+                _frameCount = value;
+            }
         }
 
         public static bool Recording
@@ -186,6 +191,16 @@ namespace NBodies
             }
         }
 
+        public static double TotalTime
+        {
+            get { return _totalTime; }
+
+            set
+            {
+                _totalTime = value;
+            }
+        }
+
         private static float _viscosity = 10.0f;
         private static float _cullDistance = 8000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
@@ -197,6 +212,7 @@ namespace NBodies
         private static int _targetFPS = 60;
         private static int _minFrameTime = 0;
         private static Int64 _frameCount = 0;
+        private static double _totalTime = 0;
         private static float _timeStep = 0.008f;
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEvent _stopLoopWait = new ManualResetEvent(true);
@@ -235,6 +251,7 @@ namespace NBodies
             _stopLoopWait.WaitOne(2000);
             _loopTask.Wait();
             _loopTask.Dispose();
+            _drawingDoneWait.Wait(5000);
             PhysicsProvider.PhysicsCalc.Flush();
         }
 
@@ -330,6 +347,7 @@ namespace NBodies
 
                             // Increment physics frame count.
                             _frameCount++;
+                            _totalTime += _timeStep;
 
                             // Send the data to the recorder if we are recording.
                             if (_recorder.RecordingActive && BodyManager.Bodies.Length > 0)
@@ -375,8 +393,7 @@ namespace NBodies
                     {
                         // 4.
                         // Draw the field asynchronously.
-                        if (DrawBodies)
-                            Renderer.DrawBodiesAsync(BodyManager.Bodies, _drawingDoneWait);
+                        Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _drawingDoneWait);
 
                         _bursts = 0;
                     }

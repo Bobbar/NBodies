@@ -88,7 +88,7 @@ namespace NBodies.Rendering
             InitGraphics();
         }
 
-        public async Task DrawBodiesAsync(Body[] bodies, ManualResetEventSlim completeCallback)
+        public async Task DrawBodiesAsync(Body[] bodies, bool drawBodies, ManualResetEventSlim completeCallback)
         {
             completeCallback.Reset();
 
@@ -107,159 +107,163 @@ namespace NBodies.Rendering
                     _blurClearHack = false;
                 }
 
-                // If trails are enabled, clear one frame with a slightly 
-                // off-black color to try to hide persistent artifacts
-                // left by the lame blur technique.
-                if (Trails && !_blurClearHack)
+                if (drawBodies)
                 {
-                    Clear(Color.FromArgb(12, 12, 12));
-                    _blurClearHack = true;
-                }
-                else if (!Trails && _blurClearHack)
-                {
-                    _blurClearHack = false;
-                }
-
-                SetAntiAliasing(AAEnabled);
-
-                _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / ViewportOffsets.CurrentScale, _viewPortSize.Height / ViewportOffsets.CurrentScale);
-
-                // Since the bodies are being sorted by their spatial index
-                // we need to sort them (again) by a persistent value; we will use their UIDs.
-                // This is done because the spatial sorting can rapidly change the resulting
-                // z-order of the bodies, which causes flickering.
-
-                // Collect the index ID, and UIDs into two arrays,
-                // then sort them together to provide an ordered "lookup" array.
-
-                int[] bodyIds = new int[0];
-                int[] bodyUids = new int[0];
-
-                if (SortZOrder)
-                {
-                    bodyIds = new int[bodies.Length];
-                    bodyUids = new int[bodies.Length];
-
-                    for (int i = 0; i < bodies.Length; ++i)
+                    // If trails are enabled, clear one frame with a slightly 
+                    // off-black color to try to hide persistent artifacts
+                    // left by the lame blur technique.
+                    if (Trails && !_blurClearHack)
                     {
-                        bodyIds[i] = i;
-                        bodyUids[i] = bodies[i].UID;
+                        Clear(Color.FromArgb(12, 12, 12));
+                        _blurClearHack = true;
+                    }
+                    else if (!Trails && _blurClearHack)
+                    {
+                        _blurClearHack = false;
                     }
 
-                    Array.Sort(bodyUids, bodyIds);
-                }
+                    SetAntiAliasing(AAEnabled);
 
-                for (int i = 0; i < bodies.Length; i++)
-                {
-                    Body body;
+                    _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / ViewportOffsets.CurrentScale, _viewPortSize.Height / ViewportOffsets.CurrentScale);
 
-                    if (SortZOrder && bodyIds.Length > 0)
+                    // Since the bodies are being sorted by their spatial index
+                    // we need to sort them (again) by a persistent value; we will use their UIDs.
+                    // This is done because the spatial sorting can rapidly change the resulting
+                    // z-order of the bodies, which causes flickering.
+
+                    // Collect the index ID, and UIDs into two arrays,
+                    // then sort them together to provide an ordered "lookup" array.
+
+                    int[] bodyIds = new int[0];
+                    int[] bodyUids = new int[0];
+
+                    if (SortZOrder)
                     {
-                        body = bodies[bodyIds[i]];
-                    }
-                    else
-                    {
-                        body = bodies[i];
-                    }
+                        bodyIds = new int[bodies.Length];
+                        bodyUids = new int[bodies.Length];
 
-                    var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
-
-                    if (body.Visible == 1)
-                    {
-                        if (ClipView)
+                        for (int i = 0; i < bodies.Length; ++i)
                         {
-                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
+                            bodyIds[i] = i;
+                            bodyUids[i] = bodies[i].UID;
                         }
 
-                        Color bodyColor = Color.White;
-
-                        switch (DisplayStyle)
-                        {
-                            case DisplayStyle.Normal:
-                                bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Pressures:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Speeds:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Forces:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.HighContrast:
-                                bodyColor = Color.Black;
-                                _clearColor = Color.White;
-
-                                break;
-                        }
-
-                        //Draw body.
-                        DrawBody(body, bodyColor, bodyLoc.X, bodyLoc.Y, body.Size);
+                        Array.Sort(bodyUids, bodyIds);
                     }
-                }
 
-                if (Trails && !overlayVisible)
-                    DrawBlur(Color.FromArgb(10, _clearColor));
-
-                if (ShowAllForce)
-                {
-                    DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
-                }
-
-                if (BodyManager.FollowSelected)
-                {
-                    var followBody = BodyManager.FollowBody();
-
-                    if (ShowForce)
+                    for (int i = 0; i < bodies.Length; i++)
                     {
-                        DrawForceVectors(new Body[] { followBody }, finalOffset.X, finalOffset.Y);
+                        Body body;
+
+                        if (SortZOrder && bodyIds.Length > 0)
+                        {
+                            body = bodies[bodyIds[i]];
+                        }
+                        else
+                        {
+                            body = bodies[i];
+                        }
+
+                        var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
+
+                        if (body.Visible == 1)
+                        {
+                            if (ClipView)
+                            {
+                                if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
+                            }
+
+                            Color bodyColor = Color.White;
+
+                            switch (DisplayStyle)
+                            {
+                                case DisplayStyle.Normal:
+                                    bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.Pressures:
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.Speeds:
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.Index:
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.Forces:
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.HighContrast:
+                                    bodyColor = Color.Black;
+                                    _clearColor = Color.White;
+
+                                    break;
+                            }
+
+                            //Draw body.
+                            DrawBody(body, bodyColor, bodyLoc.X, bodyLoc.Y, body.Size);
+                        }
                     }
 
-                    if (ShowPath)
+                    if (Trails && !overlayVisible)
+                        DrawBlur(Color.FromArgb(10, _clearColor));
+
+                    if (ShowAllForce)
                     {
-                        // Start the offload task if needed.
-                        if (!_orbitOffloadRunning)
-                            CalcOrbitOffload();
+                        DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
+                    }
 
-                        // Previous orbit calc is complete.
-                        // Bring the new data into another reference.
-                        if (!_orbitReadyWait.Wait(0))
+                    if (BodyManager.FollowSelected)
+                    {
+                        var followBody = BodyManager.FollowBody();
+
+                        if (ShowForce)
                         {
-                            // Reference the new data.
-                            _drawPath = _orbitPath;
-
-                            _orbitReadyWait.Set();
+                            DrawForceVectors(new Body[] { followBody }, finalOffset.X, finalOffset.Y);
                         }
 
-                        // Add the final offset to the path points and draw them as a line.
-                        if (_drawPath.Count > 0)
+                        if (ShowPath)
                         {
-                            var pathArr = _drawPath.ToArray();
+                            // Start the offload task if needed.
+                            if (!_orbitOffloadRunning)
+                                CalcOrbitOffload();
 
-                            pathArr[0] = new PointF(followBody.PosX, followBody.PosY);
+                            // Previous orbit calc is complete.
+                            // Bring the new data into another reference.
+                            if (!_orbitReadyWait.Wait(0))
+                            {
+                                // Reference the new data.
+                                _drawPath = _orbitPath;
 
-                            DrawOrbit(pathArr, finalOffset);
+                                _orbitReadyWait.Set();
+                            }
+
+                            // Add the final offset to the path points and draw them as a line.
+                            if (_drawPath.Count > 0)
+                            {
+                                var pathArr = _drawPath.ToArray();
+
+                                pathArr[0] = new PointF(followBody.PosX, followBody.PosY);
+
+                                DrawOrbit(pathArr, finalOffset);
+                            }
                         }
                     }
+
                 }
 
                 if (ShowMesh)
@@ -270,10 +274,56 @@ namespace NBodies.Rendering
                 if (overlayVisible)
                     DrawOverlays(finalOffset.X, finalOffset.Y);
 
+                DrawStats(GetStats(), Color.FromArgb(255, 0, 192, 0));
+
                 EndDraw();
             });
 
             completeCallback.Set();
+        }
+
+        private string GetStats()
+        {
+            var ts = TimeSpan.FromSeconds(MainLoop.TotalTime * 10000);
+            //Time: {Math.Round(MainLoop.TotalTime, 3)}
+            string stats = $@"Renderer: {MainLoop.Renderer.ToString()}
+
+FPS: {Math.Round(MainLoop.CurrentFPS, 2)}
+Count: {MainLoop.FrameCount}
+Time: {ts.Days} days  {ts.Hours} hr  {ts.Minutes} min
+
+Bodies: {BodyManager.BodyCount}
+Tot Mass: {Math.Round(BodyManager.TotalMass, 2)}
+
+Scale: {Math.Round(ViewportOffsets.CurrentScale, 2)}";
+
+            if (BodyManager.FollowSelected)
+            {
+                var body = BodyManager.FollowBody();
+
+                stats += $@"
+
+Density: {body.Density}
+Press: {body.Pressure}
+Agg. Speed: {body.AggregateSpeed()}";
+
+            }
+
+            if (MainLoop.Recorder.RecordingActive)
+            {
+                stats += $@"
+
+Rec Size: {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
+
+            }
+
+            return stats;
+        }
+
+        private void GetTimeSpan()
+        {
+            var ts = TimeSpan.FromHours(MainLoop.TotalTime);
+            
         }
 
         public abstract void InitGraphics();
@@ -297,6 +347,8 @@ namespace NBodies.Rendering
         public abstract void DrawOrbit(PointF[] points, PointF finalOffset);
 
         public abstract void DrawBlur(Color color);
+
+        public abstract void DrawStats(string stats, System.Drawing.Color color);
 
         public abstract void BeginDraw();
 

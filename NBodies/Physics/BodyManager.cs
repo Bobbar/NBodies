@@ -387,6 +387,9 @@ namespace NBodies.Physics
 
             _currentUID = -1;
             ClearStates();
+
+            MainLoop.FrameCount = 0;
+            MainLoop.TotalTime = 0;
         }
 
         public static void ReplaceBodies(Body[] bodies)
