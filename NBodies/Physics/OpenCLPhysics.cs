@@ -537,21 +537,49 @@ namespace NBodies.Physics
             LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
             LevelInfo[] topLevels = CalcTopSpatials(botLevel);
 
+            // Get the total number of mesh cells to be created.
             int totCells = 0;
             foreach (var lvl in topLevels)
             {
                 totCells += lvl.CellCount;
             }
 
+            // Reallocate the local mesh array as needed.
             if (_mesh.Length != totCells)
                 _mesh = new MeshCell[totCells];
 
+            // Grid info for each level.
             _gridInfo = new GridInfo[_levels + 1];
+
+            // Index to hold the starting indexes for each level within the 1D mesh array.
+            _levelIdx = new int[_levels + 1];
+            _levelIdx[0] = 0;
+
+            // Build the first (bottom) level of the mesh.
+            BuildBottomLevel(botLevel, cellSizeExp);
+
+            // At this point we are done modifying the body array,
+            // so go ahead and start writing it to the GPU with a non-blocking call.
+            WriteBodiesToGPU();
+
+            // Build the remaining (top) levels of the mesh.
+            BuildTopLevels(topLevels, cellSizeExp, _levels);
+
+            // Allocate and begin writing mesh to GPU.
+            Allocate(ref _gpuMesh, _mesh.Length, true);
+            _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
+
+            // Populate the grid index and calulate mesh neighbor index.
+            PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
+        }
+
+        private void BuildBottomLevel(LevelInfo levelInfo, int cellSizeExp)
+        {
             object lockObj = new object();
             MinMax minMax = new MinMax();
 
-            int cellCount = botLevel.CellCount;
-            int[] cellStartIdx = botLevel.CellIndex;
+            int cellCount = levelInfo.CellCount;
+            int[] cellStartIdx = levelInfo.CellIndex;
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             int pLen, pRem, pCount;
@@ -571,15 +599,12 @@ namespace NBodies.Physics
                 for (int m = offset; m < len; m++)
                 {
                     // Get the spatial info from the first cell index; there may only be one cell.
-                    var spatial = botLevel.Spatials[cellStartIdx[m]];
+                    var spatial = levelInfo.Spatials[cellStartIdx[m]];
 
                     var newCell = new MeshCell();
-                    newCell.LocX = (spatial.IdxX << cellSizeExp) + (cellSize * 0.5f);
-                    newCell.LocY = (spatial.IdxY << cellSizeExp) + (cellSize * 0.5f);
                     newCell.IdxX = spatial.IdxX;
                     newCell.IdxY = spatial.IdxY;
                     newCell.Size = cellSize;
-                    newCell.Mort = spatial.Mort;
 
                     mm.Update(spatial.IdxX, spatial.IdxY);
 
@@ -612,23 +637,6 @@ namespace NBodies.Physics
             });
 
             AddGridDims(minMax, 0);
-
-            // At this point we are done modifying the body array,
-            // so go ahead and start writing it to the GPU with a non-blocking call.
-            WriteBodiesToGPU();
-
-            // Index to hold the starting indexes for each level.
-            _levelIdx = new int[_levels + 1];
-            _levelIdx[0] = 0;
-
-            BuildTopLevels(topLevels, cellSizeExp, _levels);
-
-            // Allocate and begin writing mesh to GPU.
-            Allocate(ref _gpuMesh, _mesh.Length, true);
-            _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
-
-            // Populate the grid index and calulate mesh neighbor index.
-            PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
         private void BuildTopLevels(LevelInfo[] levelInfo, int cellSizeExp, int levels)
@@ -672,12 +680,9 @@ namespace NBodies.Physics
                         int newIdx = m + meshOffset;
 
                         var newCell = new MeshCell();
-                        newCell.LocX = (spatial.IdxX << cellSizeExpLevel) + (cellSize * 0.5f);
-                        newCell.LocY = (spatial.IdxY << cellSizeExpLevel) + (cellSize * 0.5f);
                         newCell.IdxX = spatial.IdxX;
                         newCell.IdxY = spatial.IdxY;
                         newCell.Size = cellSize;
-                        newCell.Mort = spatial.Mort;
                         newCell.ChildStartIdx = current.CellIndex[m] + levelOffset;
                         newCell.ChildCount = 0;
                         newCell.ID = newIdx;
@@ -740,6 +745,7 @@ namespace NBodies.Physics
             }
 
             // Calulate total size of 1D mesh neighbor index.
+            // Each cell can have a max of 9 neighbors, including itself.
             int neighborLen = meshSize * 9;
 
             // Reallocate and resize GPU buffer as needed.
@@ -747,7 +753,7 @@ namespace NBodies.Physics
 
             using (var gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
             {
-                // Write Grid info.
+                // Write Grid info to GPU.
                 _queue.WriteToBuffer(gridInfo, gpuGridInfo, true, null);
                 _queue.Finish();
 

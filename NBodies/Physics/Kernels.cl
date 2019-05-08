@@ -26,11 +26,8 @@ struct Body
 struct MeshCell
 {
 	int ID;
-	float LocX;
-	float LocY;
 	int IdxX;
 	int IdxY;
-	int Mort;
 	float CmX;
 	float CmY;
 	float Mass;
