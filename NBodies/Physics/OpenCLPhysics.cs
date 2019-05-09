@@ -569,7 +569,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuMesh, _mesh.Length, true);
             _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
 
-            // Populate the grid index and calulate mesh neighbor index.
+            // Populate the grid index and mesh neighbor index.
             PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
@@ -814,13 +814,14 @@ namespace NBodies.Physics
         private int Allocate<T>(ref ComputeBuffer<T> buffer, int size, bool exactSize = false) where T : struct
         {
             long handleVal = buffer.Handle.Value.ToInt64();
+            BufferDims dims;
 
-            if (!_bufferInfo.ContainsKey(handleVal))
+            if (!_bufferInfo.TryGetValue(handleVal, out dims))
             {
-                _bufferInfo.Add(handleVal, new BufferDims(handleVal, size, size, exactSize));
+                dims = new BufferDims(handleVal, size, size, exactSize);
+                _bufferInfo.Add(handleVal, dims);
             }
 
-            var dims = _bufferInfo[handleVal];
             var flags = buffer.Flags;
 
             if (!dims.ExactSize)
