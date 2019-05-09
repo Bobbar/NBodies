@@ -114,7 +114,9 @@ namespace NBodies.Rendering
                     // left by the lame blur technique.
                     if (Trails && !_blurClearHack)
                     {
-                        Clear(Color.FromArgb(12, 12, 12));
+                        if (DisplayStyle != DisplayStyle.HighContrast)
+                            Clear(Color.FromArgb(12, 12, 12));
+
                         _blurClearHack = true;
                     }
                     else if (!Trails && _blurClearHack)
@@ -263,7 +265,6 @@ namespace NBodies.Rendering
                             }
                         }
                     }
-
                 }
 
                 if (ShowMesh)
@@ -274,7 +275,8 @@ namespace NBodies.Rendering
                 if (overlayVisible)
                     DrawOverlays(finalOffset.X, finalOffset.Y);
 
-                DrawStats(GetStats(), Color.FromArgb(255, 0, 192, 0));
+
+                DrawStats(GetStats(), Color.FromArgb(255, 0, 192, 0), Color.FromArgb(100, _clearColor));
 
                 EndDraw();
             });
@@ -284,13 +286,14 @@ namespace NBodies.Rendering
 
         private string GetStats()
         {
-            var ts = TimeSpan.FromSeconds(MainLoop.TotalTime * 10000);
-            //Time: {Math.Round(MainLoop.TotalTime, 3)}
+            // Define a completely arbitrary yet slightly informative time span.
+            var elapTime = TimeSpan.FromSeconds(MainLoop.TotalTime * 10000);
+
             string stats = $@"Renderer: {MainLoop.Renderer.ToString()}
 
-FPS: {Math.Round(MainLoop.CurrentFPS, 2)}
+FPS: {Math.Round(MainLoop.CurrentFPS, 2)} ({Math.Round(MainLoop.PeakFPS, 2)})
 Count: {MainLoop.FrameCount}
-Time: {ts.Days} days  {ts.Hours} hr  {ts.Minutes} min
+Time: {elapTime.Days} days  {elapTime.Hours} hr  {elapTime.Minutes} min
 
 Bodies: {BodyManager.BodyCount}
 Tot Mass: {Math.Round(BodyManager.TotalMass, 2)}
@@ -323,7 +326,7 @@ Rec Size: {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
         private void GetTimeSpan()
         {
             var ts = TimeSpan.FromHours(MainLoop.TotalTime);
-            
+
         }
 
         public abstract void InitGraphics();
@@ -348,7 +351,7 @@ Rec Size: {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
 
         public abstract void DrawBlur(Color color);
 
-        public abstract void DrawStats(string stats, System.Drawing.Color color);
+        public abstract void DrawStats(string stats, System.Drawing.Color foreColor, System.Drawing.Color backColor);
 
         public abstract void BeginDraw();
 

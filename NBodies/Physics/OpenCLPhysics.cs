@@ -18,7 +18,7 @@ namespace NBodies.Physics
 {
     public class OpenCLPhysics : IPhysicsCalc, IDisposable
     {
-        private int _gpuIndex = 2;
+        private int _gpuIndex = 4;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 12;//24;

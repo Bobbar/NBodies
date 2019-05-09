@@ -3,6 +3,7 @@ using NBodies.IO;
 using NBodies.Physics;
 using NBodies.Shapes;
 using NBodies.Rendering;
+using NBodies.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,9 +19,18 @@ namespace NBodies
         public static bool RocheLimit = true;
         public static bool Collisions = true;
         public static bool RewindBuffer = false;
-        public static float CurrentFPS = 0;
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
+
+        public static float CurrentFPS
+        {
+            get { return _currentFPS; }
+        }
+
+        public static float PeakFPS
+        {
+            get { return _peakFPS; }
+        }
 
         public static float CullDistance
         {
@@ -210,10 +220,13 @@ namespace NBodies
         private static int _burstSkips = 0;
         private static int _bursts = 0;
         private static int _targetFPS = 60;
+        private static float _currentFPS = 0;
+        private static float _peakFPS = 0;
         private static int _minFrameTime = 0;
         private static Int64 _frameCount = 0;
         private static double _totalTime = 0;
         private static float _timeStep = 0.008f;
+        private static Average _avgFPS = new Average(40);
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEvent _stopLoopWait = new ManualResetEvent(true);
         private static ManualResetEventSlim _drawingDoneWait = new ManualResetEventSlim(true);
@@ -253,6 +266,7 @@ namespace NBodies
             _loopTask.Dispose();
             _drawingDoneWait.Wait(5000);
             PhysicsProvider.PhysicsCalc.Flush();
+            _peakFPS = 0;
         }
 
         public static void End()
@@ -263,6 +277,7 @@ namespace NBodies
             _loopTask.Wait();
             _loopTask.Dispose();
             PhysicsProvider.PhysicsCalc.Dispose();
+            _peakFPS = 0;
         }
 
         /// <summary>
@@ -449,7 +464,7 @@ namespace NBodies
 
         private static void FPSLimiter()
         {
-            int ticksPerSecond = 1000 * 10000;
+            long ticksPerSecond = TimeSpan.TicksPerSecond;
             float targetFrameTime = ticksPerSecond / (float)_targetFPS;
             long waitTime = 0;
 
@@ -467,7 +482,19 @@ namespace NBodies
                     }
                 }
 
-                CurrentFPS = ticksPerSecond / (elapTime + waitTime);
+                float fps = ticksPerSecond / (elapTime + waitTime);
+
+                _avgFPS.Add(fps);
+
+                // Reset peak FPS every 100 frames.
+                if (((_frameCount % 100) == 0))
+                {
+                    _peakFPS = fps;
+                }
+
+                _peakFPS = Math.Max(_peakFPS, fps);
+
+                _currentFPS = (int)_avgFPS.Current;
 
                 _fpsTimer.Restart();
             }
@@ -477,7 +504,5 @@ namespace NBodies
                 return;
             }
         }
-
-
     }
 }

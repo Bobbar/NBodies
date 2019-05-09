@@ -18,10 +18,13 @@ namespace NBodies.Rendering
         private Pen _blackHoleStroke = new Pen(Color.Red);
         private SolidBrush _blurBrush = new SolidBrush(Color.FromArgb(10, Color.Black));
         private SolidBrush _statsBrush = new SolidBrush(Color.FromArgb(255, Color.Black));
+        private SolidBrush _statsBackBrush = new SolidBrush(Color.FromArgb(100, Color.Black));
         private SolidBrush _bodyBrush = new SolidBrush(Color.FromArgb(255, Color.White));
 
         private Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
         private Font _statsFont = new Font("Microsoft Sans Serif", 11, GraphicsUnit.Pixel);
+
+        private RectangleF _statsArea = new RectangleF(0, 0, 150, 150);
 
         public GDIRenderer(Control targetControl) : base(targetControl)
         {
@@ -41,7 +44,7 @@ namespace NBodies.Rendering
             //_buffer.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
             //_buffer.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             //_buffer.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
-            
+
             _viewPortSize = _targetControl.Size;
         }
 
@@ -214,12 +217,18 @@ namespace NBodies.Rendering
             _buffer.Graphics.Restore(ogSt);
         }
 
-        public override void DrawStats(string stats, System.Drawing.Color color)
+        public override void DrawStats(string stats, System.Drawing.Color foreColor, System.Drawing.Color backColor)
         {
             var ogSt = _buffer.Graphics.Save();
             _buffer.Graphics.ResetTransform();
-           
-            _statsBrush.Color = color;
+
+            if (Trails)
+            {
+                _statsBackBrush.Color = backColor;
+                _buffer.Graphics.FillRectangle(_statsBackBrush, _statsArea);
+            }
+
+            _statsBrush.Color = foreColor;
             _buffer.Graphics.DrawString(stats, _statsFont, _statsBrush, new PointF(5, 5));
 
             _buffer.Graphics.Restore(ogSt);
