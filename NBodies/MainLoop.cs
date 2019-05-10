@@ -22,6 +22,8 @@ namespace NBodies
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
 
+        #region Public Properties
+
         public static float CurrentFPS
         {
             get { return _currentFPS; }
@@ -146,6 +148,17 @@ namespace NBodies
             }
         }
 
+
+        public static float RecordTimeStep
+        {
+            get { return _recFrameTimeSpan; }
+        }
+
+        public static double RecordMaxSize
+        {
+            get { return _recSizeLimit; }
+        }
+
         public static int ThreadsPerBlock
         {
             get
@@ -211,6 +224,8 @@ namespace NBodies
             }
         }
 
+        #endregion Public Properties
+
         private static float _viscosity = 10.0f;
         private static float _cullDistance = 8000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
@@ -239,7 +254,10 @@ namespace NBodies
         private static Stopwatch _fpsTimer = new Stopwatch();
 
         private static float _recElapTime = 0f;
-        private const float _recFrameTimeSpan = 0.30f;
+        private const float _recFrameTimeSpanDefault = 0.30f;
+        private const double _recSizeLimitDefault = 0;
+        private static float _recFrameTimeSpan = 0.30f;
+        private static double _recSizeLimit = 0;
 
         private static Body[] _bodiesBuffer = new Body[0];
 
@@ -373,6 +391,12 @@ namespace NBodies
                                     _recElapTime = 0f;
                                 }
                                 _recElapTime += TimeStep;
+
+                                if (_recSizeLimit > 0 && _recorder.FileSize >= _recSizeLimit)
+                                {
+                                    StopRecording();
+                                    _skipPhysics = true;
+                                }
                             }
                         }
                     }
@@ -434,9 +458,22 @@ namespace NBodies
             _recorder.CreateRecording(file);
         }
 
+        public static void StartRecording(string file, float timestep, double maxSize)
+        {
+            _recFrameTimeSpan = timestep;
+            _recSizeLimit = maxSize * 1000000;
+
+            _recorder.StopAll();
+
+            _recorder.CreateRecording(file);
+        }
+
         public static void StopRecording()
         {
             _recorder.StopAll();
+
+            _recFrameTimeSpan = _recFrameTimeSpanDefault;
+            _recSizeLimit = _recSizeLimitDefault;
         }
 
         public static double RecordedSize()

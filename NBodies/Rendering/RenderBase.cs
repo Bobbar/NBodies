@@ -316,7 +316,7 @@ Agg. Speed: {body.AggregateSpeed()}";
             {
                 stats += $@"
 
-Rec Size: {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
+Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
 
             }
 

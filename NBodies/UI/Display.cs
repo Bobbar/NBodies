@@ -187,15 +187,25 @@ namespace NBodies.UI
                 MainLoop.StopRecording();
             }
 
+            
+            using (var settingsForm = new RecordSettings())
             using (var saveDialog = new SaveFileDialog())
             {
+                float timeStep;
+                double maxSize;
+
+                settingsForm.ShowDialog();
+
+                timeStep = settingsForm.TimeStep;
+                maxSize = settingsForm.MaxRecordSize;
+
                 saveDialog.Filter = "NBody Recording|*.rec";
                 saveDialog.Title = "Save Recording";
                 saveDialog.ShowDialog();
 
                 if (!string.IsNullOrEmpty(saveDialog.FileName))
                 {
-                    MainLoop.StartRecording(saveDialog.FileName);
+                    MainLoop.StartRecording(saveDialog.FileName, timeStep, maxSize);
                 }
             }
         }
