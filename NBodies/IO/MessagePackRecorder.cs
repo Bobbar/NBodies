@@ -3,6 +3,9 @@ using NBodies.Physics;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace NBodies.IO
 {
@@ -19,6 +22,9 @@ namespace NBodies.IO
         private Body[] _currentFrame = new Body[0];
         private int _seekIndex = -1;
         private object _lockObject = new object();
+        private const int _maxBufferSize = 10;
+        private List<Body[]> _buffer = new List<Body[]>();
+        private ManualResetEventSlim _serializerWait = new ManualResetEventSlim(true);
 
         public event EventHandler<int> ProgressChanged;
 
@@ -178,19 +184,47 @@ namespace NBodies.IO
 
         public void RecordFrame(Body[] frame)
         {
-            lock (_lockObject)
+            // Add frame to buffer.
+            _buffer.Add(frame);
+
+            // Start the serializer if it's not running.
+            if (_serializerWait.Wait(0))
+                SerializeBufferAsync();
+
+            // Wait for the serializer to finish if the buffer exceeds max size.
+            if (_buffer.Count >= _maxBufferSize)
+                _serializerWait.Wait(-1);
+        }
+
+        private async void SerializeBufferAsync()
+        {
+            await Task.Run(() =>
             {
-                LZ4MessagePackSerializer.Serialize(_fileStream, frame);
-            }
+                _serializerWait.Reset();
+
+                while (_buffer.Count > 0)
+                {
+                    var frame = _buffer.First();
+
+                    LZ4MessagePackSerializer.Serialize(_fileStream, frame);
+
+                    _buffer.RemoveAt(0);
+                }
+
+                _serializerWait.Set();
+
+            });
         }
 
         public void StopAll()
         {
+            _serializerWait.Wait(500);
             _playbackActive = false;
             _playbackComplete = true;
             _recordingActive = false;
             _currentFrame = new Body[0];
             _currentFrameIdx = 0;
+            _buffer.Clear();
             _fileStream?.Close();
         }
 
