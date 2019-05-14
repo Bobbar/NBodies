@@ -224,7 +224,6 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, timestep);
             _forceKernel.SetValueArgument(argi++, _levels);
             _forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
-            _forceKernel.SetValueArgument(argi++, _levelIdx.Length);
 
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
