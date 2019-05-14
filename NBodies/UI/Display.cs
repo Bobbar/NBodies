@@ -485,8 +485,19 @@ namespace NBodies.UI
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
             InputHandler.MouseMove(e.Location);
-
             _mouseLocation = e.Location;
+
+            if (InputHandler.KeyIsDown(Keys.D))
+            {
+                _distLine.Location2 = _mouseLocation;
+                _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
+
+                var loc1 = ViewportHelpers.ScreenPointToField(_distLine.Location);
+                var loc2 = ViewportHelpers.ScreenPointToField(_distLine.Location2);
+
+                _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
+            }
+
 
             if (!InputHandler.MouseIsDown)
                 return;
@@ -558,16 +569,7 @@ namespace NBodies.UI
 
             }
 
-            if (InputHandler.KeyIsDown(Keys.D))
-            {
-                _distLine.Location2 = _mouseLocation;
-                _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
-
-                var loc1 = ViewportHelpers.ScreenPointToField(_distLine.Location);
-                var loc2 = ViewportHelpers.ScreenPointToField(_distLine.Location2);
-
-                _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
-            }
+           
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)

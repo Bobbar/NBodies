@@ -8,18 +8,18 @@ namespace NBodies.Physics
 {
     public struct GridInfo
     {
-        public int OffsetX;
-        public int OffsetY;
-        public int MinX;
-        public int MinY;
-        public int MaxX;
-        public int MaxY;
-        public int Columns;
-        public int Rows;
-        public int Size;
-        public int IndexOffset;
+        public long OffsetX;
+        public long OffsetY;
+        public long MinX;
+        public long MinY;
+        public long MaxX;
+        public long MaxY;
+        public long Columns;
+        public long Rows;
+        public long Size;
+        public long IndexOffset;
 
-        public GridInfo(int offX, int offY, int idxOff, int minX, int minY, int maxX, int maxY, int cols, int rows)
+        public GridInfo(long offX, long offY, long idxOff, long minX, long minY, long maxX, long maxY, long cols, long rows)
         {
             OffsetX = offX;
             OffsetY = offY;

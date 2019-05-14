@@ -8,10 +8,10 @@ namespace NBodies.Physics
 {
     public struct MinMax
     {
-        public int MinX;
-        public int MinY;
-        public int MaxX;
-        public int MaxY;
+        public long MinX;
+        public long MinY;
+        public long MaxX;
+        public long MaxY;
 
         public MinMax(int dummy = 0)
         {
@@ -21,7 +21,7 @@ namespace NBodies.Physics
             MaxY = int.MinValue;
         }
 
-        public MinMax(int minX, int minY, int maxX, int maxY)
+        public MinMax(long minX, long minY, long maxX, long maxY)
         {
             MinX = minX;
             MinY = minY;
@@ -30,7 +30,7 @@ namespace NBodies.Physics
         }
 
 
-        public void Update(int X, int Y)
+        public void Update(long X, long Y)
         {
             MinX = Math.Min(MinX, X);
             MinY = Math.Min(MinY, Y);

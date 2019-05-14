@@ -45,16 +45,16 @@ struct MeshCell
 
 struct GridInfo
 {
-	int OffsetX;
-	int OffsetY;
-	int MinX;
-	int MinY;
-	int MaxX;
-	int MaxY;
-	int Columns;
-	int Rows;
-	int Size;
-	int IndexOffset;
+	long OffsetX;
+	long OffsetY;
+	long MinX;
+	long MinY;
+	long MaxX;
+	long MaxY;
+	long Columns;
+	long Rows;
+	long Size;
+	long IndexOffset;
 };
 
 
@@ -98,7 +98,7 @@ __kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen, global 
 	outBodies[i] = bodyA;
 }
 
-__kernel void ClearGrid(global int* gridIdx, global struct MeshCell* mesh, int meshLen)
+__kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, global struct MeshCell* mesh, int meshLen)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -107,10 +107,17 @@ __kernel void ClearGrid(global int* gridIdx, global struct MeshCell* mesh, int m
 		return;
 	}
 
-	gridIdx[mesh[m].GridIdx] = 0;
+	int idx = mesh[m].GridIdx;
+	idx -= passOffset;
+
+	if (idx >= 0 && idx < passStride)
+	{
+		gridIdx[idx] = 0;
+	}
+
 }
 
-__kernel void PopGrid(global int* gridIdx, global struct GridInfo* gridInfo, global struct MeshCell* mesh, int meshLen)
+__kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, global struct GridInfo* gridInfo, global struct MeshCell* mesh, int meshLen)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -127,24 +134,30 @@ __kernel void PopGrid(global int* gridIdx, global struct GridInfo* gridInfo, glo
 
 	int column = cell.IdxX + grid.OffsetX;
 	int row = cell.IdxY + grid.OffsetY;
-	int idx = (row * grid.Columns) + column + row;
+	int bucket = (row * grid.Columns) + column + row;
+	
+	bucket += grid.IndexOffset;
 
-	idx += grid.IndexOffset;
-	cell.GridIdx = idx;
+	cell.GridIdx = bucket;
 
-	if (cell.ID == 0)
+	bucket -= passOffset;
+
+	if (bucket >= 0 && bucket < passStride)
 	{
-		gridIdx[idx] = -1;
-	}
-	else
-	{
-		gridIdx[idx] = cell.ID;
+		if (cell.ID == 0)
+		{
+			gridIdx[bucket] = -1;
+		}
+		else
+		{
+			gridIdx[bucket] = cell.ID;
+		}
 	}
 
 	mesh[m] = cell;
 }
 
-__kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global struct GridInfo* gridInfo, global int* gridIdx, int gridIdxLen, global int* neighborIndex)
+__kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global struct GridInfo* gridInfo, global int* gridIdx, int passStride, int passOffset, global int* neighborIndex)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -158,35 +171,45 @@ __kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global s
 	struct MeshCell cell = mesh[m];
 	struct GridInfo gInfo = gridInfo[cell.Level];
 	int columns = gInfo.Columns;
-	int offIdx = cell.GridIdx - gInfo.IndexOffset;
+	int offsetIndex = cell.GridIdx - passOffset;
 
-	for (int x = -1; x <= 1; x++)
+	if (offsetIndex >= 0 && offsetIndex < passStride)
 	{
-		for (int y = -1; y <= 1; y++)
+		int offIdx = cell.GridIdx - gInfo.IndexOffset;
+
+		for (int x = -1; x <= 1; x++)
 		{
-			int localIdx = offIdx + ((x * columns) + (y + x));
-
-			if (localIdx > 0 && localIdx < gInfo.Size)
+			for (int y = -1; y <= 1; y++)
 			{
-				int globalIdx = localIdx + gInfo.IndexOffset;
-				int idx = gridIdx[globalIdx];
+				int localIdx = offIdx + ((x * columns) + (y + x));
 
-				if (idx > 0)
+				if (localIdx > 0 && localIdx < gInfo.Size)
 				{
-					neighborIndex[(offset + count)] = idx;
-					count++;
-				}
-				else if (idx == -1)
-				{
-					neighborIndex[(offset + count)] = 0;
-					count++;
+					int bucket = localIdx + gInfo.IndexOffset;
+					bucket -= passOffset;
+
+					if (bucket >= 0 && bucket < passStride)
+					{
+						int idx = gridIdx[bucket];
+
+						if (idx > 0)
+						{
+							neighborIndex[(offset + count)] = idx;
+							count++;
+						}
+						else if (idx == -1)
+						{
+							neighborIndex[(offset + count)] = 0;
+							count++;
+						}
+					}
 				}
 			}
 		}
-	}
 
-	cell.NeighborStartIdx = offset;
-	cell.NeighborCount = count;
+		cell.NeighborStartIdx = offset;
+		cell.NeighborCount = count;
+	}
 
 	mesh[m] = cell;
 }
@@ -625,8 +648,9 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, glob
 	float distX = centerMass.x - outBody.PosX;
 	float distY = centerMass.y - outBody.PosY;
 	float dist = distX * distX + distY * distY;
+	float dsqrt = native_sqrt(dist);
 
-	if (dist > cullDistance * cullDistance)
+	if (dsqrt > cullDistance)
 		outBody.Visible = 0;
 
 	// Cull expired bodies.
