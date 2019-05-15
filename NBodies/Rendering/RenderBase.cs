@@ -23,7 +23,6 @@ namespace NBodies.Rendering
         public static bool ShowMesh = false;
         public static bool SortZOrder = true;
         public static bool FastPrimitives = true;
-
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
         public static float StyleScaleMax

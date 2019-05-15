@@ -1219,6 +1219,7 @@ MeshID: { body.MeshID }
     Neighbors: { mesh.NeighborCount }
     Cm (X,Y): { mesh.CmX }, { mesh.CmY }
     Loc (X,Y): { mesh.LocX }, { mesh.LocY }
+    Idx (X,Y): { mesh.IdxX }, { mesh.IdxY }
 
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }

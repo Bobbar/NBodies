@@ -332,8 +332,8 @@ namespace NBodies.Physics
 
         private void AddGridDims(MinMax minMax, int level)
         {
-            long minXAbs = Math.Abs(minMax.MinX - 1);
-            long minYAbs = Math.Abs(minMax.MinY - 1);
+            long offsetX = (minMax.MinX - 1) * -1;
+            long offsetY = (minMax.MinY - 1) * -1;
 
             long columns = Math.Abs(minMax.MinX - minMax.MaxX - 1);
             long rows = Math.Abs(minMax.MinY - minMax.MaxY - 1);
@@ -354,7 +354,7 @@ namespace NBodies.Physics
                 idxOff = _gridInfo[level - 1].IndexOffset + _gridInfo[level - 1].Size;
             }
 
-            _gridInfo[level] = new GridInfo(minXAbs, minYAbs, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
+            _gridInfo[level] = new GridInfo(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
 
         }
 
