@@ -176,7 +176,7 @@ namespace NBodies.UI
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                // selectBody.PrintInfo();
+                selectBody.PrintInfo();
             }
         }
 

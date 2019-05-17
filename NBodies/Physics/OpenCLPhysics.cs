@@ -177,24 +177,6 @@ namespace NBodies.Physics
             Allocate(ref _gpuLevelIdx, 0, true);
         }
 
-        public void FixOverLaps(ref Body[] bodies)
-        {
-            using (var inBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
-            using (var outBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
-            {
-                _queue.WriteToBuffer(bodies, inBodies, true, null);
-                _queue.Finish();
-
-                _fixOverlapKernel.SetMemoryArgument(0, inBodies);
-                _fixOverlapKernel.SetValueArgument(1, bodies.Length);
-                _fixOverlapKernel.SetMemoryArgument(2, outBodies);
-
-                _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-                _queue.Finish();
-
-                bodies = ReadBuffer(outBodies);
-            }
-        }
 
         public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, bool collisions, int meshLevels, int threadsPerBlock)
         {
@@ -255,6 +237,27 @@ namespace NBodies.Physics
             _queue.Finish();
         }
 
+
+        public void FixOverLaps(ref Body[] bodies)
+        {
+            using (var inBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
+            using (var outBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
+            {
+                _queue.WriteToBuffer(bodies, inBodies, true, null);
+                _queue.Finish();
+
+                _fixOverlapKernel.SetMemoryArgument(0, inBodies);
+                _fixOverlapKernel.SetValueArgument(1, bodies.Length);
+                _fixOverlapKernel.SetMemoryArgument(2, outBodies);
+
+                _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Finish();
+
+                bodies = ReadBuffer(outBodies);
+            }
+        }
+
+
         private Vector2 CalcCenterMass()
         {
             double cmX = 0;
@@ -276,13 +279,6 @@ namespace NBodies.Physics
             return new Vector2((float)cmX, (float)cmY);
         }
 
-        private void WriteBodiesToGPU()
-        {
-            Allocate(ref _gpuInBodies, _bodies.Length, true);
-            Allocate(ref _gpuOutBodies, _bodies.Length, true);
-
-            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
-        }
 
         /// <summary>
         /// Calculates number of thread blocks needed to fit the specified data length and the specified number of threads per block.
@@ -308,6 +304,7 @@ namespace NBodies.Physics
 
             return blocks;
         }
+
 
         // Calculate dimensionless morton number from X/Y coords.
         private static readonly int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
@@ -356,6 +353,54 @@ namespace NBodies.Physics
 
             _gridInfo[level] = new GridInfo(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
 
+        }
+
+        /// <summary>
+        /// Builds the particle mesh and mesh-neighbor index for the current field.  Also begins writing the body array to GPU...
+        /// </summary>
+        /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
+        private void BuildMesh(int cellSizeExp)
+        {
+            // Get spatial info for the cells about to be constructed.
+            LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
+            LevelInfo[] topLevels = CalcTopSpatials(botLevel);
+
+            // Get the total number of mesh cells to be created.
+            int totCells = 0;
+            foreach (var lvl in topLevels)
+            {
+                totCells += lvl.CellCount;
+            }
+
+            // Reallocate the local mesh array as needed.
+            if (_mesh.Length != totCells)
+                _mesh = new MeshCell[totCells];
+
+            // Grid info for each level.
+            _gridInfo = new GridInfo[_levels + 1];
+
+            // Index to hold the starting indexes for each level within the 1D mesh array.
+            _levelIdx = new int[_levels + 1];
+            _levelIdx[0] = 0;
+
+            // Build the first (bottom) level of the mesh.
+            BuildBottomLevel(botLevel, cellSizeExp);
+
+            // At this point we are done modifying the body array,
+            // so go ahead and start writing it to the GPU with a non-blocking call.
+            Allocate(ref _gpuInBodies, _bodies.Length, true);
+            Allocate(ref _gpuOutBodies, _bodies.Length, true);
+            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
+
+            // Build the remaining (top) levels of the mesh.
+            BuildTopLevels(topLevels, cellSizeExp, _levels);
+
+            // Allocate and begin writing mesh to GPU.
+            Allocate(ref _gpuMesh, _mesh.Length, true);
+            _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
+
+            // Populate the grid index and mesh neighbor index.
+            PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
         /// <summary>
@@ -520,52 +565,6 @@ namespace NBodies.Physics
             }
 
             return output;
-        }
-
-        /// <summary>
-        /// Builds the particle mesh and mesh-neighbor index for the current field.  Also begins writing the body array to GPU...
-        /// </summary>
-        /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
-        private void BuildMesh(int cellSizeExp)
-        {
-            // Get spatial info for the cells about to be constructed.
-            LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
-            LevelInfo[] topLevels = CalcTopSpatials(botLevel);
-
-            // Get the total number of mesh cells to be created.
-            int totCells = 0;
-            foreach (var lvl in topLevels)
-            {
-                totCells += lvl.CellCount;
-            }
-
-            // Reallocate the local mesh array as needed.
-            if (_mesh.Length != totCells)
-                _mesh = new MeshCell[totCells];
-
-            // Grid info for each level.
-            _gridInfo = new GridInfo[_levels + 1];
-
-            // Index to hold the starting indexes for each level within the 1D mesh array.
-            _levelIdx = new int[_levels + 1];
-            _levelIdx[0] = 0;
-
-            // Build the first (bottom) level of the mesh.
-            BuildBottomLevel(botLevel, cellSizeExp);
-
-            // At this point we are done modifying the body array,
-            // so go ahead and start writing it to the GPU with a non-blocking call.
-            WriteBodiesToGPU();
-
-            // Build the remaining (top) levels of the mesh.
-            BuildTopLevels(topLevels, cellSizeExp, _levels);
-
-            // Allocate and begin writing mesh to GPU.
-            Allocate(ref _gpuMesh, _mesh.Length, true);
-            _queue.WriteToBuffer(_mesh, _gpuMesh, false, null);
-
-            // Populate the grid index and mesh neighbor index.
-            PopGridAndNeighborsGPU(_gridInfo, _mesh.Length);
         }
 
         private void BuildBottomLevel(LevelInfo levelInfo, int cellSizeExp)
@@ -807,23 +806,31 @@ namespace NBodies.Physics
             }
         }
 
-        private void Partition(int length, int parts, out int pLen, out int rem, out int count)
+        /// <summary>
+        /// Computes parameters for partitioning the specified length into the specified number of parts.
+        /// </summary>
+        /// <param name="length">Total number of items to be partitioned.</param>
+        /// <param name="parts">Number of partitions to compute.</param>
+        /// <param name="partLen">Computed length of each part.</param>
+        /// <param name="modulo">Computed modulo or remainder to be added to the last partitions length.</param>
+        /// <param name="count">Computed number of partitions. If parts is greater than length, this will be 1.</param>
+        private void Partition(int length, int parts, out int partLen, out int modulo, out int count)
         {
-            int outpLen, outRem;
+            int outpLen, outMod;
 
             outpLen = length / parts;
-            outRem = length % parts;
+            outMod = length % parts;
 
             if (parts >= length || outpLen <= 1)
             {
-                pLen = length;
-                rem = 0;
+                partLen = length;
+                modulo = 0;
                 count = 1;
             }
             else
             {
-                pLen = outpLen;
-                rem = outRem;
+                partLen = outpLen;
+                modulo = outMod;
                 count = parts;
             }
 

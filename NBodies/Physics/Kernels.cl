@@ -58,7 +58,7 @@ struct GridInfo
 };
 
 
-int IsNear(struct MeshCell testCell, struct MeshCell neighborCell);
+int IsNeighbor(struct MeshCell testCell, struct MeshCell neighborCell);
 struct Body CollideBodies(struct Body master, struct Body slave, float colMass, float forceX, float forceY);
 
 __kernel void FixOverlaps(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies)
@@ -266,7 +266,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global st
 				{
 					struct MeshCell cell = inMesh[(c)];
 
-					if (IsNear(levelCell, cell) == 0)
+					if (IsNeighbor(levelCell, cell) == 0)
 					{
 						// Calculate the force from the cells center of mass.
 						float distX = cell.CmX - outBody.PosX;
@@ -293,7 +293,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global st
 	{
 		struct MeshCell cell = inMesh[(top)];
 
-		if (IsNear(levelCell, cell) == 0)
+		if (IsNeighbor(levelCell, cell) == 0)
 		{
 			float distX = cell.CmX - outBody.PosX;
 			float distY = cell.CmY - outBody.PosY;
@@ -388,7 +388,7 @@ __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global st
 }
 
 // Is the specified cell a neighbor of the test cell?
-int IsNear(struct MeshCell cell, struct MeshCell testCell)
+int IsNeighbor(struct MeshCell cell, struct MeshCell testCell)
 {
 	int result = 0;
 

@@ -132,13 +132,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Physics\BufferDims.cs" />
-    <Compile Include="Physics\GridInfo.cs" />
-    <Compile Include="Physics\LevelInfo.cs" />
-    <Compile Include="Physics\MinMax.cs" />
+    <Compile Include="Physics\Structs\BufferDims.cs" />
+    <Compile Include="Physics\Structs\GridInfo.cs" />
+    <Compile Include="Physics\Structs\LevelInfo.cs" />
+    <Compile Include="Physics\Structs\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
-    <Compile Include="Physics\MeshCell.cs" />
-    <Compile Include="Physics\SpatialInfo.cs" />
+    <Compile Include="Physics\Structs\MeshCell.cs" />
+    <Compile Include="Physics\Structs\SpatialInfo.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
@@ -162,7 +162,7 @@
     <Compile Include="IO\Serializer.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Helpers\Numbers.cs" />
-    <Compile Include="Physics\Body.cs" />
+    <Compile Include="Physics\Structs\Body.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
     <Compile Include="Physics\PhysicsProvider.cs" />
     <Compile Include="UI\InputHandler.cs" />

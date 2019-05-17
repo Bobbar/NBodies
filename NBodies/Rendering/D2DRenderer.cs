@@ -201,6 +201,12 @@ namespace NBodies.Rendering
                 //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
+
+
+            //// Draws origin.
+            //_wndRender.DrawLine(new Vector2(0 + offsetX, -5000 + offsetY), new Vector2(0 + offsetX, 5000 + offsetY), _greenBrush, 0.2f);
+            //_wndRender.DrawLine(new Vector2(-5000 + offsetX, 0 + offsetY), new Vector2(5000 + offsetX, 0 + offsetY), _greenBrush, 0.2f);
+
         }
 
         public override void DrawOverlays(float offsetX, float offsetY)
