@@ -14,7 +14,15 @@ namespace NBodies.Physics
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
-        public static MeshCell[] Mesh = new MeshCell[0];
+        //public static MeshCell[] Mesh = new MeshCell[0];
+        public static MeshCell[] Mesh
+        {
+            get
+            {
+                return PhysicsProvider.PhysicsCalc.CurrentMesh;
+            }
+        }
+
         public static bool FollowSelected = false;
         public static int FollowBodyUID = -1;
 

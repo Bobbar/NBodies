@@ -373,7 +373,7 @@ namespace NBodies
                             // 3.
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = _bodiesBuffer;
-                            BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
+                           // BodyManager.Mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
 
                             // Do some final host-side processing.
                             BodyManager.PostProcess(RocheLimit);

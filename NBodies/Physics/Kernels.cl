@@ -135,7 +135,7 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	int column = cell.IdxX + grid.OffsetX;
 	int row = cell.IdxY + grid.OffsetY;
 	int bucket = (row * grid.Columns) + column + row;
-	
+
 	bucket += grid.IndexOffset;
 
 	cell.GridIdx = bucket;
@@ -214,6 +214,118 @@ __kernel void BuildNeighbors(global struct MeshCell* mesh, int meshLen, global s
 	mesh[m] = cell;
 }
 
+__kernel void BuildBottom(global struct Body* inBodies, global struct Body* outBodies, global struct MeshCell* mesh, int meshLen, global int* cellIdx, global float2* locIdx, int cellSize)
+{
+	int m = get_global_id(0);
+
+	if (m >= meshLen)
+		return;
+
+	struct MeshCell newCell;
+	float2 idx = locIdx[m];
+
+	newCell.IdxX = (int)idx.X;
+	newCell.IdxY = (int)idx.Y;
+	newCell.Size = cellSize;
+	newCell.BodyCount = 0;
+	newCell.ChildCount = 0;
+	newCell.ID = 0;
+	newCell.Level = 0;
+	newCell.ParentID = -1;
+	newCell.CmX = 0;
+	newCell.CmY = 0;
+	newCell.Mass = 0;
+
+	for (int i = cellIdx[m]; i < cellIdx[m + 1]; i++)
+	{
+		struct Body body = inBodies[i];
+		newCell.Mass += body.Mass;
+		newCell.CmX += body.Mass * body.PosX;
+		newCell.CmY += body.Mass * body.PosY;
+		newCell.BodyCount++;
+
+		body.MeshID = m;
+
+		outBodies[i] = body;
+	}
+
+	newCell.ID = m;
+	newCell.BodyStartIdx = cellIdx[m];
+
+	newCell.CmX = newCell.CmX / (float)newCell.Mass;
+	newCell.CmY = newCell.CmY / (float)newCell.Mass;
+
+	mesh[m] = newCell;
+
+}
+
+__kernel void BuildTop(global struct MeshCell* mesh, int len, global int* cellIdx, global float2* locIdx, int cellSize, int levelOffset, int meshOffset, int level)
+{
+	int m = get_global_id(0);
+
+	if (m >= len)
+		return;
+
+	struct MeshCell newCell;
+	float2 idx = locIdx[m];
+	int newIdx = m + meshOffset;
+
+	newCell.IdxX = (int)idx.X;
+	newCell.IdxY = (int)idx.Y;
+	newCell.Size = cellSize;
+	newCell.ChildStartIdx = cellIdx[m] + levelOffset;
+	newCell.ChildCount = 0;
+	newCell.ID = newIdx;
+	newCell.Level = level;
+	newCell.BodyStartIdx = 0;
+	newCell.BodyCount = 0;
+	newCell.ParentID = -1;
+	newCell.CmX = 0;
+	newCell.CmY = 0;
+	newCell.Mass = 0;
+
+	for (int i = cellIdx[m]; i < cellIdx[m + 1]; i++)
+	{
+		struct MeshCell child = mesh[i + levelOffset];
+		newCell.Mass += child.Mass;
+		newCell.CmX += (float)child.Mass * child.CmX;
+		newCell.CmY += (float)child.Mass * child.CmY;
+		newCell.ChildCount++;
+		newCell.BodyCount += child.BodyCount;
+
+		if (newCell.ChildCount == 1)
+			newCell.BodyStartIdx = child.BodyStartIdx;
+
+		child.ParentID = newIdx;
+		mesh[i + levelOffset] = child;
+	}
+
+	newCell.CmX = newCell.CmX / (float)newCell.Mass;
+	newCell.CmY = newCell.CmY / (float)newCell.Mass;
+
+	mesh[newIdx] = newCell;
+}
+
+__kernel void CalcCenterOfMass(global struct MeshCell* inMesh, global float2* cm, int start, int end)
+{ 
+	double cmX = 0;
+	double cmY = 0;
+	double mass = 0;
+
+	for (int i = start; i <end; i++)
+	{
+		struct MeshCell cell = inMesh[i];
+
+		mass += cell.Mass;
+		cmX += cell.Mass * cell.CmX;
+		cmY += cell.Mass * cell.CmY;
+	}
+
+	cmX = cmX / mass;
+	cmY = cmY / mass;
+
+	cm[0] = (float2)(cmX, cmY);
+}
 
 __kernel void CalcForce(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx)
 {
@@ -506,7 +618,8 @@ __kernel void CalcCollisionsLarge(global struct Body* inBodies, int inBodiesLen,
 	outBodies[(a)] = outBody;
 }
 
-__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance, int collisions)
+//__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance, int collisions)
+__kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, global struct Body* outBodies, global struct MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, global float2* centerMass, float cullDistance, int collisions)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
@@ -645,8 +758,9 @@ __kernel void CalcCollisions(global struct Body* inBodies, int inBodiesLen, glob
 	}
 
 	// Cull distant bodies.
-	float distX = centerMass.x - outBody.PosX;
-	float distY = centerMass.y - outBody.PosY;
+	float2 cm = centerMass[0];
+	float distX = cm.x - outBody.PosX;
+	float distY = cm.y - outBody.PosY;
 	float dist = distX * distX + distY * distY;
 	float dsqrt = native_sqrt(dist);
 

@@ -80,6 +80,18 @@ namespace NBodies.Rules
 
             return Types[0];
         }
+
+        public static MatterType GetForDistance(float dist, float max)
+        {
+            int layers = Types.Length;
+            float layerSize = max / layers;
+            var sortMatter = Types.OrderByDescending(m => m.Density).ToArray();
+
+            int layer = (int)(dist / layerSize);
+
+            return sortMatter[layer];
+        }
+
     }
 
     public struct Range
