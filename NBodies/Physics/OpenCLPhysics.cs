@@ -36,6 +36,7 @@ namespace NBodies.Physics
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
+
         private ComputeProgram _program;
 
         private ComputeKernel _forceKernel;
@@ -56,7 +57,7 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuOutBodies;
         private ComputeBuffer<int> _gpuGridIndex;
         private ComputeBuffer<Vector2> _gpuCM;
-      
+
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
         private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -186,7 +187,7 @@ namespace NBodies.Physics
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
             Allocate(ref _gpuLevelIdx, 0, true);
 
-       
+
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
 
@@ -255,6 +256,12 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             _queue.Finish();
+
+            if (_mesh.Length != _meshLength)
+                _mesh = new MeshCell[_meshLength];
+          
+            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, null);
+
         }
 
 
