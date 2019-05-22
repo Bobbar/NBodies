@@ -194,19 +194,20 @@ namespace NBodies.Physics
             {
                 var body = Bodies[i];
                 totMass += body.Mass;
+
                 // Fracture large bodies in roche.
                 if (processRoche)
                 {
-                    if (body.Visible == 1 && body.InRoche == 1 && body.Flag != 1 && body.IsExplosion != 1)
+                    if (body.Size > 1)
                     {
-                        if (body.Size > 1)
+                        if (body.Visible == 1 && body.InRoche == 1 && body.Flag != 1 && body.IsExplosion != 1)
                         {
-                            body.Visible = 0;
+                                body.Visible = 0;
 
-                            if (fractures.Count == 0)
-                                fractures = new List<Body>(2000);
+                                if (fractures.Count == 0)
+                                    fractures = new List<Body>(2000);
 
-                            fractures.AddRange(FractureBody(Bodies[i]));
+                                fractures.AddRange(FractureBody(Bodies[i]));
                         }
                     }
                 }
@@ -241,7 +242,6 @@ namespace NBodies.Physics
 
                     // Update the max UID.
                     maxUID = Math.Max(maxUID, body.UID);
-
 
                     // Update UID buckets and resize as needed.
                     if (body.UID < UIDBuckets.Count)
@@ -616,8 +616,11 @@ namespace NBodies.Physics
             bool apoapsis = false;
             int start = 0;
             int end = 0;
-            int meshLevel = 1;
+            int meshLevel = 3;
             int[] levelIndex = PhysicsProvider.PhysicsCalc.LevelIndex;
+
+            if (meshLevel >= levelIndex.Length)
+                meshLevel = levelIndex.Length - 1;
 
             start = levelIndex[meshLevel];
             end = (meshLevel + 1 >= levelIndex.Length) ? Mesh.Length : levelIndex[meshLevel + 1];
@@ -652,7 +655,7 @@ namespace NBodies.Physics
                         var dist = (distX * distX) + (distY * distY);
                         var distSqrt = (float)Math.Sqrt(dist);
 
-                        if (distSqrt > (cell.Size * 3))
+                        if (distSqrt > (cell.Size))
                         {
                             var totMass = body.Mass * cell.Mass;
 

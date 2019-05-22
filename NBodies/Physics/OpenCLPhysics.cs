@@ -59,7 +59,6 @@ namespace NBodies.Physics
         private ComputeBuffer<Vector2> _gpuCM;
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
-        private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
