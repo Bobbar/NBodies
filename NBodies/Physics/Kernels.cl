@@ -259,21 +259,24 @@ __kernel void BuildBottom(global struct Body* inBodies, global struct Body* outB
 
 }
 
-__kernel void BuildTop(global struct MeshCell* mesh, int len, global int* cellIdx, global float2* locIdx, int cellSize, int levelOffset, int meshOffset, int level)
+__kernel void BuildTop(global struct MeshCell* mesh, int len, global int* cellIdx, global float2* locIdx, int cellSize, int levelOffset, int meshOffset, int readOffset, int level)
 {
 	int m = get_global_id(0);
 
 	if (m >= len)
 		return;
 
-	struct MeshCell newCell;
-	float2 idx = locIdx[m];
+	int locIdxOff = m + readOffset;
+	int cellIdxOff = locIdxOff + (level - 1);
 	int newIdx = m + meshOffset;
 
+	struct MeshCell newCell;
+
+	float2 idx = locIdx[locIdxOff];
 	newCell.IdxX = (int)idx.X;
 	newCell.IdxY = (int)idx.Y;
 	newCell.Size = cellSize;
-	newCell.ChildStartIdx = cellIdx[m] + levelOffset;
+	newCell.ChildStartIdx = cellIdx[cellIdxOff] + levelOffset;
 	newCell.ChildCount = 0;
 	newCell.ID = newIdx;
 	newCell.Level = level;
@@ -284,7 +287,8 @@ __kernel void BuildTop(global struct MeshCell* mesh, int len, global int* cellId
 	newCell.CmY = 0;
 	newCell.Mass = 0;
 
-	for (int i = cellIdx[m]; i < cellIdx[m + 1]; i++)
+
+	for (int i = cellIdx[cellIdxOff]; i < cellIdx[cellIdxOff + 1]; i++)
 	{
 		struct MeshCell child = mesh[i + levelOffset];
 		newCell.Mass += child.Mass;

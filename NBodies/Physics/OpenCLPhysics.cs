@@ -530,7 +530,7 @@ namespace NBodies.Physics
             output.Spatials = _spatials;
             output.CellCount = count;
             output.CellIndex = new int[count + 1];
-            output.Idx = idx.ToArray();
+            output.LocIdx = idx.ToArray();
             Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
 
             return output;
@@ -614,7 +614,7 @@ namespace NBodies.Physics
 
                 output[level].CellCount = count;
                 output[level].CellIndex = new int[count + 1];
-                output[level].Idx = idx.ToArray();
+                output[level].LocIdx = idx.ToArray();
                 Array.Copy(_cellIdx, 0, output[level].CellIndex, 0, count + 1);
             }
 
@@ -627,10 +627,10 @@ namespace NBodies.Physics
             int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             using (var gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, levelInfo.CellIndex.Length, IntPtr.Zero))
-            using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, levelInfo.Idx.Length, IntPtr.Zero))
+            using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, levelInfo.LocIdx.Length, IntPtr.Zero))
             {
                 _queue.WriteToBuffer(levelInfo.CellIndex, gpuCellIdx, false, null);
-                _queue.WriteToBuffer(levelInfo.Idx, gpuLocIdx, false, null);
+                _queue.WriteToBuffer(levelInfo.LocIdx, gpuLocIdx, false, null);
 
                 _buildBottomKernel.SetMemoryArgument(0, _gpuInBodies);
                 _buildBottomKernel.SetMemoryArgument(1, _gpuOutBodies);
@@ -644,32 +644,69 @@ namespace NBodies.Physics
             }
         }
 
-
         private void BuildTopLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
-            int meshOffset = 0;
+            // Writing the cell and location indexes as single large arrays
+            // is much faster than chunking them in at each level.
 
-            for (int level = 1; level <= levels; level++)
+            // Calc total size of cell and location indexes.
+            long cellIdxLen = 0;
+            long locIdxLen = 0;
+
+            for (int i = 1; i < levelInfo.Length; i++)
             {
-                int cellSizeExpLevel = cellSizeExp + level;
-                int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
+                var lvl = levelInfo[i];
 
-                meshOffset += levelInfo[level - 1].CellCount;
-                _levelIdx[level] = meshOffset;
+                cellIdxLen += lvl.CellIndex.Length;
+                locIdxLen += lvl.LocIdx.Length;
+            }
 
-                int levelOffset = 0;
+            // Build 1D arrays of cell and location indexes.
+            var cellIdx = new int[cellIdxLen];
+            var locIdx = new Vector2[locIdxLen];
 
-                if (level > 1)
-                    levelOffset = _levelIdx[level - 1];
+            long cellIdxPos = 0;
+            long locIdxPos = 0;
 
-                LevelInfo current = levelInfo[level];
-                int cellCount = current.CellCount;
+            for (int i = 1; i < levelInfo.Length; i++)
+            {
+                var lvl = levelInfo[i];
 
-                using (var gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, current.CellIndex.Length, IntPtr.Zero))
-                using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, current.Idx.Length, IntPtr.Zero))
+                Array.Copy(lvl.CellIndex, 0, cellIdx, cellIdxPos, lvl.CellIndex.Length);
+                cellIdxPos += lvl.CellIndex.Length;
+
+                Array.Copy(lvl.LocIdx, 0, locIdx, locIdxPos, lvl.LocIdx.Length);
+                locIdxPos += lvl.LocIdx.Length;
+            }
+
+            // Allocate and write to the cell and location buffers.
+            using (var gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, cellIdxLen, IntPtr.Zero))
+            using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, locIdxLen, IntPtr.Zero))
+            {
+                _queue.WriteToBuffer(cellIdx, gpuCellIdx, false, null);
+                _queue.WriteToBuffer(locIdx, gpuLocIdx, false, null);
+
+                int meshOffset = 0; // Write offset for new cells array location.
+                int readOffset = 0; // Read offset for cell and location indexes.
+
+                for (int level = 1; level <= levels; level++)
                 {
-                    _queue.WriteToBuffer(current.CellIndex, gpuCellIdx, false, null);
-                    _queue.WriteToBuffer(current.Idx, gpuLocIdx, false, null);
+                    int cellSizeExpLevel = cellSizeExp + level;
+                    int cellSize = (int)Math.Pow(2, cellSizeExpLevel);
+
+                    meshOffset += levelInfo[level - 1].CellCount;
+                    _levelIdx[level] = meshOffset;
+
+                    int levelOffset = 0;
+
+                    if (level > 1)
+                    {
+                        levelOffset = _levelIdx[level - 1];
+                        readOffset += levelInfo[level - 1].CellCount;
+                    }
+
+                    LevelInfo current = levelInfo[level];
+                    int cellCount = current.CellCount;
 
                     _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
                     _buildTopKernel.SetValueArgument(1, cellCount);
@@ -678,7 +715,8 @@ namespace NBodies.Physics
                     _buildTopKernel.SetValueArgument(4, cellSize);
                     _buildTopKernel.SetValueArgument(5, levelOffset);
                     _buildTopKernel.SetValueArgument(6, meshOffset);
-                    _buildTopKernel.SetValueArgument(7, level);
+                    _buildTopKernel.SetValueArgument(7, readOffset);
+                    _buildTopKernel.SetValueArgument(8, level);
 
                     _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 }

@@ -9,7 +9,7 @@ namespace NBodies.Physics
 {
     public struct LevelInfo
     {
-        public Vector2[] Idx;
+        public Vector2[] LocIdx;
         public SpatialInfo[] Spatials;
         public int[] CellIndex;
         public int CellCount;
@@ -19,7 +19,7 @@ namespace NBodies.Physics
             Spatials = spatials;
             CellIndex = cellIndex;
             CellCount = cellCount;
-            Idx = new Vector2[0];
+            LocIdx = new Vector2[0];
         }
 
         public LevelInfo(Vector2[] idx, int[] cellIndex, int cellCount)
@@ -27,7 +27,7 @@ namespace NBodies.Physics
             Spatials = new SpatialInfo[0];
             CellIndex = cellIndex;
             CellCount = cellCount;
-            Idx = idx;
+            LocIdx = idx;
         }
     }
 }
