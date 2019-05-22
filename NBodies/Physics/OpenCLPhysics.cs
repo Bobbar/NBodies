@@ -49,7 +49,6 @@ namespace NBodies.Physics
         private ComputeKernel _buildTopKernel;
         private ComputeKernel _calcCMKernel;
 
-
         private ComputeBuffer<int> _gpuLevelIdx;
         private ComputeBuffer<MeshCell> _gpuMesh;
         private ComputeBuffer<int> _gpuMeshNeighbors;
@@ -57,9 +56,7 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuOutBodies;
         private ComputeBuffer<int> _gpuGridIndex;
         private ComputeBuffer<Vector2> _gpuCM;
-        //private ComputeBuffer<int> _gpuCellIdx;
-        //private ComputeBuffer<Vector2> _gpuLocIdx;
-
+      
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
         private static ParallelOptions _parallelOptions = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -71,7 +68,6 @@ namespace NBodies.Physics
         {
             get
             {
-                ///   Console.WriteLine("Get");
                 return _mesh;
             }
         }
@@ -163,9 +159,6 @@ namespace NBodies.Physics
             _gpuInBodies.Dispose();
             _gpuOutBodies.Dispose();
             _gpuGridIndex.Dispose();
-            //_gpuCellIdx.Dispose();
-            //_gpuLocIdx.Dispose();
-
             _gpuCM.Dispose();
 
             _bufferInfo.Clear();
@@ -193,13 +186,7 @@ namespace NBodies.Physics
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
             Allocate(ref _gpuLevelIdx, 0, true);
 
-            //_gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
-            //Allocate(ref _gpuCellIdx, 0);
-
-            //_gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
-            //Allocate(ref _gpuLocIdx, 0);
-
-
+       
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
 
