@@ -210,9 +210,9 @@ namespace NBodies.Physics
             _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
             _calcCMKernel.SetValueArgument(3, _meshLength);
 
-            _queue.Execute(_calcCMKernel, null, new long[] { 1 * 1 }, new long[] { 1 }, null);
+            _queue.ExecuteTask(_calcCMKernel, null);
 
-            // Allocate and write thhe level index.
+            // Allocate and write the level index.
             Allocate(ref _gpuLevelIdx, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, false, null);
 
