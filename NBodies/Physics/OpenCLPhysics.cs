@@ -258,7 +258,7 @@ namespace NBodies.Physics
 
             if (_mesh.Length != _meshLength)
                 _mesh = new MeshCell[_meshLength];
-          
+
             _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, null);
 
         }
@@ -309,23 +309,22 @@ namespace NBodies.Physics
         }
 
 
-        // Calculate dimensionless morton number from X/Y coords.
-        private static readonly int[] B = new int[] { 0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF };
-        private static readonly int[] S = new int[] { 1, 2, 4, 8 };
-
+        /// <summary>
+        /// Calculate dimensionless morton number from X/Y coords.
+        /// </summary>
         private int MortonNumber(int x, int y)
         {
-            x &= 0x0000ffff;
-            x = (x | (x << S[3])) & B[3];
-            x = (x | (x << S[2])) & B[2];
-            x = (x | (x << S[1])) & B[1];
-            x = (x | (x << S[0])) & B[0];
+            x &= 65535;
+            x = (x | (x << 8)) & 16711935;
+            x = (x | (x << 4)) & 252645135;
+            x = (x | (x << 2)) & 858993459;
+            x = (x | (x << 1)) & 1431655765;
 
-            y &= 0x0000ffff;
-            y = (y | (y << S[3])) & B[3];
-            y = (y | (y << S[2])) & B[2];
-            y = (y | (y << S[1])) & B[1];
-            y = (y | (y << S[0])) & B[0];
+            y &= 65535;
+            y = (y | (y << 8)) & 16711935;
+            y = (y | (y << 4)) & 252645135;
+            y = (y | (y << 2)) & 858993459;
+            y = (y | (y << 1)) & 1431655765;
 
             return x | (y << 1);
         }

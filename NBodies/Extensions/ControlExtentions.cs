@@ -22,7 +22,7 @@ namespace NBodies.Extensions
 
         public static void Print(this Stopwatch timer, string label = "")
         {
-            Console.WriteLine($@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
+            Debug.WriteLine($@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
 
             timer.Restart();
         }
