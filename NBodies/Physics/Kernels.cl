@@ -224,8 +224,8 @@ __kernel void BuildBottom(global struct Body* inBodies, global struct Body* outB
 	struct MeshCell newCell;
 	float2 idx = locIdx[m];
 
-	newCell.IdxX = (int)idx.X;
-	newCell.IdxY = (int)idx.Y;
+	newCell.IdxX = (int)idx.x;
+	newCell.IdxY = (int)idx.y;
 	newCell.Size = cellSize;
 	newCell.BodyCount = 0;
 	newCell.ChildCount = 0;
@@ -273,8 +273,8 @@ __kernel void BuildTop(global struct MeshCell* mesh, int len, global int* cellId
 	struct MeshCell newCell;
 
 	float2 idx = locIdx[locIdxOff];
-	newCell.IdxX = (int)idx.X;
-	newCell.IdxY = (int)idx.Y;
+	newCell.IdxX = (int)idx.x;
+	newCell.IdxY = (int)idx.y;
 	newCell.Size = cellSize;
 	newCell.ChildStartIdx = cellIdx[cellIdxOff] + levelOffset;
 	newCell.ChildCount = 0;
