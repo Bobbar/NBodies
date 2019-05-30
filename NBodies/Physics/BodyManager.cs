@@ -1180,6 +1180,9 @@ namespace NBodies.Physics
             b.UID = -1;
             b.MeshID = -1;
 
+            b.Temp = Numbers.GetRandomFloat(1, 1000);
+
+
             return Add(b);
         }
 

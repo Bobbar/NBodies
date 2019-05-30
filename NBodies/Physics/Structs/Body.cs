@@ -92,6 +92,10 @@ namespace NBodies.Physics
         [IgnoreMember]
         public int MeshID;
 
+        [ProtoMember(17)]
+        [Key(16)]
+        public float Temp;
+
        // public float Test;
 
         //[IgnoreMember]

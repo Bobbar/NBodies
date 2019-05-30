@@ -21,6 +21,7 @@ typedef struct __attribute__((packed)) Body
 	float Lifetime;
 	float Age;
 	int MeshID;
+	float Temp;
 
 } Body;
 
@@ -637,6 +638,8 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	if (a >= inBodiesLen)
 		return;
 
+	double tempDelta = 0;
+
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
 
@@ -701,18 +704,38 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							outBody.ForceX -= gradX;
 							outBody.ForceY -= gradY;
 
+							// Temp derived viscosity?
+							viscosity = (1000 / outBody.Temp);
+							viscosity = min(viscosity, 20.0f);
+							viscosity = max(viscosity, 1.0f);
+
 							// Viscosity force
 							float visc_laplace = 14.323944f * (kernelSize - distSqrt);
 							float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
 
 							float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
 							float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
+							float velo = viscVelo_diffX * viscVelo_diffX + viscVelo_diffY * viscVelo_diffY;
 
 							viscVelo_diffX *= visc_scalar;
 							viscVelo_diffY *= visc_scalar;
 
 							outBody.ForceX += viscVelo_diffX;
 							outBody.ForceY += viscVelo_diffY;
+
+							// Temp delta from direct conduction?
+							float tempK = 1.0f;
+							float tempDiff = outBody.Temp - inBody.Temp;
+							tempDelta += (-0.5 * tempK) * (tempDiff / dist);
+
+							// Temp delta from friction?
+							float coeff = 0.01f;
+							float adhesion = 0.01f;
+							float heatJ = 4.1550f;
+							float heatFac = 1950;
+							tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * 2);
+							tempDelta = min(tempDelta, 8000.0);
+							tempDelta = max(tempDelta, -8000.0);
 
 						}
 						// Elastic collision.
@@ -761,6 +784,17 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	outBody.VeloY += dt * outBody.ForceY / outBody.Mass;
 	outBody.PosX += dt * outBody.VeloX;
 	outBody.PosY += dt * outBody.VeloY;
+
+	outBody.Temp += tempDelta * dt;
+
+	// Black body radiation?
+	float radiationD = 5.0f;//1.0f;
+	if (outBody.Temp > 0)
+		outBody.Temp -= radiationD * dt;
+
+	outBody.Temp = min(outBody.Temp, 1000.0f);
+	outBody.Temp = max(outBody.Temp, 1.0f);
+
 
 	if (outBody.Lifetime > 0.0f)
 	{

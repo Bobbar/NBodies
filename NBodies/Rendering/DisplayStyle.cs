@@ -9,10 +9,12 @@ namespace NBodies.Rendering
     public enum DisplayStyle
     {
         Normal,
-        Pressures,
-        Speeds,
+        Pressure,
+        Temp,
+        Speed,
         Index,
-        Forces,
+        Force,
         HighContrast
+
     }
 }

@@ -34,7 +34,7 @@ namespace NBodies.Rendering
 
             set
             {
-                if (value > 0 && value <= 2000)
+                if (value > 0 && value <= 10000)
                 {
                     _styleScaleMax = value;
                 }
@@ -184,13 +184,19 @@ namespace NBodies.Rendering
 
                                     break;
 
-                                case DisplayStyle.Pressures:
+                                case DisplayStyle.Pressure:
                                     bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
                                     _clearColor = _defaultClearColor;
 
                                     break;
 
-                                case DisplayStyle.Speeds:
+                                case DisplayStyle.Temp:
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Temp, true);
+                                    _clearColor = _defaultClearColor;
+
+                                    break;
+
+                                case DisplayStyle.Speed:
                                     bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
                                     _clearColor = _defaultClearColor;
 
@@ -202,7 +208,7 @@ namespace NBodies.Rendering
 
                                     break;
 
-                                case DisplayStyle.Forces:
+                                case DisplayStyle.Force:
                                     bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
                                     _clearColor = _defaultClearColor;
 
@@ -307,7 +313,8 @@ Scale: {Math.Round(ViewportOffsets.CurrentScale, 2)}";
 
 Density: {body.Density}
 Press: {body.Pressure}
-Agg. Speed: {body.AggregateSpeed()}";
+Agg. Speed: {body.AggregateSpeed()}
+Temp: {body.Temp}";
 
             }
 

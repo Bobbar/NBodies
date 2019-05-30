@@ -231,11 +231,12 @@ namespace NBodies.UI
         private void SetDisplayOptionTags()
         {
             normalToolStripMenuItem.Tag = DisplayStyle.Normal;
-            pressuresToolStripMenuItem.Tag = DisplayStyle.Pressures;
+            pressuresToolStripMenuItem.Tag = DisplayStyle.Pressure;
+            temperatureToolStripMenuItem.Tag = DisplayStyle.Temp;
             highContrastToolStripMenuItem.Tag = DisplayStyle.HighContrast;
-            speedsToolStripMenuItem.Tag = DisplayStyle.Speeds;
+            speedsToolStripMenuItem.Tag = DisplayStyle.Speed;
             indexToolStripMenuItem.Tag = DisplayStyle.Index;
-            forcesToolStripMenuItem.Tag = DisplayStyle.Forces;
+            forcesToolStripMenuItem.Tag = DisplayStyle.Force;
         }
 
         private void SetDisplayStyle(DisplayStyle style)
@@ -686,7 +687,7 @@ namespace NBodies.UI
 
         private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SetDisplayStyle(DisplayStyle.Pressures);
+            SetDisplayStyle(DisplayStyle.Pressure);
         }
 
         private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
@@ -696,7 +697,7 @@ namespace NBodies.UI
 
         private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SetDisplayStyle(DisplayStyle.Speeds);
+            SetDisplayStyle(DisplayStyle.Speed);
         }
 
         private void indexToolStripMenuItem_Click(object sender, EventArgs e)
@@ -706,7 +707,7 @@ namespace NBodies.UI
 
         private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SetDisplayStyle(DisplayStyle.Forces);
+            SetDisplayStyle(DisplayStyle.Force);
         }
 
         private void UpdateButton_Click(object sender, EventArgs e)
