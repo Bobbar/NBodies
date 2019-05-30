@@ -339,6 +339,7 @@ namespace NBodies.Physics
                 {
                     var newbody = NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, minSize, newMass, Color.FromArgb(body.Color), 1);
                     newbody.ForceTot = body.ForceTot;
+                    newbody.Temp = body.Temp;
                     newBodies.Add(newbody);
                 }
 
