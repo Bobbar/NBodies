@@ -176,7 +176,7 @@ namespace NBodies.UI
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                selectBody.PrintInfo();
+              //  selectBody.PrintInfo();
             }
         }
 
@@ -688,6 +688,10 @@ namespace NBodies.UI
         private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SetDisplayStyle(DisplayStyle.Pressure);
+        }
+        private void temperatureToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetDisplayStyle(DisplayStyle.Temp);
         }
 
         private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)

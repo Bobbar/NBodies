@@ -638,6 +638,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	if (a >= inBodiesLen)
 		return;
 
+	float maxTemp = 10000.0f;//4000.0f
 	double tempDelta = 0;
 	int cols = 0;
 	// Copy current body from memory.
@@ -684,9 +685,14 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 						// SPH collision.
 						if (outBody.InRoche == 1 && inBody.InRoche == 1)
 						{
+							float pctOMax = inBody.Temp / maxTemp;
+
 							float FLOAT_EPSILON = 1.192092896e-07f;
 							float FLOAT_EPSILONSQRT = 3.45267E-11f;
 							float kernelSize = 1.10f;//1.0f;
+
+							// Increase kernel size with temp. to simulate decreased density.
+							kernelSize = 1.00f + ((0.50f * pctOMax) + 0.00f);
 
 							if (dist < FLOAT_EPSILON)
 							{
@@ -707,8 +713,10 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							outBody.ForceY -= gradY;
 
 							// Temp derived viscosity?
-							//viscosity = (4000 / outBody.Temp);
-							viscosity = (4000 / inBody.Temp);
+							viscosity = (3000 / outBody.Temp);
+							//viscosity = (2000 / inBody.Temp);
+
+							//viscosity = (30.f * pctOMax) + 1.0f;
 							viscosity = min(viscosity, 30.0f);
 							viscosity = max(viscosity, 1.0f);
 
@@ -727,18 +735,18 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							outBody.ForceY += viscVelo_diffY;
 
 							// Temp delta from direct conduction?
-							float tempK = 1.0f;//0.5f;//2.0f;//1.0f;
+							float tempK = 0.1f;//0.5f;//2.0f;//1.0f;
 							float tempDiff = outBody.Temp - inBody.Temp;
-							tempDelta += (-0.7 * tempK) * (tempDiff / dist);
+							tempDelta += (-0.5 * tempK) * (tempDiff / dist);
 
 							// Temp delta from friction?
-							float coeff = 0.0001f;
+							float coeff = 0.0004f;
 							float adhesion = viscosity;//0.1f;
 							float heatJ = 4.1550f;
 							float heatFac = 1950;
 							tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * (2));
-							tempDelta = min(tempDelta, 10000.0);
-							tempDelta = max(tempDelta, -10000.0);
+							tempDelta = min(tempDelta, 8000.0);
+							tempDelta = max(tempDelta, -8000.0);
 
 						}
 						// Elastic collision.
@@ -791,20 +799,22 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	outBody.Temp += tempDelta * dt;
 
 	// Black body radiation?
-	float radiationD = 5.0f;//1.0f;
-	double SBC = 0.000000056703;
+	//double SBC = 0.000000056703;
+	double SBC = 0.056703;
 
-	if (outBody.Temp > 0 && cols < 5)
+	//if (outBody.Temp > 0 && cols <= 4)
+	if (outBody.Temp > 0 && bodyCell.NeighborCount < 9)
 	{
-		double lossD = SBC * pow(outBody.Temp, 4) * 1.0;//0.785;
-		outBody.Temp -= lossD * dt;
+		//double lossD = SBC * pow((double)outBody.Temp, 4.0) * 0.5f;//0.1;//1.0;//0.785;
+		double lossD = SBC * pow((double)outBody.Temp, 2.0) * 0.1f;//0.1;//1.0;//0.785;
+		outBody.Temp -= ((lossD / (double)(outBody.Mass * 0.25)) / 4.186) * dt;
 	
 	}
 
 	//if (outBody.Temp > 0)
 	//	outBody.Temp -= radiationD * dt;
 
-	outBody.Temp = min(outBody.Temp, 4000.0f);
+	outBody.Temp = min(outBody.Temp, maxTemp);
 	outBody.Temp = max(outBody.Temp, 1.0f);
 
 

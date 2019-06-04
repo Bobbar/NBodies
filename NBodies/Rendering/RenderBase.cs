@@ -191,7 +191,7 @@ namespace NBodies.Rendering
                                     break;
 
                                 case DisplayStyle.Temp:
-                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Temp, true);
+                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Temp * 0.25f, true);
                                     _clearColor = _defaultClearColor;
 
                                     break;
