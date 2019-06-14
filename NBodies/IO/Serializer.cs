@@ -26,7 +26,7 @@ namespace NBodies.IO
                 }
             }
 
-            MainLoop.ResumePhysics(true);
+            MainLoop.ResumePhysics();
         }
 
         public static void WriteState(string fileName)

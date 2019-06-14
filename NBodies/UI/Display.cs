@@ -352,14 +352,11 @@ namespace NBodies.UI
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
-
                     _shiftDown = false;
-                    // MainLoop.ResumePhysics();
 
                     break;
 
                 case Keys.ControlKey:
-
                     _ctrlDown = false;
                     MainLoop.ResumePhysics();
 

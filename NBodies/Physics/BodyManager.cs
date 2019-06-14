@@ -819,7 +819,7 @@ namespace NBodies.Physics
                 Bodies = Bodies.Add(NewBody(location, 10, 400, Color.Orange, lifetime, 1));
             }
 
-            MainLoop.ResumePhysics(true);
+            MainLoop.ResumePhysics();
         }
 
         public static int NextUID()

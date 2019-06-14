@@ -121,7 +121,7 @@ namespace NBodies
 
             BodyManager.Add(bodyArr);
 
-            MainLoop.ResumePhysics(true);
+            MainLoop.ResumePhysics();
         }
 
         //private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, float centerMass)
@@ -277,7 +277,7 @@ namespace NBodies
 
             BodyManager.Add(bodyArr);
 
-            MainLoop.ResumePhysics(true);
+            MainLoop.ResumePhysics();
         }
 
         private bool IntersectsExisting(List<Body> bodies, PointF location, float diameter)

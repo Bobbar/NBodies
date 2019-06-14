@@ -23,7 +23,7 @@ namespace NBodies.Physics
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 12;//24;
         private long _maxBufferSize = 0;
-        private const float _kernelSize = 1.0f;//0.190625f;//1.50f;//1.0f;
+        private const float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
 
         private int[] _levelIdx = new int[0];

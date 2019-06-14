@@ -526,6 +526,9 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		outBody.InRoche = 1;
 	}
 
+	if (outBody.Size <= 1.1f)
+		outBody.InRoche = 1;
+
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
@@ -690,8 +693,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 					float dist = distX * distX + distY * distY;
 
 					// Calc the distance and check for collision.
-					//float colDist = sph.kSize * 0.5f + sph.kSize * 0.5f;
-					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+					float colDist = sph.kSize * 0.5f + sph.kSize * 0.5f;
 					if (dist <= colDist * colDist)
 					{
 						// We know we have a collision, so go ahead and do the expensive square root now.
