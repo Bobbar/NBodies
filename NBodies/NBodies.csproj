@@ -138,7 +138,9 @@
     <Compile Include="Physics\Structs\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\Structs\MeshCell.cs" />
+    <Compile Include="Physics\Structs\SimSettings.cs" />
     <Compile Include="Physics\Structs\SpatialInfo.cs" />
+    <Compile Include="Physics\Structs\SPHPreCalc.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />

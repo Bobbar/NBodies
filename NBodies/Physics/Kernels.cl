@@ -62,6 +62,30 @@ typedef struct __attribute__((packed)) GridInfo
 
 } GridInfo;
 
+typedef struct __attribute__((packed)) SPHPreCalc
+{
+	float kSize;
+	float kSizeSq;
+	float kSize3;
+	float kRad6;
+	float kSize9;
+	float fViscosity;
+	float fPressure;
+	float fDensity;
+
+} SPHPreCalc;
+
+typedef struct __attribute__((packed)) SimSettings
+{
+	float DeltaTime;
+	float Viscosity;
+	//float2 CenterMass;
+	float CullDistance;
+	bool CollisionsOn;
+	int MeshLevels;
+	int CellSizeExponent;
+
+} SimSettings;
 
 int IsNeighbor(MeshCell testCell, MeshCell neighborCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
@@ -337,10 +361,11 @@ __kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int 
 	cm[0] = (float2)(cmX, cmY);
 }
 
-__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, float dt, int topLevel, global int* levelIdx)
+__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, global int* levelIdx, const SimSettings sim, const SPHPreCalc sph)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
+	float softening = 0.04f;
 
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -360,14 +385,10 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	outBody.Density = 0.0f;
 	outBody.Pressure = 0.0f;
 
-	float ksize = 1.0f;
-	float ksizeSq = 1.0f;
-	float factor = 1.566682f;
-	float softening = 0.04f;
+	// Resting density.	
+	outBody.Density = outBody.Mass * sph.fDensity;
 
-	outBody.Density = outBody.Mass * factor;
-
-	for (int level = 0; level < topLevel; level++)
+	for (int level = 0; level < sim.MeshLevels; level++)
 	{
 		// Iterate parent cell neighbors.
 		int start = levelCellParent.NeighborStartIdx;
@@ -411,7 +432,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	}
 
 	// Iterate the top level cells.
-	for (int top = levelIdx[(topLevel)]; top < inMeshLen; top++)
+	for (int top = levelIdx[(sim.MeshLevels)]; top < inMeshLen; top++)
 	{
 		MeshCell cell = inMesh[(top)];
 
@@ -453,7 +474,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				float dist = distX * distX + distY * distY;
 
 				// If this body is within collision/SPH distance.
-				if (dist <= ksize)
+				if (dist <= sph.kSize)
 				{
 					// Clamp SPH softening distance.
 					if (dist < FLOAT_EPSILON)
@@ -462,8 +483,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 					}
 
 					// Accumulate density.
-					float diff = ksizeSq - dist;
-					float fac = factor * diff * diff * diff;
+					float diff = sph.kSizeSq - dist;
+					float fac = sph.fDensity * diff * diff * diff;
 					outBody.Density += outBody.Mass * fac;
 				}
 
@@ -540,96 +561,98 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
 
-	// Only proceed for bodies larger than 1 unit.
-	if (outBody.Size <= 1.0f)
+	if (collisions == 1)
 	{
-		outBodies[a] = outBody;
-		return;
-	}
-
-	// Get the current parent cell.
-	MeshCell parentCell = inMesh[(outBody.MeshID)];
-	int pcellSize = parentCell.Size;
-
-	// Move up through parent cells until we find one
-	// whose size is atleast as big as the target body.
-	while (pcellSize < outBody.Size)
-	{
-		// Stop if we reach the top-most level.
-		if (parentCell.ParentID == -1)
-			break;
-
-		parentCell = inMesh[parentCell.ParentID];
-		pcellSize = parentCell.Size;
-	}
-
-	// Itereate the neighboring cells of the selected parent.
-	for (int i = parentCell.NeighborStartIdx; i < parentCell.NeighborStartIdx + parentCell.NeighborCount; i++)
-	{
-		// Get the neighbor cell from the index.
-		int nId = meshNeighbors[(i)];
-		MeshCell nCell = inMesh[(nId)];
-
-		// Iterate all the bodies within each neighboring cell.
-		int mbStart = nCell.BodyStartIdx;
-		int mbLen = nCell.BodyCount + mbStart;
-		for (int mb = mbStart; mb < mbLen; mb++)
+		// Only proceed for bodies larger than 1 unit.
+		if (outBody.Size <= 1.0f)
 		{
-			// Save us from ourselves.
-			if (mb != a)
+			outBodies[a] = outBody;
+			return;
+		}
+
+		// Get the current parent cell.
+		MeshCell parentCell = inMesh[(outBody.MeshID)];
+		int pcellSize = parentCell.Size;
+
+		// Move up through parent cells until we find one
+		// whose size is atleast as big as the target body.
+		while (pcellSize < outBody.Size)
+		{
+			// Stop if we reach the top-most level.
+			if (parentCell.ParentID == -1)
+				break;
+
+			parentCell = inMesh[parentCell.ParentID];
+			pcellSize = parentCell.Size;
+		}
+
+		// Itereate the neighboring cells of the selected parent.
+		for (int i = parentCell.NeighborStartIdx; i < parentCell.NeighborStartIdx + parentCell.NeighborCount; i++)
+		{
+			// Get the neighbor cell from the index.
+			int nId = meshNeighbors[(i)];
+			MeshCell nCell = inMesh[(nId)];
+
+			// Iterate all the bodies within each neighboring cell.
+			int mbStart = nCell.BodyStartIdx;
+			int mbLen = nCell.BodyCount + mbStart;
+			for (int mb = mbStart; mb < mbLen; mb++)
 			{
-				Body inBody = inBodies[(mb)];
-
-				// Calc the distance and check for collision.
-				float distX = outBody.PosX - inBody.PosX;
-				float distY = outBody.PosY - inBody.PosY;
-				float dist = distX * distX + distY * distY;
-				float distSqrt = (float)native_sqrt(dist);
-
-				float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
-				if (distSqrt <= colDist)
+				// Save us from ourselves.
+				if (mb != a)
 				{
-					// Calculate elastic collision forces.
-					float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
-					float forceX = distX * colScale;
-					float forceY = distY * colScale;
-					float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+					Body inBody = inBodies[(mb)];
 
-					// If we're the bigger one, eat the other guy.
-					if (outBody.Mass > inBody.Mass)
+					// Calc the distance and check for collision.
+					float distX = outBody.PosX - inBody.PosX;
+					float distY = outBody.PosY - inBody.PosY;
+					float dist = distX * distX + distY * distY;
+					float distSqrt = (float)native_sqrt(dist);
+
+					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+					if (distSqrt <= colDist)
 					{
-						outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-						outBodies[(mb)].Visible = 0;
-					}
-					else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
-					{
-						outBody.Visible = 0;
-						outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
-					}
-					else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
-					{
-						// Our UID is more gooder, eat the other guy.
-						if (outBody.UID > inBody.UID)
+						// Calculate elastic collision forces.
+						float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
+						float forceX = distX * colScale;
+						float forceY = distY * colScale;
+						float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+
+						// If we're the bigger one, eat the other guy.
+						if (outBody.Mass > inBody.Mass)
 						{
 							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 							outBodies[(mb)].Visible = 0;
 						}
-						else // Our UID is inferior, we must go away.
+						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 						{
 							outBody.Visible = 0;
 							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+						}
+						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+						{
+							// Our UID is more gooder, eat the other guy.
+							if (outBody.UID > inBody.UID)
+							{
+								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+								outBodies[(mb)].Visible = 0;
+							}
+							else // Our UID is inferior, we must go away.
+							{
+								outBody.Visible = 0;
+								outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-
 	outBodies[(a)] = outBody;
 }
 
-//__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, float2 centerMass, float cullDistance, int collisions)
-__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, float dt, float viscosity, global float2* centerMass, float cullDistance, int collisions)
+
+__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph)
 {
 	// Get index for the current body.
 	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
@@ -643,7 +666,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	// Copy this body's mesh cell from memory.
 	MeshCell bodyCell = inMesh[(outBody.MeshID)];
 
-	if (collisions == 1)
+	if (sim.CollisionsOn == 1)
 	{
 		// Iterate neighbor cells.
 		for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
@@ -667,6 +690,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 					float dist = distX * distX + distY * distY;
 
 					// Calc the distance and check for collision.
+					//float colDist = sph.kSize * 0.5f + sph.kSize * 0.5f;
 					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
 					if (dist <= colDist * colDist)
 					{
@@ -681,16 +705,17 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 						{
 							float FLOAT_EPSILON = 1.192092896e-07f;
 							float FLOAT_EPSILONSQRT = 3.45267E-11f;
-							float kernelSize = 1.0f;
 
 							if (dist < FLOAT_EPSILON)
 							{
 								distSqrt = FLOAT_EPSILONSQRT;
 							}
 
+							float kDiff = sph.kSize - distSqrt;
+
 							// Pressure force
 							float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
-							float gradFactor = -10442.157f * (kernelSize - distSqrt) * (kernelSize - distSqrt) / distSqrt;
+							float gradFactor = -sph.fPressure * kDiff * kDiff / distSqrt;
 
 							float gradX = distX * gradFactor;
 							float gradY = distY * gradFactor;
@@ -702,8 +727,8 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							outBody.ForceY -= gradY;
 
 							// Viscosity force
-							float visc_laplace = 14.323944f * (kernelSize - distSqrt);
-							float visc_scalar = inBody.Mass * visc_laplace * viscosity * 1.0f / inBody.Density;
+							float visc_laplace = sph.fViscosity * kDiff;
+							float visc_scalar = inBody.Mass * visc_laplace * sim.Viscosity * 1.0f / inBody.Density;
 
 							float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
 							float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
@@ -757,14 +782,14 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	}
 
 	// Integrate.
-	outBody.VeloX += dt * outBody.ForceX / outBody.Mass;
-	outBody.VeloY += dt * outBody.ForceY / outBody.Mass;
-	outBody.PosX += dt * outBody.VeloX;
-	outBody.PosY += dt * outBody.VeloY;
+	outBody.VeloX += sim.DeltaTime * outBody.ForceX / outBody.Mass;
+	outBody.VeloY += sim.DeltaTime * outBody.ForceY / outBody.Mass;
+	outBody.PosX += sim.DeltaTime * outBody.VeloX;
+	outBody.PosY += sim.DeltaTime * outBody.VeloY;
 
 	if (outBody.Lifetime > 0.0f)
 	{
-		outBody.Age += dt * 4.0f;
+		outBody.Age += sim.DeltaTime * 4.0f;
 	}
 
 	// Cull distant bodies.
@@ -774,7 +799,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	float dist = distX * distX + distY * distY;
 	float dsqrt = native_sqrt(dist);
 
-	if (dsqrt > cullDistance)
+	if (dsqrt > sim.CullDistance)
 		outBody.Visible = 0;
 
 	// Cull expired bodies.

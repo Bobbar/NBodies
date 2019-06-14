@@ -260,6 +260,7 @@ namespace NBodies
         private static double _recSizeLimit = 0;
 
         private static Body[] _bodiesBuffer = new Body[0];
+        private static SimSettings _settings = new SimSettings();
 
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
@@ -364,7 +365,7 @@ namespace NBodies
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, _timeStep, _viscosity, _cellSizeExp, _cullDistance, Collisions, _meshLevels, (int)Math.Pow(2, _threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp));
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.
@@ -448,6 +449,17 @@ namespace NBodies
             {
                 _stopLoopWait.Set();
             }
+        }
+
+        private static SimSettings GetSettings()
+        {
+            _settings.DeltaTime = _timeStep;
+            _settings.Viscosity = _viscosity;
+            _settings.CullDistance = _cullDistance;
+            _settings.CollisionsOn = Convert.ToInt32(Collisions);
+            _settings.MeshLevels = _meshLevels;
+            _settings.CellSizeExponent = _cellSizeExp;
+            return _settings;
         }
 
         public static void StartRecording(string file)

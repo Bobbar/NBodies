@@ -23,6 +23,8 @@ namespace NBodies.Physics
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 12;//24;
         private long _maxBufferSize = 0;
+        private const float _kernelSize = 1.0f;//0.190625f;//1.50f;//1.0f;
+        private SPHPreCalc _preCalcs;
 
         private int[] _levelIdx = new int[0];
         private MeshCell[] _mesh = new MeshCell[0];
@@ -134,6 +136,8 @@ namespace NBodies.Physics
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
 
             InitBuffers();
+
+            PreCalcSPH(_kernelSize);
         }
 
         private List<ComputeDevice> GetDevices()
@@ -149,6 +153,24 @@ namespace NBodies.Physics
             }
 
             return devices;
+        }
+
+        private void PreCalcSPH(float kernelSize)
+        {
+            var calcs = new SPHPreCalc();
+
+            calcs.kSize = kernelSize;
+            calcs.kSizeSq = (float)Math.Pow(kernelSize, 2);
+            calcs.kSize3 = (float)Math.Pow(kernelSize, 3);
+            calcs.kSize9 = (float)Math.Pow(kernelSize, 9);
+            calcs.kRad6 = (float)Math.Pow((1.0f / 3.0f), 6); //??
+           // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
+
+            calcs.fViscosity = (float)(15.0f / (2.0f * Math.PI * calcs.kSize3)) * (6.0f / calcs.kSize3);
+            calcs.fPressure = (float)(15.0f / (Math.PI * calcs.kRad6)) * 3.0f;
+            calcs.fDensity = (float)(315.0f / (64.0f * Math.PI * calcs.kSize9));
+
+            _preCalcs = calcs;
         }
 
         public void Flush()
@@ -190,26 +212,24 @@ namespace NBodies.Physics
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
 
-
-        public void CalcMovement(ref Body[] bodies, float timestep, float viscosity, int cellSizeExp, float cullDistance, bool collisions, int meshLevels, int threadsPerBlock)
+        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
-            _levels = meshLevels;
+            _levels = sim.MeshLevels;
             int threadBlocks = 0;
 
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(_bodies.Length);
 
             // Build the particle mesh, mesh index, and mesh neighbors index.
-            BuildMesh(cellSizeExp);
+            BuildMesh(sim.CellSizeExponent);
 
             // Calc center of mass on GPU.
             _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
             _calcCMKernel.SetMemoryArgument(1, _gpuCM);
             _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
             _calcCMKernel.SetValueArgument(3, _meshLength);
-
             _queue.ExecuteTask(_calcCMKernel, null);
 
             // Allocate and write the level index.
@@ -223,10 +243,9 @@ namespace NBodies.Physics
             _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
             _forceKernel.SetValueArgument(argi++, _meshLength);
             _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _forceKernel.SetValueArgument(argi++, timestep);
-            _forceKernel.SetValueArgument(argi++, _levels);
             _forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
-
+            _forceKernel.SetValueArgument(argi++, sim);
+            _forceKernel.SetValueArgument(argi++, _preCalcs);
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
@@ -235,8 +254,7 @@ namespace NBodies.Physics
             _collisionLargeKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(collisions));
-
+            _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
             _queue.Execute(_collisionLargeKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
@@ -245,12 +263,9 @@ namespace NBodies.Physics
             _collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _collisionKernel.SetValueArgument(argi++, timestep);
-            _collisionKernel.SetValueArgument(argi++, viscosity);
             _collisionKernel.SetMemoryArgument(argi++, _gpuCM);
-            _collisionKernel.SetValueArgument(argi++, cullDistance);
-            _collisionKernel.SetValueArgument(argi++, Convert.ToInt32(collisions));
-
+            _collisionKernel.SetValueArgument(argi++, sim);
+            _collisionKernel.SetValueArgument(argi++, _preCalcs);
             _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
@@ -260,9 +275,7 @@ namespace NBodies.Physics
                 _mesh = new MeshCell[_meshLength];
 
             _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, null);
-
         }
-
 
         public void FixOverLaps(ref Body[] bodies)
         {
