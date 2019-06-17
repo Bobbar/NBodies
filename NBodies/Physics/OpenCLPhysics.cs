@@ -503,13 +503,8 @@ namespace NBodies.Physics
             int count = 0;
             int val = 0;
 
-            //if (_cellIdx.Length != _bodies.Length + 1)
-            //    _cellIdx = new int[_bodies.Length + 1];
-
             if (_cellIdx.Length < _bodies.Length)
                 _cellIdx = new int[_bodies.Length + 100];
-
-            var idx = new List<Vector2>(_bodies.Length);
 
             for (int i = 0; i < _spatials.Length; i++)
             {
@@ -523,8 +518,6 @@ namespace NBodies.Physics
                     _cellIdx[count] = i;
                     val = spat.Mort;
 
-                    idx.Add(new Vector2(spat.IdxX, spat.IdxY));
-
                     count++;
                 }
             }
@@ -535,7 +528,6 @@ namespace NBodies.Physics
             output.Spatials = _spatials;
             output.CellCount = count;
             output.CellIndex = new int[count + 1];
-            output.LocIdx = idx.ToArray();
             Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
 
             return output;
@@ -598,8 +590,6 @@ namespace NBodies.Physics
                 int count = 0;
                 int val = int.MaxValue;
 
-                var idx = new List<Vector2>(current.CellCount);
-
                 for (int i = 0; i < output[level].Spatials.Length; i++)
                 {
                     var spat = output[level].Spatials[i];
@@ -609,8 +599,6 @@ namespace NBodies.Physics
                         _cellIdx[count] = i;
                         val = spat.Mort;
 
-                        idx.Add(new Vector2(spat.IdxX, spat.IdxY));
-
                         count++;
                     }
                 }
@@ -619,7 +607,6 @@ namespace NBodies.Physics
 
                 output[level].CellCount = count;
                 output[level].CellIndex = new int[count + 1];
-                output[level].LocIdx = idx.ToArray();
                 Array.Copy(_cellIdx, 0, output[level].CellIndex, 0, count + 1);
             }
 
@@ -629,21 +616,17 @@ namespace NBodies.Physics
         private void BuildBottomLevelGPU(LevelInfo levelInfo, int cellSizeExp)
         {
             int cellCount = levelInfo.CellCount;
-            int cellSize = (int)Math.Pow(2, cellSizeExp);
 
             using (var gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, levelInfo.CellIndex.Length, IntPtr.Zero))
-            using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, levelInfo.LocIdx.Length, IntPtr.Zero))
             {
                 _queue.WriteToBuffer(levelInfo.CellIndex, gpuCellIdx, false, null);
-                _queue.WriteToBuffer(levelInfo.LocIdx, gpuLocIdx, false, null);
 
                 _buildBottomKernel.SetMemoryArgument(0, _gpuInBodies);
                 _buildBottomKernel.SetMemoryArgument(1, _gpuOutBodies);
                 _buildBottomKernel.SetMemoryArgument(2, _gpuMesh);
                 _buildBottomKernel.SetValueArgument(3, cellCount);
                 _buildBottomKernel.SetMemoryArgument(4, gpuCellIdx);
-                _buildBottomKernel.SetMemoryArgument(5, gpuLocIdx);
-                _buildBottomKernel.SetValueArgument(6, cellSize);
+                _buildBottomKernel.SetValueArgument(5, cellSizeExp);
 
                 _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
@@ -651,27 +634,22 @@ namespace NBodies.Physics
 
         private void BuildTopLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
-            // Writing the cell and location indexes as single large arrays
-            // is much faster than chunking them in at each level.
+            // Writing the cell index as a single large array
+            // is much faster than chunking it in at each level.
 
-            // Calc total size of cell and location indexes.
+            // Calc total size of cell index.
             long cellIdxLen = 0;
-            long locIdxLen = 0;
 
             for (int i = 1; i < levelInfo.Length; i++)
             {
                 var lvl = levelInfo[i];
-
                 cellIdxLen += lvl.CellIndex.Length;
-                locIdxLen += lvl.LocIdx.Length;
             }
 
-            // Build 1D arrays of cell and location indexes.
+            // Build 1D array of cell index.
             var cellIdx = new int[cellIdxLen];
-            var locIdx = new Vector2[locIdxLen];
 
             long cellIdxPos = 0;
-            long locIdxPos = 0;
 
             for (int i = 1; i < levelInfo.Length; i++)
             {
@@ -679,17 +657,12 @@ namespace NBodies.Physics
 
                 Array.Copy(lvl.CellIndex, 0, cellIdx, cellIdxPos, lvl.CellIndex.Length);
                 cellIdxPos += lvl.CellIndex.Length;
-
-                Array.Copy(lvl.LocIdx, 0, locIdx, locIdxPos, lvl.LocIdx.Length);
-                locIdxPos += lvl.LocIdx.Length;
             }
 
             // Allocate and write to the cell and location buffers.
             using (var gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, cellIdxLen, IntPtr.Zero))
-            using (var gpuLocIdx = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadOnly, locIdxLen, IntPtr.Zero))
             {
                 _queue.WriteToBuffer(cellIdx, gpuCellIdx, false, null);
-                _queue.WriteToBuffer(locIdx, gpuLocIdx, false, null);
 
                 int meshOffset = 0; // Write offset for new cells array location.
                 int readOffset = 0; // Read offset for cell and location indexes.
@@ -716,12 +689,11 @@ namespace NBodies.Physics
                     _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
                     _buildTopKernel.SetValueArgument(1, cellCount);
                     _buildTopKernel.SetMemoryArgument(2, gpuCellIdx);
-                    _buildTopKernel.SetMemoryArgument(3, gpuLocIdx);
-                    _buildTopKernel.SetValueArgument(4, cellSize);
-                    _buildTopKernel.SetValueArgument(5, levelOffset);
-                    _buildTopKernel.SetValueArgument(6, meshOffset);
-                    _buildTopKernel.SetValueArgument(7, readOffset);
-                    _buildTopKernel.SetValueArgument(8, level);
+                    _buildTopKernel.SetValueArgument(3, cellSizeExpLevel);
+                    _buildTopKernel.SetValueArgument(4, levelOffset);
+                    _buildTopKernel.SetValueArgument(5, meshOffset);
+                    _buildTopKernel.SetValueArgument(6, readOffset);
+                    _buildTopKernel.SetValueArgument(7, level);
 
                     _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 }

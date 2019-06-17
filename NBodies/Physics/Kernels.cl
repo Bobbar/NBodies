@@ -244,29 +244,34 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 	mesh[m] = cell;
 }
 
-__kernel void BuildBottom(global  Body* inBodies, global  Body* outBodies, global  MeshCell* mesh, int meshLen, global int* cellIdx, global float2* locIdx, int cellSize)
+__kernel void BuildBottom(global  Body* inBodies, global  Body* outBodies, global  MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp)
 {
 	int m = get_global_id(0);
 
 	if (m >= meshLen)
 		return;
 
-	MeshCell newCell;
-	float2 idx = locIdx[m];
+	int firstIdx = cellIdx[m];
+	Body firstBody = inBodies[firstIdx];
 
-	newCell.IdxX = (int)idx.x;
-	newCell.IdxY = (int)idx.y;
-	newCell.Size = cellSize;
-	newCell.BodyCount = 0;
+	MeshCell newCell;
+	newCell.IdxX = (int)firstBody.PosX >> cellSizeExp;
+	newCell.IdxY = (int)firstBody.PosY >> cellSizeExp;
+	newCell.Size = (int)pown(2.0f, cellSizeExp);
+	newCell.BodyStartIdx = firstIdx;
+	newCell.BodyCount = 1;
 	newCell.ChildCount = 0;
-	newCell.ID = 0;
+	newCell.ID = m;
 	newCell.Level = 0;
 	newCell.ParentID = -1;
-	newCell.CmX = 0;
-	newCell.CmY = 0;
-	newCell.Mass = 0;
+	newCell.CmX = firstBody.Mass * firstBody.PosX;
+	newCell.CmY = firstBody.Mass * firstBody.PosY;
+	newCell.Mass = firstBody.Mass;
 
-	for (int i = cellIdx[m]; i < cellIdx[m + 1]; i++)
+	firstBody.MeshID = m;
+	outBodies[firstIdx] = firstBody;
+
+	for (int i = firstIdx + 1; i < cellIdx[m + 1]; i++)
 	{
 		Body body = inBodies[i];
 		newCell.Mass += body.Mass;
@@ -275,21 +280,16 @@ __kernel void BuildBottom(global  Body* inBodies, global  Body* outBodies, globa
 		newCell.BodyCount++;
 
 		body.MeshID = m;
-
 		outBodies[i] = body;
 	}
-
-	newCell.ID = m;
-	newCell.BodyStartIdx = cellIdx[m];
 
 	newCell.CmX = newCell.CmX / (float)newCell.Mass;
 	newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
 	mesh[m] = newCell;
-
 }
 
-__kernel void BuildTop(global  MeshCell* mesh, int len, global int* cellIdx, global float2* locIdx, int cellSize, int levelOffset, int meshOffset, int readOffset, int level)
+__kernel void BuildTop(global  MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int readOffset, int level)
 {
 	int m = get_global_id(0);
 
@@ -300,38 +300,39 @@ __kernel void BuildTop(global  MeshCell* mesh, int len, global int* cellIdx, glo
 	int cellIdxOff = locIdxOff + (level - 1);
 	int newIdx = m + meshOffset;
 
-	MeshCell newCell;
+	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
+	MeshCell firstCell = mesh[firstIdx];
 
-	float2 idx = locIdx[locIdxOff];
-	newCell.IdxX = (int)idx.x;
-	newCell.IdxY = (int)idx.y;
-	newCell.Size = cellSize;
-	newCell.ChildStartIdx = cellIdx[cellIdxOff] + levelOffset;
-	newCell.ChildCount = 0;
+	MeshCell newCell;
+	newCell.IdxX = firstCell.IdxX >> 1;
+	newCell.IdxY = firstCell.IdxY >> 1;
+	newCell.Size = (int)pown(2.0f, cellSizeExp);
+	newCell.ChildStartIdx = firstIdx;
+	newCell.ChildCount = 1;
 	newCell.ID = newIdx;
 	newCell.Level = level;
-	newCell.BodyStartIdx = 0;
-	newCell.BodyCount = 0;
+	newCell.BodyStartIdx = firstCell.BodyStartIdx;
+	newCell.BodyCount = firstCell.BodyCount;
 	newCell.ParentID = -1;
-	newCell.CmX = 0;
-	newCell.CmY = 0;
-	newCell.Mass = 0;
+	newCell.CmX = (float)firstCell.Mass * firstCell.CmX;
+	newCell.CmY = (float)firstCell.Mass * firstCell.CmY;
+	newCell.Mass = firstCell.Mass;
 
+	firstCell.ParentID = newIdx;
+	mesh[firstIdx] = firstCell;
 
-	for (int i = cellIdx[cellIdxOff]; i < cellIdx[cellIdxOff + 1]; i++)
+	for (int i = firstIdx + 1; i < cellIdx[cellIdxOff + 1] + levelOffset; i++)
 	{
-		MeshCell child = mesh[i + levelOffset];
+		MeshCell child = mesh[i];
+
 		newCell.Mass += child.Mass;
 		newCell.CmX += (float)child.Mass * child.CmX;
 		newCell.CmY += (float)child.Mass * child.CmY;
 		newCell.ChildCount++;
 		newCell.BodyCount += child.BodyCount;
 
-		if (newCell.ChildCount == 1)
-			newCell.BodyStartIdx = child.BodyStartIdx;
-
 		child.ParentID = newIdx;
-		mesh[i + levelOffset] = child;
+		mesh[i] = child;
 	}
 
 	newCell.CmX = newCell.CmX / (float)newCell.Mass;
