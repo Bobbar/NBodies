@@ -368,7 +368,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	float FLOAT_EPSILON = 1.192093E-07f;
 	float softening = 0.04f;
 
-	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int a = get_global_id(0);
 
 	if (a >= inBodiesLen)
 		return;
@@ -557,7 +557,7 @@ int IsNeighbor(MeshCell cell, MeshCell testCell)
 __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, int collisions)
 {
 	// Get index for the current body.
-	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int a = get_global_id(0);
 
 	if (a >= inBodiesLen)
 		return;
@@ -659,7 +659,7 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph)
 {
 	// Get index for the current body.
-	int a = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int a = get_global_id(0);
 
 	if (a >= inBodiesLen)
 		return;
@@ -797,12 +797,9 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 
 	// Cull distant bodies.
 	float2 cm = centerMass[0];
-	float distX = cm.x - outBody.PosX;
-	float distY = cm.y - outBody.PosY;
-	float dist = distX * distX + distY * distY;
-	float dsqrt = native_sqrt(dist);
+	float dist = fast_distance(cm, (float2)(outBody.PosX, outBody.PosY));
 
-	if (dsqrt > sim.CullDistance)
+	if (dist > sim.CullDistance)
 		outBody.Visible = 0;
 
 	// Cull expired bodies.
