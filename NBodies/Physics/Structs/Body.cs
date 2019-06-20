@@ -95,13 +95,13 @@ namespace NBodies.Physics
         }
 
         [IgnoreMember]
-        public int Culled
+        public bool Culled
         {
-            get { return Convert.ToInt32(HasFlag(Flags.Culled)); }
+            get { return HasFlag(Flags.Culled); }
 
             set
             {
-                SetFlag(Flags.Culled, Convert.ToBoolean(value));
+                SetFlag(Flags.Culled, value);
             }
         }
 
@@ -125,6 +125,10 @@ namespace NBodies.Physics
             set
             {
                 SetFlag(Flags.IsExplosion, value);
+
+                // Explosion particle should always be in roche.
+                if (value)
+                    SetFlag(Flags.InRoche, true);
             }
         }
 
@@ -133,8 +137,7 @@ namespace NBodies.Physics
         {
             get
             {
-                var ret = HasFlag(Flags.BlackHole);
-                return ret;
+                return HasFlag(Flags.BlackHole);
             }
 
             set
@@ -164,31 +167,12 @@ namespace NBodies.Physics
             ForceTot = 0.0f;
             Density = 0.0f;
             Pressure = 0.0f;
-            Culled = 0;
+            Culled = false;
             InRoche = 0;
             Lifetime = -100;
 
         }
 
-    
-
-
-        public void SetFlag(int flag)
-        {
-            if (!HasFlag(flag))
-                Flag += flag;
-        }
-
-        public void RemoveFlag(int flag)
-        {
-            if (HasFlag(flag))
-                Flag -= flag;
-        }
-
-        public void SetFlag(Flags flag)
-        {
-            SetFlag((int)flag);
-        }
 
         public void SetFlag(Flags flag, bool enabled)
         {
@@ -198,15 +182,31 @@ namespace NBodies.Physics
                 RemoveFlag((int)flag);
         }
 
+        public void SetFlag(Flags flag)
+        {
+            SetFlag((int)flag);
+        }
+
+        public void SetFlag(int flag)
+        {
+            if (!HasFlag(flag))
+                Flag += flag;
+        }
+
+        public bool HasFlag(Flags flag)
+        {
+            return HasFlag((int)flag);
+        }
+
         public bool HasFlag(int flag)
         {
             return (Flag & flag) != 0;
         }
 
-        public bool HasFlag(Flags flag)
+        public void RemoveFlag(int flag)
         {
-            return (Flag & (int)flag) != 0;
+            if (HasFlag(flag))
+                Flag -= flag;
         }
     }
-
 }

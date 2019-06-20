@@ -192,7 +192,6 @@ namespace NBodies.Physics
 
             for (int i = 0; i < Bodies.Length; i++)
             {
-                SetRoche(ref Bodies[i]);
                 var body = Bodies[i];
                 totMass += body.Mass;
 
@@ -201,9 +200,9 @@ namespace NBodies.Physics
                 {
                     if (body.Size > 1)
                     {
-                        if (body.Culled == 0 && body.InRoche == 1 && !body.IsBlackHole && !body.IsExplosion)
+                        if (body.Flag == (int)Flags.InRoche)
                         {
-                            body.Culled = 1;
+                            body.Culled = true;
 
                             if (fractures.Count == 0)
                                 fractures = new List<Body>(2000);
@@ -213,7 +212,7 @@ namespace NBodies.Physics
                     }
                 }
 
-                if (body.Culled == 1)
+                if (body.Culled)
                 {
                     // Only start to reallocate if we find an invisible body.
                     if (!realloc)
