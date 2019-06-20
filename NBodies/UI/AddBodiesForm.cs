@@ -94,8 +94,18 @@ namespace NBodies
 
                 float newMass = 1;
 
-                var dist = bodyLoc.DistanceSqrt(ellipse.Location);
-                MatterType matter = Matter.GetForDistance(dist, radius);
+                bool byDist = false;
+                MatterType matter;
+
+                if (byDist)
+                {
+                    var dist = bodyLoc.DistanceSqrt(ellipse.Location);
+                    matter = Matter.GetForDistance(dist, radius);
+                }
+                else
+                {
+                    matter = Matter.GetRandom();
+                }
 
                 if (StaticDensityCheckBox.Checked)
                 {

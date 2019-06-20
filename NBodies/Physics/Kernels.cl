@@ -82,31 +82,50 @@ typedef struct __attribute__((packed)) SimSettings
 
 } SimSettings;
 
-constant int VISIBLE = 1;
+constant int BLACKHOLE = 1;
 constant int ISEXPLOSION = 2;
-constant int BLACKHOLE = 4;
+constant int CULLED = 4;
 constant int INROCHE = 8;
 
 int IsNeighbor(MeshCell testCell, MeshCell neighborCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
-int SetFlag(int flags, int in, bool enabled);
+int SetFlag(int flags, int flag, bool enabled);
+Body SetFlagB(Body body, int flag, bool enabled);
 bool HasFlag(int flags, int check);
 bool HasFlagB(Body body, int check);
 
-int SetFlag(int flags, int in, bool enabled)
+int SetFlag(int flags, int flag, bool enabled)
 {
-	if (HasFlag(flags, in))
+	if (HasFlag(flags, flag))
 	{
 		if (!enabled)
-			return flags -= in;
+			return flags -= flag;
 	}
 	else
 	{
 		if (enabled)
-			return flags += in;
+			return flags += flag;
 	}
 
 	return flags;
+}
+
+Body SetFlagB(Body body, int flag, bool enabled)
+{
+	Body out = body;
+
+	if (HasFlag(out.Flag, flag))
+	{
+		if (!enabled)
+			out.Flag -= flag;
+	}
+	else
+	{
+		if (enabled)
+			out.Flag += flag;
+	}
+
+	return out;
 }
 
 bool HasFlag(int flags, int check)
@@ -538,6 +557,12 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	// Calculate pressure from density.
 	outBody.Pressure = GAS_K * outBody.Density;
 
+	if (outBody.ForceTot > outBody.Mass * 4.0f)
+	{
+		outBody = SetFlagB(outBody, INROCHE, true);
+	}
+
+
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
@@ -634,11 +659,11 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 						if (outBody.Mass > inBody.Mass)
 						{
 							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-							outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, VISIBLE, false);
+							outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
 						}
 						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 						{
-							outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+							outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
@@ -647,11 +672,11 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 							if (outBody.UID > inBody.UID)
 							{
 								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, VISIBLE, false);
+								outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
 							}
 							else // Our UID is inferior, we must go away.
 							{
-								outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 								outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
 							}
 						}
@@ -754,7 +779,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 						// Elastic collision.
 						else if (HasFlagB(outBody, INROCHE) && !HasFlagB(inBody, INROCHE))
 						{
-							outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+							outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 						}
 						else
 						{
@@ -771,7 +796,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							}
 							else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 							{
-								outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 							}
 							else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 							{
@@ -782,7 +807,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 								}
 								else // Our UID is inferior, we must go away.
 								{
-									outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+									outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 								}
 							}
 						}
@@ -808,12 +833,12 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	float dist = fast_distance(cm, (float2)(outBody.PosX, outBody.PosY));
 
 	if (dist > sim.CullDistance)
-		outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 
 	// Cull expired bodies.
 	if (outBody.Lifetime < 0.0f && outBody.Lifetime > -100.0f)
 	{
-		outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
+		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 		//printf("%s\n", "this is a test string\n");
 	}
 

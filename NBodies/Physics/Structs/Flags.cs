@@ -8,9 +8,9 @@ namespace NBodies.Physics
 {
     public enum Flags
     {
-        Visible = 1,
+        BlackHole = 1,
         IsExplosion = 2,
-        BlackHole = 4,
+        Culled = 4,
         InRoche = 8
     }
 }

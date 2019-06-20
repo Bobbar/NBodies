@@ -76,15 +76,32 @@ namespace NBodies.Physics
         public int MeshID;
 
 
+        /// <summary>
+        /// Visible and Culled are flipped values of the same flag.
+        /// This is done to maintain backwards compatibility with saved states.
+        /// 
+        /// Visible = 1 (true) == Culled = 0 (false)
+        /// </summary>
         [ProtoMember(11)]
         [Key(10)]
         public int Visible
         {
-            get { return Convert.ToInt32(HasFlag(Flags.Visible)); }
+            get { return Convert.ToInt32(!HasFlag(Flags.Culled)); }
 
             set
             {
-                SetFlag(Flags.Visible, Convert.ToBoolean(value));
+                SetFlag(Flags.Culled, !Convert.ToBoolean(value));
+            }
+        }
+
+        [IgnoreMember]
+        public int Culled
+        {
+            get { return Convert.ToInt32(HasFlag(Flags.Culled)); }
+
+            set
+            {
+                SetFlag(Flags.Culled, Convert.ToBoolean(value));
             }
         }
 
@@ -147,12 +164,13 @@ namespace NBodies.Physics
             ForceTot = 0.0f;
             Density = 0.0f;
             Pressure = 0.0f;
-            Visible = 1;
+            Culled = 0;
             InRoche = 0;
             Lifetime = -100;
 
         }
 
+    
 
 
         public void SetFlag(int flag)

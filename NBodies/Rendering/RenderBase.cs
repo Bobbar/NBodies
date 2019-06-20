@@ -167,7 +167,7 @@ namespace NBodies.Rendering
 
                         var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
-                        if (body.Visible == 1)
+                        if (body.Culled == 0)
                         {
                             if (ClipView)
                             {
