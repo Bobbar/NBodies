@@ -76,7 +76,7 @@ namespace NBodies.Rendering
                 }
             }
 
-            if (body.Flag == 1)
+            if (body.IsBlackHole)
             {
                 _buffer.Graphics.DrawEllipse(_blackHoleStroke, X, Y, size, size);
             }

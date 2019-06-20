@@ -53,14 +53,6 @@ namespace NBodies.Physics
         [Key(9)]
         public float Size;
 
-        [ProtoMember(11)]
-        [Key(10)]
-        public int Visible;
-
-        [ProtoMember(12)]
-        [Key(11)]
-        public int InRoche;
-
         [ProtoMember(13)]
         [Key(12)]
         public int Flag;
@@ -77,28 +69,126 @@ namespace NBodies.Physics
         [Key(15)]
         public float Pressure;
 
-        //[IgnoreMember]
-        //public int HasCollision;
-
-        [IgnoreMember]
-        public int IsExplosion;
-
         [IgnoreMember]
         public float Lifetime;
 
         [IgnoreMember]
-        public float Age;
-
-        [IgnoreMember]
         public int MeshID;
 
-       // public float Test;
 
-        //[IgnoreMember]
-        //public float ElapTime;
+        [ProtoMember(11)]
+        [Key(10)]
+        public int Visible
+        {
+            get { return Convert.ToInt32(HasFlag(Flags.Visible)); }
 
-        //[IgnoreMember]
-        //public float DeltaTime;
+            set
+            {
+                SetFlag(Flags.Visible, Convert.ToBoolean(value));
+            }
+        }
+
+        [ProtoMember(12)]
+        [Key(11)]
+        public int InRoche
+        {
+            get { return Convert.ToInt32(HasFlag(Flags.InRoche)); }
+
+            set
+            {
+                SetFlag(Flags.InRoche, Convert.ToBoolean(value));
+            }
+        }
+
+        [IgnoreMember]
+        public bool IsExplosion
+        {
+            get { return HasFlag(Flags.IsExplosion); }
+
+            set
+            {
+                SetFlag(Flags.IsExplosion, value);
+            }
+        }
+
+        [IgnoreMember]
+        public bool IsBlackHole
+        {
+            get
+            {
+                var ret = HasFlag(Flags.BlackHole);
+                return ret;
+            }
+
+            set
+            {
+                SetFlag(Flags.BlackHole, value);
+            }
+        }
+
+        public Body(int dummy) : this()
+        {
+            Flag = 1;
+            UID = -1;
+            MeshID = -1;
+
+
+            IsExplosion = false;
+            IsBlackHole = false;
+            PosX = 0.0f;
+            PosY = 0.0f;
+            Mass = 0.0f;
+            Size = 0.0f;
+            Color = 0;
+            VeloX = 0.0f;
+            VeloY = 0.0f;
+            ForceX = 0.0f;
+            ForceY = 0.0f;
+            ForceTot = 0.0f;
+            Density = 0.0f;
+            Pressure = 0.0f;
+            Visible = 1;
+            InRoche = 0;
+            Lifetime = -100;
+
+        }
+
+
+
+        public void SetFlag(int flag)
+        {
+            if (!HasFlag(flag))
+                Flag += flag;
+        }
+
+        public void RemoveFlag(int flag)
+        {
+            if (HasFlag(flag))
+                Flag -= flag;
+        }
+
+        public void SetFlag(Flags flag)
+        {
+            SetFlag((int)flag);
+        }
+
+        public void SetFlag(Flags flag, bool enabled)
+        {
+            if (enabled)
+                SetFlag((int)flag);
+            else
+                RemoveFlag((int)flag);
+        }
+
+        public bool HasFlag(int flag)
+        {
+            return (Flag & flag) != 0;
+        }
+
+        public bool HasFlag(Flags flag)
+        {
+            return (Flag & (int)flag) != 0;
+        }
     }
 
 }

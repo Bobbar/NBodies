@@ -146,7 +146,7 @@ namespace NBodies.Rendering
                 }
             }
 
-            if (body.Flag == 1)
+            if (body.IsBlackHole)
             {
                 _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
             }

@@ -11,15 +11,11 @@ typedef struct __attribute__((packed)) Body
 	float ForceTot;
 	int Color;
 	float Size;
-	int Visible;
-	int InRoche;
 	int Flag;
 	int UID;
 	float Density;
 	float Pressure;
-	int IsExplosion;
 	float Lifetime;
-	float Age;
 	int MeshID;
 
 } Body;
@@ -79,7 +75,6 @@ typedef struct __attribute__((packed)) SimSettings
 {
 	float DeltaTime;
 	float Viscosity;
-	//float2 CenterMass;
 	float CullDistance;
 	bool CollisionsOn;
 	int MeshLevels;
@@ -87,8 +82,42 @@ typedef struct __attribute__((packed)) SimSettings
 
 } SimSettings;
 
+constant int VISIBLE = 1;
+constant int ISEXPLOSION = 2;
+constant int BLACKHOLE = 4;
+constant int INROCHE = 8;
+
 int IsNeighbor(MeshCell testCell, MeshCell neighborCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
+int SetFlag(int flags, int in, bool enabled);
+bool HasFlag(int flags, int check);
+bool HasFlagB(Body body, int check);
+
+int SetFlag(int flags, int in, bool enabled)
+{
+	if (HasFlag(flags, in))
+	{
+		if (!enabled)
+			return flags -= in;
+	}
+	else
+	{
+		if (enabled)
+			return flags += in;
+	}
+
+	return flags;
+}
+
+bool HasFlag(int flags, int check)
+{
+	return (check & flags) != 0;
+}
+
+bool HasFlagB(Body body, int check)
+{
+	return (check & body.Flag) != 0;
+}
 
 
 __kernel void FixOverlaps(global  Body* inBodies, int inBodiesLen, global  Body* outBodies)
@@ -509,27 +538,6 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	// Calculate pressure from density.
 	outBody.Pressure = GAS_K * outBody.Density;
 
-	if (outBody.ForceTot > outBody.Mass * 4.0f & outBody.Flag == 0)
-	{
-		outBody.InRoche = 1;
-	}
-	else if (outBody.ForceTot * 2.0f < outBody.Mass * 4.0f)
-	{
-		outBody.InRoche = 0;
-	}
-	else if (outBody.IsExplosion == 1)
-	{
-		outBody.InRoche = 1;
-	}
-
-	if (outBody.Flag == 2)
-	{
-		outBody.InRoche = 1;
-	}
-
-	if (outBody.Size <= 1.1f)
-		outBody.InRoche = 1;
-
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
@@ -626,11 +634,11 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 						if (outBody.Mass > inBody.Mass)
 						{
 							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-							outBodies[(mb)].Visible = 0;
+							outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, VISIBLE, false);
 						}
 						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 						{
-							outBody.Visible = 0;
+							outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
@@ -639,11 +647,11 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 							if (outBody.UID > inBody.UID)
 							{
 								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								outBodies[(mb)].Visible = 0;
+								outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, VISIBLE, false);
 							}
 							else // Our UID is inferior, we must go away.
 							{
-								outBody.Visible = 0;
+								outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 								outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
 							}
 						}
@@ -694,7 +702,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 					float dist = distX * distX + distY * distY;
 
 					// Calc the distance and check for collision.
-					float colDist = sph.kSize * 0.5f + sph.kSize * 0.5f;
+					float colDist = (sph.kSize * 0.5f) * 2.0f;
 					if (dist <= colDist * colDist)
 					{
 						// We know we have a collision, so go ahead and do the expensive square root now.
@@ -704,10 +712,10 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 						// Otherwise, an elastic collision and merge is done.
 
 						// SPH collision.
-						if (outBody.InRoche == 1 && inBody.InRoche == 1)
+						if (HasFlagB(outBody, INROCHE) && HasFlagB(inBody, INROCHE))
 						{
 							float FLOAT_EPSILON = 1.192092896e-07f;
-							float FLOAT_EPSILONSQRT = 3.45267E-11f;
+							float FLOAT_EPSILONSQRT = 3.45267e-11f;
 
 							if (dist < FLOAT_EPSILON)
 							{
@@ -744,9 +752,9 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 
 						}
 						// Elastic collision.
-						else if (outBody.InRoche == 1 && inBody.InRoche == 0)
+						else if (HasFlagB(outBody, INROCHE) && !HasFlagB(inBody, INROCHE))
 						{
-							outBody.Visible = 0;
+							outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 						}
 						else
 						{
@@ -763,7 +771,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							}
 							else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 							{
-								outBody.Visible = 0;
+								outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 							}
 							else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 							{
@@ -774,7 +782,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 								}
 								else // Our UID is inferior, we must go away.
 								{
-									outBody.Visible = 0;
+									outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 								}
 							}
 						}
@@ -792,7 +800,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 
 	if (outBody.Lifetime > 0.0f)
 	{
-		outBody.Age += sim.DeltaTime * 4.0f;
+		outBody.Lifetime -= sim.DeltaTime * 4.0f;
 	}
 
 	// Cull distant bodies.
@@ -800,12 +808,12 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	float dist = fast_distance(cm, (float2)(outBody.PosX, outBody.PosY));
 
 	if (dist > sim.CullDistance)
-		outBody.Visible = 0;
+		outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 
 	// Cull expired bodies.
-	if (outBody.Age > outBody.Lifetime)
+	if (outBody.Lifetime < 0.0f && outBody.Lifetime > -100.0f)
 	{
-		outBody.Visible = 0;
+		outBody.Flag = SetFlag(outBody.Flag, VISIBLE, false);
 		//printf("%s\n", "this is a test string\n");
 	}
 
@@ -820,7 +828,7 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 	outBody.VeloX += colMass * forceX;
 	outBody.VeloY += colMass * forceY;
 
-	if (outBody.Flag != 1)
+	if (!HasFlagB(outBody, BLACKHOLE))
 	{
 		float a1 = pow((outBody.Size * 0.5f), 2.0f);
 		float a2 = pow((bodyB.Size * 0.5f), 2.0f);

@@ -133,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Physics\Structs\BufferDims.cs" />
+    <Compile Include="Physics\Structs\Flags.cs" />
     <Compile Include="Physics\Structs\GridInfo.cs" />
     <Compile Include="Physics\Structs\LevelInfo.cs" />
     <Compile Include="Physics\Structs\MinMax.cs" />

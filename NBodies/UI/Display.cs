@@ -302,7 +302,7 @@ namespace NBodies.UI
                     {
                         try
                         {
-                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Flag = 2;
+                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].InRoche = 1;
                         }
                         catch { }
                     }

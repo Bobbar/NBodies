@@ -195,19 +195,21 @@ namespace NBodies.Physics
                 var body = Bodies[i];
                 totMass += body.Mass;
 
+                SetRoche(ref Bodies[i]);
+
                 // Fracture large bodies in roche.
                 if (processRoche)
                 {
                     if (body.Size > 1)
                     {
-                        if (body.Visible == 1 && body.InRoche == 1 && body.Flag != 1 && body.IsExplosion != 1)
+                        if (body.Visible == 1 && body.InRoche == 1 && !body.IsBlackHole && !body.IsExplosion)
                         {
-                                body.Visible = 0;
+                            body.Visible = 0;
 
-                                if (fractures.Count == 0)
-                                    fractures = new List<Body>(2000);
+                            if (fractures.Count == 0)
+                                fractures = new List<Body>(2000);
 
-                                fractures.AddRange(FractureBody(Bodies[i]));
+                            fractures.AddRange(FractureBody(Bodies[i]));
                         }
                     }
                 }
@@ -277,6 +279,26 @@ namespace NBodies.Physics
             if (fractures.Count > 0)
                 Add(fractures.ToArray());
 
+        }
+
+        private static void SetRoche(ref Body body)
+        {
+            if (body.ForceTot > body.Mass * 4.0f)
+            {
+                body.InRoche = 1;
+            }
+            else if (body.ForceTot * 2.0f < body.Mass * 4.0f)
+            {
+                body.InRoche = 0;
+            }
+            else if (body.IsExplosion)
+            {
+                body.InRoche = 1;
+            }
+
+         
+            if (body.Size <= 1.1f)
+                body.InRoche = 1;
         }
 
         public static void CullDistant()
@@ -448,7 +470,7 @@ namespace NBodies.Physics
                 // Fail silently and try again on the next frame.
             }
 
-            return new Body();
+            return new Body(0);
         }
 
         public static int UIDToIndex(int uid)
@@ -898,26 +920,16 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color, int inRoche)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
             b.VeloX = veloX;
             b.VeloY = veloY;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
             b.InRoche = inRoche;
-            b.Lifetime = 0;
-            b.Age = 0.0f;
-            b.IsExplosion = 0;
-
-            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -925,26 +937,16 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
             b.VeloX = veloX;
             b.VeloY = veloY;
             b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
-            b.Lifetime = 0;
-            b.Age = 0.0f;
-            b.IsExplosion = 0;
-
-            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -952,24 +954,15 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
             b.Lifetime = lifetime;
-            b.Age = 0.0f;
-            b.IsExplosion = isExplosion;
+            b.IsExplosion = Convert.ToBoolean(isExplosion);
 
             if (isExplosion == 1)
             {
@@ -978,7 +971,6 @@ namespace NBodies.Physics
 
             //b.DeltaTime = 0.0005f;
 
-            b.Flag = 0;
             b.UID = NextUID();
 
             return b;
@@ -986,25 +978,15 @@ namespace NBodies.Physics
 
         public static Body NewBody(PointF loc, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
             b.Lifetime = lifetime;
-            b.Age = 0.0f;
-            b.IsExplosion = isExplosion;
-            b.Flag = 0;
+            b.IsExplosion = Convert.ToBoolean(isExplosion);
             b.UID = NextUID();
 
             return b;
@@ -1012,51 +994,30 @@ namespace NBodies.Physics
 
         public static Body NewBody(PointF loc, float size, float mass, Color color, int isBlackhole = 0)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
-            b.Lifetime = 0;
-            b.Age = 0.0f;
-            b.IsExplosion = 0;
-            b.Flag = isBlackhole;
+            b.IsBlackHole = Convert.ToBoolean(isBlackhole);
             b.UID = NextUID();
 
             return b;
         }
 
-        public static void Add(float locX, float locY, float size, float mass, Color color, float lifetime, int blackhole = 0)
+        public static void Add(float locX, float locY, float size, float mass, Color color, float lifetime, int isBlackhole = 0)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
             b.Lifetime = lifetime;
-            b.Age = 0.0f;
-            b.Flag = blackhole;
-            b.UID = -1;
+            b.IsBlackHole = Convert.ToBoolean(isBlackhole);
 
             Add(b);
         }
@@ -1092,93 +1053,58 @@ namespace NBodies.Physics
 
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
             b.VeloX = velX;
             b.VeloY = velY;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
-            b.Flag = 0;
-            b.UID = -1;
 
             Add(b);
         }
 
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color, int inRoche)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = locX;
             b.PosY = locY;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
             b.VeloX = velX;
             b.VeloY = velY;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
             b.InRoche = inRoche;
-            b.Flag = 0;
-            b.UID = -1;
 
             Add(b);
         }
 
-        public static void Add(PointF loc, float size, float mass, Color color, int blackhole = 0)
+        public static void Add(PointF loc, float size, float mass, Color color, int isBlackhole = 0)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
-            b.Flag = blackhole;
-            b.UID = -1;
+            b.IsBlackHole = Convert.ToBoolean(isBlackhole);
 
             Add(b);
         }
 
         public static int Add(PointF loc, float size, Color color)
         {
-            var b = new Body();
+            var b = new Body(0);
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
             b.Mass = CalcMass(size);
             b.Size = size;
             b.Color = color.ToArgb();
-
-            b.VeloX = 0;
-            b.VeloY = 0;
-            b.ForceX = 0;
-            b.ForceY = 0;
-            b.ForceTot = 0;
-            b.Visible = 1;
-            b.InRoche = 0;
-            b.Flag = 0;
-            b.UID = -1;
-            b.MeshID = -1;
 
             return Add(b);
         }
