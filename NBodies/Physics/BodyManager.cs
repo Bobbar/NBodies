@@ -279,17 +279,6 @@ namespace NBodies.Physics
 
         }
 
-        private static void SetRoche(ref Body body)
-        {
-            if (body.IsExplosion)
-            {
-                body.InRoche = 1;
-            }
-
-         
-            if (body.Size <= 1.1f)
-                body.InRoche = 1;
-        }
 
         public static void CullDistant()
         {
@@ -460,7 +449,7 @@ namespace NBodies.Physics
                 // Fail silently and try again on the next frame.
             }
 
-            return new Body(0);
+            return new Body();
         }
 
         public static int UIDToIndex(int uid)
@@ -910,7 +899,7 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color, int inRoche)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -927,7 +916,7 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float veloX, float veloY, float size, float mass, Color color)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -944,7 +933,7 @@ namespace NBodies.Physics
 
         public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -968,7 +957,7 @@ namespace NBodies.Physics
 
         public static Body NewBody(PointF loc, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
@@ -984,7 +973,7 @@ namespace NBodies.Physics
 
         public static Body NewBody(PointF loc, float size, float mass, Color color, int isBlackhole = 0)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
@@ -999,7 +988,7 @@ namespace NBodies.Physics
 
         public static void Add(float locX, float locY, float size, float mass, Color color, float lifetime, int isBlackhole = 0)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -1043,7 +1032,7 @@ namespace NBodies.Physics
 
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -1058,7 +1047,7 @@ namespace NBodies.Physics
 
         public static void Add(float locX, float locY, float velX, float velY, float size, float mass, Color color, int inRoche)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = locX;
             b.PosY = locY;
@@ -1074,7 +1063,7 @@ namespace NBodies.Physics
 
         public static void Add(PointF loc, float size, float mass, Color color, int isBlackhole = 0)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
@@ -1088,7 +1077,7 @@ namespace NBodies.Physics
 
         public static int Add(PointF loc, float size, Color color)
         {
-            var b = new Body(0);
+            var b = new Body();
 
             b.PosX = loc.X;
             b.PosY = loc.Y;

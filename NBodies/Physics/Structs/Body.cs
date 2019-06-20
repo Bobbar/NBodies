@@ -53,6 +53,37 @@ namespace NBodies.Physics
         [Key(9)]
         public float Size;
 
+        /// <summary>
+        /// Visible and Culled are flipped values of the same flag.
+        /// This is done to maintain backwards compatibility with saved states.
+        /// 
+        /// Visible = 1 (true) == Culled = 0 (false)
+        /// </summary>
+        [ProtoMember(11)]
+        [Key(10)]
+        public int Visible
+        {
+            get { return Convert.ToInt32(!HasFlag(Flags.Culled)); }
+
+            set
+            {
+                SetFlag(Flags.Culled, !Convert.ToBoolean(value));
+            }
+        }
+
+        [ProtoMember(12)]
+        [Key(11)]
+        public int InRoche
+        {
+            get { return Convert.ToInt32(HasFlag(Flags.InRoche)); }
+
+            set
+            {
+                SetFlag(Flags.InRoche, Convert.ToBoolean(value));
+            }
+        }
+
+
         [ProtoMember(13)]
         [Key(12)]
         public int Flag;
@@ -76,24 +107,7 @@ namespace NBodies.Physics
         public int MeshID;
 
 
-        /// <summary>
-        /// Visible and Culled are flipped values of the same flag.
-        /// This is done to maintain backwards compatibility with saved states.
-        /// 
-        /// Visible = 1 (true) == Culled = 0 (false)
-        /// </summary>
-        [ProtoMember(11)]
-        [Key(10)]
-        public int Visible
-        {
-            get { return Convert.ToInt32(!HasFlag(Flags.Culled)); }
-
-            set
-            {
-                SetFlag(Flags.Culled, !Convert.ToBoolean(value));
-            }
-        }
-
+       
         [IgnoreMember]
         public bool Culled
         {
@@ -102,18 +116,6 @@ namespace NBodies.Physics
             set
             {
                 SetFlag(Flags.Culled, value);
-            }
-        }
-
-        [ProtoMember(12)]
-        [Key(11)]
-        public int InRoche
-        {
-            get { return Convert.ToInt32(HasFlag(Flags.InRoche)); }
-
-            set
-            {
-                SetFlag(Flags.InRoche, Convert.ToBoolean(value));
             }
         }
 
@@ -146,32 +148,34 @@ namespace NBodies.Physics
             }
         }
 
-        public Body(int dummy) : this()
-        {
-            Flag = 1;
-            UID = -1;
-            MeshID = -1;
+        //public Body(int dummy) : this()
+        //{
+        //    Flag = 1;
+        //    UID = -1;
+        //    MeshID = -1;
 
 
-            IsExplosion = false;
-            IsBlackHole = false;
-            PosX = 0.0f;
-            PosY = 0.0f;
-            Mass = 0.0f;
-            Size = 0.0f;
-            Color = 0;
-            VeloX = 0.0f;
-            VeloY = 0.0f;
-            ForceX = 0.0f;
-            ForceY = 0.0f;
-            ForceTot = 0.0f;
-            Density = 0.0f;
-            Pressure = 0.0f;
-            Culled = false;
-            InRoche = 0;
-            Lifetime = -100;
+        //    //IsExplosion = false;
+        //    //IsBlackHole = false;
+        //    IsExplosion = 0;
+        //    IsBlackHole = 0;
+        //    PosX = 0.0f;
+        //    PosY = 0.0f;
+        //    Mass = 0.0f;
+        //    Size = 0.0f;
+        //    Color = 0;
+        //    VeloX = 0.0f;
+        //    VeloY = 0.0f;
+        //    ForceX = 0.0f;
+        //    ForceY = 0.0f;
+        //    ForceTot = 0.0f;
+        //    Density = 0.0f;
+        //    Pressure = 0.0f;
+        //    Culled = false;
+        //    InRoche = 0;
+        //    Lifetime = -100;
 
-        }
+        //}
 
 
         public void SetFlag(Flags flag, bool enabled)
