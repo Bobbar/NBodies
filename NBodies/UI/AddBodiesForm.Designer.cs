@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             this.BodyParamsGroup = new System.Windows.Forms.GroupBox();
-            this.StationaryGroup = new System.Windows.Forms.GroupBox();
-            this.AddStationaryButton = new System.Windows.Forms.Button();
             this.CirOrbitGroup = new System.Windows.Forms.GroupBox();
+            this.layeredCheckBox = new System.Windows.Forms.CheckBox();
+            this.AddStationaryButton = new System.Windows.Forms.Button();
             this.AddOrbitButton = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
             this.OrbitRadiusTextBox = new System.Windows.Forms.TextBox();
@@ -54,7 +54,6 @@
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
             this.BodyParamsGroup.SuspendLayout();
-            this.StationaryGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -64,56 +63,58 @@
             this.BodyParamsGroup.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.BodyParamsGroup.Controls.Add(this.StationaryGroup);
             this.BodyParamsGroup.Controls.Add(this.CirOrbitGroup);
             this.BodyParamsGroup.Controls.Add(this.panel1);
             this.BodyParamsGroup.Location = new System.Drawing.Point(12, 12);
             this.BodyParamsGroup.Name = "BodyParamsGroup";
-            this.BodyParamsGroup.Size = new System.Drawing.Size(386, 356);
+            this.BodyParamsGroup.Size = new System.Drawing.Size(386, 281);
             this.BodyParamsGroup.TabIndex = 0;
             this.BodyParamsGroup.TabStop = false;
             this.BodyParamsGroup.Text = "Bodies";
             // 
-            // StationaryGroup
-            // 
-            this.StationaryGroup.Controls.Add(this.AddStationaryButton);
-            this.StationaryGroup.Location = new System.Drawing.Point(6, 263);
-            this.StationaryGroup.Name = "StationaryGroup";
-            this.StationaryGroup.Size = new System.Drawing.Size(374, 85);
-            this.StationaryGroup.TabIndex = 2;
-            this.StationaryGroup.TabStop = false;
-            this.StationaryGroup.Text = "Add Stationary";
-            // 
-            // AddStationaryButton
-            // 
-            this.AddStationaryButton.Location = new System.Drawing.Point(109, 19);
-            this.AddStationaryButton.Name = "AddStationaryButton";
-            this.AddStationaryButton.Size = new System.Drawing.Size(145, 47);
-            this.AddStationaryButton.TabIndex = 9;
-            this.AddStationaryButton.Text = "Add Stationary";
-            this.AddStationaryButton.UseVisualStyleBackColor = true;
-            this.AddStationaryButton.Click += new System.EventHandler(this.AddStationaryButton_Click);
-            // 
             // CirOrbitGroup
             // 
+            this.CirOrbitGroup.Controls.Add(this.layeredCheckBox);
+            this.CirOrbitGroup.Controls.Add(this.AddStationaryButton);
             this.CirOrbitGroup.Controls.Add(this.AddOrbitButton);
             this.CirOrbitGroup.Controls.Add(this.label8);
             this.CirOrbitGroup.Controls.Add(this.OrbitRadiusTextBox);
             this.CirOrbitGroup.Controls.Add(this.label7);
             this.CirOrbitGroup.Controls.Add(this.CenterMassTextBox);
             this.CirOrbitGroup.Controls.Add(this.CenterMassCheckBox);
-            this.CirOrbitGroup.Location = new System.Drawing.Point(6, 103);
+            this.CirOrbitGroup.Location = new System.Drawing.Point(6, 104);
             this.CirOrbitGroup.Name = "CirOrbitGroup";
-            this.CirOrbitGroup.Size = new System.Drawing.Size(374, 151);
+            this.CirOrbitGroup.Size = new System.Drawing.Size(374, 171);
             this.CirOrbitGroup.TabIndex = 1;
             this.CirOrbitGroup.TabStop = false;
-            this.CirOrbitGroup.Text = "Add Into Circular Orbit";
+            this.CirOrbitGroup.Text = "System Params";
+            // 
+            // layeredCheckBox
+            // 
+            this.layeredCheckBox.AutoSize = true;
+            this.layeredCheckBox.Enabled = false;
+            this.layeredCheckBox.Location = new System.Drawing.Point(15, 52);
+            this.layeredCheckBox.Name = "layeredCheckBox";
+            this.layeredCheckBox.Size = new System.Drawing.Size(112, 17);
+            this.layeredCheckBox.TabIndex = 10;
+            this.layeredCheckBox.Text = "Layered By Matter";
+            this.layeredCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // AddStationaryButton
+            // 
+            this.AddStationaryButton.Location = new System.Drawing.Point(185, 106);
+            this.AddStationaryButton.Name = "AddStationaryButton";
+            this.AddStationaryButton.Size = new System.Drawing.Size(145, 36);
+            this.AddStationaryButton.TabIndex = 9;
+            this.AddStationaryButton.Text = "Add Stationary";
+            this.AddStationaryButton.UseVisualStyleBackColor = true;
+            this.AddStationaryButton.Click += new System.EventHandler(this.AddStationaryButton_Click);
             // 
             // AddOrbitButton
             // 
-            this.AddOrbitButton.Location = new System.Drawing.Point(171, 59);
+            this.AddOrbitButton.Location = new System.Drawing.Point(185, 39);
             this.AddOrbitButton.Name = "AddOrbitButton";
-            this.AddOrbitButton.Size = new System.Drawing.Size(145, 47);
+            this.AddOrbitButton.Size = new System.Drawing.Size(145, 33);
             this.AddOrbitButton.TabIndex = 8;
             this.AddOrbitButton.Text = "Add Orbit";
             this.AddOrbitButton.UseVisualStyleBackColor = true;
@@ -122,7 +123,7 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(31, 93);
+            this.label8.Location = new System.Drawing.Point(31, 118);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(40, 13);
             this.label8.TabIndex = 7;
@@ -130,7 +131,7 @@
             // 
             // OrbitRadiusTextBox
             // 
-            this.OrbitRadiusTextBox.Location = new System.Drawing.Point(34, 109);
+            this.OrbitRadiusTextBox.Location = new System.Drawing.Point(34, 134);
             this.OrbitRadiusTextBox.Name = "OrbitRadiusTextBox";
             this.OrbitRadiusTextBox.Size = new System.Drawing.Size(63, 20);
             this.OrbitRadiusTextBox.TabIndex = 6;
@@ -139,7 +140,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(31, 49);
+            this.label7.Location = new System.Drawing.Point(31, 79);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(66, 13);
             this.label7.TabIndex = 5;
@@ -147,11 +148,11 @@
             // 
             // CenterMassTextBox
             // 
-            this.CenterMassTextBox.Location = new System.Drawing.Point(34, 65);
+            this.CenterMassTextBox.Location = new System.Drawing.Point(34, 95);
             this.CenterMassTextBox.Name = "CenterMassTextBox";
             this.CenterMassTextBox.Size = new System.Drawing.Size(63, 20);
             this.CenterMassTextBox.TabIndex = 4;
-            this.CenterMassTextBox.Text = "8000";
+            this.CenterMassTextBox.Text = "80000";
             // 
             // CenterMassCheckBox
             // 
@@ -183,7 +184,7 @@
             this.panel1.Controls.Add(this.NumToAddTextBox);
             this.panel1.Location = new System.Drawing.Point(6, 16);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(361, 81);
+            this.panel1.Size = new System.Drawing.Size(361, 82);
             this.panel1.TabIndex = 0;
             // 
             // label9
@@ -214,6 +215,7 @@
             this.StaticDensityCheckBox.TabIndex = 11;
             this.StaticDensityCheckBox.Text = "Static";
             this.StaticDensityCheckBox.UseVisualStyleBackColor = true;
+            this.StaticDensityCheckBox.CheckedChanged += new System.EventHandler(this.StaticDensityCheckBox_CheckedChanged);
             // 
             // label6
             // 
@@ -308,20 +310,19 @@
             this.NumToAddTextBox.Name = "NumToAddTextBox";
             this.NumToAddTextBox.Size = new System.Drawing.Size(70, 20);
             this.NumToAddTextBox.TabIndex = 0;
-            this.NumToAddTextBox.Text = "500";
+            this.NumToAddTextBox.Text = "5000";
             // 
             // AddBodiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(410, 380);
+            this.ClientSize = new System.Drawing.Size(410, 305);
             this.Controls.Add(this.BodyParamsGroup);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Name = "AddBodiesForm";
             this.Opacity = 0.8D;
             this.Text = "Add Bodies";
             this.BodyParamsGroup.ResumeLayout(false);
-            this.StationaryGroup.ResumeLayout(false);
             this.CirOrbitGroup.ResumeLayout(false);
             this.CirOrbitGroup.PerformLayout();
             this.panel1.ResumeLayout(false);
@@ -333,7 +334,6 @@
         #endregion
 
         private System.Windows.Forms.GroupBox BodyParamsGroup;
-        private System.Windows.Forms.GroupBox StationaryGroup;
         private System.Windows.Forms.Button AddStationaryButton;
         private System.Windows.Forms.GroupBox CirOrbitGroup;
         private System.Windows.Forms.Button AddOrbitButton;
@@ -357,5 +357,6 @@
         private System.Windows.Forms.CheckBox StaticDensityCheckBox;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox LifeTimeTextBox;
+        private System.Windows.Forms.CheckBox layeredCheckBox;
     }
 }
