@@ -175,6 +175,7 @@
     <Compile Include="UI\KeyActions\DisplayStyleKey.cs" />
     <Compile Include="UI\KeyActions\ExplosionKey.cs" />
     <Compile Include="UI\KeyActions\FPSKey.cs" />
+    <Compile Include="UI\KeyActions\KernelSizeKey.cs" />
     <Compile Include="UI\KeyActions\LevelKey.cs" />
     <Compile Include="UI\KeyActions\RewindKey.cs" />
     <Compile Include="UI\KeyActions\SimpleKey.cs" />

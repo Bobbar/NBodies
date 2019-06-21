@@ -24,6 +24,19 @@ namespace NBodies
 
         #region Public Properties
 
+        public static float KernelSize
+        {
+            get { return _kernelSize; }
+
+            set
+            {
+                if (value > 0.1f && value <= 2.0f)
+                {
+                    _kernelSize = value;
+                }
+            }
+        }
+
         public static float CurrentFPS
         {
             get { return _currentFPS; }
@@ -226,7 +239,8 @@ namespace NBodies
 
         #endregion Public Properties
 
-        private static float _viscosity = 10.0f;
+        private static float _kernelSize = 1.0f;
+        private static float _viscosity = 15.0f;
         private const float _cullDistance = 20000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
@@ -453,6 +467,7 @@ namespace NBodies
 
         private static SimSettings GetSettings()
         {
+            _settings.KernelSize = _kernelSize;
             _settings.DeltaTime = _timeStep;
             _settings.Viscosity = _viscosity;
             _settings.CullDistance = _cullDistance;

@@ -72,6 +72,7 @@ namespace NBodies.Physics
         private static bool _serializerRunning = false;
         private const float _timeSpan = 0.04f;
         private static float _elap = _timeSpan;
+        private const float _minBodySize = 1.0f;
 
         public static void PushState(Body[] frame)
         {
@@ -198,7 +199,7 @@ namespace NBodies.Physics
                 // Fracture large bodies in roche.
                 if (processRoche)
                 {
-                    if (body.Size > 1)
+                    if (body.Size > _minBodySize)
                     {
                         if (body.Flag == (int)Flags.InRoche)
                         {
@@ -303,15 +304,13 @@ namespace NBodies.Physics
 
         private static Body[] FractureBody(Body body)
         {
-            float minSize = 1.0f;
             float newMass;
             float prevMass;
-
             bool flipflop = true;
 
             float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
 
-            newMass = CalcMass(1, density);
+            newMass = CalcMass(_minBodySize, density);
 
             int num = (int)(body.Mass / newMass);
 
@@ -320,7 +319,7 @@ namespace NBodies.Physics
             var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), body.Size * 0.5f);
 
             bool done = false;
-            float stepSize = minSize * 0.98f;
+            float stepSize = MainLoop.KernelSize * 0.98f;
 
             float startXpos = ellipse.Location.X - ellipse.Size;
             float startYpos = ellipse.Location.Y - ellipse.Size;
@@ -338,7 +337,7 @@ namespace NBodies.Physics
 
                 if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                 {
-                    var newbody = NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, minSize, newMass, Color.FromArgb(body.Color), 1);
+                    var newbody = NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, _minBodySize, newMass, Color.FromArgb(body.Color), 1);
                     newbody.ForceTot = body.ForceTot;
                     newBodies.Add(newbody);
                 }
@@ -349,7 +348,7 @@ namespace NBodies.Physics
                 {
                     if (flipflop)
                     {
-                        Xpos = startXpos + (minSize / 2f);
+                        Xpos = startXpos + (MainLoop.KernelSize / 2f);
                         flipflop = false;
                     }
                     else
@@ -367,6 +366,19 @@ namespace NBodies.Physics
                 }
 
                 its++;
+            }
+
+            // Adjust new bodies mass if we missed by a lot.
+            // We prefer to maintain density over total mass.
+            if ((newBodies.Count * newMass) / prevMass < 0.75f)
+            {
+                float adjustMass = body.Mass / newBodies.Count;
+                for (int i = 0; i < newBodies.Count; i++)
+                {
+                    var b = newBodies[i];
+                    b.Mass = adjustMass;
+                    newBodies[i] = b;
+                }
             }
 
             return newBodies.ToArray();

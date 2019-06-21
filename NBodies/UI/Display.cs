@@ -78,6 +78,7 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new LevelKey());
             InputHandler.AddKeyAction(new ThreadsKey());
             InputHandler.AddKeyAction(new ViscosityKey());
+            InputHandler.AddKeyAction(new KernelSizeKey());
 
 
             SetDisplayOptionTags();

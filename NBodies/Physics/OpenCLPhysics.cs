@@ -23,7 +23,7 @@ namespace NBodies.Physics
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 12;//24;
         private long _maxBufferSize = 0;
-        private const float _kernelSize = 1.0f;
+        private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
 
         private int[] _levelIdx = new int[0];
@@ -218,6 +218,12 @@ namespace NBodies.Physics
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
             int threadBlocks = 0;
+
+            if (_kernelSize != sim.KernelSize)
+            {
+                _kernelSize = sim.KernelSize;
+                PreCalcSPH(_kernelSize);
+            }
 
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(_bodies.Length);

@@ -9,6 +9,7 @@ namespace NBodies.Physics
 {
     public struct SimSettings
     {
+        public float KernelSize;
         public float DeltaTime;
         public float Viscosity;
         public float CullDistance;

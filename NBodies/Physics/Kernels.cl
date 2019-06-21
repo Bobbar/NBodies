@@ -73,6 +73,7 @@ typedef struct __attribute__((packed)) SPHPreCalc
 
 typedef struct __attribute__((packed)) SimSettings
 {
+	float KernelSize;
 	float DeltaTime;
 	float Viscosity;
 	float CullDistance;
@@ -521,9 +522,10 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				float distX = inBody.PosX - outBody.PosX;
 				float distY = inBody.PosY - outBody.PosY;
 				float dist = distX * distX + distY * distY;
+				float distSqrt = (float)native_sqrt(dist);
 
 				// If this body is within collision/SPH distance.
-				if (dist <= sph.kSize)
+				if (distSqrt <= sph.kSize)
 				{
 					// Clamp SPH softening distance.
 					if (dist < FLOAT_EPSILON)
@@ -544,7 +546,6 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				}
 
 				// Accumulate body-to-body force.
-				float distSqrt = (float)native_sqrt(dist);
 				float force = inBody.Mass * outBody.Mass / dist;
 
 				outBody.ForceTot += force;
