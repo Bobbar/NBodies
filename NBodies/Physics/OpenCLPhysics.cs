@@ -164,7 +164,7 @@ namespace NBodies.Physics
             calcs.kSize3 = (float)Math.Pow(kernelSize, 3);
             calcs.kSize9 = (float)Math.Pow(kernelSize, 9);
             calcs.kRad6 = (float)Math.Pow((1.0f / 3.0f), 6); //??
-           // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
+                                                             // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
 
             calcs.fViscosity = (float)(15.0f / (2.0f * Math.PI * calcs.kSize3)) * (6.0f / calcs.kSize3);
             calcs.fPressure = (float)(15.0f / (Math.PI * calcs.kRad6)) * 3.0f;
@@ -182,7 +182,7 @@ namespace NBodies.Physics
             _gpuOutBodies.Dispose();
             _gpuGridIndex.Dispose();
             _gpuCM.Dispose();
-
+            _mesh = new MeshCell[0];
             _bufferInfo.Clear();
 
             InitBuffers();
@@ -747,14 +747,14 @@ namespace NBodies.Physics
                 stride = (int)_gpuGridIndex.Count;
             }
 
-            for (int i = 0; i < passes; i++)
+            using (var gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
             {
-                passOffset = stride * i;
+                // Write Grid info to GPU.
+                _queue.WriteToBuffer(gridInfo, gpuGridInfo, false, null);
 
-                using (var gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
+                for (int i = 0; i < passes; i++)
                 {
-                    // Write Grid info to GPU.
-                    _queue.WriteToBuffer(gridInfo, gpuGridInfo, false, null);
+                    passOffset = stride * i;
 
                     // Pop grid.
                     int argi = 0;
@@ -764,7 +764,6 @@ namespace NBodies.Physics
                     _popGridKernel.SetMemoryArgument(argi++, gpuGridInfo);
                     _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                     _popGridKernel.SetValueArgument(argi++, meshSize);
-
                     _queue.Execute(_popGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                     // Build neighbor index.
@@ -776,7 +775,6 @@ namespace NBodies.Physics
                     _buildNeighborsKernel.SetValueArgument(argi++, (int)stride);
                     _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
                     _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-
                     _queue.Execute(_buildNeighborsKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                     // We're done with the grid index, so undo what we added to clear it for the next frame.
@@ -785,11 +783,9 @@ namespace NBodies.Physics
                     _clearGridKernel.SetValueArgument(2, (int)passOffset);
                     _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
                     _clearGridKernel.SetValueArgument(4, meshSize);
-
                     _queue.Execute(_clearGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-                }
 
-                //  _queue.Finish();
+                }
             }
         }
 

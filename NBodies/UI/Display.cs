@@ -674,6 +674,7 @@ namespace NBodies.UI
             _mouseId = -1;
             _bodyMovin = false;
             BodyManager.ClearBodies();
+            PhysicsProvider.PhysicsCalc.Flush();
             MainLoop.ResumePhysics();
         }
 
