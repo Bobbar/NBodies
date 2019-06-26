@@ -110,7 +110,7 @@ namespace NBodies.Physics
 
             try
             {
-                _program.Build(null, "-cl-std=CL1.2", null, IntPtr.Zero);
+                _program.Build(null, "-cl-std=CL1.2 -cl-fast-relaxed-math", null, IntPtr.Zero);
             }
             catch (BuildProgramFailureComputeException ex)
             {
@@ -130,7 +130,6 @@ namespace NBodies.Physics
             _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
-
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
@@ -164,7 +163,7 @@ namespace NBodies.Physics
             calcs.kSize3 = (float)Math.Pow(kernelSize, 3);
             calcs.kSize9 = (float)Math.Pow(kernelSize, 9);
             calcs.kRad6 = (float)Math.Pow((1.0f / 3.0f), 6); //??
-                                                             // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
+            // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
 
             calcs.fViscosity = (float)(15.0f / (2.0f * Math.PI * calcs.kSize3)) * (6.0f / calcs.kSize3);
             calcs.fPressure = (float)(15.0f / (Math.PI * calcs.kRad6)) * 3.0f;
@@ -241,6 +240,9 @@ namespace NBodies.Physics
             // Allocate and write the level index.
             Allocate(ref _gpuLevelIdx, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, false, null);
+            _queue.Finish();
+
+            timer.Restart();
 
             int argi = 0;
             _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
@@ -273,6 +275,9 @@ namespace NBodies.Physics
             _collisionKernel.SetValueArgument(argi++, sim);
             _collisionKernel.SetValueArgument(argi++, _preCalcs);
             _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Finish();
+
+            timer.Print();
 
             _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             _queue.Finish();

@@ -424,9 +424,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 	// Copy current body and mesh cell from memory.
 	Body outBody = inBodies[(a)];
-	MeshCell bodyCell = inMesh[(outBody.MeshID)];
-	MeshCell levelCell = bodyCell;
-	MeshCell levelCellParent = inMesh[(bodyCell.ParentID)];
+	MeshCell levelCell = inMesh[(outBody.MeshID)];
+	MeshCell levelCellParent = inMesh[(levelCell.ParentID)];
 
 	// Reset forces.
 	outBody.ForceTot = 0.0f;
@@ -437,6 +436,57 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 	// Resting density.	
 	outBody.Density = outBody.Mass * sph.fDensity;
+
+	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
+	// Read from the flattened mesh-neighbor index at the correct location.
+	for (int n = levelCell.NeighborStartIdx; n < levelCell.NeighborStartIdx + levelCell.NeighborCount; n++)
+	{
+		// Get the mesh cell index, then copy it from memory.
+		int nId = meshNeighbors[(n)];
+		MeshCell cell = inMesh[(nId)];
+		
+		// Iterate the bodies within the cell.
+		// Read from body array at the correct location.
+		int mbStart = cell.BodyStartIdx;
+		int mbLen = cell.BodyCount + mbStart;
+		for (int mb = mbStart; mb < mbLen; mb++)
+		{
+			// Save us from ourselves.
+			if (mb != a)
+			{
+				Body inBody = inBodies[(mb)];
+
+				float distX = inBody.PosX - outBody.PosX;
+				float distY = inBody.PosY - outBody.PosY;
+				float dist = distX * distX + distY * distY;
+				float distSqrt = (float)native_sqrt(dist);
+
+				// If this body is within collision/SPH distance.
+				if (distSqrt <= sph.kSize)
+				{
+					// Clamp SPH softening distance.
+					dist = max(dist, FLOAT_EPSILON);
+					
+
+					// Accumulate density.
+					float diff = sph.kSizeSq - dist;
+					float fac = sph.fDensity * diff * diff * diff;
+					outBody.Density += outBody.Mass * fac;
+				}
+
+				// Clamp gravity softening distance.
+				dist = max(dist, softening);
+				
+				// Accumulate body-to-body force.
+				float force = inBody.Mass * outBody.Mass / dist;
+
+				outBody.ForceTot += force;
+				outBody.ForceX += force * distX / distSqrt;
+				outBody.ForceY += force * distY / distSqrt;
+			}
+		}
+	}
+
 
 	for (int level = 0; level < sim.MeshLevels; level++)
 	{
@@ -500,60 +550,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		}
 	}
 
-	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
-	// Read from the flattened mesh-neighbor index at the correct location.
-	for (int n = bodyCell.NeighborStartIdx; n < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; n++)
-	{
-		// Get the mesh cell index, then copy it from memory.
-		int nId = meshNeighbors[(n)];
-		MeshCell cell = inMesh[(nId)];
 
-		// Iterate the bodies within the cell.
-		// Read from body array at the correct location.
-		int mbStart = cell.BodyStartIdx;
-		int mbLen = cell.BodyCount + mbStart;
-		for (int mb = mbStart; mb < mbLen; mb++)
-		{
-			// Save us from ourselves.
-			if (mb != a)
-			{
-				Body inBody = inBodies[(mb)];
-
-				float distX = inBody.PosX - outBody.PosX;
-				float distY = inBody.PosY - outBody.PosY;
-				float dist = distX * distX + distY * distY;
-				float distSqrt = (float)native_sqrt(dist);
-
-				// If this body is within collision/SPH distance.
-				if (distSqrt <= sph.kSize)
-				{
-					// Clamp SPH softening distance.
-					if (dist < FLOAT_EPSILON)
-					{
-						dist = FLOAT_EPSILON;
-					}
-
-					// Accumulate density.
-					float diff = sph.kSizeSq - dist;
-					float fac = sph.fDensity * diff * diff * diff;
-					outBody.Density += outBody.Mass * fac;
-				}
-
-				// Clamp gravity softening distance.
-				if (dist < softening)
-				{
-					dist = softening;
-				}
-
-				// Accumulate body-to-body force.
-				float force = inBody.Mass * outBody.Mass / dist;
-
-				outBody.ForceTot += force;
-				outBody.ForceX += force * distX / distSqrt;
-				outBody.ForceY += force * distY / distSqrt;
-			}
-		}
-	}
 
 	// Calculate pressure from density.
 	outBody.Pressure = GAS_K * outBody.Density;
@@ -743,11 +740,8 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							float FLOAT_EPSILON = 1.192092896e-07f;
 							float FLOAT_EPSILONSQRT = 3.45267e-11f;
 
-							if (dist < FLOAT_EPSILON)
-							{
-								distSqrt = FLOAT_EPSILONSQRT;
-							}
-
+							distSqrt = max(distSqrt, FLOAT_EPSILONSQRT);
+							
 							float kDiff = sph.kSize - distSqrt;
 
 							// Pressure force
