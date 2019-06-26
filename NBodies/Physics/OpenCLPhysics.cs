@@ -240,9 +240,6 @@ namespace NBodies.Physics
             // Allocate and write the level index.
             Allocate(ref _gpuLevelIdx, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, false, null);
-            _queue.Finish();
-
-            timer.Restart();
 
             int argi = 0;
             _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
@@ -275,9 +272,6 @@ namespace NBodies.Physics
             _collisionKernel.SetValueArgument(argi++, sim);
             _collisionKernel.SetValueArgument(argi++, _preCalcs);
             _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-            _queue.Finish();
-
-            timer.Print();
 
             _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             _queue.Finish();
