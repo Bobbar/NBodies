@@ -77,7 +77,7 @@ typedef struct __attribute__((packed)) SimSettings
 	float DeltaTime;
 	float Viscosity;
 	float CullDistance;
-	bool CollisionsOn;
+	int CollisionsOn;
 	int MeshLevels;
 	int CellSizeExponent;
 
