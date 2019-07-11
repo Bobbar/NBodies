@@ -411,7 +411,7 @@ __kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int 
 	cm[0] = (float2)(cmX, cmY);
 }
 
-__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, global int* levelIdx, const SimSettings sim, const SPHPreCalc sph)
+__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, global int* levelIdx, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
@@ -558,6 +558,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	if (outBody.ForceTot > outBody.Mass * 4.0f)
 	{
 		outBody = SetFlagB(outBody, INROCHE, true);
+		postNeeded[0] = 1;
 	}
 
 
@@ -585,7 +586,7 @@ int IsNeighbor(MeshCell cell, MeshCell testCell)
 }
 
 // Collision pass for bodies larger than thier parent cells.
-__kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, int collisions)
+__kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -658,11 +659,13 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 						{
 							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 							outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
+							postNeeded[0] = 1;
 						}
 						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 						{
 							outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+							postNeeded[0] = 1;
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 						{
@@ -671,11 +674,13 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 							{
 								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 								outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
+								postNeeded[0] = 1;
 							}
 							else // Our UID is inferior, we must go away.
 							{
 								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 								outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+								postNeeded[0] = 1;
 							}
 						}
 					}
@@ -687,7 +692,7 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 }
 
 
-__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph)
+__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -788,10 +793,12 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							if (outBody.Mass > inBody.Mass)
 							{
 								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+								postNeeded[0] = 1;
 							}
 							else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
 							{
 								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+								postNeeded[0] = 1;
 							}
 							else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 							{
@@ -799,10 +806,12 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 								if (outBody.UID > inBody.UID)
 								{
 									outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+									postNeeded[0] = 1;
 								}
 								else // Our UID is inferior, we must go away.
 								{
 									outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+									postNeeded[0] = 1;
 								}
 							}
 						}
@@ -828,12 +837,17 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	float dist = fast_distance(cm, (float2)(outBody.PosX, outBody.PosY));
 
 	if (dist > sim.CullDistance)
+	{
 		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+		postNeeded[0] = 1;
+	}
 
 	// Cull expired bodies.
 	if (outBody.Lifetime < 0.0f && outBody.Lifetime > -100.0f)
 	{
 		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+		postNeeded[0] = 1;
+
 		//printf("%s\n", "this is a test string\n");
 	}
 

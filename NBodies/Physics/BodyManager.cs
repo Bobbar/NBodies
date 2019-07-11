@@ -24,7 +24,23 @@ namespace NBodies.Physics
         }
 
         public static bool FollowSelected = false;
+        //public static bool FollowSelected
+        //{
+        //    get { return _followSelected; }
+
+        //    set
+        //    {
+        //        if (_followSelected != value)
+        //        {
+        //            _followSelected = value;
+        //            if ()
+        //        }
+        //    }
+        //}
+
         public static int FollowBodyUID = -1;
+
+        //private static bool _followSelected = false;
 
         public static int BodyCount
         {
@@ -175,9 +191,12 @@ namespace NBodies.Physics
         /// <summary>
         /// Culls invisible bodies, processes roche factures, rebuilds UID index.
         /// </summary>
-        public static void PostProcess(bool processRoche)
+        public static void PostProcess(bool processRoche, bool postNeeded)
         {
             if (Bodies.Length < 1) return;
+
+            if (!postNeeded && !FollowSelected)
+                return;
 
             bool realloc = false;
             int position = 0;

@@ -378,8 +378,12 @@ namespace NBodies
                             _bodiesBuffer = new Body[BodyManager.Bodies.Length];
                             Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
 
+                            // True if post processing is needed.
+                            // GPU kernels set the flag if any bodies need removed/fractured.
+                            bool postNeeded = false;
+
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp));
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), out postNeeded);
 
                             // 2.
                             // Wait for the drawing thread to complete if needed.
@@ -389,8 +393,8 @@ namespace NBodies
                             // Copy the new data to the current body collection.
                             BodyManager.Bodies = _bodiesBuffer;
 
-                            // Do some final host-side processing.
-                            BodyManager.PostProcess(RocheLimit);
+                            // Do some final host-side processing. (Remove culled, roche fractures, etc)
+                            BodyManager.PostProcess(RocheLimit, postNeeded);
 
                             // Increment physics frame count.
                             _frameCount++;

@@ -213,7 +213,7 @@ namespace NBodies.Physics
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
 
-        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock)
+        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool isPostNeeded)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
@@ -243,37 +243,50 @@ namespace NBodies.Physics
             Allocate(ref _gpuLevelIdx, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, false, null);
 
-            int argi = 0;
-            _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _forceKernel.SetValueArgument(argi++, _bodies.Length);
-            _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
-            _forceKernel.SetValueArgument(argi++, _meshLength);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
-            _forceKernel.SetValueArgument(argi++, sim);
-            _forceKernel.SetValueArgument(argi++, _preCalcs);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            int[] postNeeded = new int[1] { 0 };
+            using (var gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero))
+            {
+                _queue.WriteToBuffer(postNeeded, gpuPostNeeded, false, null);
 
-            argi = 0;
-            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _collisionLargeKernel.SetValueArgument(argi++, _bodies.Length);
-            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMesh);
-            _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
-            _queue.Execute(_collisionLargeKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+                int argi = 0;
+                _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+                _forceKernel.SetValueArgument(argi++, _bodies.Length);
+                _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+                _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _forceKernel.SetValueArgument(argi++, _meshLength);
+                _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
+                _forceKernel.SetValueArgument(argi++, sim);
+                _forceKernel.SetValueArgument(argi++, _preCalcs);
+                _forceKernel.SetMemoryArgument(argi++, gpuPostNeeded);
+                _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-            argi = 0;
-            _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _collisionKernel.SetValueArgument(argi++, _bodies.Length);
-            _collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
-            _collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _collisionKernel.SetMemoryArgument(argi++, _gpuCM);
-            _collisionKernel.SetValueArgument(argi++, sim);
-            _collisionKernel.SetValueArgument(argi++, _preCalcs);
-            _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+                argi = 0;
+                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuInBodies);
+                _collisionLargeKernel.SetValueArgument(argi++, _bodies.Length);
+                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
+                _collisionLargeKernel.SetMemoryArgument(argi++, gpuPostNeeded);
+                _queue.Execute(_collisionLargeKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+                argi = 0;
+                _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+                _collisionKernel.SetValueArgument(argi++, _bodies.Length);
+                _collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
+                _collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _collisionKernel.SetMemoryArgument(argi++, _gpuCM);
+                _collisionKernel.SetValueArgument(argi++, sim);
+                _collisionKernel.SetValueArgument(argi++, _preCalcs);
+                _collisionKernel.SetMemoryArgument(argi++, gpuPostNeeded);
+                _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+                postNeeded = ReadBuffer(gpuPostNeeded);
+                isPostNeeded = Convert.ToBoolean(postNeeded[0]);
+            }
 
             _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
             _queue.Finish();
@@ -512,7 +525,7 @@ namespace NBodies.Physics
 
         private async void DeferredReindex(SpatialInfo[] spatials)
         {
-            Task.Run(() => 
+            Task.Run(() =>
             {
                 _reindexWait.Reset();
 
@@ -533,7 +546,7 @@ namespace NBodies.Physics
                     for (int b = offset; b < len; b++)
                     {
                         _sortBodies[b] = _bodies[spatials[b].Index];
-                       // spatials[b].Index = b;
+                        // spatials[b].Index = b;
                     }
 
                 });
