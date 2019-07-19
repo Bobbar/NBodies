@@ -77,6 +77,7 @@ namespace NBodies.Physics
             }
         }
 
+        public static int TopUID { get { return _currentUID; } }
 
         private static List<int> UIDBuckets = new List<int>(50000);
         private static int _currentUID = -1;
@@ -228,6 +229,8 @@ namespace NBodies.Physics
                                 fractures = new List<Body>(2000);
 
                             fractures.AddRange(FractureBody(Bodies[i]));
+                            // Record the new max UID;
+                            maxUID = _currentUID;
                         }
                     }
                 }
@@ -283,7 +286,6 @@ namespace NBodies.Physics
 
             // Set current UID to the determined max.
             _currentUID = maxUID;
-
             _totalMass = totMass;
 
             // Resize the main body array and copy from the cull store.
@@ -297,7 +299,7 @@ namespace NBodies.Physics
             if (fractures.Count > 0)
                 Add(fractures.ToArray());
 
-        }
+        } 
 
 
         public static void CullDistant()
@@ -447,14 +449,13 @@ namespace NBodies.Physics
 
         public static void RebuildUIDIndex()
         {
-            var maxUID = Bodies.Max(b => b.UID);
-
-            UIDBuckets = new List<int>(new int[maxUID + 1]);
-            _currentUID = maxUID;
+            UIDBuckets = new List<int>(new int[Bodies.Length + 1]);
+            _currentUID = Bodies.Length;
 
             for (int i = 0; i < Bodies.Length; i++)
             {
-                UIDBuckets[Bodies[i].UID] = i;
+                Bodies[i].UID = i;
+                UIDBuckets[i] = i;
             }
         }
 

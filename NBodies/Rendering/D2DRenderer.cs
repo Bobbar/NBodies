@@ -110,7 +110,7 @@ namespace NBodies.Rendering
             }
         }
 
-        public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
+        public override void DrawBody(System.Drawing.Color color, float X, float Y, float size, bool isBlackHole)
         {
             _bodyColor.A = color.A / 255f;
             _bodyColor.R = color.R / 255f;
@@ -121,8 +121,8 @@ namespace NBodies.Rendering
 
             _bodyEllipse.Point.X = X;
             _bodyEllipse.Point.Y = Y;
-            _bodyEllipse.RadiusX = body.Size * 0.5f;
-            _bodyEllipse.RadiusY = body.Size * 0.5f;
+            _bodyEllipse.RadiusX = size * 0.5f;
+            _bodyEllipse.RadiusY = size * 0.5f;
 
             float offset = size * 0.5f;
             _bodyRect.X = X - offset;
@@ -146,7 +146,7 @@ namespace NBodies.Rendering
                 }
             }
 
-            if (body.IsBlackHole)
+            if (isBlackHole)
             {
                 _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
             }

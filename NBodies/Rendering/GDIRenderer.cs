@@ -53,7 +53,7 @@ namespace NBodies.Rendering
             _buffer.Graphics.Clear(color);
         }
 
-        public override void DrawBody(Body body, Color color, float X, float Y, float size)
+        public override void DrawBody(Color color, float X, float Y, float size, bool isBlackHole)
         {
             X -= size * 0.5f;
             Y -= size * 0.5f;
@@ -76,7 +76,7 @@ namespace NBodies.Rendering
                 }
             }
 
-            if (body.IsBlackHole)
+            if (isBlackHole)
             {
                 _buffer.Graphics.DrawEllipse(_blackHoleStroke, X, Y, size, size);
             }

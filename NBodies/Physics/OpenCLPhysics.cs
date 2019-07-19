@@ -493,13 +493,13 @@ namespace NBodies.Physics
 
             for (int i = 0; i < _spatials.Length; i++)
             {
-                var spat = _spatials[i];
+                var mort = _spatials[i].Mort;
 
                 // Find the start of each new morton number and record location to build cell index.
-                if (val != spat.Mort)
+                if (val != mort)
                 {
                     _cellIdx[count] = i;
-                    val = spat.Mort;
+                    val = mort;
 
                     count++;
                 }
@@ -617,12 +617,12 @@ namespace NBodies.Physics
 
                 for (int i = 0; i < output[level].Spatials.Length; i++)
                 {
-                    var spat = output[level].Spatials[i];
+                    var mort = output[level].Spatials[i].Mort;
 
-                    if (val != spat.Mort)
+                    if (val != mort)
                     {
                         _cellIdx[count] = i;
-                        val = spat.Mort;
+                        val = mort;
 
                         count++;
                     }
@@ -667,8 +667,7 @@ namespace NBodies.Physics
 
             for (int i = 1; i < levelInfo.Length; i++)
             {
-                var lvl = levelInfo[i];
-                cellIdxLen += lvl.CellIndex.Length;
+                cellIdxLen += levelInfo[i].CellIndex.Length;
             }
 
             // Build 1D array of cell index.
@@ -678,10 +677,10 @@ namespace NBodies.Physics
 
             for (int i = 1; i < levelInfo.Length; i++)
             {
-                var lvl = levelInfo[i];
+                var cellIndex = levelInfo[i].CellIndex;
 
-                Array.Copy(lvl.CellIndex, 0, cellIdx, cellIdxPos, lvl.CellIndex.Length);
-                cellIdxPos += lvl.CellIndex.Length;
+                Array.Copy(cellIndex, 0, cellIdx, cellIdxPos, cellIndex.Length);
+                cellIdxPos += cellIndex.Length;
             }
 
             // Allocate and write to the cell and location buffers.

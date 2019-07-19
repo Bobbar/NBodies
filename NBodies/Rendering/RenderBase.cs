@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace NBodies.Rendering
 {
@@ -74,6 +75,9 @@ namespace NBodies.Rendering
         private List<PointF> _drawPath = new List<PointF>();
         private bool _blurClearHack = false;
 
+        private int[] _bodyIds = new int[0];
+        private int[] _counts = new int[0];
+
         private Stopwatch timer = new Stopwatch();
 
         protected RenderBase(Control targetControl)
@@ -93,6 +97,7 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
             {
+                int maxUID = BodyManager.TopUID;
                 bool overlayVisible = OverlaysVisible();
                 var finalOffset = CalcFinalOffset();
 
@@ -106,7 +111,7 @@ namespace NBodies.Rendering
                     _blurClearHack = false;
                 }
 
-                if (drawBodies)
+                if (drawBodies && bodies.Length > 0)
                 {
                     // If trails are enabled, clear one frame with a slightly 
                     // off-black color to try to hide persistent artifacts
@@ -131,34 +136,67 @@ namespace NBodies.Rendering
                     // we need to sort them (again) by a persistent value; we will use their UIDs.
                     // This is done because the spatial sorting can rapidly change the resulting
                     // z-order of the bodies, which causes flickering.
+                    
+                    // Perform a Counting Sort with the bodies UIDs.
 
-                    // Collect the index ID, and UIDs into two arrays,
-                    // then sort them together to provide an ordered "lookup" array.
-
-                    int[] bodyIds = new int[0];
-                    int[] bodyUids = new int[0];
-
-                    if (SortZOrder)
+                    if (bodies.Length > 0)
                     {
-                        bodyIds = new int[bodies.Length];
-                        bodyUids = new int[bodies.Length];
-
-                        for (int i = 0; i < bodies.Length; ++i)
+                        if (SortZOrder)
                         {
-                            bodyIds[i] = i;
-                            bodyUids[i] = bodies[i].UID;
-                        }
+                            int len = maxUID + 1;
 
-                        Array.Sort(bodyUids, bodyIds);
+                            // Realloc if needed.
+                            if (_counts.Length < len)
+                            {
+                                _counts = new int[len];
+                                _bodyIds = new int[len + 1];
+                            }
+
+                            // Zero clear indexes.
+                            for (int i = 0; i < _bodyIds.Length; i++)
+                            {
+                                if (i < _counts.Length)
+                                    _counts[i] = 0;
+
+                                _bodyIds[i] = 0;
+                            }
+
+                            // Count.
+                            for (int i = 0; i < bodies.Length; i++)
+                            {
+                                _counts[bodies[i].UID]++;
+                            }
+
+                            // Sum.
+                            for (int i = 1; i < len; i++)
+                            {
+                                int sum = _counts[i] + _counts[i - 1];
+                                _counts[i] = sum;
+                            }
+
+                            // Build sorted lookup index.
+                            for (int i = 0; i < bodies.Length; i++)
+                            {
+                                int idx = bodies[i].UID;
+                                _counts[idx] -= 1;
+                                _bodyIds[_counts[idx]] = i;
+                            }
+                        }
+                        else if (!SortZOrder && _counts.Length > 0)
+                        {
+                            // Null the indexes if Z-sort is turned off.
+                            _counts = new int[0];
+                            _bodyIds = new int[0];
+                        }
                     }
 
                     for (int i = 0; i < bodies.Length; i++)
                     {
                         Body body;
-
-                        if (SortZOrder && bodyIds.Length > 0)
+                      
+                        if (SortZOrder && _bodyIds.Length > 0)
                         {
-                            body = bodies[bodyIds[i]];
+                            body = bodies[_bodyIds[i]];
                         }
                         else
                         {
@@ -167,57 +205,54 @@ namespace NBodies.Rendering
 
                         var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
-                        if (!body.Culled)
+                        if (ClipView)
                         {
-                            if (ClipView)
-                            {
-                                if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
-                            }
-
-                            Color bodyColor = Color.White;
-
-                            switch (DisplayStyle)
-                            {
-                                case DisplayStyle.Normal:
-                                    bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
-                                    _clearColor = _defaultClearColor;
-
-                                    break;
-
-                                case DisplayStyle.Pressures:
-                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
-                                    _clearColor = _defaultClearColor;
-
-                                    break;
-
-                                case DisplayStyle.Speeds:
-                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
-                                    _clearColor = _defaultClearColor;
-
-                                    break;
-
-                                case DisplayStyle.Index:
-                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
-                                    _clearColor = _defaultClearColor;
-
-                                    break;
-
-                                case DisplayStyle.Forces:
-                                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
-                                    _clearColor = _defaultClearColor;
-
-                                    break;
-
-                                case DisplayStyle.HighContrast:
-                                    bodyColor = Color.Black;
-                                    _clearColor = Color.White;
-
-                                    break;
-                            }
-
-                            //Draw body.
-                            DrawBody(body, bodyColor, bodyLoc.X, bodyLoc.Y, body.Size);
+                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
                         }
+
+                        Color bodyColor = Color.White;
+
+                        switch (DisplayStyle)
+                        {
+                            case DisplayStyle.Normal:
+                                bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.Pressures:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.Speeds:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.Index:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.Forces:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.HighContrast:
+                                bodyColor = Color.Black;
+                                _clearColor = Color.White;
+
+                                break;
+                        }
+
+                        //Draw body.
+                        DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
                     }
 
                     if (Trails && !overlayVisible)
@@ -338,7 +373,7 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
 
         public abstract void SetAntiAliasing(bool enabled);
 
-        public abstract void DrawBody(Body body, Color color, float X, float Y, float size);
+        public abstract void DrawBody(Color color, float X, float Y, float size, bool isBlackHole);
 
         public abstract void DrawForceVectors(Body[] bodies, float offsetX, float offsetY);
 
