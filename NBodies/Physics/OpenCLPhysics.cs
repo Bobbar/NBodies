@@ -322,25 +322,19 @@ namespace NBodies.Physics
         /// <param name="len">Length of data set.</param>
         /// <param name="threads">Number of threads per block.</param>
         /// <returns>Number of blocks.</returns>
-        public static int BlockCount(int len, int threads = 0)
+        public int BlockCount(int len, int threads = 0)
         {
             if (threads == 0)
                 threads = _threadsPerBlock;
 
-            var blocks = (int)Math.Round((len - 1 + threads - 1) / (float)threads, 0);
+            int blocks = len / threads;
+            int mod = len % threads;
 
-            if (((threads * blocks) - len) > threads)
-            {
-                blocks -= 1;
-            }
-            else if ((threads * blocks) < len)
-            {
+            if (mod > 0)
                 blocks += 1;
-            }
 
             return blocks;
         }
-
 
         /// <summary>
         /// Calculate dimensionless morton number from X/Y coords.
