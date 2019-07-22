@@ -60,8 +60,6 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuGridIndex;
         private ComputeBuffer<Vector2> _gpuCM;
 
-        private ManualResetEventSlim _reindexWait = new ManualResetEventSlim(false);
-
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
 
         private Stopwatch timer = new Stopwatch();
@@ -395,6 +393,13 @@ namespace NBodies.Physics
 
             // Get spatial info for the cells about to be constructed.
             LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
+
+            // At this point we are done modifying the body array,
+            // so go ahead and start writing it to the GPU with a non-blocking call.
+            Allocate(ref _gpuInBodies, _bodies.Length, true);
+            Allocate(ref _gpuOutBodies, _bodies.Length, true);
+            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
+
             LevelInfo[] topLevels = CalcTopSpatials(botLevel);
 
             // Get the total number of mesh cells to be created.
@@ -411,9 +416,6 @@ namespace NBodies.Physics
             // Index to hold the starting indexes for each level within the 1D mesh array.
             _levelIdx = new int[_levels + 1];
             _levelIdx[0] = 0;
-
-            // Wait for reindexing to finish.
-            _reindexWait.Wait(-1);
 
             // Build the first (bottom) level of the mesh.
             BuildBottomLevelGPU(botLevel, cellSizeExp);
@@ -481,7 +483,28 @@ namespace NBodies.Physics
             // Sort by morton number to produce a spatially sorted array.
             Array.Sort(_mortKeys, _spatials);
 
-            DeferredReindex(_spatials);
+            // Build a new sorted body array from the sorted spatial info.
+            if (_sortBodies.Length != _bodies.Length)
+                _sortBodies = new Body[_bodies.Length];
+
+            Partition(_spatials.Length, _parallelPartitions, out pLen, out pRem, out pCount);
+            Parallel.For(0, pCount, (p) =>
+            {
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                for (int b = offset; b < len; b++)
+                {
+                    _sortBodies[b] = _bodies[_spatials[b].Index];
+                }
+
+            });
+
+            // Update the original body array with the sorted one.
+            _bodies = _sortBodies;
 
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
@@ -514,48 +537,6 @@ namespace NBodies.Physics
             Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
 
             return output;
-        }
-
-
-        private async void DeferredReindex(SpatialInfo[] spatials)
-        {
-            Task.Run(() =>
-            {
-                _reindexWait.Reset();
-
-                // Build a new sorted body array from the sorted spatial info.
-                if (_sortBodies.Length != _bodies.Length)
-                    _sortBodies = new Body[_bodies.Length];
-
-                int pLen, pRem, pCount;
-                Partition(spatials.Length, _parallelPartitions, out pLen, out pRem, out pCount);
-                Parallel.For(0, pCount, (p) =>
-                {
-                    int offset = p * pLen;
-                    int len = offset + pLen;
-
-                    if (p == pCount - 1)
-                        len += pRem;
-
-                    for (int b = offset; b < len; b++)
-                    {
-                        _sortBodies[b] = _bodies[spatials[b].Index];
-                        // spatials[b].Index = b;
-                    }
-
-                });
-
-                // Update the original body array with the sorted one.
-                _bodies = _sortBodies;
-
-                // At this point we are done modifying the body array,
-                // so go ahead and start writing it to the GPU with a non-blocking call.
-                Allocate(ref _gpuInBodies, _bodies.Length, true);
-                Allocate(ref _gpuOutBodies, _bodies.Length, true);
-                _queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
-
-                _reindexWait.Set();
-            });
         }
 
         /// <summary>
