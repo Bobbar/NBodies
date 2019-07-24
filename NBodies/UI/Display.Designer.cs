@@ -78,6 +78,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.snapToGridToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -138,15 +139,16 @@
             this.drawToolStripMenuItem,
             this.antiAliasingToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
+            this.fastPrimitivesToolStripMenuItem,
+            this.sortZOrderToolStripMenuItem,
             this.collisionsToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
-            this.sortZOrderToolStripMenuItem,
-            this.fastPrimitivesToolStripMenuItem,
             this.rewindBufferToolStripMenuItem,
             this.showMeshToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
-            this.followingBodyToolStripMenuItem});
+            this.followingBodyToolStripMenuItem,
+            this.snapToGridToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -675,6 +677,15 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // snapToGridToolStripMenuItem
+            // 
+            this.snapToGridToolStripMenuItem.Checked = true;
+            this.snapToGridToolStripMenuItem.CheckOnClick = true;
+            this.snapToGridToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.snapToGridToolStripMenuItem.Name = "snapToGridToolStripMenuItem";
+            this.snapToGridToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.snapToGridToolStripMenuItem.Text = "Snap To Grid";
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -758,6 +769,7 @@
         private System.Windows.Forms.ToolStripMenuItem rewindBufferToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem collisionsToolStripMenuItem;
         private System.Windows.Forms.ToolTip toolTip;
+        private System.Windows.Forms.ToolStripMenuItem snapToGridToolStripMenuItem;
     }
 }
 

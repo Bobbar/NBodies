@@ -509,7 +509,10 @@ namespace NBodies.UI
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ViewportHelpers.ScreenPointToField(e.Location));
+                    var loc = ViewportHelpers.ScreenPointToField(e.Location);
+                    if (snapToGridToolStripMenuItem.Checked)
+                        loc = loc.SnapToGrid(2);
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), loc);
                 }
                 else
                 {

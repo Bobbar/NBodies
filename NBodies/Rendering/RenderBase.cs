@@ -255,8 +255,8 @@ namespace NBodies.Rendering
                         DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
                     }
 
-                    if (Trails && !overlayVisible)
-                        DrawBlur(Color.FromArgb(10, _clearColor));
+                    //if (Trails && !overlayVisible)
+                    //    DrawBlur(Color.FromArgb(10, _clearColor));
 
                     if (ShowAllForce)
                     {
