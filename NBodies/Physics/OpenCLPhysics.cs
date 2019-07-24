@@ -509,7 +509,7 @@ namespace NBodies.Physics
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
-            int val = 0;
+            int val = int.MaxValue;
 
             if (_cellIdx.Length < _bodies.Length)
                 _cellIdx = new int[_bodies.Length + 100];
