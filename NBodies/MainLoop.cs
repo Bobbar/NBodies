@@ -375,8 +375,9 @@ namespace NBodies
 
                             // 1.
                             // Copy the current bodies to another array.
-                            _bodiesBuffer = new Body[BodyManager.Bodies.Length];
-                            Array.Copy(BodyManager.Bodies, _bodiesBuffer, BodyManager.Bodies.Length);
+                            if (_bodiesBuffer.Length != BodyManager.Bodies.Length)
+                                _bodiesBuffer = new Body[BodyManager.Bodies.Length];
+                            Array.Copy(BodyManager.Bodies, 0, _bodiesBuffer, 0, BodyManager.Bodies.Length);
 
                             // True if post processing is needed.
                             // GPU kernels set the flag if any bodies need removed/fractured.
@@ -391,7 +392,7 @@ namespace NBodies
 
                             // 3.
                             // Copy the new data to the current body collection.
-                            BodyManager.Bodies = _bodiesBuffer;
+                            Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, BodyManager.Bodies.Length);
 
                             // Do some final host-side processing. (Remove culled, roche fractures, etc)
                             BodyManager.PostProcess(RocheLimit, postNeeded);

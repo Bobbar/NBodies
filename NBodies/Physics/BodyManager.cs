@@ -14,7 +14,6 @@ namespace NBodies.Physics
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
-        //public static MeshCell[] Mesh = new MeshCell[0];
         public static MeshCell[] Mesh
         {
             get
@@ -24,23 +23,10 @@ namespace NBodies.Physics
         }
 
         public static bool FollowSelected = false;
-        //public static bool FollowSelected
-        //{
-        //    get { return _followSelected; }
-
-        //    set
-        //    {
-        //        if (_followSelected != value)
-        //        {
-        //            _followSelected = value;
-        //            if ()
-        //        }
-        //    }
-        //}
+       
 
         public static int FollowBodyUID = -1;
 
-        //private static bool _followSelected = false;
 
         public static int BodyCount
         {
@@ -444,10 +430,23 @@ namespace NBodies.Physics
 
             CullDistant();
 
-            RebuildUIDIndex();
+            PurgeUIDs();
         }
 
         public static void RebuildUIDIndex()
+        {
+            var maxUID = Bodies.Max(b => b.UID);
+
+            UIDBuckets = new List<int>(new int[maxUID + 1]);
+            _currentUID = maxUID;
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                UIDBuckets[Bodies[i].UID] = i;
+            }
+        }
+
+        public static void PurgeUIDs()
         {
             UIDBuckets = new List<int>(new int[Bodies.Length + 1]);
             _currentUID = Bodies.Length;

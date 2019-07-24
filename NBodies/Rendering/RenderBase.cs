@@ -357,11 +357,6 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
             return stats;
         }
 
-        private void GetTimeSpan()
-        {
-            var ts = TimeSpan.FromHours(MainLoop.TotalTime);
-
-        }
 
         public abstract void InitGraphics();
 

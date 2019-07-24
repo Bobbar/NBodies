@@ -8,7 +8,7 @@ namespace NBodies.IO
 {
     public static class Serializer
     {
-        private static Stream _previousStream = new MemoryStream();
+        private static string _previousFile = string.Empty;
 
         public static void SaveState()
         {
@@ -65,9 +65,7 @@ namespace NBodies.IO
             {
                 using (var fStream = new FileStream(fileName, FileMode.Open))
                 {
-                    _previousStream = new MemoryStream();
-
-                    fStream.CopyTo(_previousStream);
+                    _previousFile = fileName;
 
                     LoadStateStream(fStream);
                 }
@@ -76,10 +74,8 @@ namespace NBodies.IO
 
         public static void LoadPreviousState()
         {
-            if (_previousStream != null && _previousStream.Length > 0)
-            {
-                LoadStateStream(_previousStream);
-            }
+            if (!string.IsNullOrEmpty(_previousFile))
+                ReadState(_previousFile);
         }
 
         private static void LoadStateStream(Stream stateStream)
