@@ -286,13 +286,13 @@ namespace NBodies.Physics
                 isPostNeeded = Convert.ToBoolean(postNeeded[0]);
             }
 
-            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, null);
+            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
 
             if (_mesh.Length != _meshLength)
                 _mesh = new MeshCell[_meshLength];
 
-            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, null);
+            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -396,9 +396,9 @@ namespace NBodies.Physics
 
             // At this point we are done modifying the body array,
             // so go ahead and start writing it to the GPU with a non-blocking call.
-            Allocate(ref _gpuInBodies, _bodies.Length, true);
-            Allocate(ref _gpuOutBodies, _bodies.Length, true);
-            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, null);
+            Allocate(ref _gpuInBodies, _bodies.Length, false);
+            Allocate(ref _gpuOutBodies, _bodies.Length, false);
+            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, 0, 0, _bodies.Length, null);
 
             LevelInfo[] topLevels = CalcTopSpatials(botLevel);
 
@@ -411,7 +411,7 @@ namespace NBodies.Physics
 
             _meshLength = totCells;
 
-            Allocate(ref _gpuMesh, totCells, true);
+            Allocate(ref _gpuMesh, totCells, false);
 
             // Index to hold the starting indexes for each level within the 1D mesh array.
             _levelIdx = new int[_levels + 1];
@@ -751,6 +751,8 @@ namespace NBodies.Physics
                 // Write Grid info to GPU.
                 _queue.WriteToBuffer(gridInfo, gpuGridInfo, false, null);
 
+                int workSize = BlockCount(meshSize) * _threadsPerBlock;
+
                 for (int i = 0; i < passes; i++)
                 {
                     passOffset = stride * i;
@@ -763,7 +765,7 @@ namespace NBodies.Physics
                     _popGridKernel.SetMemoryArgument(argi++, gpuGridInfo);
                     _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                     _popGridKernel.SetValueArgument(argi++, meshSize);
-                    _queue.Execute(_popGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                    _queue.Execute(_popGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                     // Build neighbor index.
                     argi = 0;
@@ -774,7 +776,7 @@ namespace NBodies.Physics
                     _buildNeighborsKernel.SetValueArgument(argi++, (int)stride);
                     _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
                     _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                    _queue.Execute(_buildNeighborsKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                    _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                     // We're done with the grid index, so undo what we added to clear it for the next frame.
                     _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
@@ -782,7 +784,7 @@ namespace NBodies.Physics
                     _clearGridKernel.SetValueArgument(2, (int)passOffset);
                     _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
                     _clearGridKernel.SetValueArgument(4, meshSize);
-                    _queue.Execute(_clearGridKernel, null, new long[] { BlockCount(meshSize) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                    _queue.Execute(_clearGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                 }
             }
