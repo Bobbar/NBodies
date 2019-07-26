@@ -30,14 +30,16 @@ namespace NBodies.Rendering
         {
             get
             {
-                return _styleScaleMax;
+                //return _styleScaleMax;
+                return _styleScales[(int)DisplayStyle];
             }
 
             set
             {
                 if (value > 0 && value <= 2000)
                 {
-                    _styleScaleMax = value;
+                    _styleScales[(int)DisplayStyle] = value;
+                    //_styleScaleMax = value;
                 }
             }
         }
@@ -60,6 +62,7 @@ namespace NBodies.Rendering
 
         private static float _styleScaleMax = 210;
         private static int _bodyAlpha = 210;
+        private static float[] _styleScales = new float[1] { _styleScaleMax };
 
         protected Control _targetControl;
         protected float _prevScale = 0;
@@ -89,6 +92,11 @@ namespace NBodies.Rendering
         {
             _targetControl = targetControl;
             InitGraphics();
+
+            int styleCount = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max() + 1;
+            _styleScales = new float[styleCount];
+            for (int i = 0; i < _styleScales.Length; i++)
+                _styleScales[i] = _styleScaleMax;
         }
 
         public async Task DrawBodiesAsync(Body[] bodies, bool drawBodies, ManualResetEventSlim completeCallback)
@@ -108,7 +116,7 @@ namespace NBodies.Rendering
                 if (!Trails || overlayVisible)
                 {
                     Clear(_clearColor);
-                    _blurClearHack = false;
+               //     _blurClearHack = false;
                 }
 
                 if (drawBodies && bodies.Length > 0)
@@ -116,17 +124,17 @@ namespace NBodies.Rendering
                     // If trails are enabled, clear one frame with a slightly 
                     // off-black color to try to hide persistent artifacts
                     // left by the lame blur technique.
-                    if (Trails && !_blurClearHack)
-                    {
-                        if (DisplayStyle != DisplayStyle.HighContrast)
-                            Clear(Color.FromArgb(12, 12, 12));
+                    //if (Trails && !_blurClearHack)
+                    //{
+                    //    if (DisplayStyle != DisplayStyle.HighContrast)
+                    //        Clear(Color.FromArgb(12, 12, 12));
 
-                        _blurClearHack = true;
-                    }
-                    else if (!Trails && _blurClearHack)
-                    {
-                        _blurClearHack = false;
-                    }
+                    //    _blurClearHack = true;
+                    //}
+                    //else if (!Trails && _blurClearHack)
+                    //{
+                    //    _blurClearHack = false;
+                    //}
 
                     SetAntiAliasing(AAEnabled);
 
