@@ -45,5 +45,13 @@ namespace NBodies.Physics
             MaxX = Math.Max(MaxX, minMax.MaxX);
             MaxY = Math.Max(MaxY, minMax.MaxY);
         }
+
+        public void Reset()
+        {
+            MinX = int.MaxValue;
+            MinY = int.MaxValue;
+            MaxX = int.MinValue;
+            MaxY = int.MinValue;
+        }
     }
 }

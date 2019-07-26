@@ -445,21 +445,12 @@ namespace NBodies.Physics
             var minMax = new MinMax(0);
             var sync = new object();
 
-            int pLen, pRem, pCount;
-            Partition(_bodies.Length, _parallelPartitions, out pLen, out pRem, out pCount);
-
             // Compute the spatial info in parallel.
-            Parallel.For(0, pCount, (p) =>
+            ParallelForSlim(_bodies.Length, _parallelPartitions, (start, len) =>
             {
                 var mm = new MinMax(0);
 
-                int offset = p * pLen;
-                int len = offset + pLen;
-
-                if (p == pCount - 1)
-                    len += pRem;
-
-                for (int b = offset; b < len; b++)
+                for (int b = start; b < len; b++)
                 {
                     int idxX = (int)_bodies[b].PosX >> cellSizeExp;
                     int idxY = (int)_bodies[b].PosY >> cellSizeExp;
@@ -487,20 +478,12 @@ namespace NBodies.Physics
             if (_sortBodies.Length != _bodies.Length)
                 _sortBodies = new Body[_bodies.Length];
 
-            Partition(_spatials.Length, _parallelPartitions, out pLen, out pRem, out pCount);
-            Parallel.For(0, pCount, (p) =>
+            ParallelForSlim(_spatials.Length, _parallelPartitions, (start, len) =>
             {
-                int offset = p * pLen;
-                int len = offset + pLen;
-
-                if (p == pCount - 1)
-                    len += pRem;
-
-                for (int b = offset; b < len; b++)
+                for (int b = start; b < len; b++)
                 {
                     _sortBodies[b] = _bodies[_spatials[b].Index];
                 }
-
             });
 
             // Update the original body array with the sorted one.
@@ -535,7 +518,6 @@ namespace NBodies.Physics
             output.CellCount = count;
             output.CellIndex = new int[count + 1];
             Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
-
             return output;
         }
 
@@ -549,39 +531,33 @@ namespace NBodies.Physics
 
             output[0] = bottom;
 
+            object sync = new object();
+            MinMax minMax = new MinMax(0);
             for (int level = 1; level <= _levels; level++)
             {
-                object sync = new object();
-                MinMax minMax = new MinMax(0);
+                minMax.Reset();
 
-                LevelInfo current = output[level - 1];
+                LevelInfo previous = output[level - 1];
 
                 output[level] = new LevelInfo();
-                output[level].Spatials = new SpatialInfo[current.CellCount];
+                output[level].Spatials = new SpatialInfo[previous.CellCount];
 
-                int pLen, pRem, pCount;
-                Partition(current.CellCount, _parallelPartitions, out pLen, out pRem, out pCount);
+                SpatialInfo[] currentSpa = output[level].Spatials;
 
-                Parallel.For(0, pCount, (p) =>
+                ParallelForSlim(previous.CellCount, _parallelPartitions, (start, len) =>
                 {
                     var mm = new MinMax(0);
 
-                    int offset = p * pLen;
-                    int len = offset + pLen;
-
-                    if (p == pCount - 1)
-                        len += pRem;
-
-                    for (int b = offset; b < len; b++)
+                    for (int b = start; b < len; b++)
                     {
-                        var spatial = current.Spatials[current.CellIndex[b]];
+                        var spatial = previous.Spatials[previous.CellIndex[b]];
                         int idxX = spatial.IdxX >> 1;
                         int idxY = spatial.IdxY >> 1;
                         int morton = MortonNumber(idxX, idxY);
 
                         mm.Update(idxX, idxY);
 
-                        output[level].Spatials[b] = new SpatialInfo(morton, idxX, idxY, spatial.Index + b);
+                        currentSpa[b] = new SpatialInfo(morton, idxX, idxY, spatial.Index + b);
                     }
 
                     lock (sync)
@@ -596,9 +572,9 @@ namespace NBodies.Physics
                 int count = 0;
                 int val = int.MaxValue;
 
-                for (int i = 0; i < output[level].Spatials.Length; i++)
+                for (int i = 0; i < currentSpa.Length; i++)
                 {
-                    var mort = output[level].Spatials[i].Mort;
+                    var mort = currentSpa[i].Mort;
 
                     if (val != mort)
                     {
@@ -609,8 +585,9 @@ namespace NBodies.Physics
                     }
                 }
 
-                _cellIdx[count] = output[level].Spatials.Length;
+                _cellIdx[count] = currentSpa.Length;
 
+                output[level].Spatials = currentSpa;
                 output[level].CellCount = count;
                 output[level].CellIndex = new int[count + 1];
                 Array.Copy(_cellIdx, 0, output[level].CellIndex, 0, count + 1);
@@ -817,7 +794,6 @@ namespace NBodies.Physics
                 modulo = outMod;
                 count = parts;
             }
-
         }
 
         private long Allocate<T>(ref ComputeBuffer<T> buffer, long size, bool exactSize = false) where T : struct
@@ -898,13 +874,27 @@ namespace NBodies.Physics
         private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, long offset, long length) where T : struct
         {
             T[] buf = new T[length - offset];
-            // T[] buf = new T[buffer.Count];
-
 
             _queue.ReadFromBuffer(buffer, ref buf, true, offset, 0, length - offset, null);
             _queue.Finish();
 
             return buf;
+        }
+
+        private ParallelLoopResult ParallelForSlim(int count, int partitions, Action<int, int> body)
+        {
+            int pLen, pRem, pCount;
+            Partition(count, partitions, out pLen, out pRem, out pCount);
+            return Parallel.For(0, pCount, (p) =>
+            {
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                body(offset, len);
+            });
         }
 
         public void Dispose()
