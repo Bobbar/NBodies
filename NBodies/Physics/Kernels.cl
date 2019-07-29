@@ -275,7 +275,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 			{
 				int localIdx = offIdx + ((x * columns) + (y + x));
 
-				if (localIdx != cell.GridIdx && localIdx > 0 && localIdx < gInfo.Size)
+				if (localIdx > 0 && localIdx < gInfo.Size)
 				{
 					int bucket = localIdx + gInfo.IndexOffset;
 					bucket -= passOffset;
@@ -450,23 +450,14 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	// Resting density.	
 	outBody.Density = outBody.Mass * sph.fDensity;
 
-	// Accumulate forces from all bodies within near neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
+	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
 	// Read from the flattened mesh-neighbor index at the correct location.
-	for (int n = levelCell.NeighborStartIdx; n <= levelCell.NeighborStartIdx + levelCell.NeighborCount; n++)
+	for (int n = levelCell.NeighborStartIdx; n < levelCell.NeighborStartIdx + levelCell.NeighborCount; n++)
 	{
-
-		// Get a neighboring cell, or this body cell once we have iterated all the neighbors.
-		MeshCell cell;
-		if (n != levelCell.NeighborStartIdx + levelCell.NeighborCount)
-		{
-			int nId = meshNeighbors[(n)];
-			cell = inMesh[(nId)];
-		}
-		else
-		{
-			cell = levelCell;
-		}
-
+		// Get the mesh cell index, then copy it from memory.
+		int nId = meshNeighbors[(n)];
+		MeshCell cell = inMesh[(nId)];
+		
 		// Iterate the bodies within the cell.
 		// Read from body array at the correct location.
 		int mbStart = cell.BodyStartIdx;
@@ -488,7 +479,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				{
 					// Clamp SPH softening distance.
 					dist = max(dist, FLOAT_EPSILON);
-
+					
 
 					// Accumulate density.
 					float diff = sph.kSizeSq - dist;
@@ -498,7 +489,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 				// Clamp gravity softening distance.
 				dist = max(dist, softening);
-
+				
 				// Accumulate body-to-body force.
 				float force = inBody.Mass * outBody.Mass / dist;
 
@@ -509,7 +500,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		}
 	}
 
-	// Accumulate forces from non-neighbor mesh cells for all levels.
+
 	for (int level = 0; level < sim.MeshLevels; level++)
 	{
 		// Iterate parent cell neighbors.
@@ -552,7 +543,6 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		levelCell = levelCellParent;
 		levelCellParent = inMesh[(levelCellParent.ParentID)];
 	}
-
 
 	// Iterate the top level cells.
 	for (int top = levelIdx[(sim.MeshLevels)]; top < inMeshLen; top++)
@@ -732,20 +722,11 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	if (sim.CollisionsOn == 1)
 	{
 		// Iterate neighbor cells.
-		for (int i = bodyCell.NeighborStartIdx; i <= bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
+		for (int i = bodyCell.NeighborStartIdx; i < bodyCell.NeighborStartIdx + bodyCell.NeighborCount; i++)
 		{
-			MeshCell cell;
-
-			// Get the neighbor cell or this body's cell.
-			if (i != bodyCell.NeighborStartIdx + bodyCell.NeighborCount)
-			{
-				int nId = meshNeighbors[(i)];
-				cell = inMesh[(nId)];
-			}
-			else
-			{
-				cell = bodyCell;
-			}
+			// Get the neighbor cell from the index.
+			int nId = meshNeighbors[(i)];
+			MeshCell cell = inMesh[(nId)];
 
 			// Iterate the neighbor cell bodies.
 			int mbStart = cell.BodyStartIdx;
@@ -778,7 +759,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							float FLOAT_EPSILONSQRT = 3.45267e-11f;
 
 							distSqrt = max(distSqrt, FLOAT_EPSILONSQRT);
-
+							
 							float kDiff = sph.kSize - distSqrt;
 
 							// Pressure force
