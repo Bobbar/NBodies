@@ -35,6 +35,7 @@ namespace NBodies.Physics
         private static SpatialInfo[] _spatials = new SpatialInfo[0];
         private static int[] _mortKeys = new int[0];
         private static int[] _cellIdx = new int[0];
+        private static int[] _sortPart = new int[0];
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
@@ -51,6 +52,7 @@ namespace NBodies.Physics
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
         private ComputeKernel _calcCMKernel;
+        private ComputeKernel _reorderKernel;
 
         private ComputeBuffer<int> _gpuLevelIdx;
         private ComputeBuffer<MeshCell> _gpuMesh;
@@ -59,6 +61,7 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuOutBodies;
         private ComputeBuffer<int> _gpuGridIndex;
         private ComputeBuffer<Vector2> _gpuCM;
+        private ComputeBuffer<int> _gpuSortPart;
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
 
@@ -133,6 +136,7 @@ namespace NBodies.Physics
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
+            _reorderKernel = _program.CreateKernel("ReindexBodies");
 
             InitBuffers();
 
@@ -207,6 +211,8 @@ namespace NBodies.Physics
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
             Allocate(ref _gpuLevelIdx, 0, true);
 
+            _gpuSortPart = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
+            Allocate(ref _gpuSortPart, 0, true);
 
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
@@ -392,13 +398,6 @@ namespace NBodies.Physics
 
             // Get spatial info for the cells about to be constructed.
             LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
-
-            // At this point we are done modifying the body array,
-            // so go ahead and start writing it to the GPU with a non-blocking call.
-            Allocate(ref _gpuInBodies, _bodies.Length, false);
-            Allocate(ref _gpuOutBodies, _bodies.Length, false);
-            _queue.WriteToBuffer(_bodies, _gpuInBodies, false, 0, 0, _bodies.Length, null);
-
             LevelInfo[] topLevels = CalcTopSpatials(botLevel);
 
             // Get the total number of mesh cells to be created.
@@ -473,21 +472,6 @@ namespace NBodies.Physics
             // Sort by morton number to produce a spatially sorted array.
             Array.Sort(_mortKeys, _spatials);
 
-            // Build a new sorted body array from the sorted spatial info.
-            if (_sortBodies.Length != _bodies.Length)
-                _sortBodies = new Body[_bodies.Length];
-
-            ParallelForSlim(_spatials.Length, _parallelPartitions, (start, len) =>
-            {
-                for (int b = start; b < len; b++)
-                {
-                    _sortBodies[b] = _bodies[_spatials[b].Index];
-                }
-            });
-
-            // Update the original body array with the sorted one.
-            _bodies = _sortBodies;
-
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
@@ -496,9 +480,13 @@ namespace NBodies.Physics
             if (_cellIdx.Length < _bodies.Length)
                 _cellIdx = new int[_bodies.Length + 100];
 
+            if (_sortPart.Length < _bodies.Length)
+                _sortPart = new int[_bodies.Length + 100];
+
             for (int i = 0; i < _spatials.Length; i++)
             {
-                var mort = _spatials[i].Mort;
+                var mort = _mortKeys[i];
+                _sortPart[i] = _spatials[i].Index;
 
                 // Find the start of each new morton number and record location to build cell index.
                 if (val != mort)
@@ -512,6 +500,8 @@ namespace NBodies.Physics
 
             _cellIdx[count] = _spatials.Length;
 
+            UploadAndReindexGPU(_sortPart, _bodies.Length);
+
             var output = new LevelInfo();
             output.Spatials = _spatials;
             output.CellCount = count;
@@ -519,6 +509,22 @@ namespace NBodies.Physics
             Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
             return output;
         }
+
+        private void UploadAndReindexGPU(int[] sortPart, int sortLen)
+        {
+            Allocate(ref _gpuSortPart, sortLen);
+            Allocate(ref _gpuInBodies, _bodies.Length, false);
+            Allocate(ref _gpuOutBodies, _bodies.Length, false);
+            _queue.WriteToBuffer(_bodies, _gpuOutBodies, false, 0, 0, _bodies.Length, null);
+            _queue.WriteToBuffer(sortPart, _gpuSortPart, false, 0, 0, sortLen, null);
+
+            _reorderKernel.SetMemoryArgument(0, _gpuOutBodies);
+            _reorderKernel.SetValueArgument(1, _bodies.Length);
+            _reorderKernel.SetMemoryArgument(2, _gpuSortPart);
+            _reorderKernel.SetMemoryArgument(3, _gpuInBodies);
+            _queue.Execute(_reorderKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+        }
+
 
         /// <summary>
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.

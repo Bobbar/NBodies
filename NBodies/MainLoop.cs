@@ -377,6 +377,7 @@ namespace NBodies
                             // Copy the current bodies to another array.
                             if (_bodiesBuffer.Length != BodyManager.Bodies.Length)
                                 _bodiesBuffer = new Body[BodyManager.Bodies.Length];
+
                             Array.Copy(BodyManager.Bodies, 0, _bodiesBuffer, 0, BodyManager.Bodies.Length);
 
                             // True if post processing is needed.

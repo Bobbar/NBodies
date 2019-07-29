@@ -83,6 +83,7 @@ typedef struct __attribute__((packed)) SimSettings
 
 } SimSettings;
 
+
 constant int BLACKHOLE = 1;
 constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
@@ -176,6 +177,18 @@ __kernel void FixOverlaps(global  Body* inBodies, int inBodiesLen, global  Body*
 
 	outBodies[i] = bodyA;
 }
+
+
+__kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortPart, global Body* outBodies)
+{
+	int b = get_global_id(0);
+
+	if (b >= blen)
+		return;
+
+	outBodies[b] = inBodies[sortPart[b]];
+}
+
 
 __kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, global  MeshCell* mesh, int meshLen)
 {
