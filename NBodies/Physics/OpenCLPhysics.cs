@@ -259,7 +259,6 @@ namespace NBodies.Physics
                 _forceKernel.SetMemoryArgument(argi++, gpuPostNeeded);
                 _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-
                 argi = 0;
                 _collisionLargeKernel.SetMemoryArgument(argi++, _gpuInBodies);
                 _collisionLargeKernel.SetValueArgument(argi++, _bodies.Length);
@@ -686,7 +685,7 @@ namespace NBodies.Physics
         {
             // Calulate total size of 1D mesh neighbor index.
             // Each cell can have a max of 9 neighbors, including itself.
-            int neighborLen = meshSize * 9;
+            int neighborLen = meshSize * 8;
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
