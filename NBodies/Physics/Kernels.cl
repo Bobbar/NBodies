@@ -306,7 +306,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 	mesh[m] = cell;
 }
 
-__kernel void BuildBottom(global  Body* inBodies, global  Body* outBodies, global  MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp)
+__kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global  MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp)
 {
 	int m = get_global_id(0);
 
@@ -351,7 +351,7 @@ __kernel void BuildBottom(global  Body* inBodies, global  Body* outBodies, globa
 	mesh[m] = newCell;
 }
 
-__kernel void BuildTop(global  MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int readOffset, int level)
+__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int readOffset, int level)
 {
 	int m = get_global_id(0);
 
