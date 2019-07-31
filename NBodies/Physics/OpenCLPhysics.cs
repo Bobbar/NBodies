@@ -481,7 +481,8 @@ namespace NBodies.Physics
             AddGridDims(minMax, 0);
 
             // Sort by morton number to produce a spatially sorted array.
-            Array.Sort(_mortKeys, _spatials);
+            // Array.Sort(_mortKeys, _spatials);
+            Sort.ParallelQuickSort(_mortKeys, _spatials);
 
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
