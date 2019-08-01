@@ -78,8 +78,8 @@ namespace NBodies.Rendering
         private List<PointF> _drawPath = new List<PointF>();
         private bool _blurClearHack = false;
 
-        private int[] _bodyIds = new int[0];
-        private int[] _counts = new int[0];
+        private int[] _pointers = new int[0];
+        private int[] _buckets = new int[0];
 
         private Stopwatch timer = new Stopwatch();
 
@@ -116,7 +116,7 @@ namespace NBodies.Rendering
                 if (!Trails || overlayVisible)
                 {
                     Clear(_clearColor);
-               //     _blurClearHack = false;
+                    //     _blurClearHack = false;
                 }
 
                 if (drawBodies && bodies.Length > 0)
@@ -144,8 +144,11 @@ namespace NBodies.Rendering
                     // we need to sort them (again) by a persistent value; we will use their UIDs.
                     // This is done because the spatial sorting can rapidly change the resulting
                     // z-order of the bodies, which causes flickering.
-                    
-                    // Perform a Counting Sort with the bodies UIDs.
+
+                    // Perform a Bucket Sort with the bodies UIDs.
+                    // We will also cull the bodies outside the viewport.
+
+                    int nVis = 0;
 
                     if (bodies.Length > 0)
                     {
@@ -153,58 +156,61 @@ namespace NBodies.Rendering
                         {
                             int len = maxUID + 1;
 
-                            // Realloc if needed.
-                            if (_counts.Length < len)
+                            //Realloc as needed.
+                            if (_buckets.Length < len)
+                                _buckets = new int[len];
+
+                            if (_pointers.Length < bodies.Length)
+                                _pointers = new int[bodies.Length];
+
+                            // Clear buckets.
+                            for (int i = 0; i < len; i++)
                             {
-                                _counts = new int[len];
-                                _bodyIds = new int[len + 1];
+                                _buckets[i] = -1;
                             }
 
-                            // Zero clear indexes.
-                            for (int i = 0; i < _bodyIds.Length; i++)
-                            {
-                                if (i < _counts.Length)
-                                    _counts[i] = 0;
-
-                                _bodyIds[i] = 0;
-                            }
-
-                            // Count.
+                            // Find bodies inside the viewport and put them in buckets by UID.
+                            int maxVisUID = 0;
                             for (int i = 0; i < bodies.Length; i++)
                             {
-                                _counts[bodies[i].UID]++;
+                                if (_cullTangle.Contains(bodies[i].PosX, bodies[i].PosY))
+                                {
+                                    _buckets[bodies[i].UID] = i;
+                                    maxVisUID = Math.Max(maxVisUID, bodies[i].UID); // Record max seen UID to save iterations of the following step.
+                                }
                             }
 
-                            // Sum.
-                            for (int i = 1; i < len; i++)
+                            // Populate pointers with the locations of populated buckets.
+                            for (int i = 0; i < maxVisUID; i++)
                             {
-                                int sum = _counts[i] + _counts[i - 1];
-                                _counts[i] = sum;
-                            }
-
-                            // Build sorted lookup index.
-                            for (int i = 0; i < bodies.Length; i++)
-                            {
-                                int idx = bodies[i].UID;
-                                _counts[idx] -= 1;
-                                _bodyIds[_counts[idx]] = i;
+                                if (_buckets[i] != -1)
+                                {
+                                    _pointers[nVis] = i;
+                                    nVis++;
+                                }
                             }
                         }
-                        else if (!SortZOrder && _counts.Length > 0)
+                        else if (!SortZOrder && _buckets.Length > 0)
                         {
                             // Null the indexes if Z-sort is turned off.
-                            _counts = new int[0];
-                            _bodyIds = new int[0];
+                            _buckets = new int[0];
+                            _pointers = new int[0];
+
                         }
                     }
 
-                    for (int i = 0; i < bodies.Length; i++)
+                    int n = bodies.Length;
+
+                    if (SortZOrder)
+                        n = nVis;
+
+                    for (int i = 0; i < n; i++)
                     {
                         Body body;
-                      
-                        if (SortZOrder && _bodyIds.Length > 0)
+
+                        if (SortZOrder && _pointers.Length > 0)
                         {
-                            body = bodies[_bodyIds[i]];
+                            body = bodies[_buckets[_pointers[i]]];
                         }
                         else
                         {
@@ -213,10 +219,10 @@ namespace NBodies.Rendering
 
                         var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
-                        if (ClipView)
-                        {
-                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
-                        }
+                        //if (ClipView)
+                        //{
+                        //    if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
+                        //}
 
                         Color bodyColor = Color.White;
 
