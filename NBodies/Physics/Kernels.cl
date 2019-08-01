@@ -845,6 +845,13 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 		outBody.Lifetime -= sim.DeltaTime * 4.0f;
 	}
 
+	int nanCheck = isnan(outBody.PosX) + isnan(outBody.PosY);
+    if (nanCheck > 0)
+	{
+		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+		postNeeded[0] = 1;
+	}
+
 	// Cull distant bodies.
 	float2 cm = centerMass[0];
 	float dist = fast_distance(cm, (float2)(outBody.PosX, outBody.PosY));

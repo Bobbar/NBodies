@@ -36,10 +36,10 @@
             this.drawToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.collisionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -53,6 +53,7 @@
             this.followingBodyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showFollowBodyForce = new System.Windows.Forms.ToolStripMenuItem();
             this.showPredictOrbit = new System.Windows.Forms.ToolStripMenuItem();
+            this.snapToGridToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -78,7 +79,6 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.snapToGridToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -183,6 +183,26 @@
             this.clipToViewportToolStripMenuItem.Text = "Clip To Viewport";
             this.clipToViewportToolStripMenuItem.CheckedChanged += new System.EventHandler(this.clipToViewportToolStripMenuItem_CheckedChanged);
             // 
+            // fastPrimitivesToolStripMenuItem
+            // 
+            this.fastPrimitivesToolStripMenuItem.Checked = true;
+            this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
+            this.fastPrimitivesToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
+            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
+            this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
+            // 
+            // sortZOrderToolStripMenuItem
+            // 
+            this.sortZOrderToolStripMenuItem.Checked = true;
+            this.sortZOrderToolStripMenuItem.CheckOnClick = true;
+            this.sortZOrderToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.sortZOrderToolStripMenuItem.Name = "sortZOrderToolStripMenuItem";
+            this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
+            this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
+            // 
             // collisionsToolStripMenuItem
             // 
             this.collisionsToolStripMenuItem.Checked = true;
@@ -202,26 +222,6 @@
             this.rocheLimitToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.rocheLimitToolStripMenuItem.Text = "Roche Limit";
             this.rocheLimitToolStripMenuItem.CheckedChanged += new System.EventHandler(this.rocheLimitToolStripMenuItem_CheckedChanged);
-            // 
-            // sortZOrderToolStripMenuItem
-            // 
-            this.sortZOrderToolStripMenuItem.Checked = true;
-            this.sortZOrderToolStripMenuItem.CheckOnClick = true;
-            this.sortZOrderToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.sortZOrderToolStripMenuItem.Name = "sortZOrderToolStripMenuItem";
-            this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
-            this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
-            // 
-            // fastPrimitivesToolStripMenuItem
-            // 
-            this.fastPrimitivesToolStripMenuItem.Checked = true;
-            this.fastPrimitivesToolStripMenuItem.CheckOnClick = true;
-            this.fastPrimitivesToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.fastPrimitivesToolStripMenuItem.Name = "fastPrimitivesToolStripMenuItem";
-            this.fastPrimitivesToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.fastPrimitivesToolStripMenuItem.Text = "Fast Primitives";
-            this.fastPrimitivesToolStripMenuItem.CheckedChanged += new System.EventHandler(this.fastPrimitivesToolStripMenuItem_CheckedChanged);
             // 
             // rewindBufferToolStripMenuItem
             // 
@@ -334,6 +334,15 @@
             this.showPredictOrbit.Size = new System.Drawing.Size(139, 22);
             this.showPredictOrbit.Text = "Orbit";
             this.showPredictOrbit.CheckedChanged += new System.EventHandler(this.showPredictOrbit_CheckedChanged);
+            // 
+            // snapToGridToolStripMenuItem
+            // 
+            this.snapToGridToolStripMenuItem.Checked = true;
+            this.snapToGridToolStripMenuItem.CheckOnClick = true;
+            this.snapToGridToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.snapToGridToolStripMenuItem.Name = "snapToGridToolStripMenuItem";
+            this.snapToGridToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.snapToGridToolStripMenuItem.Text = "Snap To Grid";
             // 
             // toolsToolStripMenuItem
             // 
@@ -676,15 +685,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // snapToGridToolStripMenuItem
-            // 
-            this.snapToGridToolStripMenuItem.Checked = true;
-            this.snapToGridToolStripMenuItem.CheckOnClick = true;
-            this.snapToGridToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.snapToGridToolStripMenuItem.Name = "snapToGridToolStripMenuItem";
-            this.snapToGridToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.snapToGridToolStripMenuItem.Text = "Snap To Grid";
             // 
             // DisplayForm
             // 

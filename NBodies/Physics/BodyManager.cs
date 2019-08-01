@@ -291,10 +291,14 @@ namespace NBodies.Physics
         public static void CullDistant()
         {
             var cm = CenterOfMass();
+            int before = Bodies.Length;
 
             var bList = new List<Body>(Bodies);
             bList.RemoveAll(b =>
             {
+                if (float.IsNaN(b.PosX) || float.IsNaN(b.PosY))
+                    return true;
+
                 float distX = cm.X - b.PosX;
                 float distY = cm.Y - b.PosY;
                 float dist = distX * distX + distY * distY;
@@ -307,6 +311,8 @@ namespace NBodies.Physics
             });
 
             Bodies = bList.ToArray();
+
+            Console.WriteLine($@"{before - Bodies.Length} bodies removed.");
         }
 
         private static Body[] FractureBody(Body body)
@@ -545,6 +551,9 @@ namespace NBodies.Physics
             for (int i = 0; i < Bodies.Length; i++)
             {
                 var body = Bodies[i];
+
+                if (double.IsNaN(body.PosX) || double.IsNaN(body.PosY))
+                    continue;
 
                 totMass += body.Mass;
 
