@@ -181,7 +181,7 @@ namespace NBodies.Rendering
                             }
 
                             // Populate pointers with the locations of populated buckets.
-                            for (int i = 0; i < maxVisUID; i++)
+                            for (int i = 0; i <= maxVisUID; i++)
                             {
                                 if (_buckets[i] != -1)
                                 {
