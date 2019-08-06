@@ -43,7 +43,16 @@ namespace NBodies.Physics
 
         [ProtoMember(8)]
         [Key(7)]
-        public float ForceTot;
+        public float ForceTot
+        {
+            get
+            {
+                return (float)Math.Sqrt((Math.Pow(ForceX, 2) + Math.Pow(ForceY, 2)));
+            }
+
+            set { var dummy = value; }
+
+        }
 
         [ProtoMember(9)]
         [Key(8)]

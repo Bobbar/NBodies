@@ -8,7 +8,6 @@ typedef struct __attribute__((packed)) Body
 	float VeloY;
 	float ForceX;
 	float ForceY;
-	float ForceTot;
 	int Color;
 	float Size;
 	int Flag;
@@ -441,7 +440,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	MeshCell levelCellParent = inMesh[(levelCell.ParentID)];
 
 	// Reset forces.
-	outBody.ForceTot = 0.0f;
+	float totForce = 0;
 	outBody.ForceX = 0.0f;
 	outBody.ForceY = 0.0f;
 	outBody.Density = 0.0f;
@@ -493,7 +492,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				// Accumulate body-to-body force.
 				float force = inBody.Mass * outBody.Mass / dist;
 
-				outBody.ForceTot += force;
+				totForce += force;
 				outBody.ForceX += force * distX / distSqrt;
 				outBody.ForceY += force * distY / distSqrt;
 			}
@@ -531,7 +530,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 						float distSqrt = (float)native_sqrt(dist);
 						float force = (float)cell.Mass * outBody.Mass / dist;
 
-						outBody.ForceTot += force;
+						totForce += force;
 						outBody.ForceX += force * distX / distSqrt;
 						outBody.ForceY += force * distY / distSqrt;
 					}
@@ -557,23 +556,20 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 			float distSqrt = (float)native_sqrt(dist);
 			float force = (float)cell.Mass * outBody.Mass / dist;
 
-			outBody.ForceTot += force;
+			totForce += force;
 			outBody.ForceX += force * distX / distSqrt;
 			outBody.ForceY += force * distY / distSqrt;
 		}
 	}
 
-
-
 	// Calculate pressure from density.
 	outBody.Pressure = GAS_K * outBody.Density;
 
-	if (outBody.ForceTot > outBody.Mass * 4.0f)
+	if (totForce > outBody.Mass * 4.0f)
 	{
 		outBody = SetFlagB(outBody, INROCHE, true);
 		postNeeded[0] = 1;
 	}
-
 
 	// Write back to memory.
 	outBodies[(a)] = outBody;

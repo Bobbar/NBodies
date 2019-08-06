@@ -349,7 +349,7 @@ namespace NBodies
             }
         }
 
-        private async static void DoLoop()
+        private static void DoLoop()
         {
             // Double-buffered body array:
             //
