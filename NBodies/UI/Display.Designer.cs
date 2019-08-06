@@ -615,7 +615,7 @@
             this.StyleScaleUpDown.Dock = System.Windows.Forms.DockStyle.Fill;
             this.StyleScaleUpDown.Location = new System.Drawing.Point(372, 3);
             this.StyleScaleUpDown.Maximum = new decimal(new int[] {
-            2000,
+            10000,
             0,
             0,
             0});

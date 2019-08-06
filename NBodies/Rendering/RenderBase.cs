@@ -30,16 +30,14 @@ namespace NBodies.Rendering
         {
             get
             {
-                //return _styleScaleMax;
                 return _styleScales[(int)DisplayStyle];
             }
 
             set
             {
-                if (value > 0 && value <= 2000)
+                if (value > 0 && value <= 8000)
                 {
                     _styleScales[(int)DisplayStyle] = value;
-                    //_styleScaleMax = value;
                 }
             }
         }
@@ -219,10 +217,10 @@ namespace NBodies.Rendering
 
                         var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
-                        //if (ClipView)
-                        //{
-                        //    if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
-                        //}
+                        if (ClipView && !SortZOrder)
+                        {
+                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
+                        }
 
                         Color bodyColor = Color.White;
 
@@ -247,7 +245,7 @@ namespace NBodies.Rendering
                                 break;
 
                             case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, maxUID, body.UID, true);
                                 _clearColor = _defaultClearColor;
 
                                 break;

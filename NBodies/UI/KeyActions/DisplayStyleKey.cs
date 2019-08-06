@@ -70,7 +70,7 @@ namespace NBodies.UI.KeyActions
                 }
                 else
                 {
-                    RenderBase.StyleScaleMax += wheelValue;
+                    RenderBase.StyleScaleMax += wheelValue * 2;
                     Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
                 }
             }
