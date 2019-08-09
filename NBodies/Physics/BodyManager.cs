@@ -97,7 +97,7 @@ namespace NBodies.Physics
         /// <summary>
         /// Preallocated storage for culled bodies. Reduces one potentially large reallocation.
         /// </summary>
-        private static Body[] _cullStore = new Body[500000];
+        private static Body[] _cullStore = new Body[50000];
 
         /// <summary>
         /// Culls invisible bodies, processes roche factures, rebuilds UID index.
@@ -108,6 +108,9 @@ namespace NBodies.Physics
 
             if (!postNeeded && !FollowSelected)
                 return;
+
+            var timer = new Stopwatch();
+            timer.Restart();
 
             bool realloc = false;
             int position = 0;
@@ -201,9 +204,11 @@ namespace NBodies.Physics
             // Resize the main body array and copy from the cull store.
             if (realloc)
             {
-                Array.Resize(ref Bodies, newSize);
+                Bodies = new Body[newSize];
                 Array.Copy(_cullStore, 0, Bodies, 0, newSize);
             }
+
+            timer.Print("Post");
 
             // Add fractured bodies after to be processed on the following frame.
             if (fractures.Count > 0)

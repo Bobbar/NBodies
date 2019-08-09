@@ -567,8 +567,11 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 	if (totForce > outBody.Mass * 4.0f)
 	{
-		outBody = SetFlagB(outBody, INROCHE, true);
-		postNeeded[0] = 1;
+		if (!HasFlagB(outBody, INROCHE))
+		{ 
+			outBody = SetFlagB(outBody, INROCHE, true);
+			postNeeded[0] = 1;
+		}
 	}
 
 	// Write back to memory.
