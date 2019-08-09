@@ -133,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Physics\Sort.cs" />
+    <Compile Include="Physics\StateRewinder.cs" />
     <Compile Include="Physics\Structs\BufferDims.cs" />
     <Compile Include="Physics\Structs\Flags.cs" />
     <Compile Include="Physics\Structs\GridInfo.cs" />

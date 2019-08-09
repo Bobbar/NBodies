@@ -6,14 +6,14 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using MessagePack;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace NBodies.Physics
 {
     public static class BodyManager
     {
         public static Body[] Bodies = new Body[0];
+
         public static MeshCell[] Mesh
         {
             get
@@ -23,8 +23,6 @@ namespace NBodies.Physics
         }
 
         public static bool FollowSelected = false;
-       
-
         public static int FollowBodyUID = -1;
 
 
@@ -48,10 +46,7 @@ namespace NBodies.Physics
         {
             get
             {
-                if (_stateIdx < 0)
-                    return 0;
-
-                return _stateIdx;
+                return _rewinder.Position;
             }
         }
 
@@ -59,7 +54,7 @@ namespace NBodies.Physics
         {
             get
             {
-                return _states.Count - 1;
+                return _rewinder.Count;
             }
         }
 
@@ -68,107 +63,36 @@ namespace NBodies.Physics
         private static List<int> UIDBuckets = new List<int>(50000);
         private static int _currentUID = -1;
         private static double _totalMass = 0;
-        private static int _stateIdx = -1;
-        private const int _maxStates = 200;
-        private static List<byte[]> _states = new List<byte[]>(_maxStates + 1);
-        private static List<Body[]> _statesBuffer = new List<Body[]>(_maxStates + 1);
-        private static bool _serializerRunning = false;
-        private const float _timeSpan = 0.04f;
-        private static float _elap = _timeSpan;
         private const float _minBodySize = 1.0f;
 
-        public static void PushState(Body[] frame)
-        {
-            ResumeStates();
-
-            // Don't save every frame to cut back on memory usage while also increasing length of time stored.
-            if (_elap >= _timeSpan)
-            {
-                _statesBuffer.Add(frame);
-
-                if (!_serializerRunning)
-                    SerializeBufferAsync();
-
-                _elap = 0f;
-            }
-
-            _elap += MainLoop.TimeStep;
-        }
-
-        private async static void SerializeBufferAsync()
-        {
-            await Task.Run(() =>
-            {
-                _serializerRunning = true;
-
-                while (_statesBuffer.Count > 0)
-                {
-                    var state = _statesBuffer.First();
-
-                    _states.Add(LZ4MessagePackSerializer.Serialize(state));
-
-                    if (_states.Count - 1 > _maxStates)
-                        _states.RemoveAt(0);
-
-                    _stateIdx = _states.Count - 1;
-
-                    if (_statesBuffer.Count > 0)
-                        _statesBuffer.RemoveAt(0);
-                }
-
-                _serializerRunning = false;
-
-            });
-        }
-
+        private static StateRewinder _rewinder = new StateRewinder();
+      
         public static void PushState()
         {
-            PushState(Bodies);
+            _rewinder.PushState(Bodies, MainLoop.TimeStep);
         }
 
         public static void RewindState()
         {
-            if (_states.Count > 0)
+            if (_rewinder.TryGetPreviousState(ref Bodies))
             {
-                if (_stateIdx - 1 >= 0)
-                    _stateIdx--;
-
-                Bodies = LZ4MessagePackSerializer.Deserialize<Body[]>(_states[_stateIdx]);
-
                 RebuildUIDIndex();
             }
-
-            _elap = _timeSpan;
         }
 
         public static void FastForwardState()
         {
-            if (_states.Count > 0)
+            if (_rewinder.TryGetNextState(ref Bodies))
             {
-                if (_stateIdx + 1 <= _states.Count - 1)
-                    _stateIdx++;
-
-                Bodies = LZ4MessagePackSerializer.Deserialize<Body[]>(_states[_stateIdx]);
-
                 RebuildUIDIndex();
-            }
-        }
-
-        public static void ResumeStates()
-        {
-            if (_stateIdx < _states.Count - 1 && _stateIdx != -1)
-            {
-                _states.RemoveRange(_stateIdx, _states.Count - _stateIdx);
-                _stateIdx = -1;
             }
         }
 
         public static void ClearStates()
         {
-            _states.Clear();
-            _stateIdx = -1;
-            _elap = _timeSpan;
+            _rewinder.Clear();
         }
+
 
         /// <summary>
         /// Preallocated storage for culled bodies. Reduces one potentially large reallocation.
@@ -286,7 +210,6 @@ namespace NBodies.Physics
                 Add(fractures.ToArray());
 
         } 
-
 
         public static void CullDistant()
         {

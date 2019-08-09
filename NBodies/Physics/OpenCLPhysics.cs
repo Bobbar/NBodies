@@ -1,18 +1,11 @@
-﻿using System;
+﻿using Cloo;
+using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Threading;
-using Cloo;
-using Cloo.Bindings;
-using Cloo.Extensions;
 using System.IO;
-using NBodies.Extensions;
-using System.Runtime.InteropServices;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace NBodies.Physics
 {
