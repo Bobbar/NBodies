@@ -182,21 +182,20 @@ namespace NBodies.Rendering
 
             foreach (var m in mesh)
             {
-                if (!_cullTangle.Contains(m.LocX, m.LocY))
-                    continue;
+                float pSizeLvl = pSize + m.Level * 0.2f;
 
-                var meshX = m.LocX - m.Size / 2 + offsetX;
-                var meshY = m.LocY - m.Size / 2 + offsetY;
+                if (_cullTangle.Contains(m.LocX, m.LocY))
+                {
+                    var meshX = m.LocX - m.Size / 2 + offsetX;
+                    var meshY = m.LocY - m.Size / 2 + offsetY;
+                    _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), _meshBrush, 0.2f);
+                }
 
-                _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), _meshBrush, 0.2f);
-
-                var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX, m.LocY + offsetY), pSize, pSize);
-
-                _wndRender.FillEllipse(centerEllip, _centerBrush);
-
-                var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSize, pSize);
-
-                _wndRender.FillEllipse(massEllip, _massBrush);
+                if (_cullTangle.Contains(m.CmX, m.CmY))
+                {
+                    var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSizeLvl, pSizeLvl);
+                    _wndRender.FillEllipse(massEllip, _massBrush);
+                }
 
                 //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);

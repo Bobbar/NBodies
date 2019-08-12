@@ -283,14 +283,14 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 					{
 						int idx = gridIdx[bucket];
 
-						if (idx > 0)
-						{
-							neighborIndex[(offset + count)] = idx;
-							count++;
-						}
-						else if (idx == -1)
+						if (idx == -1)
 						{
 							neighborIndex[(offset + count)] = 0;
+							count++;
+						}
+						else
+						{
+							neighborIndex[(offset + count)] = idx;
 							count++;
 						}
 					}
@@ -478,8 +478,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				{
 					// Clamp SPH softening distance.
 					dist = max(dist, FLOAT_EPSILON);
-					
-
+			
 					// Accumulate density.
 					float diff = sph.kSizeSq - dist;
 					float fac = sph.fDensity * diff * diff * diff;
