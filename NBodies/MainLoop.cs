@@ -18,11 +18,25 @@ namespace NBodies
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
         public static bool Collisions = true;
-        public static bool RewindBuffer = false;
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
 
         #region Public Properties
+        public static bool RewindBuffer
+        {
+            get { return _rewindBuffer; }
+
+            set
+            {
+                if (_rewindBuffer != value)
+                {
+                    _rewindBuffer = value;
+
+                    if (!_rewindBuffer)
+                        BodyManager.ClearRewinder();
+                }
+            }
+        }
 
         public static float KernelSize
         {
@@ -262,6 +276,7 @@ namespace NBodies
 
         private static bool _skipPhysics = false;
         private static bool _wasPaused = false;
+        private static bool _rewindBuffer = false;
 
         private static Task _loopTask;
         private static CancellationTokenSource _cancelTokenSource;

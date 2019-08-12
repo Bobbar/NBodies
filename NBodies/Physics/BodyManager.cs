@@ -88,9 +88,12 @@ namespace NBodies.Physics
             }
         }
 
-        public static void ClearStates()
+        public static void ClearRewinder()
         {
             _rewinder.Clear();
+            _rewinder.Dispose();
+            _rewinder = null;
+            _rewinder = new StateRewinder();
         }
 
 
@@ -108,9 +111,6 @@ namespace NBodies.Physics
 
             if (!postNeeded && !FollowSelected)
                 return;
-
-            var timer = new Stopwatch();
-            timer.Restart();
 
             bool realloc = false;
             int position = 0;
@@ -207,8 +207,6 @@ namespace NBodies.Physics
                 Bodies = new Body[newSize];
                 Array.Copy(_cullStore, 0, Bodies, 0, newSize);
             }
-
-            timer.Print("Post");
 
             // Add fractured bodies after to be processed on the following frame.
             if (fractures.Count > 0)
@@ -348,7 +346,7 @@ namespace NBodies.Physics
             UIDBuckets.Clear();
 
             _currentUID = -1;
-            ClearStates();
+            ClearRewinder();
 
             MainLoop.FrameCount = 0;
             MainLoop.TotalTime = 0;
