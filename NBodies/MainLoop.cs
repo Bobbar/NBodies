@@ -341,6 +341,9 @@ namespace NBodies
                 _pausePhysicsWait.Reset();
                 // Wait until the handle is signaled after the GPU calcs complete.
                 _pausePhysicsWait.Wait(2000);
+
+                // Rebuild UID index to ensure correct mouse to body UI behaviour.
+                BodyManager.RebuildUIDIndex();
             }
         }
 

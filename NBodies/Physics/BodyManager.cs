@@ -64,6 +64,7 @@ namespace NBodies.Physics
         private static int _currentUID = -1;
         private static double _totalMass = 0;
         private const float _minBodySize = 1.0f;
+        private static int _prevBodyCount = 0;
 
         private static StateRewinder _rewinder = new StateRewinder();
       
@@ -109,7 +110,7 @@ namespace NBodies.Physics
         {
             if (Bodies.Length < 1) return;
 
-            if (!postNeeded && !FollowSelected)
+            if (!postNeeded && !FollowSelected && _prevBodyCount == Bodies.Length)
                 return;
 
             bool realloc = false;
@@ -207,6 +208,9 @@ namespace NBodies.Physics
                 Bodies = new Body[newSize];
                 Array.Copy(_cullStore, 0, Bodies, 0, newSize);
             }
+
+
+            _prevBodyCount = Bodies.Length;
 
             // Add fractured bodies after to be processed on the following frame.
             if (fractures.Count > 0)
@@ -367,6 +371,8 @@ namespace NBodies.Physics
 
         public static void RebuildUIDIndex()
         {
+            if (Bodies.Length == 0) return;
+
             var maxUID = Bodies.Max(b => b.UID);
 
             UIDBuckets = new List<int>(new int[maxUID + 1]);
