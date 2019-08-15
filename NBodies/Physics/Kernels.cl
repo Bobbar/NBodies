@@ -283,14 +283,14 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 					{
 						int idx = gridIdx[bucket];
 
-						if (idx == -1)
-						{
-							neighborIndex[(offset + count)] = 0;
-							count++;
-						}
-						else
+						if (idx > 0)
 						{
 							neighborIndex[(offset + count)] = idx;
+							count++;
+						}
+						else if (idx == -1)
+						{
+							neighborIndex[(offset + count)] = 0;
 							count++;
 						}
 					}
