@@ -46,10 +46,13 @@ namespace NBodies
             var newBodies = new List<Body>();
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
+            float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
+
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
             var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
+            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
 
             if (includeCenterMass)
             {
@@ -58,8 +61,6 @@ namespace NBodies
 
             for (int i = 0; i < count; i++)
             {
-               
-
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
@@ -70,7 +71,7 @@ namespace NBodies
 
                 PointF newLoc = new PointF(px, py);
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -140,9 +141,12 @@ namespace NBodies
             var newBodies = new List<Body>();
 
             float px, py;
-            float radius = float.Parse(OrbitRadiusTextBox.Text);
-            Rules.Matter.Density = float.Parse(DensityTextBox.Text);
+            float radius = float.Parse(OrbitRadiusTextBox.Text.Trim());
+            float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
+
+            Matter.Density = float.Parse(DensityTextBox.Text);
             var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
+            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
 
             for (int i = 0; i < count; i++)
             {
@@ -156,7 +160,7 @@ namespace NBodies
 
                 PointF newLoc = new PointF(px, py);
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {

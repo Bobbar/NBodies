@@ -53,6 +53,8 @@
             this.MinSizeTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.InOrbitRadiusTextBox = new System.Windows.Forms.TextBox();
             this.BodyParamsGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -74,6 +76,8 @@
             // 
             // CirOrbitGroup
             // 
+            this.CirOrbitGroup.Controls.Add(this.label10);
+            this.CirOrbitGroup.Controls.Add(this.InOrbitRadiusTextBox);
             this.CirOrbitGroup.Controls.Add(this.layeredCheckBox);
             this.CirOrbitGroup.Controls.Add(this.AddStationaryButton);
             this.CirOrbitGroup.Controls.Add(this.AddOrbitButton);
@@ -123,7 +127,7 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(31, 118);
+            this.label8.Location = new System.Drawing.Point(3, 117);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(40, 13);
             this.label8.TabIndex = 7;
@@ -131,7 +135,7 @@
             // 
             // OrbitRadiusTextBox
             // 
-            this.OrbitRadiusTextBox.Location = new System.Drawing.Point(34, 134);
+            this.OrbitRadiusTextBox.Location = new System.Drawing.Point(6, 133);
             this.OrbitRadiusTextBox.Name = "OrbitRadiusTextBox";
             this.OrbitRadiusTextBox.Size = new System.Drawing.Size(63, 20);
             this.OrbitRadiusTextBox.TabIndex = 6;
@@ -312,6 +316,23 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "5000";
             // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(76, 117);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(67, 13);
+            this.label10.TabIndex = 12;
+            this.label10.Text = "Inner Radius";
+            // 
+            // InOrbitRadiusTextBox
+            // 
+            this.InOrbitRadiusTextBox.Location = new System.Drawing.Point(79, 133);
+            this.InOrbitRadiusTextBox.Name = "InOrbitRadiusTextBox";
+            this.InOrbitRadiusTextBox.Size = new System.Drawing.Size(63, 20);
+            this.InOrbitRadiusTextBox.TabIndex = 11;
+            this.InOrbitRadiusTextBox.Text = "10";
+            // 
             // AddBodiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -358,5 +379,7 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox LifeTimeTextBox;
         private System.Windows.Forms.CheckBox layeredCheckBox;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.TextBox InOrbitRadiusTextBox;
     }
 }
