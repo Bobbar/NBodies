@@ -184,6 +184,7 @@
     <Compile Include="UI\KeyActions\ThreadsKey.cs" />
     <Compile Include="UI\KeyActions\TimeStepKey.cs" />
     <Compile Include="UI\KeyActions\ViscosityKey.cs" />
+    <Compile Include="UI\KeyActions\ZeroVeloKey.cs" />
     <Compile Include="UI\PlaybackControlForm.cs">
       <SubType>Form</SubType>
     </Compile>

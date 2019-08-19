@@ -356,6 +356,15 @@ namespace NBodies.Physics
             MainLoop.TotalTime = 0;
         }
 
+        public static void ZeroVelocities()
+        {
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                Bodies[i].VeloX = 0;
+                Bodies[i].VeloY = 0;
+            }
+        }
+
         public static void ReplaceBodies(Body[] bodies)
         {
             ClearBodies();
