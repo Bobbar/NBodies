@@ -73,6 +73,11 @@ namespace NBodies.Physics
             _rewinder.PushState(Bodies, MainLoop.TimeStep);
         }
 
+        public static void PushState(Body[] bodies)
+        {
+            _rewinder.PushState(bodies, MainLoop.TimeStep);
+        }
+
         public static void RewindState()
         {
             if (_rewinder.TryGetPreviousState(ref Bodies))
@@ -216,7 +221,119 @@ namespace NBodies.Physics
             if (fractures.Count > 0)
                 Add(fractures.ToArray());
 
-        } 
+        }
+
+
+        /// <summary>
+        /// Culls invisible bodies, processes roche factures, rebuilds UID index.
+        /// </summary>
+        public static void PostProcessFrame(ref Body[] bodies, bool processRoche, bool postNeeded)
+        {
+            if (bodies.Length < 1) return;
+
+            if (!postNeeded && !FollowSelected)
+                return;
+
+            bool realloc = false;
+            int position = 0;
+            int newSize = 0;
+            int maxUID = -1;
+            double totMass = 0;
+            List<Body> fractures = new List<Body>(0);
+
+            // Make sure the preallocated store is large enough.
+            if (_cullStore.Length < bodies.Length)
+                _cullStore = new Body[bodies.Length];
+
+
+            for (int i = 0; i < bodies.Length; i++)
+            {
+                var body = bodies[i];
+                totMass += body.Mass;
+
+                // Fracture large bodies in roche.
+                if (processRoche)
+                {
+                    if (body.Size > _minBodySize)
+                    {
+                        if (body.Flag == (int)Flags.InRoche)
+                        {
+                            body.Culled = true;
+
+                            if (fractures.Count == 0)
+                                fractures = new List<Body>(2000);
+
+                            fractures.AddRange(FractureBody(bodies[i]));
+                            // Record the new max UID;
+                            maxUID = _currentUID;
+
+                        }
+                    }
+                }
+
+                if (body.Culled)
+                {
+                    // Only start to reallocate if we find an invisible body.
+                    if (!realloc)
+                    {
+                        Array.Copy(bodies, 0, _cullStore, 0, position);
+
+                        realloc = true;
+                        newSize = position;
+                    }
+
+                    // Stop following invisible bodies.
+                    if (body.UID == FollowBodyUID)
+                    {
+                        FollowSelected = false;
+                        FollowBodyUID = -1;
+                    }
+
+                }
+                else
+                {
+                    // Store visible bodies in the a preallocated array.
+                    if (realloc)
+                    {
+                        _cullStore[position] = body;
+                        newSize++;
+                    }
+
+                    // Update the max UID.
+                    maxUID = Math.Max(maxUID, body.UID);
+
+                    // Update UID buckets and resize as needed.
+                    if (body.UID < UIDBuckets.Count)
+                    {
+                        UIDBuckets[body.UID] = position;
+                    }
+                    else
+                    {
+                        int inc = (body.UID - UIDBuckets.Count) + 1;
+
+                        UIDBuckets.AddRange(new int[inc]);
+                        UIDBuckets[body.UID] = position;
+                    }
+
+                    // Update our current position for the cull store.
+                    position++;
+                }
+            }
+
+            // Set current UID to the determined max.
+            _currentUID = maxUID;
+            _totalMass = totMass;
+
+            // Resize the main body array and copy from the cull store.
+            if (realloc)
+            {
+                bodies = new Body[newSize + fractures.Count];
+                Array.Copy(_cullStore, 0, bodies, 0, newSize);
+                Array.Copy(fractures.ToArray(), 0, bodies, newSize, fractures.Count);
+            }
+
+            _prevBodyCount = bodies.Length;
+        }
 
         public static void CullDistant()
         {

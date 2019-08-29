@@ -79,6 +79,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.syncRendererToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -141,6 +142,7 @@
             this.clipToViewportToolStripMenuItem,
             this.fastPrimitivesToolStripMenuItem,
             this.sortZOrderToolStripMenuItem,
+            this.syncRendererToolStripMenuItem,
             this.collisionsToolStripMenuItem,
             this.rocheLimitToolStripMenuItem,
             this.rewindBufferToolStripMenuItem,
@@ -686,6 +688,14 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // syncRendererToolStripMenuItem
+            // 
+            this.syncRendererToolStripMenuItem.CheckOnClick = true;
+            this.syncRendererToolStripMenuItem.Name = "syncRendererToolStripMenuItem";
+            this.syncRendererToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.syncRendererToolStripMenuItem.Text = "Sync Renderer";
+            this.syncRendererToolStripMenuItem.CheckedChanged += new System.EventHandler(this.syncRendererToolStripMenuItem_CheckedChanged);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -770,6 +780,7 @@
         private System.Windows.Forms.ToolStripMenuItem collisionsToolStripMenuItem;
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.ToolStripMenuItem snapToGridToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem syncRendererToolStripMenuItem;
     }
 }
 

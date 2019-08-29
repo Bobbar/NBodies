@@ -15,19 +15,13 @@ namespace NBodies.UI.KeyActions
         public FPSKey()
         {
             AddKey(Keys.F);
-            AddKey(Keys.ShiftKey);
 
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.F])
-            {
-                Overlay.Value = $@"Burst Frames: {MainLoop.RenderBurstFrames}";
-                Overlay.Show();
-            }
-            else if (!KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.F])
+            if (KeyDownStates[Keys.F])
             {
                 Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
                 Overlay.Show();
@@ -58,16 +52,8 @@ namespace NBodies.UI.KeyActions
         {
             if (KeyDownStates[Keys.F])
             {
-                if (KeyDownStates[Keys.ShiftKey])
-                {
-                    MainLoop.RenderBurstFrames += wheelValue;
-                    Overlay.Value = $@"Burst Frames: {MainLoop.RenderBurstFrames}";
-                }
-                else
-                {
-                    MainLoop.TargetFPS += wheelValue;
-                    Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                }
+                MainLoop.TargetFPS += wheelValue;
+                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
             }
         }
     }

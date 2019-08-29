@@ -815,5 +815,10 @@ namespace NBodies.UI
         {
             MainLoop.Collisions = collisionsToolStripMenuItem.Checked;
         }
+
+        private void syncRendererToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.SyncRenderer = syncRendererToolStripMenuItem.Checked;
+        }
     }
 }
