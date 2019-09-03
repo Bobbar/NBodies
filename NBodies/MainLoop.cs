@@ -291,7 +291,6 @@ namespace NBodies
 
             SyncPhysicsBuffer();
 
-
             _loopTask = new Task(DoLoop, _cancelTokenSource.Token, TaskCreationOptions.LongRunning);
             _loopTask.Start();
         }

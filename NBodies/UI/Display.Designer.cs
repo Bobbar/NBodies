@@ -38,6 +38,7 @@
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.syncRendererToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.collisionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -79,7 +80,6 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.syncRendererToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -204,6 +204,14 @@
             this.sortZOrderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.sortZOrderToolStripMenuItem.Text = "Sort Z-Order";
             this.sortZOrderToolStripMenuItem.CheckedChanged += new System.EventHandler(this.sortZOrderToolStripMenuItem_CheckedChanged);
+            // 
+            // syncRendererToolStripMenuItem
+            // 
+            this.syncRendererToolStripMenuItem.CheckOnClick = true;
+            this.syncRendererToolStripMenuItem.Name = "syncRendererToolStripMenuItem";
+            this.syncRendererToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.syncRendererToolStripMenuItem.Text = "Sync Renderer";
+            this.syncRendererToolStripMenuItem.CheckedChanged += new System.EventHandler(this.syncRendererToolStripMenuItem_CheckedChanged);
             // 
             // collisionsToolStripMenuItem
             // 
@@ -687,14 +695,6 @@
             this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
-            // syncRendererToolStripMenuItem
-            // 
-            this.syncRendererToolStripMenuItem.CheckOnClick = true;
-            this.syncRendererToolStripMenuItem.Name = "syncRendererToolStripMenuItem";
-            this.syncRendererToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.syncRendererToolStripMenuItem.Text = "Sync Renderer";
-            this.syncRendererToolStripMenuItem.CheckedChanged += new System.EventHandler(this.syncRendererToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 

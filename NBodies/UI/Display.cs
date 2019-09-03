@@ -636,7 +636,10 @@ namespace NBodies.UI
 
         private void PauseButton_CheckedChanged(object sender, EventArgs e)
         {
-            MainLoop.PausePhysics = PauseButton.Checked;
+            if (!MainLoop.PausePhysics)
+                MainLoop.WaitForPause();
+            else
+                MainLoop.ResumePhysics(true);
         }
 
         private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
