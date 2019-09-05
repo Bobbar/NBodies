@@ -618,7 +618,7 @@
             this.PauseButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.toolTip.SetToolTip(this.PauseButton, "Pause/Resume physics calculations");
             this.PauseButton.UseVisualStyleBackColor = true;
-            this.PauseButton.CheckedChanged += new System.EventHandler(this.PauseButton_CheckedChanged);
+            this.PauseButton.Click += new System.EventHandler(this.PauseButton_Click);
             // 
             // StyleScaleUpDown
             // 

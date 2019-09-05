@@ -34,7 +34,9 @@ namespace NBodies.Physics
         {
             if (_elap >= _interval)
             {
-                _buffer.Add(frame);
+                var copy = new Body[frame.Length];
+                Array.Copy(frame, copy, frame.Length);
+                _buffer.Add(copy);
                 _serializerWait.Set();
                 _elap = 0f;
             }

@@ -150,7 +150,7 @@ namespace NBodies.UI
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
             StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             SetDisplayStyle(RenderBase.DisplayStyle);
-           
+
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {
                 SetSelectedInfo();
@@ -189,7 +189,7 @@ namespace NBodies.UI
                 MainLoop.StopRecording();
             }
 
-            
+
             using (var settingsForm = new RecordSettings())
             using (var saveDialog = new SaveFileDialog())
             {
@@ -571,7 +571,7 @@ namespace NBodies.UI
 
             }
 
-           
+
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
@@ -634,7 +634,7 @@ namespace NBodies.UI
             RenderBase.Trails = TrailsCheckBox.Checked;
         }
 
-        private void PauseButton_CheckedChanged(object sender, EventArgs e)
+        private void PauseButton_Click(object sender, EventArgs e)
         {
             if (!MainLoop.PausePhysics)
                 MainLoop.WaitForPause();
