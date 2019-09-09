@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-
 
 namespace NBodies.Rendering
 {
@@ -13,11 +7,8 @@ namespace NBodies.Rendering
     {
         public OverlayGraphicType Type { get; set; }
         public PointF Location { get; set; }
-
         public PointF Location2 { get; set; }
-
         public List<PointF> OrbitPath { get; set; } = new List<PointF>();
-
         public string Value { get; set; }
         public bool Visible { get; set; } = false;
 
@@ -38,8 +29,6 @@ namespace NBodies.Rendering
         {
             Visible = true;
         }
-
-
     }
 
     public enum OverlayGraphicType

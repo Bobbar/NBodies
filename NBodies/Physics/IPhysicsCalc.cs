@@ -6,13 +6,18 @@ using System.Threading.Tasks;
 
 namespace NBodies.Physics
 {
-    public interface IPhysicsCalc
+    public interface IPhysicsCalc : IDisposable
     {
         MeshCell[] CurrentMesh { get; }
 
+        int[] LevelIndex { get; }
+
         void Init();
 
-        void CalcMovement(ref Body[] bodies, float timestep, int cellSizeExp);
+        void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool postNeeded);
 
+        void FixOverLaps(ref Body[] bodies);
+
+        void Flush();
     }
 }

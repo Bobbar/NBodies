@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace NBodies.Extensions
 {
@@ -17,6 +18,13 @@ namespace NBodies.Extensions
             Type type = control.GetType();
             PropertyInfo pi = type.GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
             pi.SetValue(control, setting, null);
+        }
+
+        public static void Print(this Stopwatch timer, string label = "")
+        {
+            Debug.WriteLine($@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
+
+            timer.Restart();
         }
     }
 }

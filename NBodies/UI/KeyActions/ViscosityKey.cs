@@ -1,31 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
-using NBodies.Extensions;
+using System.Drawing;
 
 namespace NBodies.UI.KeyActions
 {
-    public class FPSKey : KeyAction
+    class ViscosityKey : KeyAction
     {
-        public FPSKey()
-        {
-            AddKey(Keys.F);
+        private Keys _myKey = Keys.V;
 
+        public ViscosityKey()
+        {
+            AddKey(_myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
-
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.F])
-            {
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                Overlay.Show();
-            }
+            Overlay.Value = "Viscosity: " +  MainLoop.Viscosity;
+            Overlay.Show();
         }
 
         public override void DoKeyUp()
@@ -38,22 +34,22 @@ namespace NBodies.UI.KeyActions
             // throw new NotImplementedException();
         }
 
-        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
-        {
-            //throw new NotImplementedException();
-        }
-
         public override void DoMouseMove(PointF mouseLoc)
         {
-            //throw new NotImplementedException();
+            // throw new NotImplementedException();
+        }
+
+        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
+        {
+            // throw new NotImplementedException();
         }
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.F])
+            if (KeyDownStates[_myKey])
             {
-                MainLoop.TargetFPS += wheelValue;
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                MainLoop.Viscosity += (wheelValue * 0.1f);
+                Overlay.Value = "Viscosity: " + MainLoop.Viscosity;
             }
         }
     }

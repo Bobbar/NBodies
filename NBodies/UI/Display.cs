@@ -2,6 +2,7 @@
 using NBodies.Physics;
 using NBodies.Rendering;
 using NBodies.UI.KeyActions;
+using NBodies.Helpers;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -41,14 +42,14 @@ namespace NBodies.UI
         {
             InitializeComponent();
 
-            _UIUpdateTimer.Interval = 100;
+            _UIUpdateTimer.Interval = 250;
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
             _UIUpdateTimer.Start();
 
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
-            PressureScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
+            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             AlphaUpDown.Value = RenderBase.BodyAlpha;
 
             RenderBox.DoubleBuffered(true);
@@ -56,9 +57,9 @@ namespace NBodies.UI
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
-            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
-            RenderVars.ScaleOffset = ScaleHelpers.FieldPointToScreenUnscaled(RenderVars.ScreenCenter);
-
+            ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
+            ViewportOffsets.ScaleOffset = ViewportHelpers.FieldPointToScreenNoOffset(ViewportOffsets.ScreenCenter);
+            MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
             PhysicsProvider.InitPhysics();
 
             MainLoop.Renderer = new D2DRenderer(RenderBox);
@@ -74,8 +75,13 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new SimpleKey(Keys.D));
             InputHandler.AddKeyAction(new TimeStepKey());
             InputHandler.AddKeyAction(new RewindKey());
+            InputHandler.AddKeyAction(new LevelKey());
+            InputHandler.AddKeyAction(new ThreadsKey());
+            InputHandler.AddKeyAction(new ViscosityKey());
+            InputHandler.AddKeyAction(new KernelSizeKey());
+            InputHandler.AddKeyAction(new ZeroVeloKey());
 
-            SetDisplayOptionTags();
+            PopulateDisplayStyleMenu();
 
             MainLoop.StartLoop();
         }
@@ -110,7 +116,7 @@ namespace NBodies.UI
                 for (int i = 0; i < BodyManager.Bodies.Length; i++)
                 {
                     var body = BodyManager.Bodies[i];
-                    var dist = Math.Sqrt(Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).X - body.LocX, 2) + Math.Pow(ScaleHelpers.ScreenPointToField(mouseLoc).Y - body.LocY, 2));
+                    var dist = Math.Sqrt(Math.Pow(ViewportHelpers.ScreenPointToField(mouseLoc).X - body.PosX, 2) + Math.Pow(ViewportHelpers.ScreenPointToField(mouseLoc).Y - body.PosY, 2));
 
                     if (dist < body.Size * 0.5f)
                     {
@@ -139,29 +145,10 @@ namespace NBodies.UI
                 PauseButton.BackColor = Color.DarkGreen;
             }
 
-            FPSLabel.Text = string.Format("FPS: {0}", Math.Round(MainLoop.CurrentFPS, 2));
-            FrameCountLabel.Text = string.Format("Count: {0}", MainLoop.FrameCount);
-            BodyCountLabel.Text = string.Format("Bodies: {0}", BodyManager.BodyCount);
-            TotalMassLabel.Text = string.Format("Tot Mass: {0}", BodyManager.TotalMass);
-            ScaleLabel.Text = string.Format("Scale: {0}", Math.Round(RenderVars.CurrentScale, 2));
             AlphaUpDown.Value = RenderBase.BodyAlpha;
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
+            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             SetDisplayStyle(RenderBase.DisplayStyle);
-
-            RendererLabel.Text = $@"Renderer: { MainLoop.Renderer.ToString() }";
-
-            if (BodyManager.FollowSelected)
-            {
-                DensityLabel.Visible = true;
-                PressureLabel.Visible = true;
-                SpeedLabel.Visible = true;
-            }
-            else
-            {
-                DensityLabel.Visible = false;
-                PressureLabel.Visible = false;
-                SpeedLabel.Visible = false;
-            }
 
             if (_selectedUid != -1 && !MainLoop.PausePhysics)
             {
@@ -171,12 +158,9 @@ namespace NBodies.UI
             if (MainLoop.Recorder.RecordingActive)
             {
                 RecordButton.BackColor = Color.DarkGreen;
-                RecSizeLabel.Visible = true;
-                RecSizeLabel.Text = $@"Rec Size (MB): { Math.Round((MainLoop.RecordedSize() / (float)1000000), 2) }";
             }
             else
             {
-                RecSizeLabel.Visible = false;
                 RecordButton.BackColor = DefaultBackColor;
             }
         }
@@ -187,15 +171,11 @@ namespace NBodies.UI
             {
                 var selectBody = BodyManager.BodyFromUID(_selectedUid);
 
-                VeloXTextBox.Text = selectBody.SpeedX.ToString();
-                VeloYTextBox.Text = selectBody.SpeedY.ToString();
+                VeloXTextBox.Text = selectBody.VeloX.ToString();
+                VeloYTextBox.Text = selectBody.VeloY.ToString();
                 RadiusTextBox.Text = selectBody.Size.ToString();
                 MassTextBox.Text = selectBody.Mass.ToString();
-                FlagsTextBox.Text = selectBody.BlackHole.ToString();
-
-                DensityLabel.Text = string.Format("Density: {0}", selectBody.Density);
-                PressureLabel.Text = string.Format("Press: {0}", selectBody.Pressure);
-                SpeedLabel.Text = string.Format("Agg. Speed: {0}", selectBody.AggregateSpeed());
+                FlagsTextBox.Text = selectBody.Flag.ToString();
 
                 selectBody.PrintInfo();
             }
@@ -208,15 +188,25 @@ namespace NBodies.UI
                 MainLoop.StopRecording();
             }
 
+
+            using (var settingsForm = new RecordSettings())
             using (var saveDialog = new SaveFileDialog())
             {
+                float timeStep;
+                double maxSize;
+
+                settingsForm.ShowDialog();
+
+                timeStep = settingsForm.TimeStep;
+                maxSize = settingsForm.MaxRecordSize;
+
                 saveDialog.Filter = "NBody Recording|*.rec";
                 saveDialog.Title = "Save Recording";
                 saveDialog.ShowDialog();
 
                 if (!string.IsNullOrEmpty(saveDialog.FileName))
                 {
-                    MainLoop.StartRecording(saveDialog.FileName);
+                    MainLoop.StartRecording(saveDialog.FileName, timeStep, maxSize);
                 }
             }
         }
@@ -239,14 +229,26 @@ namespace NBodies.UI
             }
         }
 
-        private void SetDisplayOptionTags()
+        private void PopulateDisplayStyleMenu()
         {
-            normalToolStripMenuItem.Tag = DisplayStyle.Normal;
-            pressuresToolStripMenuItem.Tag = DisplayStyle.Pressures;
-            highContrastToolStripMenuItem.Tag = DisplayStyle.HighContrast;
-            speedsToolStripMenuItem.Tag = DisplayStyle.Speeds;
-            indexToolStripMenuItem.Tag = DisplayStyle.Index;
-            forcesToolStripMenuItem.Tag = DisplayStyle.Forces;
+            var styles = Enum.GetValues(typeof(DisplayStyle));
+
+            foreach (DisplayStyle s in styles)
+            {
+                string name = Enum.GetName(typeof(DisplayStyle), s);
+                var styleTool = new ToolStripMenuItem(name);
+                styleTool.Tag = s;
+                styleTool.CheckOnClick = true;
+                styleTool.Click += StyleTool_Click;
+                displayToolStripMenuItem.DropDownItems.Add(styleTool);
+            }
+        }
+
+        private void StyleTool_Click(object sender, EventArgs e)
+        {
+            var styleTool = sender as ToolStripMenuItem;
+            DisplayStyle style = (DisplayStyle)styleTool.Tag;
+            SetDisplayStyle(style);
         }
 
         private void SetDisplayStyle(DisplayStyle style)
@@ -311,7 +313,11 @@ namespace NBodies.UI
 
                     if (_selectedUid != -1)
                     {
-                        BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = 2;
+                        try
+                        {
+                            BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].InRoche = 1;
+                        }
+                        catch { }
                     }
 
                     break;
@@ -359,22 +365,26 @@ namespace NBodies.UI
             switch (e.KeyCode)
             {
                 case Keys.ShiftKey:
-
                     _shiftDown = false;
-                    MainLoop.ResumePhysics();
 
                     break;
 
                 case Keys.ControlKey:
-
                     _ctrlDown = false;
                     MainLoop.ResumePhysics();
 
                     break;
 
-                case Keys.Space:
+                case Keys.P:
 
-                    MainLoop.WaitForPause();
+                    if (MainLoop.PausePhysics)
+                    {
+                        MainLoop.ResumePhysics(true);
+                    }
+                    else
+                    {
+                        MainLoop.WaitForPause();
+                    }
 
                     break;
             }
@@ -390,6 +400,8 @@ namespace NBodies.UI
 
                 if (!_mouseRightDown)
                 {
+                    _mouseRightDown = true;
+
                     MainLoop.WaitForPause();
 
                     var mUid = MouseOverUID(e.Location);
@@ -400,10 +412,10 @@ namespace NBodies.UI
                     }
                     else
                     {
-                        _mouseId = BodyManager.Add(ScaleHelpers.ScreenPointToField(e.Location), 1f, ColorHelper.RandomColor());
+                        _mouseId = BodyManager.Add(ViewportHelpers.ScreenPointToField(e.Location), 1f, ColorHelper.RandomColor());
                     }
 
-                    var bodyPos = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                    var bodyPos = ViewportHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
 
                     _flingOver.Location = bodyPos;
                     _flingOver.Location2 = bodyPos;
@@ -416,8 +428,6 @@ namespace NBodies.UI
                     _orbitOver.Show();
 
                     RenderBase.AddOverlay(_orbitOver);
-
-                    _mouseRightDown = true;
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -485,29 +495,41 @@ namespace NBodies.UI
         private void RenderBox_MouseMove(object sender, MouseEventArgs e)
         {
             InputHandler.MouseMove(e.Location);
-
             _mouseLocation = e.Location;
+
+            if (InputHandler.KeyIsDown(Keys.D))
+            {
+                _distLine.Location2 = _mouseLocation;
+                _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
+
+                var loc1 = ViewportHelpers.ScreenPointToField(_distLine.Location);
+                var loc2 = ViewportHelpers.ScreenPointToField(_distLine.Location2);
+
+                _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
+            }
+
+
+            if (!InputHandler.MouseIsDown)
+                return;
 
             if (e.Button == MouseButtons.Left)
             {
-                if (_selectedUid == -1 && _shiftDown)
+                if (_selectedUid != -1 && _shiftDown)
                 {
-                    var mId = MouseOverUID(e.Location);
-                    if (mId != -1)
-                    {
-                        _bodyMovin = true;
-                        _selectedUid = mId;
-                    }
+                    _bodyMovin = true;
                 }
 
                 if (_bodyMovin)
                 {
-                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), ScaleHelpers.ScreenPointToField(e.Location));
+                    var loc = ViewportHelpers.ScreenPointToField(e.Location);
+                    if (snapToGridToolStripMenuItem.Checked)
+                        loc = loc.SnapToGrid(2);
+                    BodyManager.Move(BodyManager.UIDToIndex(_selectedUid), loc);
                 }
                 else
                 {
                     var moveDiff = e.Location.Subtract(_mouseMoveDownLoc);
-                    RenderVars.ViewportOffset = RenderVars.ViewportOffset.Add(ScaleHelpers.FieldPointToScreenUnscaled(moveDiff));
+                    ViewportOffsets.ViewportOffset = ViewportOffsets.ViewportOffset.Add(ViewportHelpers.FieldPointToScreenNoOffset(moveDiff));
                     _mouseMoveDownLoc = e.Location;
                 }
             }
@@ -537,50 +559,45 @@ namespace NBodies.UI
                     _flingOver.Location2 = _flingOver.Location.Subtract(deflection);
 
                     // Flip and shorten the vector and apply it to the body speed.
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedX = -deflection.X / 3f;
-                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].SpeedY = -deflection.Y / 3f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].VeloX = -deflection.X / 3f;
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].VeloY = -deflection.Y / 3f;
+
+                    // Calculate the true screen position from the body location.
+                    var clientPosition = ViewportHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
+                    var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
+
+                    // Lock the cursor in place above the body.
+                    Cursor.Position = screenPosition;
+                    _flingPrevScreenPos = screenPosition;
 
                     // Calculate the new orbital path.
                     var orbitPath = BodyManager.CalcPathCircle(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)]);
 
                     // Update the orbit overlay.
-                    _orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].LocY);
+                    _orbitOver.Location = new PointF(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].PosX, BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].PosY);
                     _orbitOver.OrbitPath = orbitPath;
                     _orbitOver.Show();
                     RenderBase.AddOverlay(_orbitOver);
                 }
 
-                // Calculate the true screen position from the body location.
-                var clientPosition = ScaleHelpers.FieldPointToScreen(BodyManager.Bodies[BodyManager.UIDToIndex(_mouseId)].Position());
-                var screenPosition = RenderBox.PointToScreen(clientPosition.ToPoint());
-
-                // Lock the cursor in place above the body.
-                Cursor.Position = screenPosition;
-                _flingPrevScreenPos = screenPosition;
             }
 
-            if (InputHandler.KeyIsDown(Keys.D))
-            {
-                _distLine.Location2 = _mouseLocation;
-                _distOver.Location = _mouseLocation.Add(new PointF(30, 5));
 
-                var loc1 = ScaleHelpers.ScreenPointToField(_distLine.Location);
-                var loc2 = ScaleHelpers.ScreenPointToField(_distLine.Location2);
-
-                _distOver.Value = loc1.DistanceSqrt(loc2).ToString();
-            }
         }
 
         private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
         {
             InputHandler.MouseWheel(e.Delta);
 
-            var scaleChange = 0.05f * RenderVars.CurrentScale;
+            var scaleChange = 0.05f * ViewportOffsets.CurrentScale;
+            float newScale = ViewportOffsets.CurrentScale;
 
             if (e.Delta > 0)
             {
+                newScale += scaleChange;
+
                 if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
-                    RenderVars.CurrentScale += scaleChange;
+                    ViewportOffsets.Zoom(newScale, e.Location);
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -590,8 +607,10 @@ namespace NBodies.UI
             }
             else
             {
+                newScale -= scaleChange;
+
                 if (!InputHandler.KeysDown && !InputHandler.MouseIsDown)
-                    RenderVars.CurrentScale -= scaleChange;
+                    ViewportOffsets.Zoom(newScale, e.Location);
 
                 if (_mouseRightDown && _mouseId != -1)
                 {
@@ -606,7 +625,7 @@ namespace NBodies.UI
 
         private void RenderBox_Resize(object sender, EventArgs e)
         {
-            RenderVars.ScreenCenter = new PointF(this.RenderBox.Width * 0.5f, this.RenderBox.Height * 0.5f);
+            ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width * 0.5f, this.RenderBox.Height * 0.5f);
         }
 
         private void AddBodiesButton_Click(object sender, EventArgs e)
@@ -626,9 +645,12 @@ namespace NBodies.UI
             RenderBase.Trails = TrailsCheckBox.Checked;
         }
 
-        private void PauseButton_CheckedChanged(object sender, EventArgs e)
+        private void PauseButton_Click(object sender, EventArgs e)
         {
-            MainLoop.PausePhysics = PauseButton.Checked;
+            if (!MainLoop.PausePhysics)
+                MainLoop.WaitForPause();
+            else
+                MainLoop.ResumePhysics(true);
         }
 
         private void saveStateToolStripMenuItem_Click(object sender, EventArgs e)
@@ -639,11 +661,13 @@ namespace NBodies.UI
         private void loadStateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadState();
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void reloadPreviousToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NBodies.IO.Serializer.LoadPreviousState();
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
@@ -664,62 +688,34 @@ namespace NBodies.UI
         private void RemoveAllButton_Click(object sender, EventArgs e)
         {
             MainLoop.WaitForPause();
+            _selectedUid = -1;
+            _mouseId = -1;
+            _bodyMovin = false;
             BodyManager.ClearBodies();
+            PhysicsProvider.PhysicsCalc.Flush();
             MainLoop.ResumePhysics();
-        }
-
-        private void normalToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Normal);
-        }
-
-        private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Pressures);
-        }
-
-        private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.HighContrast);
-        }
-
-        private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Speeds);
-        }
-
-        private void indexToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Index);
-        }
-
-        private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Forces);
         }
 
         private void UpdateButton_Click(object sender, EventArgs e)
         {
             if (_selectedUid != -1)
             {
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedX = Convert.ToSingle(VeloXTextBox.Text.Trim());
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].SpeedY = Convert.ToSingle(VeloYTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].VeloX = Convert.ToSingle(VeloXTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].VeloY = Convert.ToSingle(VeloYTextBox.Text.Trim());
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Size = Convert.ToSingle(RadiusTextBox.Text.Trim());
                 BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Mass = Convert.ToSingle(MassTextBox.Text.Trim());
-                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].BlackHole = Convert.ToInt32(FlagsTextBox.Text.Trim());
+                BodyManager.Bodies[BodyManager.UIDToIndex(_selectedUid)].Flag = Convert.ToInt32(FlagsTextBox.Text.Trim());
             }
         }
 
-        private void PressureScaleUpDown_ValueChanged(object sender, EventArgs e)
+        private void StyleScaleUpDown_ValueChanged(object sender, EventArgs e)
         {
-            RenderBase.StyleScaleMax = (float)PressureScaleUpDown.Value;
+            RenderBase.StyleScaleMax = (float)StyleScaleUpDown.Value;
         }
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
         {
-            var cm = BodyManager.CenterOfMass().Multi(-1.0f);
-
-            RenderVars.ViewportOffset = cm;
+            ViewportHelpers.CenterCurrentField();
         }
 
         private void ToggleRendererButton_Click(object sender, EventArgs e)
@@ -744,7 +740,7 @@ namespace NBodies.UI
 
         private void DisplayForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            MainLoop.Stop();
+            MainLoop.End();
         }
 
         private void LoadRecordingButton_Click(object sender, EventArgs e)
@@ -774,11 +770,6 @@ namespace NBodies.UI
             MainLoop.RocheLimit = rocheLimitToolStripMenuItem.Checked;
         }
 
-        private void leapfrogIntegratorToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
-        {
-            MainLoop.LeapFrog = leapfrogIntegratorToolStripMenuItem.Checked;
-        }
-
         private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderBase.ShowMesh = showMeshToolStripMenuItem.Checked;
@@ -787,6 +778,31 @@ namespace NBodies.UI
         private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
+        }
+
+        private void sortZOrderToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderBase.SortZOrder = sortZOrderToolStripMenuItem.Checked;
+        }
+
+        private void fastPrimitivesToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderBase.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
+        }
+
+        private void rewindBufferToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.RewindBuffer = rewindBufferToolStripMenuItem.Checked;
+        }
+
+        private void collisionsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.Collisions = collisionsToolStripMenuItem.Checked;
+        }
+
+        private void syncRendererToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            MainLoop.SyncRenderer = syncRendererToolStripMenuItem.Checked;
         }
     }
 }

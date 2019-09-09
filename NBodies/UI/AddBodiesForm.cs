@@ -1,17 +1,17 @@
 ﻿using NBodies.Extensions;
-using NBodies.Rendering;
 using NBodies.Rules;
 using NBodies.Shapes;
+using NBodies.Physics;
+using NBodies.Helpers;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace NBodies
 {
     public partial class AddBodiesForm : Form
     {
-        private float _solarMass = 30000;
-
         public AddBodiesForm()
         {
             InitializeComponent();
@@ -43,37 +43,24 @@ namespace NBodies
         {
             MainLoop.WaitForPause();
 
+            var newBodies = new List<Body>();
             float px, py;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
+            float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
+
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            int nGas = (count / 8) * 7;
-            int nMinerals = (count / 8);
-            int bodyCount = 0;
-
-            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
+            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
+            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
 
             if (includeCenterMass)
             {
-                BodyManager.Add(ellipse.Location, 3, centerMass, Color.Black, 1);
+                newBodies.Add(BodyManager.NewBody(ellipse.Location, 3, centerMass, Color.Black, 1));
             }
 
             for (int i = 0; i < count; i++)
             {
-                MatterType matter = Matter.Types[0];
-
-                if (bodyCount <= nGas)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
-                }
-                else if (bodyCount >= nMinerals)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
-                }
-
-                bodyCount++;
-
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
@@ -82,7 +69,9 @@ namespace NBodies
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
+                PointF newLoc = new PointF(px, py);
+
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -94,17 +83,29 @@ namespace NBodies
                     bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-
+                    newLoc = new PointF(px, py);
                     its++;
                 }
 
                 if (outOfSpace)
                     continue;
 
-                var bodyLoc = new PointF(px, py);
-                var bodyVelo = OrbitVel(ellipse.Location, bodyLoc, centerMass);
+                var bodyVelo = OrbitVel(ellipse.Location, newLoc, centerMass);
 
                 float newMass = 1;
+
+                bool byDist = layeredCheckBox.Checked;
+                MatterType matter;
+
+                if (byDist)
+                {
+                    var dist = newLoc.DistanceSqrt(ellipse.Location);
+                    matter = Matter.GetForDistance(dist, radius);
+                }
+                else
+                {
+                    matter = Matter.GetRandom();
+                }
 
                 if (StaticDensityCheckBox.Checked)
                 {
@@ -122,44 +123,33 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color));
+                newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color)));
             }
 
+            var bodyArr = newBodies.ToArray();
+            FixOverlaps(ref bodyArr, 3);
 
-            MainLoop.ResumePhysics(true);
+            BodyManager.Add(bodyArr);
+
+            MainLoop.ResumePhysics();
         }
 
         private void AddBodiesToDisc(int count, int maxSize, int minSize, int bodyMass)
         {
             MainLoop.WaitForPause();
 
+            var newBodies = new List<Body>();
 
             float px, py;
-            float radius = float.Parse(OrbitRadiusTextBox.Text);
-            Rules.Matter.Density = float.Parse(DensityTextBox.Text);
-            var ellipse = new Ellipse(ScaleHelpers.ScreenPointToField(RenderVars.ScreenCenter), radius);
+            float radius = float.Parse(OrbitRadiusTextBox.Text.Trim());
+            float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
 
-            int nGas = (count / 8) * 7;
-            int nMinerals = (count / 8);
-            int bodyCount = 0;
-
+            Matter.Density = float.Parse(DensityTextBox.Text);
+            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
+            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
 
             for (int i = 0; i < count; i++)
             {
-                MatterType matter = Matter.Types[0];
-
-                if (bodyCount <= nGas)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(0, 1)];
-                }
-                else if (bodyCount >= nMinerals)
-                {
-                    matter = Matter.Types[Numbers.GetRandomInt(2, 4)];
-                }
-
-
-                bodyCount++;
-
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
@@ -168,7 +158,9 @@ namespace NBodies
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, new PointF(px, py)) || BodyManager.IntersectsExisting(new PointF(px, py), bodySize))
+                PointF newLoc = new PointF(px, py);
+
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -180,7 +172,7 @@ namespace NBodies
                     bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-
+                    newLoc = new PointF(px, py);
                     its++;
                 }
 
@@ -188,6 +180,18 @@ namespace NBodies
                     continue;
 
                 float newMass;
+                bool byDist = layeredCheckBox.Checked;
+                MatterType matter;
+
+                if (byDist)
+                {
+                    var dist = newLoc.DistanceSqrt(ellipse.Location);
+                    matter = Matter.GetForDistance(dist, radius);
+                }
+                else
+                {
+                    matter = Matter.GetRandom();
+                }
 
 
                 if (StaticDensityCheckBox.Checked)
@@ -206,10 +210,51 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                BodyManager.Add(px, py, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim()));
+                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim())));
             }
 
-            MainLoop.ResumePhysics(true);
+            var bodyArr = newBodies.ToArray();
+            FixOverlaps(ref bodyArr, 3);
+
+            BodyManager.Add(bodyArr);
+
+            MainLoop.ResumePhysics();
+        }
+
+        private bool IntersectsExisting(List<Body> bodies, PointF location, float diameter)
+        {
+            float distX = 0;
+            float distY = 0;
+            float dist = 0;
+            float colDist = 0;
+
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                var body = bodies[i];
+                distX = body.PosX - location.X;
+                distY = body.PosY - location.Y;
+                dist = (distX * distX) + (distY * distY);
+                colDist = (body.Size / 2f) + (diameter / 2f);
+
+                if (dist <= (colDist * colDist))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// OpenCL accelerated overlap correcting.
+        /// </summary>
+        private void FixOverlaps(ref Body[] bodies, int passes)
+        {
+            for (int i = 0; i < passes; i++)
+            {
+                PhysicsProvider.PhysicsCalc.FixOverLaps(ref bodies);
+            }
+
         }
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
@@ -219,6 +264,12 @@ namespace NBodies
         private void AddStationaryButton_Click(object sender, EventArgs e)
         {
             AddBodiesToDisc(int.Parse(NumToAddTextBox.Text.Trim()), int.Parse(MaxSizeTextBox.Text.Trim()), int.Parse(MinSizeTextBox.Text.Trim()), int.Parse(MassTextBox.Text.Trim()));
+        }
+
+        private void StaticDensityCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            layeredCheckBox.Enabled = !StaticDensityCheckBox.Checked;
+            DensityTextBox.Enabled = !StaticDensityCheckBox.Checked;
         }
     }
 }

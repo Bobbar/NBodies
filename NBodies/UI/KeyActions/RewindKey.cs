@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using NBodies.Rendering;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using NBodies.Rendering;
+using NBodies.Physics;
 
 namespace NBodies.UI.KeyActions
 {

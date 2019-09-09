@@ -6,26 +6,23 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
-using NBodies.Extensions;
 
 namespace NBodies.UI.KeyActions
 {
-    public class FPSKey : KeyAction
+    public class LevelKey : KeyAction
     {
-        public FPSKey()
-        {
-            AddKey(Keys.F);
+        private Keys myKey = Keys.L;
 
+        public LevelKey()
+        {
+            AddKey(myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.F])
-            {
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                Overlay.Show();
-            }
+            Overlay.Value = "Mesh Levels: " + MainLoop.MeshLevels;
+            Overlay.Show();
         }
 
         public override void DoKeyUp()
@@ -35,11 +32,6 @@ namespace NBodies.UI.KeyActions
 
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
-            // throw new NotImplementedException();
-        }
-
-        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
-        {
             //throw new NotImplementedException();
         }
 
@@ -48,12 +40,17 @@ namespace NBodies.UI.KeyActions
             //throw new NotImplementedException();
         }
 
+        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
+        {
+            //throw new NotImplementedException();
+        }
+
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.F])
+            if (KeyDownStates[myKey])
             {
-                MainLoop.TargetFPS += wheelValue;
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                MainLoop.MeshLevels += wheelValue;
+                Overlay.Value = "Mesh Levels: " + MainLoop.MeshLevels;
             }
         }
     }

@@ -4,12 +4,28 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
+using NBodies.Physics;
 
 
 namespace NBodies.Extensions
 {
     public static class PointExtensions
     {
+        public static PointF SnapToGrid(this PointF point, int gridSize)
+        {
+            return new PointF(((int)point.X >> gridSize) << gridSize, ((int)point.Y >> gridSize) << gridSize);
+        }
+
+        public static Point SnapToGrid(this Point point, int gridSize)
+        {
+            return new Point((point.X >> gridSize) << gridSize, (point.Y >> gridSize) << gridSize);
+        }
+
+        public static PointF Location(this MeshCell cell)
+        {
+            return new PointF(cell.LocX, cell.LocY);
+        }
+
         public static SharpDX.Vector2 ToVector(this PointF point)
         {
             return new SharpDX.Vector2(point.X, point.Y);

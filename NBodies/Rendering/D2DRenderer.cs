@@ -18,7 +18,9 @@ namespace NBodies.Rendering
         private d2.HwndRenderTargetProperties _hwndProperties;
         private d2.RenderTargetProperties _rndTargProperties;
         private d2.WindowRenderTarget _wndRender;
-        private Matrix3x2 _transform = new Matrix3x2();
+        private Matrix3x2 _scaleTransform = new Matrix3x2();
+        private Matrix3x2 _defaultScaleTransform = new Matrix3x2(1, 0, 0, 1, 0, 0);
+        private SharpDX.RectangleF _statsArea = new SharpDX.RectangleF(5, 5, 150, 150);
 
         private d2.SolidColorBrush _bodyBrush;
         private d2.SolidColorBrush _whiteBrush;
@@ -27,12 +29,21 @@ namespace NBodies.Rendering
         private d2.SolidColorBrush _orbitBrush;
         private d2.SolidColorBrush _redBrush;
         private d2.SolidColorBrush _forceBrush;
+        private d2.SolidColorBrush _blurBrush;
+        private d2.SolidColorBrush _statsBrush;
+        private d2.SolidColorBrush _statsBackBrush;
 
         private d2.SolidColorBrush _meshBrush;
         private d2.SolidColorBrush _centerBrush;
         private d2.SolidColorBrush _massBrush;
 
+        private dw.TextFormat _statsFont;
+
         private d2.Ellipse _bodyEllipse;
+        private SharpDX.RectangleF _bodyRect;
+        private SharpDX.RectangleF _blurRect;
+        private RawColor4 _bodyColor;
+
         private dw.TextFormat _infoText;
         private d2.StrokeStyle _arrowStyle;
 
@@ -59,9 +70,11 @@ namespace NBodies.Rendering
             InitProperties(_targetControl);
 
             _wndRender = new d2.WindowRenderTarget(_fact, _rndTargProperties, _hwndProperties);
-
             _bodyBrush = new d2.SolidColorBrush(_wndRender, new Color4(0, 0, 0, 0));
             _bodyEllipse = new d2.Ellipse(new Vector2(), 0, 0);
+            _bodyRect = new SharpDX.RectangleF(0, 0, 0, 0);
+            _blurRect = new SharpDX.RectangleF(0, 0, 0, 0);
+            _blurBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(10, System.Drawing.Color.Black)));
             _infoText = new dw.TextFormat(_dwFact, "Tahoma", dw.FontWeight.Normal, dw.FontStyle.Normal, 11);
             _whiteBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.White));
             _greenBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.LimeGreen));
@@ -72,6 +85,9 @@ namespace NBodies.Rendering
             _meshBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.Red)));
             _centerBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.Blue));
             _massBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(200, System.Drawing.Color.GreenYellow)));
+            _statsBrush = new d2.SolidColorBrush(_wndRender, new RawColor4(255, 0, 0, 0));
+            _statsBackBrush = new d2.SolidColorBrush(_wndRender, ConvertColor(System.Drawing.Color.FromArgb(100, System.Drawing.Color.Black)));
+            _statsFont = new dw.TextFormat(_dwFact, "Microsoft Sans Serif", 11);
 
             var arrowProps = new d2.StrokeStyleProperties() { EndCap = d2.CapStyle.Triangle };
             _arrowStyle = new d2.StrokeStyle(_fact, arrowProps);
@@ -94,40 +110,67 @@ namespace NBodies.Rendering
             }
         }
 
-        public override void DrawBody(Body body, System.Drawing.Color color, float X, float Y, float size)
+        public override void DrawBody(System.Drawing.Color color, float X, float Y, float size, bool isBlackHole)
         {
-            _bodyBrush.Color = ConvertColor(color);
-            _bodyEllipse.Point.X = X; 
+            _bodyColor.A = color.A / 255f;
+            _bodyColor.R = color.R / 255f;
+            _bodyColor.G = color.G / 255f;
+            _bodyColor.B = color.B / 255f;
+
+            _bodyBrush.Color = _bodyColor;
+
+            _bodyEllipse.Point.X = X;
             _bodyEllipse.Point.Y = Y;
-            _bodyEllipse.RadiusX = body.Size * 0.5f;
-            _bodyEllipse.RadiusY = body.Size * 0.5f;
+            _bodyEllipse.RadiusX = size * 0.5f;
+            _bodyEllipse.RadiusY = size * 0.5f;
 
-            _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+            float offset = size * 0.5f;
+            _bodyRect.X = X - offset;
+            _bodyRect.Y = Y - offset;
+            _bodyRect.Width = size;
+            _bodyRect.Height = size;
 
-            if (body.BlackHole == 1)
+            if (!FastPrimitives)
+            {
+                _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+            }
+            else
+            {
+                if (size <= 1f)
+                {
+                    _wndRender.FillRectangle(_bodyRect, _bodyBrush);
+                }
+                else
+                {
+                    _wndRender.FillEllipse(_bodyEllipse, _bodyBrush);
+                }
+            }
+
+            if (isBlackHole)
             {
                 _wndRender.DrawEllipse(_bodyEllipse, _redBrush);
-
             }
         }
 
         public override void DrawForceVectors(Body[] bodies, float offsetX, float offsetY)
         {
+            var finalOffset = new PointF(offsetX, offsetY);
+
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
 
-                if (!_cullTangle.Contains(body.LocX, body.LocY))
+                if (!_cullTangle.Contains(body.PosX, body.PosY))
                     continue;
 
-                var bloc = new PointF(body.LocX, body.LocY);
+                var bloc = new PointF(body.PosX, body.PosY);
 
                 var f = new PointF(body.ForceX, body.ForceY);
                 f = f.Normalize();
                 f = f.Multi(2f);
 
                 var floc = bloc.Add(f);
-                var finalOffset = new PointF(offsetX, offsetY);
+
                 _wndRender.DrawLine(bloc.Add(finalOffset).ToVector(), floc.Add(finalOffset).ToVector(), _forceBrush, 0.2f, _arrowStyle);
             }
         }
@@ -136,28 +179,33 @@ namespace NBodies.Rendering
         {
             float pSize = 0.3f;
             float pOffset = pSize / 2f;
-           
+
             foreach (var m in mesh)
             {
-                if (!_cullTangle.Contains(m.LocX, m.LocY))
-                    continue;
+                float pSizeLvl = pSize + m.Level * 0.2f;
 
-                var meshX = m.LocX - m.Size / 2 + offsetX;
-                var meshY = m.LocY - m.Size / 2 + offsetY;
+                if (_cullTangle.Contains(m.LocX, m.LocY))
+                {
+                    var meshX = m.LocX - m.Size / 2 + offsetX;
+                    var meshY = m.LocY - m.Size / 2 + offsetY;
+                    _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), _meshBrush, 0.2f);
+                }
 
-                _wndRender.DrawRectangle(new SharpDX.RectangleF(meshX, meshY, m.Size, m.Size), _meshBrush, 0.2f);
-
-                var centerEllip = new d2.Ellipse(new Vector2(m.LocX + offsetX, m.LocY + offsetY), pSize, pSize);
-
-                _wndRender.FillEllipse(centerEllip, _centerBrush);
-
-                var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSize, pSize);
-
-                _wndRender.FillEllipse(massEllip, _massBrush);
+                if (_cullTangle.Contains(m.CmX, m.CmY))
+                {
+                    var massEllip = new d2.Ellipse(new Vector2(m.CmX + offsetX, m.CmY + offsetY), pSizeLvl, pSizeLvl);
+                    _wndRender.FillEllipse(massEllip, _massBrush);
+                }
 
                 //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
                 //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
+
+
+            //// Draws origin.
+            //_wndRender.DrawLine(new Vector2(0 + offsetX, -5000 + offsetY), new Vector2(0 + offsetX, 5000 + offsetY), _greenBrush, 0.2f);
+            //_wndRender.DrawLine(new Vector2(-5000 + offsetX, 0 + offsetY), new Vector2(5000 + offsetX, 0 + offsetY), _greenBrush, 0.2f);
+
         }
 
         public override void DrawOverlays(float offsetX, float offsetY)
@@ -178,7 +226,8 @@ namespace NBodies.Rendering
             }
 
             var ogSt = _wndRender.Transform;
-            _wndRender.Transform = new Matrix3x2(1, 0, 0, 1, 0, 0);
+            _wndRender.Transform = _defaultScaleTransform;
+
             foreach (var overlay in OverLays.ToArray())
             {
                 if (overlay.Visible)
@@ -208,6 +257,38 @@ namespace NBodies.Rendering
             {
                 _wndRender.DrawLine(points[a - 1].Add(finalOffset).ToVector(), points[a].Add(finalOffset).ToVector(), _orbitBrush, 0.4f, _arrowStyle);
             }
+        }
+
+        public override void DrawBlur(System.Drawing.Color color)
+        {
+            var ogSt = _wndRender.Transform;
+            _wndRender.Transform = _defaultScaleTransform;
+
+            _blurBrush.Color = ConvertColor(color);
+            _blurRect.X = 0;
+            _blurRect.Y = 0;
+            _blurRect.Size = new Size2F(_viewPortSize.Width, _viewPortSize.Height);
+
+            _wndRender.FillRectangle(_blurRect, _blurBrush);
+
+            _wndRender.Transform = ogSt;
+        }
+
+        public override void DrawStats(string stats, System.Drawing.Color foreColor, System.Drawing.Color backColor)
+        {
+            var ogSt = _wndRender.Transform;
+            _wndRender.Transform = _defaultScaleTransform;
+
+            if (Trails)
+            {
+                _statsBackBrush.Color = ConvertColor(backColor);
+                _wndRender.FillRectangle(_statsArea, _statsBackBrush);
+            }
+
+            _statsBrush.Color = ConvertColor(foreColor);
+            _wndRender.DrawText(stats, _statsFont, _statsArea, _statsBrush, SharpDX.Direct2D1.DrawTextOptions.None);
+
+            _wndRender.Transform = ogSt;
         }
 
         public override void BeginDraw()
@@ -252,8 +333,8 @@ namespace NBodies.Rendering
 
         public override void UpdateGraphicsScale(float currentScale)
         {
-            _transform.ScaleVector = new Vector2(currentScale, currentScale);
-            _wndRender.Transform = _transform;
+            _scaleTransform.ScaleVector = new Vector2(currentScale, currentScale);
+            _wndRender.Transform = _scaleTransform;
             _prevScale = currentScale;
         }
 

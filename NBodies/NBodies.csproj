@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.Net.Compilers.2.6.0\build\Microsoft.Net.Compilers.props" Condition="Exists('..\packages\Microsoft.Net.Compilers.2.6.0\build\Microsoft.Net.Compilers.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,9 +10,13 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>NBodies</RootNamespace>
     <AssemblyName>NBodies</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>7.2</LangVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -22,7 +27,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -43,9 +48,8 @@
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cudafy.NET, Version=1.29.5576.13786, Culture=neutral, PublicKeyToken=63a4c9931616906b, processorArchitecture=MSIL">
-      <HintPath>..\packages\CUDAfy.NET.1.29.5576.13786\lib\net40\Cudafy.NET.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Cloo, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Cloo.clSharp.1.0.0\lib\netstandard2.0\Cloo.dll</HintPath>
     </Reference>
     <Reference Include="MessagePack, Version=1.7.3.4, Culture=neutral, PublicKeyToken=b4a0369545f0a1be, processorArchitecture=MSIL">
       <HintPath>..\packages\MessagePack.1.7.3.4\lib\net47\MessagePack.dll</HintPath>
@@ -92,8 +96,25 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.4.0\lib\netstandard1.1\System.Buffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.2\lib\netstandard1.1\System.Memory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.4.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard1.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Threading.Tasks.Extensions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -111,7 +132,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Physics\MeshCell.cs" />
+    <Compile Include="Physics\Sort.cs" />
+    <Compile Include="Physics\StateRewinder.cs" />
+    <Compile Include="Physics\Structs\BufferDims.cs" />
+    <Compile Include="Physics\Structs\Flags.cs" />
+    <Compile Include="Physics\Structs\GridInfo.cs" />
+    <Compile Include="Physics\Structs\LevelInfo.cs" />
+    <Compile Include="Physics\Structs\MinMax.cs" />
+    <Compile Include="Physics\OpenCLPhysics.cs" />
+    <Compile Include="Physics\Structs\MeshCell.cs" />
+    <Compile Include="Physics\Structs\SimSettings.cs" />
+    <Compile Include="Physics\Structs\SpatialInfo.cs" />
+    <Compile Include="Physics\Structs\SPHPreCalc.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
@@ -134,9 +166,8 @@
     <Compile Include="IO\ProtoBufRecorder.cs" />
     <Compile Include="IO\Serializer.cs" />
     <Compile Include="Logger.cs" />
-    <Compile Include="Numbers.cs" />
-    <Compile Include="Physics\Body.cs" />
-    <Compile Include="Physics\CUDAFloat.cs" />
+    <Compile Include="Helpers\Numbers.cs" />
+    <Compile Include="Physics\Structs\Body.cs" />
     <Compile Include="Physics\IPhysicsCalc.cs" />
     <Compile Include="Physics\PhysicsProvider.cs" />
     <Compile Include="UI\InputHandler.cs" />
@@ -146,9 +177,14 @@
     <Compile Include="UI\KeyActions\DisplayStyleKey.cs" />
     <Compile Include="UI\KeyActions\ExplosionKey.cs" />
     <Compile Include="UI\KeyActions\FPSKey.cs" />
+    <Compile Include="UI\KeyActions\KernelSizeKey.cs" />
+    <Compile Include="UI\KeyActions\LevelKey.cs" />
     <Compile Include="UI\KeyActions\RewindKey.cs" />
     <Compile Include="UI\KeyActions\SimpleKey.cs" />
+    <Compile Include="UI\KeyActions\ThreadsKey.cs" />
     <Compile Include="UI\KeyActions\TimeStepKey.cs" />
+    <Compile Include="UI\KeyActions\ViscosityKey.cs" />
+    <Compile Include="UI\KeyActions\ZeroVeloKey.cs" />
     <Compile Include="UI\PlaybackControlForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -157,16 +193,22 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Rendering\BodyManager.cs" />
-    <Compile Include="Rendering\ColorHelper.cs" />
+    <Compile Include="Physics\BodyManager.cs" />
+    <Compile Include="Helpers\ColorHelper.cs" />
     <Compile Include="Rendering\DisplayStyle.cs" />
-    <Compile Include="Rendering\MainLoop.cs" />
+    <Compile Include="MainLoop.cs" />
     <Compile Include="Rendering\OverlayGraphic.cs" />
     <Compile Include="Extensions\PointExtensions.cs" />
-    <Compile Include="Rendering\RenderVars.cs" />
-    <Compile Include="Rendering\ScaleHelpers.cs" />
+    <Compile Include="Helpers\ViewportOffsets.cs" />
+    <Compile Include="Helpers\ViewportHelpers.cs" />
     <Compile Include="Rules\Matter.cs" />
     <Compile Include="Shapes\Ellipse.cs" />
+    <Compile Include="UI\RecordSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\RecordSettings.Designer.cs">
+      <DependentUpon>RecordSettings.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="UI\AddBodiesForm.resx">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -184,8 +226,17 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
-    <None Include="packages.config" />
+    <EmbeddedResource Include="UI\RecordSettings.resx">
+      <DependentUpon>RecordSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Physics\Kernels.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -203,6 +254,12 @@
     <Analyzer Include="..\packages\MessagePackAnalyzer.1.6.0\analyzers\dotnet\cs\MessagePackAnalyzer.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Microsoft.Net.Compilers.2.6.0\build\Microsoft.Net.Compilers.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Net.Compilers.2.6.0\build\Microsoft.Net.Compilers.props'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

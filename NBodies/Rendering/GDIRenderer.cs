@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace NBodies.Rendering
 {
@@ -11,13 +12,19 @@ namespace NBodies.Rendering
     {
         private BufferedGraphicsContext _currentContext;
         private BufferedGraphics _buffer;
-        private Dictionary<int, SolidBrush> _brushCache = new Dictionary<int, SolidBrush>();
 
         private Pen _forcePen = new Pen(Color.FromArgb(150, Color.Chartreuse), 0.2f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.FromArgb(100, Color.White), 0.2f);
         private Pen _orbitPen = new Pen(Color.FromArgb(200, Color.LightGray), 0.4f) { EndCap = LineCap.ArrowAnchor };//new Pen(Color.White, 0.4f) { DashStyle = DashStyle.Dot, EndCap = LineCap.ArrowAnchor };
         private Pen _blackHoleStroke = new Pen(Color.Red);
+        private SolidBrush _blurBrush = new SolidBrush(Color.FromArgb(10, Color.Black));
+        private SolidBrush _statsBrush = new SolidBrush(Color.FromArgb(255, Color.Black));
+        private SolidBrush _statsBackBrush = new SolidBrush(Color.FromArgb(100, Color.Black));
+        private SolidBrush _bodyBrush = new SolidBrush(Color.FromArgb(255, Color.White));
 
         private Font _infoTextFont = new Font("Tahoma", 8, FontStyle.Regular);
+        private Font _statsFont = new Font("Microsoft Sans Serif", 11, GraphicsUnit.Pixel);
+
+        private RectangleF _statsArea = new RectangleF(0, 0, 150, 150);
 
         public GDIRenderer(Control targetControl) : base(targetControl)
         {
@@ -46,23 +53,30 @@ namespace NBodies.Rendering
             _buffer.Graphics.Clear(color);
         }
 
-        public override void DrawBody(Body body, Color color, float X, float Y, float size)
+        public override void DrawBody(Color color, float X, float Y, float size, bool isBlackHole)
         {
             X -= size * 0.5f;
             Y -= size * 0.5f;
 
-            int brushID = color.ToArgb();
+            _bodyBrush.Color = color;
 
-            if (!_brushCache.ContainsKey(brushID))
+            if (!FastPrimitives)
             {
-                _brushCache.Add(brushID, new SolidBrush(color));
+                _buffer.Graphics.FillEllipse(_bodyBrush, X, Y, size, size);
+            }
+            else
+            {
+                if (size <= 1f)
+                {
+                    _buffer.Graphics.FillRectangle(_bodyBrush, X, Y, size, size);
+                }
+                else
+                {
+                    _buffer.Graphics.FillEllipse(_bodyBrush, X, Y, size, size);
+                }
             }
 
-            var bodyBrush = _brushCache[brushID];
-
-            _buffer.Graphics.FillEllipse(bodyBrush, X, Y, size, size);
-
-            if (body.BlackHole == 1)
+            if (isBlackHole)
             {
                 _buffer.Graphics.DrawEllipse(_blackHoleStroke, X, Y, size, size);
             }
@@ -74,10 +88,10 @@ namespace NBodies.Rendering
             {
                 var body = bodies[i];
 
-                if (!_cullTangle.Contains(body.LocX, body.LocY))
+                if (!_cullTangle.Contains(body.PosX, body.PosY))
                     continue;
 
-                var bloc = new PointF(body.LocX, body.LocY);
+                var bloc = new PointF(body.PosX, body.PosY);
 
                 var f = new PointF(body.ForceX, body.ForceY);
                 f = f.Normalize();
@@ -91,15 +105,20 @@ namespace NBodies.Rendering
 
         public override void DrawMesh(MeshCell[] mesh, float offsetX, float offsetY)
         {
+            if (mesh.Length < 1)
+                return;
+
             float pSize = 0.6f;
             float pOffset = pSize / 2f;
             var meshPen = new Pen(Color.FromArgb(100, Color.Red), 0.1f);
             var pBrush = new SolidBrush(Color.FromArgb(200, Color.GreenYellow));
-            Font tinyFont = new Font("Tahoma", 3, FontStyle.Regular);
+            Font tinyFont = new Font("Tahoma", 1, FontStyle.Regular);
             var finalOffset = new PointF(offsetX, offsetY);
 
-            foreach (var m in mesh)
+            for (int i = 0; i < mesh.Length; i++)
             {
+                var m = mesh[i];
+
                 if (!_cullTangle.Contains(m.LocX, m.LocY))
                     continue;
 
@@ -111,9 +130,27 @@ namespace NBodies.Rendering
                 _buffer.Graphics.FillEllipse(Brushes.Blue, m.LocX + finalOffset.X - pOffset, m.LocY + finalOffset.Y - pOffset, pSize, pSize);
                 _buffer.Graphics.FillEllipse(pBrush, m.CmX + finalOffset.X - pOffset, m.CmY + finalOffset.Y - pOffset, pSize, pSize);
 
-                //_buffer.Graphics.DrawString($@"{m.xID},{m.yID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
 
-                //_buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), _infoTextFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                //if (m.ID < PhysicsProvider.PhysicsCalc.LevelIndex[1])
+                //{
+                //    if ((i + 1) < mesh.Length)
+                //        _buffer.Graphics.DrawLine(Pens.LimeGreen, m.Location().Add(finalOffset), mesh[i + 1].Location().Add(finalOffset));
+                //}
+
+                //  _buffer.Graphics.DrawString($@"{m.ID}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+                // _buffer.Graphics.DrawString($@"[{m.Level}] {m.ID}->{ m.ParentID }", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+
+                //  _buffer.Graphics.DrawString($@"{m.LocX},{m.LocY}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+                // _buffer.Graphics.DrawString($@"{System.Math.Round(m.Mass,2)}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+
+                //_buffer.Graphics.DrawString($@"{m.xID * m.Size},{m.yID * m.Size}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+                //_buffer.Graphics.DrawString($@"{m.IdxX},{m.IdxY}", tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
+
+                //  _buffer.Graphics.DrawString(BodyManager.Mesh.ToList().IndexOf(m).ToString(), tinyFont, Brushes.White, m.LocX + finalOffset.X, m.LocY + finalOffset.Y);
             }
         }
 
@@ -167,6 +204,34 @@ namespace NBodies.Rendering
             }
 
             _buffer.Graphics.DrawLines(_orbitPen, points);
+        }
+
+        public override void DrawBlur(Color color)
+        {
+            var ogSt = _buffer.Graphics.Save();
+            _buffer.Graphics.ResetTransform();
+
+            _blurBrush.Color = color;
+            _buffer.Graphics.FillRectangle(_blurBrush, new RectangleF(0, 0, _viewPortSize.Width, _viewPortSize.Height));
+
+            _buffer.Graphics.Restore(ogSt);
+        }
+
+        public override void DrawStats(string stats, System.Drawing.Color foreColor, System.Drawing.Color backColor)
+        {
+            var ogSt = _buffer.Graphics.Save();
+            _buffer.Graphics.ResetTransform();
+
+            if (Trails)
+            {
+                _statsBackBrush.Color = backColor;
+                _buffer.Graphics.FillRectangle(_statsBackBrush, _statsArea);
+            }
+
+            _statsBrush.Color = foreColor;
+            _buffer.Graphics.DrawString(stats, _statsFont, _statsBrush, new PointF(5, 5));
+
+            _buffer.Graphics.Restore(ogSt);
         }
 
         public override void BeginDraw()

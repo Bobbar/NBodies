@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using NBodies.Helpers;
+using NBodies.Physics;
 using NBodies.Rendering;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace NBodies.UI.KeyActions
 {
-    class ExplosionKey : KeyAction
+    internal class ExplosionKey : KeyAction
     {
         public ExplosionKey()
         {
@@ -31,7 +28,7 @@ namespace NBodies.UI.KeyActions
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
             if (KeyDownStates[Keys.E])
-                BodyManager.InsertExplosion(ScaleHelpers.ScreenPointToField(mouseLoc), 2500);
+                BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
         }
 
         public override void DoMouseMove(PointF mouseLoc)

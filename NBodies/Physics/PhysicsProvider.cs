@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NBodies.Rendering;
 
 namespace NBodies.Physics
 {
@@ -13,7 +14,8 @@ namespace NBodies.Physics
 
         public static void InitPhysics()
         {
-            PhysicsCalc = new  CUDAFloat(Program.DeviceID, Program.ThreadsPerBlockArgument); 
+            PhysicsCalc = new OpenCLPhysics(Program.DeviceID, MainLoop.MaxThreadsPerBlock);
+
             PhysicsCalc.Init();
         }
     }

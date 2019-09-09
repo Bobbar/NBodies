@@ -6,26 +6,23 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
-using NBodies.Extensions;
 
 namespace NBodies.UI.KeyActions
 {
-    public class FPSKey : KeyAction
+    public class KernelSizeKey : KeyAction
     {
-        public FPSKey()
-        {
-            AddKey(Keys.F);
+        Keys _myKey = Keys.K;
 
+        public KernelSizeKey()
+        {
+            AddKey(_myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.F])
-            {
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                Overlay.Show();
-            }
+            Overlay.Value = "Kernel Size: " + MainLoop.KernelSize;
+            Overlay.Show();
         }
 
         public override void DoKeyUp()
@@ -35,12 +32,7 @@ namespace NBodies.UI.KeyActions
 
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
-            // throw new NotImplementedException();
-        }
-
-        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
-        {
-            //throw new NotImplementedException();
+           // throw new NotImplementedException();
         }
 
         public override void DoMouseMove(PointF mouseLoc)
@@ -48,12 +40,17 @@ namespace NBodies.UI.KeyActions
             //throw new NotImplementedException();
         }
 
+        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
+        {
+          //  throw new NotImplementedException();
+        }
+
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.F])
+            if (KeyDownStates[_myKey])
             {
-                MainLoop.TargetFPS += wheelValue;
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+                MainLoop.KernelSize += wheelValue * 0.001f;
+                Overlay.Value = "Kernel Size: " + Math.Round(MainLoop.KernelSize,2);
             }
         }
     }
