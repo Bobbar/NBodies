@@ -81,8 +81,7 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new KernelSizeKey());
             InputHandler.AddKeyAction(new ZeroVeloKey());
 
-
-            SetDisplayOptionTags();
+            PopulateDisplayStyleMenu();
 
             MainLoop.StartLoop();
         }
@@ -230,14 +229,26 @@ namespace NBodies.UI
             }
         }
 
-        private void SetDisplayOptionTags()
+        private void PopulateDisplayStyleMenu()
         {
-            normalToolStripMenuItem.Tag = DisplayStyle.Normal;
-            pressuresToolStripMenuItem.Tag = DisplayStyle.Pressures;
-            highContrastToolStripMenuItem.Tag = DisplayStyle.HighContrast;
-            speedsToolStripMenuItem.Tag = DisplayStyle.Speeds;
-            indexToolStripMenuItem.Tag = DisplayStyle.Index;
-            forcesToolStripMenuItem.Tag = DisplayStyle.Forces;
+            var styles = Enum.GetValues(typeof(DisplayStyle));
+
+            foreach (DisplayStyle s in styles)
+            {
+                string name = Enum.GetName(typeof(DisplayStyle), s);
+                var styleTool = new ToolStripMenuItem(name);
+                styleTool.Tag = s;
+                styleTool.CheckOnClick = true;
+                styleTool.Click += StyleTool_Click;
+                displayToolStripMenuItem.DropDownItems.Add(styleTool);
+            }
+        }
+
+        private void StyleTool_Click(object sender, EventArgs e)
+        {
+            var styleTool = sender as ToolStripMenuItem;
+            DisplayStyle style = (DisplayStyle)styleTool.Tag;
+            SetDisplayStyle(style);
         }
 
         private void SetDisplayStyle(DisplayStyle style)
@@ -683,36 +694,6 @@ namespace NBodies.UI
             BodyManager.ClearBodies();
             PhysicsProvider.PhysicsCalc.Flush();
             MainLoop.ResumePhysics();
-        }
-
-        private void normalToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Normal);
-        }
-
-        private void pressuresToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Pressures);
-        }
-
-        private void highContrastToolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.HighContrast);
-        }
-
-        private void speedsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Speeds);
-        }
-
-        private void indexToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Index);
-        }
-
-        private void forcesToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SetDisplayStyle(DisplayStyle.Forces);
         }
 
         private void UpdateButton_Click(object sender, EventArgs e)

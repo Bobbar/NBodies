@@ -232,13 +232,19 @@ namespace NBodies.Rendering
 
                                 break;
 
-                            case DisplayStyle.Pressures:
+                            case DisplayStyle.Pressure:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
                                 _clearColor = _defaultClearColor;
 
                                 break;
 
-                            case DisplayStyle.Speeds:
+                            case DisplayStyle.Density:
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Density / body.Mass, true);
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
+                            case DisplayStyle.Velocity:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
                                 _clearColor = _defaultClearColor;
 
@@ -250,7 +256,7 @@ namespace NBodies.Rendering
 
                                 break;
 
-                            case DisplayStyle.Forces:
+                            case DisplayStyle.Force:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
                                 _clearColor = _defaultClearColor;
 

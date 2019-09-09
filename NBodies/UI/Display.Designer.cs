@@ -45,12 +45,6 @@
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.normalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.pressuresToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.speedsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.indexToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.forcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.highContrastToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.followingBodyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showFollowBodyForce = new System.Windows.Forms.ToolStripMenuItem();
             this.showPredictOrbit = new System.Windows.Forms.ToolStripMenuItem();
@@ -259,66 +253,9 @@
             // 
             // displayToolStripMenuItem
             // 
-            this.displayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.normalToolStripMenuItem,
-            this.pressuresToolStripMenuItem,
-            this.speedsToolStripMenuItem,
-            this.indexToolStripMenuItem,
-            this.forcesToolStripMenuItem,
-            this.highContrastToolStripMenuItem});
             this.displayToolStripMenuItem.Name = "displayToolStripMenuItem";
             this.displayToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.displayToolStripMenuItem.Text = "Display Style";
-            // 
-            // normalToolStripMenuItem
-            // 
-            this.normalToolStripMenuItem.Checked = true;
-            this.normalToolStripMenuItem.CheckOnClick = true;
-            this.normalToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.normalToolStripMenuItem.Name = "normalToolStripMenuItem";
-            this.normalToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.normalToolStripMenuItem.Text = "Normal";
-            this.normalToolStripMenuItem.Click += new System.EventHandler(this.normalToolStripMenuItem_Click);
-            // 
-            // pressuresToolStripMenuItem
-            // 
-            this.pressuresToolStripMenuItem.CheckOnClick = true;
-            this.pressuresToolStripMenuItem.Name = "pressuresToolStripMenuItem";
-            this.pressuresToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.pressuresToolStripMenuItem.Text = "Pressures";
-            this.pressuresToolStripMenuItem.Click += new System.EventHandler(this.pressuresToolStripMenuItem_Click);
-            // 
-            // speedsToolStripMenuItem
-            // 
-            this.speedsToolStripMenuItem.CheckOnClick = true;
-            this.speedsToolStripMenuItem.Name = "speedsToolStripMenuItem";
-            this.speedsToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.speedsToolStripMenuItem.Text = "Speeds";
-            this.speedsToolStripMenuItem.Click += new System.EventHandler(this.speedsToolStripMenuItem_Click);
-            // 
-            // indexToolStripMenuItem
-            // 
-            this.indexToolStripMenuItem.CheckOnClick = true;
-            this.indexToolStripMenuItem.Name = "indexToolStripMenuItem";
-            this.indexToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.indexToolStripMenuItem.Text = "Index";
-            this.indexToolStripMenuItem.Click += new System.EventHandler(this.indexToolStripMenuItem_Click);
-            // 
-            // forcesToolStripMenuItem
-            // 
-            this.forcesToolStripMenuItem.CheckOnClick = true;
-            this.forcesToolStripMenuItem.Name = "forcesToolStripMenuItem";
-            this.forcesToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.forcesToolStripMenuItem.Text = "Forces";
-            this.forcesToolStripMenuItem.Click += new System.EventHandler(this.forcesToolStripMenuItem_Click);
-            // 
-            // highContrastToolStripMenuItem
-            // 
-            this.highContrastToolStripMenuItem.CheckOnClick = true;
-            this.highContrastToolStripMenuItem.Name = "highContrastToolStripMenuItem";
-            this.highContrastToolStripMenuItem.Size = new System.Drawing.Size(148, 22);
-            this.highContrastToolStripMenuItem.Text = "High Contrast";
-            this.highContrastToolStripMenuItem.Click += new System.EventHandler(this.highContrastToolStripMenuItem1_Click);
             // 
             // followingBodyToolStripMenuItem
             // 
@@ -757,14 +694,9 @@
         private System.Windows.Forms.ToolStripMenuItem loadStateToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem antiAliasingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem displayToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem normalToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem pressuresToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem highContrastToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown StyleScaleUpDown;
         private System.Windows.Forms.ToolStripMenuItem reloadPreviousToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem speedsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem forcesToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown AlphaUpDown;
         private System.Windows.Forms.ToolStripMenuItem followingBodyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showFollowBodyForce;
@@ -773,7 +705,6 @@
         private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem indexToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem fastPrimitivesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rewindBufferToolStripMenuItem;
