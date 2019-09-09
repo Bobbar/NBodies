@@ -12,6 +12,9 @@ namespace NBodies
 {
     public partial class AddBodiesForm : Form
     {
+        private Color _pickedColor = Color.Transparent;
+        private bool _colorWasPicked = false;
+
         public AddBodiesForm()
         {
             InitializeComponent();
@@ -123,7 +126,20 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color)));
+                Color color;
+                if (StaticDensityCheckBox.Checked)
+                {
+                    if (_colorWasPicked)
+                        color = _pickedColor;
+                    else
+                        color = ColorHelper.RandomColor();
+                }
+                else
+                {
+                    color = matter.Color;
+                }
+               
+                newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, color));
             }
 
             var bodyArr = newBodies.ToArray();
@@ -210,7 +226,20 @@ namespace NBodies
                     newMass = BodyManager.CalcMass(bodySize, matter.Density);
                 }
 
-                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, (StaticDensityCheckBox.Checked ? ColorHelper.RandomColor() : matter.Color), int.Parse(LifeTimeTextBox.Text.Trim())));
+                Color color;
+                if (StaticDensityCheckBox.Checked)
+                {
+                    if (_colorWasPicked)
+                        color = _pickedColor;
+                    else
+                        color = ColorHelper.RandomColor();
+                }
+                else
+                {
+                    color = matter.Color;
+                }
+
+                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
             }
 
             var bodyArr = newBodies.ToArray();
@@ -254,7 +283,6 @@ namespace NBodies
             {
                 PhysicsProvider.PhysicsCalc.FixOverLaps(ref bodies);
             }
-
         }
 
         private void AddOrbitButton_Click(object sender, EventArgs e)
@@ -270,6 +298,24 @@ namespace NBodies
         {
             layeredCheckBox.Enabled = !StaticDensityCheckBox.Checked;
             DensityTextBox.Enabled = !StaticDensityCheckBox.Checked;
+            PickColorButton.Enabled = StaticDensityCheckBox.Checked;
+        }
+
+        private void PickColorButton_Click(object sender, EventArgs e)
+        {
+            using (var colorPick = new ColorDialog())
+            {
+                if (colorPick.ShowDialog(this) == DialogResult.OK)
+                {
+                    _pickedColor = colorPick.Color;
+                    _colorWasPicked = true;
+                }
+                else
+                {
+                    _pickedColor = Color.Transparent;
+                    _colorWasPicked = false;
+                }
+            }
         }
     }
 }

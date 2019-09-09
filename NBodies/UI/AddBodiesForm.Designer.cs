@@ -30,6 +30,8 @@
         {
             this.BodyParamsGroup = new System.Windows.Forms.GroupBox();
             this.CirOrbitGroup = new System.Windows.Forms.GroupBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.InOrbitRadiusTextBox = new System.Windows.Forms.TextBox();
             this.layeredCheckBox = new System.Windows.Forms.CheckBox();
             this.AddStationaryButton = new System.Windows.Forms.Button();
             this.AddOrbitButton = new System.Windows.Forms.Button();
@@ -53,8 +55,8 @@
             this.MinSizeTextBox = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
-            this.InOrbitRadiusTextBox = new System.Windows.Forms.TextBox();
+            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
+            this.PickColorButton = new System.Windows.Forms.Button();
             this.BodyParamsGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -69,7 +71,7 @@
             this.BodyParamsGroup.Controls.Add(this.panel1);
             this.BodyParamsGroup.Location = new System.Drawing.Point(12, 12);
             this.BodyParamsGroup.Name = "BodyParamsGroup";
-            this.BodyParamsGroup.Size = new System.Drawing.Size(386, 281);
+            this.BodyParamsGroup.Size = new System.Drawing.Size(386, 291);
             this.BodyParamsGroup.TabIndex = 0;
             this.BodyParamsGroup.TabStop = false;
             this.BodyParamsGroup.Text = "Bodies";
@@ -86,12 +88,29 @@
             this.CirOrbitGroup.Controls.Add(this.label7);
             this.CirOrbitGroup.Controls.Add(this.CenterMassTextBox);
             this.CirOrbitGroup.Controls.Add(this.CenterMassCheckBox);
-            this.CirOrbitGroup.Location = new System.Drawing.Point(6, 104);
+            this.CirOrbitGroup.Location = new System.Drawing.Point(6, 111);
             this.CirOrbitGroup.Name = "CirOrbitGroup";
             this.CirOrbitGroup.Size = new System.Drawing.Size(374, 171);
             this.CirOrbitGroup.TabIndex = 1;
             this.CirOrbitGroup.TabStop = false;
             this.CirOrbitGroup.Text = "System Params";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(76, 117);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(67, 13);
+            this.label10.TabIndex = 12;
+            this.label10.Text = "Inner Radius";
+            // 
+            // InOrbitRadiusTextBox
+            // 
+            this.InOrbitRadiusTextBox.Location = new System.Drawing.Point(79, 133);
+            this.InOrbitRadiusTextBox.Name = "InOrbitRadiusTextBox";
+            this.InOrbitRadiusTextBox.Size = new System.Drawing.Size(63, 20);
+            this.InOrbitRadiusTextBox.TabIndex = 11;
+            this.InOrbitRadiusTextBox.Text = "10";
             // 
             // layeredCheckBox
             // 
@@ -172,6 +191,7 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.PickColorButton);
             this.panel1.Controls.Add(this.label9);
             this.panel1.Controls.Add(this.LifeTimeTextBox);
             this.panel1.Controls.Add(this.StaticDensityCheckBox);
@@ -188,7 +208,7 @@
             this.panel1.Controls.Add(this.NumToAddTextBox);
             this.panel1.Location = new System.Drawing.Point(6, 16);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(361, 82);
+            this.panel1.Size = new System.Drawing.Size(361, 89);
             this.panel1.TabIndex = 0;
             // 
             // label9
@@ -316,28 +336,21 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "5000";
             // 
-            // label10
+            // PickColorButton
             // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(76, 117);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(67, 13);
-            this.label10.TabIndex = 12;
-            this.label10.Text = "Inner Radius";
-            // 
-            // InOrbitRadiusTextBox
-            // 
-            this.InOrbitRadiusTextBox.Location = new System.Drawing.Point(79, 133);
-            this.InOrbitRadiusTextBox.Name = "InOrbitRadiusTextBox";
-            this.InOrbitRadiusTextBox.Size = new System.Drawing.Size(63, 20);
-            this.InOrbitRadiusTextBox.TabIndex = 11;
-            this.InOrbitRadiusTextBox.Text = "10";
+            this.PickColorButton.Location = new System.Drawing.Point(277, 66);
+            this.PickColorButton.Name = "PickColorButton";
+            this.PickColorButton.Size = new System.Drawing.Size(70, 21);
+            this.PickColorButton.TabIndex = 14;
+            this.PickColorButton.Text = "Color";
+            this.PickColorButton.UseVisualStyleBackColor = true;
+            this.PickColorButton.Click += new System.EventHandler(this.PickColorButton_Click);
             // 
             // AddBodiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(410, 305);
+            this.ClientSize = new System.Drawing.Size(410, 315);
             this.Controls.Add(this.BodyParamsGroup);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Name = "AddBodiesForm";
@@ -381,5 +394,7 @@
         private System.Windows.Forms.CheckBox layeredCheckBox;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.TextBox InOrbitRadiusTextBox;
+        private System.Windows.Forms.Button PickColorButton;
+        private System.Windows.Forms.ColorDialog colorDialog1;
     }
 }
