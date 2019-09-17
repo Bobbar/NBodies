@@ -449,8 +449,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	// Resting density.	
 	outBody.Density = outBody.Mass * sph.fDensity;
 
+	// *** Particle 2 Particle & SPH ***
 	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
-	// Read from the flattened mesh-neighbor index at the correct location.
 	for (int n = levelCell.NeighborStartIdx; n < levelCell.NeighborStartIdx + levelCell.NeighborCount; n++)
 	{
 		// Get the mesh cell index, then copy it from memory.
@@ -498,7 +498,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		}
 	}
 
-
+	// *** Particle 2 Mesh ***
+	// Accumulate force from neighboring cells at each level.
 	for (int level = 0; level < sim.MeshLevels; level++)
 	{
 		// Iterate parent cell neighbors.
@@ -542,7 +543,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		levelCellParent = inMesh[(levelCellParent.ParentID)];
 	}
 
-	// Iterate the top level cells.
+	// *** Particle 2 Mesh ***
+	// Accumulate force from remaining distant cells at the top-most level.
 	for (int top = levelIdx[(sim.MeshLevels)]; top < inMeshLen; top++)
 	{
 		MeshCell cell = inMesh[(top)];

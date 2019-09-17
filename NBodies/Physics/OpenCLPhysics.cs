@@ -19,17 +19,20 @@ namespace NBodies.Physics
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
 
-        private int[] _levelIdx = new int[0];
-        private MeshCell[] _mesh = new MeshCell[0];
-        private int _meshLength = 0;
-        private GridInfo[] _gridInfo = new GridInfo[0];
-        private Body[] _bodies = new Body[0];
-        private static Body[] _sortBodies = new Body[0];
-        private static SpatialInfo[] _spatials = new SpatialInfo[0];
-        private static int[] _mortKeys = new int[0];
-        private static int[] _cellIdx = new int[0];
-        private static int[] _sortMap = new int[0];
-        private static int[] _allCellIdx = new int[0];
+        private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
+        private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
+        private int _meshLength = 0; // Total length of the 1D mesh array.
+        private GridInfo[] _gridInfo = new GridInfo[0]; // Bounds and offsets for each level of the neighbor list grid.
+        private LevelInfo[] _levelInfo = new LevelInfo[0]; // Spatial info, cell index map and counts for each level.
+        private Body[] _bodies = new Body[0]; // Local reference for the current body array.
+
+        // Static fields for large allocations.
+        private static SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
+        private static int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
+        private static int[] _sortMap = new int[0]; // Reindexing map for spatial sorting.
+        private static int[] _cellIdx = new int[0]; // Buffer for cell index maps.
+        private static int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
+ 
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
@@ -396,13 +399,18 @@ namespace NBodies.Physics
             // Grid info for each level.
             _gridInfo = new GridInfo[_levels + 1];
 
-            // Get spatial info for the cells about to be constructed.
-            LevelInfo botLevel = CalcBodySpatials(cellSizeExp);
-            LevelInfo[] topLevels = CalcTopSpatials(botLevel);
+            // Mesh info for each level.
+            if (_levelInfo.Length < (_levels + 1))
+                _levelInfo = new LevelInfo[_levels + 1];
+
+            // Compute cell count and cell index maps.
+            // Also does spatial sorting of bodies.
+            CalcBodySpatialsAndSort(cellSizeExp);
+            CalcTopSpatials();
 
             // Get the total number of mesh cells to be created.
             int totCells = 0;
-            foreach (var lvl in topLevels)
+            foreach (var lvl in _levelInfo)
             {
                 totCells += lvl.CellCount;
             }
@@ -417,13 +425,13 @@ namespace NBodies.Physics
             _levelIdx[0] = 0;
 
             // Write the cell index map as one large array.
-            WriteCellIndex(topLevels);
+            WriteCellIndex(_levelInfo);
 
             // Build the first (bottom) level of the mesh.
-            BuildBottomLevelGPU(botLevel, cellSizeExp);
+            BuildBottomLevelGPU(_levelInfo[0], cellSizeExp);
 
             // Build the remaining (top) levels of the mesh.
-            BuildTopLevelsGPU(topLevels, cellSizeExp, _levels);
+            BuildTopLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
             // Populate the grid index and mesh neighbor index.
             PopGridAndNeighborsGPU(_gridInfo, totCells);
@@ -433,11 +441,11 @@ namespace NBodies.Physics
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all bodies.
         /// </summary>
         /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
-        private LevelInfo CalcBodySpatials(int cellSizeExp)
+        private void CalcBodySpatialsAndSort(int cellSizeExp)
         {
             // Spatial info to be computed.
-            if (_spatials.Length != _bodies.Length)
-                _spatials = new SpatialInfo[_bodies.Length];
+            if (_bSpatials.Length != _bodies.Length)
+                _bSpatials = new SpatialInfo[_bodies.Length];
 
             // Array of morton numbers used for sorting.
             // Using a key array when sorting is much faster than sorting an array of objects by a field.
@@ -460,7 +468,7 @@ namespace NBodies.Physics
 
                     mm.Update(idxX, idxY);
 
-                    _spatials[b] = new SpatialInfo(morton, idxX, idxY, b);
+                    _bSpatials[b] = new SpatialInfo(morton, idxX, idxY, b);
                     _mortKeys[b] = morton;
                 }
 
@@ -475,7 +483,7 @@ namespace NBodies.Physics
 
             // Sort by morton number to produce a spatially sorted array.
             // Array.Sort(_mortKeys, _spatials);
-            Sort.ParallelQuickSort(_mortKeys, _spatials);
+            Sort.ParallelQuickSort(_mortKeys, _bSpatials);
 
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
@@ -488,10 +496,10 @@ namespace NBodies.Physics
             if (_sortMap.Length < _bodies.Length)
                 _sortMap = new int[_bodies.Length + 100];
 
-            for (int i = 0; i < _spatials.Length; i++)
+            for (int i = 0; i < _bSpatials.Length; i++)
             {
                 var mort = _mortKeys[i];
-                _sortMap[i] = _spatials[i].Index;
+                _sortMap[i] = _bSpatials[i].Index;
 
                 // Find the start of each new morton number and record location to build cell index.
                 if (val != mort)
@@ -503,17 +511,16 @@ namespace NBodies.Physics
                 }
             }
 
-            _cellIdx[count] = _spatials.Length;
+            _cellIdx[count] = _bSpatials.Length;
 
             // Write bodies and sort map to GPU and start reindexing.
             UploadAndReindexGPU(_sortMap);
 
-            var output = new LevelInfo();
-            output.Spatials = _spatials;
-            output.CellCount = count;
-            output.CellIndex = new int[count + 1];
-            Array.Copy(_cellIdx, 0, output.CellIndex, 0, count + 1);
-            return output;
+            _levelInfo[0].Spatials = _bSpatials;
+            _levelInfo[0].CellCount = count;
+            if (_levelInfo[0].CellIndex == null || _levelInfo[0].CellIndex.Length != (count + 1))
+                _levelInfo[0].CellIndex = new int[count + 1];
+            Array.Copy(_cellIdx, 0, _levelInfo[0].CellIndex, 0, count + 1);
         }
 
         private void UploadAndReindexGPU(int[] sortPart)
@@ -535,24 +542,20 @@ namespace NBodies.Physics
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.
         /// </summary>
         /// <param name="bottom">LevelInfo for bottom-most mesh level.</param>
-        private LevelInfo[] CalcTopSpatials(LevelInfo bottom)
+        private void CalcTopSpatials()
         {
-            LevelInfo[] output = new LevelInfo[_levels + 1];
-
-            output[0] = bottom;
-
             object sync = new object();
             MinMax minMax = new MinMax(0);
             for (int level = 1; level <= _levels; level++)
             {
                 minMax.Reset();
 
-                LevelInfo previous = output[level - 1];
+                LevelInfo previous = _levelInfo[level - 1];
 
-                output[level] = new LevelInfo();
-                output[level].Spatials = new SpatialInfo[previous.CellCount];
+                if (_levelInfo[level].Spatials == null || _levelInfo[level].Spatials.Length != previous.CellCount)
+                    _levelInfo[level].Spatials = new SpatialInfo[previous.CellCount];
 
-                SpatialInfo[] currentSpa = output[level].Spatials;
+                SpatialInfo[] currentSpa = _levelInfo[level].Spatials;
 
                 ParallelForSlim(previous.CellCount, _parallelPartitions, (start, len) =>
                 {
@@ -597,13 +600,12 @@ namespace NBodies.Physics
 
                 _cellIdx[count] = currentSpa.Length;
 
-                output[level].Spatials = currentSpa;
-                output[level].CellCount = count;
-                output[level].CellIndex = new int[count + 1];
-                Array.Copy(_cellIdx, 0, output[level].CellIndex, 0, count + 1);
+                _levelInfo[level].Spatials = currentSpa;
+                _levelInfo[level].CellCount = count;
+                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length != (count + 1))
+                    _levelInfo[level].CellIndex = new int[count + 1];
+                Array.Copy(_cellIdx, 0, _levelInfo[level].CellIndex, 0, count + 1);
             }
-
-            return output;
         }
 
         private void WriteCellIndex(LevelInfo[] levelInfo)
