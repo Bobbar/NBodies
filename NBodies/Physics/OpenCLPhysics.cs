@@ -51,7 +51,6 @@ namespace NBodies.Physics
         private ComputeKernel _calcCMKernel;
         private ComputeKernel _reorderKernel;
 
-        private ComputeBuffer<int> _gpuLevelIdx;
         private ComputeBuffer<MeshCell> _gpuMesh;
         private ComputeBuffer<int> _gpuMeshNeighbors;
         private ComputeBuffer<Body> _gpuInBodies;
@@ -176,7 +175,6 @@ namespace NBodies.Physics
 
         public void Flush()
         {
-            _gpuLevelIdx.Dispose();
             _gpuMesh.Dispose();
             _gpuMeshNeighbors.Dispose();
             _gpuInBodies.Dispose();
@@ -205,9 +203,6 @@ namespace NBodies.Physics
 
             _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
             Allocate(ref _gpuMesh, 0, true);
-
-            _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
-            Allocate(ref _gpuLevelIdx, 0, true);
 
             _gpuSortPart = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
             Allocate(ref _gpuSortPart, 0, true);
@@ -244,10 +239,6 @@ namespace NBodies.Physics
             _calcCMKernel.SetValueArgument(3, _meshLength);
             _queue.ExecuteTask(_calcCMKernel, null);
 
-            // Allocate and write the level index.
-            Allocate(ref _gpuLevelIdx, _levelIdx.Length, true);
-            _queue.WriteToBuffer(_levelIdx, _gpuLevelIdx, false, null);
-
             int[] postNeeded = new int[1] { 0 };
             using (var gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero))
             {
@@ -258,9 +249,9 @@ namespace NBodies.Physics
                 _forceKernel.SetValueArgument(argi++, _bodies.Length);
                 _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
                 _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _forceKernel.SetValueArgument(argi++, _levelIdx[_levels]);
                 _forceKernel.SetValueArgument(argi++, _meshLength);
                 _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _forceKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
                 _forceKernel.SetValueArgument(argi++, sim);
                 _forceKernel.SetValueArgument(argi++, _preCalcs);
                 _forceKernel.SetMemoryArgument(argi++, gpuPostNeeded);
@@ -906,7 +897,6 @@ namespace NBodies.Physics
 
         public void Dispose()
         {
-            _gpuLevelIdx.Dispose();
             _gpuMesh.Dispose();
             _gpuMeshNeighbors.Dispose();
             _gpuInBodies.Dispose();

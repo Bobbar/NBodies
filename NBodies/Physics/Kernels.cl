@@ -423,7 +423,7 @@ __kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int 
 	cm[0] = (float2)(cmX, cmY);
 }
 
-__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int inMeshLen, global int* meshNeighbors, global int* levelIdx, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	float GAS_K = 0.3f;
 	float FLOAT_EPSILON = 1.192093E-07f;
@@ -545,7 +545,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 	// *** Particle 2 Mesh ***
 	// Accumulate force from remaining distant cells at the top-most level.
-	for (int top = levelIdx[(sim.MeshLevels)]; top < inMeshLen; top++)
+	for (int top = meshTopStart; top < meshTopEnd; top++)
 	{
 		MeshCell cell = inMesh[(top)];
 
