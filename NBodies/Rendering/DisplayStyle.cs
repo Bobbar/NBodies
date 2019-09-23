@@ -13,6 +13,7 @@ namespace NBodies.Rendering
         Density,
         Velocity,
         Index,
+        SpatialOrder,
         Force,
         HighContrast
     }

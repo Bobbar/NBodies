@@ -256,6 +256,19 @@ namespace NBodies.Rendering
 
                                 break;
 
+                            case DisplayStyle.SpatialOrder:
+                                int orderIdx = 0;
+                                if (SortZOrder)
+                                    orderIdx = _buckets[body.UID];
+                                else
+                                    orderIdx = i;
+                                
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, orderIdx, true);
+
+                                _clearColor = _defaultClearColor;
+
+                                break;
+
                             case DisplayStyle.Force:
                                 bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
                                 _clearColor = _defaultClearColor;
