@@ -391,7 +391,7 @@ namespace NBodies.Physics
             _gridInfo = new GridInfo[_levels + 1];
 
             // Mesh info for each level.
-            if (_levelInfo.Length < (_levels + 1))
+            if (_levelInfo.Length != (_levels + 1))
                 _levelInfo = new LevelInfo[_levels + 1];
 
             // Compute cell count and cell index maps.
