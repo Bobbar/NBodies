@@ -1,4 +1,5 @@
 
+
 typedef struct __attribute__((packed)) Body
 {
 	float PosX;
@@ -88,7 +89,7 @@ constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
 constant int INROCHE = 8;
 
-int IsNeighbor(MeshCell testCell, MeshCell neighborCell);
+bool IsNeighbor(MeshCell cell, MeshCell testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
 int SetFlag(int flags, int flag, bool enabled);
 Body SetFlagB(Body body, int flag, bool enabled);
@@ -456,7 +457,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 		// Get the mesh cell index, then copy it from memory.
 		int nId = meshNeighbors[(n)];
 		MeshCell cell = inMesh[(nId)];
-		
+
 		// Iterate the bodies within the cell.
 		// Read from body array at the correct location.
 		int mbStart = cell.BodyStartIdx;
@@ -478,7 +479,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				{
 					// Clamp SPH softening distance.
 					dist = max(dist, FLOAT_EPSILON);
-			
+
 					// Accumulate density.
 					float diff = sph.kSizeSq - dist;
 					float fac = sph.fDensity * diff * diff * diff;
@@ -487,7 +488,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 
 				// Clamp gravity softening distance.
 				dist = max(dist, softening);
-				
+
 				// Accumulate body-to-body force.
 				float force = inBody.Mass * outBody.Mass / dist;
 
@@ -516,24 +517,20 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 			int childLen = childStartIdx + nCell.ChildCount;
 			for (int c = childStartIdx; c < childLen; c++)
 			{
-				// Make sure the current cell index is not a neighbor or this body's cell.
-				if (c != outBody.MeshID)
+				MeshCell cell = inMesh[(c)];
+
+				if (!IsNeighbor(levelCell, cell))
 				{
-					MeshCell cell = inMesh[(c)];
+					// Calculate the force from the cells center of mass.
+					float distX = cell.CmX - outBody.PosX;
+					float distY = cell.CmY - outBody.PosY;
+					float dist = distX * distX + distY * distY;
+					float distSqrt = (float)native_sqrt(dist);
+					float force = (float)cell.Mass * outBody.Mass / dist;
 
-					if (IsNeighbor(levelCell, cell) == 0)
-					{
-						// Calculate the force from the cells center of mass.
-						float distX = cell.CmX - outBody.PosX;
-						float distY = cell.CmY - outBody.PosY;
-						float dist = distX * distX + distY * distY;
-						float distSqrt = (float)native_sqrt(dist);
-						float force = (float)cell.Mass * outBody.Mass / dist;
-
-						totForce += force;
-						outBody.ForceX += force * distX / distSqrt;
-						outBody.ForceY += force * distY / distSqrt;
-					}
+					totForce += force;
+					outBody.ForceX += force * distX / distSqrt;
+					outBody.ForceY += force * distY / distSqrt;
 				}
 			}
 		}
@@ -549,7 +546,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	{
 		MeshCell cell = inMesh[(top)];
 
-		if (IsNeighbor(levelCell, cell) == 0)
+		if (!IsNeighbor(levelCell, cell))
 		{
 			float distX = cell.CmX - outBody.PosX;
 			float distY = cell.CmY - outBody.PosY;
@@ -569,7 +566,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	if (totForce > outBody.Mass * 4.0f)
 	{
 		if (!HasFlagB(outBody, INROCHE))
-		{ 
+		{
 			outBody = SetFlagB(outBody, INROCHE, true);
 			postNeeded[0] = 1;
 		}
@@ -580,22 +577,13 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 }
 
 // Is the specified cell a neighbor of the test cell?
-int IsNeighbor(MeshCell cell, MeshCell testCell)
+bool IsNeighbor(MeshCell cell, MeshCell testCell)
 {
-	int result = 0;
-
-	for (int x = -1; x <= 1; x++)
+	if (testCell.IdxX > cell.IdxX + -2 && testCell.IdxX < cell.IdxX + 2 && testCell.IdxY > cell.IdxY + -2 && testCell.IdxY < cell.IdxY + 2)
 	{
-		for (int y = -1; y <= 1; y++)
-		{
-			if (testCell.IdxX == cell.IdxX + x && testCell.IdxY == cell.IdxY + y)
-			{
-				result = 1;
-			}
-		}
+		return true;
 	}
-
-	return result;
+	return false;
 }
 
 // Collision pass for bodies larger than thier parent cells.
@@ -759,7 +747,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							float FLOAT_EPSILONSQRT = 3.45267e-11f;
 
 							distSqrt = max(distSqrt, FLOAT_EPSILONSQRT);
-							
+
 							float kDiff = sph.kSize - distSqrt;
 
 							// Pressure force
@@ -846,7 +834,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 	}
 
 	int nanCheck = isnan(outBody.PosX) + isnan(outBody.PosY);
-    if (nanCheck > 0)
+	if (nanCheck > 0)
 	{
 		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 		postNeeded[0] = 1;
