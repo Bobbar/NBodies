@@ -596,7 +596,9 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 		return;
 
 	// Copy current body from memory.
-	Body outBody = inBodies[(a)];
+	Body outBody = inBodies[a];
+	outBodies[a] = outBody;
+	barrier(CLK_GLOBAL_MEM_FENCE);
 
 	if (collisions == 1)
 	{
@@ -608,7 +610,7 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 		}
 
 		// Get the current parent cell.
-		MeshCell parentCell = inMesh[(outBody.MeshID)];
+		MeshCell parentCell = inMesh[outBody.MeshID];
 		int pcellSize = parentCell.Size;
 
 		// Move up through parent cells until we find one
@@ -627,8 +629,8 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 		for (int i = parentCell.NeighborStartIdx; i < parentCell.NeighborStartIdx + parentCell.NeighborCount; i++)
 		{
 			// Get the neighbor cell from the index.
-			int nId = meshNeighbors[(i)];
-			MeshCell nCell = inMesh[(nId)];
+			int nId = meshNeighbors[i];
+			MeshCell nCell = inMesh[nId];
 
 			// Iterate all the bodies within each neighboring cell.
 			int mbStart = nCell.BodyStartIdx;
@@ -638,7 +640,7 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 				// Save us from ourselves.
 				if (mb != a)
 				{
-					Body inBody = inBodies[(mb)];
+					Body inBody = inBodies[mb];
 
 					// Calc the distance and check for collision.
 					float distX = outBody.PosX - inBody.PosX;
@@ -658,14 +660,8 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 						// If we're the bigger one, eat the other guy.
 						if (outBody.Mass > inBody.Mass)
 						{
-							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-							outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
-							postNeeded[0] = 1;
-						}
-						else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
-						{
-							outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-							outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+							outBodies[a] = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+							outBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 							postNeeded[0] = 1;
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
@@ -673,14 +669,8 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 							// Our UID is more gooder, eat the other guy.
 							if (outBody.UID > inBody.UID)
 							{
-								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								outBodies[(mb)].Flag = SetFlag(outBodies[(mb)].Flag, CULLED, true);
-								postNeeded[0] = 1;
-							}
-							else // Our UID is inferior, we must go away.
-							{
-								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-								outBodies[(mb)] = CollideBodies(inBody, outBody, colMass, forceX, forceY);
+								outBodies[a] = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+								outBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 								postNeeded[0] = 1;
 							}
 						}
@@ -689,7 +679,6 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 			}
 		}
 	}
-	outBodies[(a)] = outBody;
 }
 
 
