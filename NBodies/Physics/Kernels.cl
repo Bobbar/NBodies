@@ -83,7 +83,13 @@ typedef struct __attribute__((packed)) SimSettings
 
 } SimSettings;
 
+// Grav/SPH consts.
+constant float SPH_SOFTENING = 0.00001f; 
+constant float SOFTENING = 0.04f;
+constant float SOFTENING_SQRT = 0.2f;
+constant float GAS_K = 0.3f;
 
+// Flags
 constant int BLACKHOLE = 1;
 constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
@@ -392,7 +398,7 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	// Set child cell parent ID.
 	firstCell.ParentID = newIdx;
 	mesh[firstIdx] = firstCell;
-	
+
 	// Accumulate values from remaining child cells and set child parent IDs.
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -438,10 +444,6 @@ __kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int 
 
 __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
-	float GAS_K = 0.3f;
-	float FLOAT_EPSILON = 1.192093E-07f;
-	float softening = 0.04f;
-
 	int a = get_global_id(0);
 
 	if (a >= inBodiesLen)
@@ -490,7 +492,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				if (distSqrt <= sph.kSize)
 				{
 					// Clamp SPH softening distance.
-					dist = max(dist, FLOAT_EPSILON);
+					dist = max(dist, SPH_SOFTENING);
 
 					// Accumulate density.
 					float diff = sph.kSizeSq - dist;
@@ -499,7 +501,8 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 				}
 
 				// Clamp gravity softening distance.
-				dist = max(dist, softening);
+				dist = max(dist, SOFTENING);
+				distSqrt = max(distSqrt, SOFTENING_SQRT);
 
 				// Accumulate body-to-body force.
 				float force = inBody.Mass * outBody.Mass / dist;
@@ -538,7 +541,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 					float distY = cell.CmY - outBody.PosY;
 					float dist = distX * distX + distY * distY;
 					float distSqrt = (float)native_sqrt(dist);
-					float force = (float)cell.Mass * outBody.Mass / dist;
+					float force = cell.Mass * outBody.Mass / dist;
 
 					totForce += force;
 					outBody.ForceX += force * distX / distSqrt;
@@ -564,7 +567,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 			float distY = cell.CmY - outBody.PosY;
 			float dist = distX * distX + distY * distY;
 			float distSqrt = (float)native_sqrt(dist);
-			float force = (float)cell.Mass * outBody.Mass / dist;
+			float force = cell.Mass * outBody.Mass / dist;
 
 			totForce += force;
 			outBody.ForceX += force * distX / distSqrt;
@@ -693,7 +696,6 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 	}
 }
 
-
 __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
@@ -735,8 +737,14 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 					float colDist = (sph.kSize * 0.5f) * 2.0f;
 					if (dist <= colDist * colDist)
 					{
-						// We know we have a collision, so go ahead and do the expensive square root now.
-						float distSqrt = (float)native_sqrt(dist);
+						// Handle exact overlaps.
+						if (dist == 0)
+						{
+							outBody.PosX += (outBody.UID + 1) * SPH_SOFTENING;
+							outBody.PosY += (outBody.UID + 1) * SPH_SOFTENING;
+						}
+
+						dist = max(dist, SPH_SOFTENING);
 
 						// If both bodies are in Roche, we do SPH physics.
 						// Otherwise, an elastic collision and merge is done.
@@ -744,38 +752,24 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 						// SPH collision.
 						if (HasFlagB(outBody, INROCHE) && HasFlagB(inBody, INROCHE))
 						{
-							float FLOAT_EPSILON = 1.192092896e-07f;
-							float FLOAT_EPSILONSQRT = 3.45267e-11f;
-
-							distSqrt = max(distSqrt, FLOAT_EPSILONSQRT);
+							float distSqrt = (float)native_sqrt(dist);
+							distSqrt = max(distSqrt, SPH_SOFTENING);
 
 							float kDiff = sph.kSize - distSqrt;
-
+						
 							// Pressure force
-							float scalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
-							float gradFactor = -sph.fPressure * kDiff * kDiff / distSqrt;
+							float pressScalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+							float pressGrad = sph.fPressure * kDiff * kDiff / distSqrt;
 
-							float gradX = distX * gradFactor;
-							float gradY = distY * gradFactor;
-
-							gradX *= scalar;
-							gradY *= scalar;
-
-							outBody.ForceX -= gradX;
-							outBody.ForceY -= gradY;
+							outBody.ForceX += (distX * pressGrad) * pressScalar;
+							outBody.ForceY += (distY * pressGrad) * pressScalar;
 
 							// Viscosity force
-							float visc_laplace = sph.fViscosity * kDiff;
-							float visc_scalar = inBody.Mass * visc_laplace * sim.Viscosity * 1.0f / inBody.Density;
+							float viscLaplace = sph.fViscosity * kDiff;
+							float viscScalar = inBody.Mass * viscLaplace * sim.Viscosity / inBody.Density;
 
-							float viscVelo_diffX = inBody.VeloX - outBody.VeloX;
-							float viscVelo_diffY = inBody.VeloY - outBody.VeloY;
-
-							viscVelo_diffX *= visc_scalar;
-							viscVelo_diffY *= visc_scalar;
-
-							outBody.ForceX += viscVelo_diffX;
-							outBody.ForceY += viscVelo_diffY;
+							outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
+							outBody.ForceY += (inBody.VeloY - outBody.VeloY) * viscScalar;
 
 						}
 						// Elastic collision.
@@ -834,6 +828,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 		outBody.Lifetime -= sim.DeltaTime * 4.0f;
 	}
 
+	// Check for and cull NANs.
 	int nanCheck = isnan(outBody.PosX) + isnan(outBody.PosY);
 	if (nanCheck > 0)
 	{
