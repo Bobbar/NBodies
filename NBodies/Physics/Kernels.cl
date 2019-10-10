@@ -179,14 +179,14 @@ __kernel void FixOverlaps(global  Body* inBodies, int inBodiesLen, global  Body*
 }
 
 
-__kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortPart, global Body* outBodies)
+__kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap, global Body* outBodies)
 {
 	int b = get_global_id(0);
 
 	if (b >= blen)
 		return;
 
-	outBodies[b] = inBodies[sortPart[b]];
+	outBodies[b] = inBodies[sortMap[b]];
 }
 
 
@@ -219,23 +219,28 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	}
 
 	MeshCell cell = mesh[m];
+	GridInfo grid = gridInfo[cell.Level];
 
-	int level = cell.Level;
-
-	GridInfo grid = gridInfo[level];
-
+	// Compute bucket index.
 	int column = cell.IdxX + grid.OffsetX;
 	int row = cell.IdxY + grid.OffsetY;
 	int bucket = (row * grid.Columns) + column + row;
 
+	// Offset bucket for this level.
 	bucket += grid.IndexOffset;
 
+	// Set cell grid index to the actual bucket location.
 	cell.GridIdx = bucket;
 
+	// Offset bucket index with the pass offset. 
+	// This offset is greater than 0 only when more than 1 pass is needed.
 	bucket -= passOffset;
 
+	// Make sure the bucket fits withing this pass.
 	if (bucket >= 0 && bucket < passStride)
 	{
+		// Unpopulated grid buckets = 0.
+		// Cell ID of 0 == bucked index of -1.
 		if (cell.ID == 0)
 		{
 			gridIdx[bucket] = -1;
@@ -269,6 +274,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 	{
 		int offIdx = cell.GridIdx - gInfo.IndexOffset;
 
+		// Shift bucket index around the cell and check for populated grid index buckets.
 		for (int x = -1; x <= 1; x++)
 		{
 			for (int y = -1; y <= 1; y++)
@@ -284,6 +290,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 					{
 						int idx = gridIdx[bucket];
 
+						// Check for populated bucket and poplate neighbor index list accordingly.
 						if (idx > 0)
 						{
 							neighborIndex[(offset + count)] = idx;
@@ -299,6 +306,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 			}
 		}
 
+		// Set cell neighbor index list pointers.
 		cell.NeighborStartIdx = offset;
 		cell.NeighborCount = count;
 	}
@@ -351,20 +359,21 @@ __kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global 
 	mesh[m] = newCell;
 }
 
-__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int readOffset, int level)
+__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int level)
 {
 	int m = get_global_id(0);
 
 	if (m >= len)
 		return;
 
-	int locIdxOff = m + readOffset;
-	int cellIdxOff = locIdxOff + (level - 1);
-	int newIdx = m + meshOffset;
+	int newIdx = m + meshOffset; // Write location for new mesh cell
+	int cellIdxOff = newIdx + level; // Starting read location for cell index map.
+	int firstIdx = cellIdx[cellIdxOff] + levelOffset;  // Read location of first child cell.
+	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset; // Read location of last child cell.
 
-	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
-	MeshCell firstCell = mesh[firstIdx];
+	MeshCell firstCell = mesh[firstIdx]; // First child cell.
 
+	// Compute initial parent cell values from first child cell.
 	MeshCell newCell;
 	newCell.IdxX = firstCell.IdxX >> 1;
 	newCell.IdxY = firstCell.IdxY >> 1;
@@ -380,10 +389,12 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	newCell.CmY = (float)firstCell.Mass * firstCell.CmY;
 	newCell.Mass = firstCell.Mass;
 
+	// Set child cell parent ID.
 	firstCell.ParentID = newIdx;
 	mesh[firstIdx] = firstCell;
-
-	for (int i = firstIdx + 1; i < cellIdx[cellIdxOff + 1] + levelOffset; i++)
+	
+	// Accumulate values from remaining child cells and set child parent IDs.
+	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
 		MeshCell child = mesh[i];
 
@@ -397,6 +408,7 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 		mesh[i] = child;
 	}
 
+	// Compute final center of mass.
 	newCell.CmX = newCell.CmX / (float)newCell.Mass;
 	newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
@@ -859,6 +871,7 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 	outBody.VeloX += colMass * forceX;
 	outBody.VeloY += colMass * forceY;
 
+	// Don't increase size of black holes.
 	if (!HasFlagB(outBody, BLACKHOLE))
 	{
 		float a1 = pow((outBody.Size * 0.5f), 2.0f);
