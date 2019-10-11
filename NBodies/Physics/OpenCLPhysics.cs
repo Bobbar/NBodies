@@ -36,7 +36,7 @@ namespace NBodies.Physics
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
-
+        private ComputeDevice _device = null;
         private ComputeProgram _program;
 
         private ComputeKernel _forceKernel;
@@ -91,16 +91,26 @@ namespace NBodies.Physics
                 _threadsPerBlock = threadsperblock;
         }
 
+        public OpenCLPhysics(ComputeDevice device, int threadsperblock)
+        {
+            _device = device;
+
+            if (threadsperblock != -1)
+                _threadsPerBlock = threadsperblock;
+        }
+
         public void Init()
         {
             var devices = GetDevices();
 
-            var device = devices[_gpuIndex];
-            var platform = device.Platform;
+            if (_device == null)
+                _device = devices[_gpuIndex];
 
-            _maxBufferSize = device.MaxMemoryAllocationSize;
-            _context = new ComputeContext(new[] { device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, device, ComputeCommandQueueFlags.None);
+            var platform = _device.Platform;
+
+            _maxBufferSize = _device.MaxMemoryAllocationSize;
+            _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -114,14 +124,15 @@ namespace NBodies.Physics
             }
             catch (BuildProgramFailureComputeException ex)
             {
-                string buildLog = _program.GetBuildLog(device);
+                string buildLog = _program.GetBuildLog(_device);
                 System.IO.File.WriteAllText("build_error.txt", buildLog);
                 Console.WriteLine(buildLog);
                 throw;
             }
 
 
-            Console.WriteLine(_program.GetBuildLog(device));
+            Console.WriteLine(_program.GetBuildLog(_device));
+            System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
             _forceKernel = _program.CreateKernel("CalcForce");
             _collisionKernel = _program.CreateKernel("CalcCollisions");
@@ -140,7 +151,7 @@ namespace NBodies.Physics
             PreCalcSPH(_kernelSize);
         }
 
-        private List<ComputeDevice> GetDevices()
+        public static List<ComputeDevice> GetDevices()
         {
             var devices = new List<ComputeDevice>();
 
@@ -664,20 +675,25 @@ namespace NBodies.Physics
         private void BuildTopLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
             int meshOffset = 0; // Write offset for new cells array location.
+            int readOffset = 0; // Read offset for cell and location indexes.
 
             for (int level = 1; level <= levels; level++)
             {
-                // Increment cell size exponent for each level.
                 int cellSizeExpLevel = cellSizeExp + level;
 
-                // Increment mesh write location offset for each level.
                 meshOffset += levelInfo[level - 1].CellCount;
-
-                // Populate the level index array.
                 _levelIdx[level] = meshOffset;
 
-                int levelOffset = _levelIdx[level - 1];
-                int cellCount = levelInfo[level].CellCount;
+                int levelOffset = 0;
+
+                levelOffset = _levelIdx[level - 1];
+                readOffset += levelInfo[level - 1].CellCount;
+
+                if (level == 1)
+                    readOffset += 1;
+
+                LevelInfo current = levelInfo[level];
+                int cellCount = current.CellCount;
 
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
                 _buildTopKernel.SetValueArgument(1, cellCount);
@@ -685,7 +701,8 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(3, cellSizeExpLevel);
                 _buildTopKernel.SetValueArgument(4, levelOffset);
                 _buildTopKernel.SetValueArgument(5, meshOffset);
-                _buildTopKernel.SetValueArgument(6, level);
+                _buildTopKernel.SetValueArgument(6, readOffset);
+                _buildTopKernel.SetValueArgument(7, level);
 
                 _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
@@ -704,7 +721,7 @@ namespace NBodies.Physics
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
-
+           
             // Calculate total size of 1D grid index.
             long gridSize = 0;
             foreach (var g in gridInfo)

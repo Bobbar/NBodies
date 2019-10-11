@@ -155,6 +155,12 @@
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Extensions\ControlExtentions.cs" />
+    <Compile Include="UI\ChooseDeviceForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\ChooseDeviceForm.Designer.cs">
+      <DependentUpon>ChooseDeviceForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Display.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -211,6 +217,9 @@
     </Compile>
     <EmbeddedResource Include="UI\AddBodiesForm.resx">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\ChooseDeviceForm.resx">
+      <DependentUpon>ChooseDeviceForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Display.resx">
       <DependentUpon>Display.cs</DependentUpon>

@@ -365,21 +365,20 @@ __kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global 
 	mesh[m] = newCell;
 }
 
-__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int level)
+__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int levelOffset, int meshOffset, int readOffset, int level)
 {
 	int m = get_global_id(0);
 
 	if (m >= len)
 		return;
 
-	int newIdx = m + meshOffset; // Write location for new mesh cell
-	int cellIdxOff = newIdx + level; // Starting read location for cell index map.
-	int firstIdx = cellIdx[cellIdxOff] + levelOffset;  // Read location of first child cell.
-	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset; // Read location of last child cell.
+	int locIdxOff = m + readOffset;
+	int cellIdxOff = locIdxOff + (level - 1);
+	int newIdx = m + meshOffset;
 
-	MeshCell firstCell = mesh[firstIdx]; // First child cell.
+	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
+	MeshCell firstCell = mesh[firstIdx];
 
-	// Compute initial parent cell values from first child cell.
 	MeshCell newCell;
 	newCell.IdxX = firstCell.IdxX >> 1;
 	newCell.IdxY = firstCell.IdxY >> 1;
@@ -395,12 +394,10 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	newCell.CmY = (float)firstCell.Mass * firstCell.CmY;
 	newCell.Mass = firstCell.Mass;
 
-	// Set child cell parent ID.
 	firstCell.ParentID = newIdx;
 	mesh[firstIdx] = firstCell;
 
-	// Accumulate values from remaining child cells and set child parent IDs.
-	for (int i = firstIdx + 1; i < lastIdx; i++)
+	for (int i = firstIdx + 1; i < cellIdx[cellIdxOff + 1] + levelOffset; i++)
 	{
 		MeshCell child = mesh[i];
 
@@ -414,7 +411,6 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 		mesh[i] = child;
 	}
 
-	// Compute final center of mass.
 	newCell.CmX = newCell.CmX / (float)newCell.Mass;
 	newCell.CmY = newCell.CmY / (float)newCell.Mass;
 
@@ -453,7 +449,7 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 	Body outBody = inBodies[(a)];
 	MeshCell levelCell = inMesh[(outBody.MeshID)];
 	MeshCell levelCellParent = inMesh[(levelCell.ParentID)];
-
+	
 	// Reset forces.
 	float totForce = 0;
 	outBody.ForceX = 0.0f;
@@ -550,9 +546,13 @@ __kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* o
 			}
 		}
 
-		// Move up to next level.
 		levelCell = levelCellParent;
-		levelCellParent = inMesh[(levelCellParent.ParentID)];
+
+		// Move up to next level.
+		if (levelCellParent.ParentID != -1)
+		{ 
+			levelCellParent = inMesh[(levelCellParent.ParentID)];
+		}
 	}
 
 	// *** Particle 2 Mesh ***
@@ -703,7 +703,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 
 	if (a >= inBodiesLen)
 		return;
-
+	
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
 

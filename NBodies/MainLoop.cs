@@ -309,12 +309,12 @@ namespace NBodies
 
         public static void End()
         {
-            _cancelTokenSource.Cancel();
-            _stopLoopWait.Reset();
-            _stopLoopWait.Wait(2000);
-            _loopTask.Wait();
-            _loopTask.Dispose();
-            PhysicsProvider.PhysicsCalc.Dispose();
+            _cancelTokenSource?.Cancel();
+            _stopLoopWait?.Reset();
+            _stopLoopWait?.Wait(2000);
+            _loopTask?.Wait();
+            _loopTask?.Dispose();
+            PhysicsProvider.PhysicsCalc?.Dispose();
             _peakFPS = 0;
         }
 

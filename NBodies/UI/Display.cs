@@ -60,7 +60,26 @@ namespace NBodies.UI
             ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             ViewportOffsets.ScaleOffset = ViewportHelpers.FieldPointToScreenNoOffset(ViewportOffsets.ScreenCenter);
             MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
-            PhysicsProvider.InitPhysics();
+
+            using (var selectDevice = new ChooseDeviceForm())
+            {
+                var result = selectDevice.ShowDialog();
+
+                if (result == DialogResult.OK)
+                {
+                    var device = selectDevice.SelectedDevice;
+                    var threads = selectDevice.MaxThreadsPerBlock;
+
+                    PhysicsProvider.InitPhysics(device, threads);
+
+                }
+                else
+                {
+                    Application.Exit();
+                }
+            }
+
+            //PhysicsProvider.InitPhysics();
 
             MainLoop.Renderer = new D2DRenderer(RenderBox);
 
