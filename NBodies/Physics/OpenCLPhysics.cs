@@ -49,7 +49,7 @@ namespace NBodies.Physics
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
         private ComputeKernel _calcCMKernel;
-        private ComputeKernel _reorderKernel;
+        private ComputeKernel _reindexKernel;
 
         private ComputeBuffer<MeshCell> _gpuMesh;
         private ComputeBuffer<int> _gpuMeshNeighbors;
@@ -133,7 +133,7 @@ namespace NBodies.Physics
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
-            _reorderKernel = _program.CreateKernel("ReindexBodies");
+            _reindexKernel = _program.CreateKernel("ReindexBodies");
 
             InitBuffers();
 
@@ -232,7 +232,7 @@ namespace NBodies.Physics
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
 
-            // Calc center of mass on GPU.
+            // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
             _calcCMKernel.SetMemoryArgument(1, _gpuCM);
             _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
@@ -415,7 +415,7 @@ namespace NBodies.Physics
             _levelIdx = new int[_levels + 1];
             _levelIdx[0] = 0;
 
-            // Write the cell index map as one large array.
+            // Write the cell index map as one large array to the GPU.
             WriteCellIndex(_levelInfo);
 
             // Build the first (bottom) level of the mesh.
@@ -522,11 +522,11 @@ namespace NBodies.Physics
             _queue.WriteToBuffer(_bodies, _gpuOutBodies, false, 0, 0, _bodies.Length, null);
             _queue.WriteToBuffer(sortMap, _gpuSortMap, false, 0, 0, _bodies.Length, null);
 
-            _reorderKernel.SetMemoryArgument(0, _gpuOutBodies);
-            _reorderKernel.SetValueArgument(1, _bodies.Length);
-            _reorderKernel.SetMemoryArgument(2, _gpuSortMap);
-            _reorderKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reorderKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
+            _reindexKernel.SetValueArgument(1, _bodies.Length);
+            _reindexKernel.SetMemoryArgument(2, _gpuSortMap);
+            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
+            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
 
         /// <summary>
