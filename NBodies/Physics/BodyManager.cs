@@ -249,7 +249,6 @@ namespace NBodies.Physics
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
-                totMass += body.Mass;
 
                 // Fracture large bodies in roche.
                 if (processRoche)
@@ -292,6 +291,8 @@ namespace NBodies.Physics
                 }
                 else
                 {
+                    totMass += body.Mass;
+
                     // Store visible bodies in the a preallocated array.
                     if (realloc)
                     {

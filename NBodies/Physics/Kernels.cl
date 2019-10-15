@@ -147,7 +147,7 @@ bool HasFlagB(Body body, int check)
 }
 
 
-__kernel void FixOverlaps(global  Body* inBodies, int inBodiesLen, global  Body* outBodies)
+__kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
 	int i = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -196,7 +196,7 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap
 }
 
 
-__kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, global  MeshCell* mesh, int meshLen)
+__kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, global MeshCell* mesh, int meshLen)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -215,7 +215,7 @@ __kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, glo
 
 }
 
-__kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, global GridInfo* gridInfo, global  MeshCell* mesh, int meshLen)
+__kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, global GridInfo* gridInfo, global MeshCell* mesh, int meshLen)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -260,7 +260,7 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	mesh[m] = cell;
 }
 
-__kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, int passStride, int passOffset, global int* neighborIndex)
+__kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, int passStride, int passOffset, global int* neighborIndex)
 {
 	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
 
@@ -320,7 +320,7 @@ __kernel void BuildNeighbors(global  MeshCell* mesh, int meshLen, global GridInf
 	mesh[m] = cell;
 }
 
-__kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global  MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp)
+__kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp)
 {
 	int m = get_global_id(0);
 
@@ -417,7 +417,7 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	mesh[newIdx] = newCell;
 }
 
-__kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int start, int end)
+__kernel void CalcCenterOfMass(global MeshCell* inMesh, global float2* cm, int start, int end)
 {
 	double cmX = 0;
 	double cmY = 0;
@@ -438,7 +438,7 @@ __kernel void CalcCenterOfMass(global  MeshCell* inMesh, global float2* cm, int 
 	cm[0] = (float2)(cmX, cmY);
 }
 
-__kernel void CalcForce(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* outBodies, global MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -601,8 +601,7 @@ bool IsNeighbor(MeshCell cell, MeshCell testCell)
 	return false;
 }
 
-// Collision pass for bodies larger than thier parent cells.
-__kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
+__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -612,15 +611,12 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 
 	// Copy current body from memory.
 	Body outBody = inBodies[a];
-	outBodies[a] = outBody;
-	barrier(CLK_GLOBAL_MEM_FENCE);
 
 	if (collisions == 1)
 	{
 		// Only proceed for bodies larger than 1 unit.
 		if (outBody.Size <= 1.0f)
 		{
-			outBodies[a] = outBody;
 			return;
 		}
 
@@ -675,17 +671,20 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 						// If we're the bigger one, eat the other guy.
 						if (outBody.Mass > inBody.Mass)
 						{
-							outBodies[a] = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-							outBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
+							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+							inBodies[a] = outBody;
+							inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 							postNeeded[0] = 1;
+						
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 						{
 							// Our UID is more gooder, eat the other guy.
 							if (outBody.UID > inBody.UID)
 							{
-								outBodies[a] = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								outBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
+								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+								inBodies[a] = outBody;
+								inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 								postNeeded[0] = 1;
 							}
 						}
@@ -696,14 +695,14 @@ __kernel void CalcCollisionsLarge(global  Body* inBodies, int inBodiesLen, globa
 	}
 }
 
-__kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Body* outBodies, global  MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global MeshCell* inMesh, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
 
 	if (a >= inBodiesLen)
 		return;
-	
+
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
 
@@ -746,9 +745,7 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 
 						dist = max(dist, SPH_SOFTENING);
 
-						// If both bodies are in Roche, we do SPH physics.
-						// Otherwise, an elastic collision and merge is done.
-
+						// Only do SPH collision if both bodies are in roche.
 						// SPH collision.
 						if (HasFlagB(outBody, INROCHE) && HasFlagB(inBody, INROCHE))
 						{
@@ -771,45 +768,6 @@ __kernel void CalcCollisions(global  Body* inBodies, int inBodiesLen, global  Bo
 							outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
 							outBody.ForceY += (inBody.VeloY - outBody.VeloY) * viscScalar;
 
-						}
-						// Elastic collision.
-						else if (HasFlagB(outBody, INROCHE) && !HasFlagB(inBody, INROCHE))
-						{
-							outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-						}
-						else
-						{
-							// Calculate elastic collision forces.
-							float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
-							float forceX = distX * colScale;
-							float forceY = distY * colScale;
-							float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
-
-							// If we're the bigger one, eat the other guy.
-							if (outBody.Mass > inBody.Mass)
-							{
-								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								postNeeded[0] = 1;
-							}
-							else if (outBody.Mass < inBody.Mass) // We're smaller, so we must go away.
-							{
-								outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-								postNeeded[0] = 1;
-							}
-							else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
-							{
-								// Our UID is more gooder, eat the other guy.
-								if (outBody.UID > inBody.UID)
-								{
-									outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-									postNeeded[0] = 1;
-								}
-								else // Our UID is inferior, we must go away.
-								{
-									outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-									postNeeded[0] = 1;
-								}
-							}
 						}
 					}
 				}

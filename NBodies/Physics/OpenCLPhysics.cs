@@ -40,8 +40,8 @@ namespace NBodies.Physics
         private ComputeProgram _program;
 
         private ComputeKernel _forceKernel;
-        private ComputeKernel _collisionKernel;
-        private ComputeKernel _collisionLargeKernel;
+        private ComputeKernel _collisionSPHKernel;
+        private ComputeKernel _collisionElasticKernel;
         private ComputeKernel _popGridKernel;
         private ComputeKernel _clearGridKernel;
         private ComputeKernel _buildNeighborsKernel;
@@ -135,8 +135,8 @@ namespace NBodies.Physics
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
             _forceKernel = _program.CreateKernel("CalcForce");
-            _collisionKernel = _program.CreateKernel("CalcCollisions");
-            _collisionLargeKernel = _program.CreateKernel("CalcCollisionsLarge");
+            _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
+            _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _popGridKernel = _program.CreateKernel("PopGrid");
             _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
@@ -268,35 +268,32 @@ namespace NBodies.Physics
                 _forceKernel.SetMemoryArgument(argi++, gpuPostNeeded);
                 _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
+                argi = 0;
+                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
+                _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
+                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
+                _collisionElasticKernel.SetMemoryArgument(argi++, gpuPostNeeded);
+                _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
                 argi = 0;
-                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuInBodies);
-                _collisionLargeKernel.SetValueArgument(argi++, _bodies.Length);
-                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _collisionLargeKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _collisionLargeKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
-                _collisionLargeKernel.SetMemoryArgument(argi++, gpuPostNeeded);
-                _queue.Execute(_collisionLargeKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-
-
-                argi = 0;
-                _collisionKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-                _collisionKernel.SetValueArgument(argi++, _bodies.Length);
-                _collisionKernel.SetMemoryArgument(argi++, _gpuInBodies);
-                _collisionKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _collisionKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _collisionKernel.SetMemoryArgument(argi++, _gpuCM);
-                _collisionKernel.SetValueArgument(argi++, sim);
-                _collisionKernel.SetValueArgument(argi++, _preCalcs);
-                _collisionKernel.SetMemoryArgument(argi++, gpuPostNeeded);
-                _queue.Execute(_collisionKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
+                _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
+                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuCM);
+                _collisionSPHKernel.SetValueArgument(argi++, sim);
+                _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
+                _collisionSPHKernel.SetMemoryArgument(argi++, gpuPostNeeded);
+                _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
                 postNeeded = ReadBuffer(gpuPostNeeded);
                 isPostNeeded = Convert.ToBoolean(postNeeded[0]);
             }
 
-            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, 0, 0, bodies.Length, null);
+            _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
 
             if (_mesh.Length != _meshLength)
@@ -937,7 +934,8 @@ namespace NBodies.Physics
             _gpuGridIndex.Dispose();
 
             _forceKernel.Dispose();
-            _collisionKernel.Dispose();
+            _collisionSPHKernel.Dispose();
+            _collisionElasticKernel.Dispose();
             _popGridKernel.Dispose();
             _clearGridKernel.Dispose();
             _buildNeighborsKernel.Dispose();
