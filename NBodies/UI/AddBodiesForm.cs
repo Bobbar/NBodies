@@ -138,12 +138,14 @@ namespace NBodies
                 {
                     color = matter.Color;
                 }
-               
+
                 newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, color));
             }
 
             var bodyArr = newBodies.ToArray();
-            FixOverlaps(ref bodyArr, 3);
+
+            if (fixOverlapCheckBox.Checked)
+                FixOverlaps(ref bodyArr, 3);
 
             BodyManager.Add(bodyArr);
 
@@ -243,7 +245,9 @@ namespace NBodies
             }
 
             var bodyArr = newBodies.ToArray();
-            FixOverlaps(ref bodyArr, 3);
+
+            if (fixOverlapCheckBox.Checked)
+                FixOverlaps(ref bodyArr, 3);
 
             BodyManager.Add(bodyArr);
 

@@ -41,6 +41,7 @@
             this.CenterMassTextBox = new System.Windows.Forms.TextBox();
             this.CenterMassCheckBox = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.PickColorButton = new System.Windows.Forms.Button();
             this.label9 = new System.Windows.Forms.Label();
             this.LifeTimeTextBox = new System.Windows.Forms.TextBox();
             this.StaticDensityCheckBox = new System.Windows.Forms.CheckBox();
@@ -56,7 +57,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
-            this.PickColorButton = new System.Windows.Forms.Button();
+            this.fixOverlapCheckBox = new System.Windows.Forms.CheckBox();
             this.BodyParamsGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -78,6 +79,7 @@
             // 
             // CirOrbitGroup
             // 
+            this.CirOrbitGroup.Controls.Add(this.fixOverlapCheckBox);
             this.CirOrbitGroup.Controls.Add(this.label10);
             this.CirOrbitGroup.Controls.Add(this.InOrbitRadiusTextBox);
             this.CirOrbitGroup.Controls.Add(this.layeredCheckBox);
@@ -211,6 +213,16 @@
             this.panel1.Size = new System.Drawing.Size(361, 89);
             this.panel1.TabIndex = 0;
             // 
+            // PickColorButton
+            // 
+            this.PickColorButton.Location = new System.Drawing.Point(277, 66);
+            this.PickColorButton.Name = "PickColorButton";
+            this.PickColorButton.Size = new System.Drawing.Size(70, 21);
+            this.PickColorButton.TabIndex = 14;
+            this.PickColorButton.Text = "Color";
+            this.PickColorButton.UseVisualStyleBackColor = true;
+            this.PickColorButton.Click += new System.EventHandler(this.PickColorButton_Click);
+            // 
             // label9
             // 
             this.label9.AutoSize = true;
@@ -336,15 +348,17 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "5000";
             // 
-            // PickColorButton
+            // fixOverlapCheckBox
             // 
-            this.PickColorButton.Location = new System.Drawing.Point(277, 66);
-            this.PickColorButton.Name = "PickColorButton";
-            this.PickColorButton.Size = new System.Drawing.Size(70, 21);
-            this.PickColorButton.TabIndex = 14;
-            this.PickColorButton.Text = "Color";
-            this.PickColorButton.UseVisualStyleBackColor = true;
-            this.PickColorButton.Click += new System.EventHandler(this.PickColorButton_Click);
+            this.fixOverlapCheckBox.AutoSize = true;
+            this.fixOverlapCheckBox.Checked = true;
+            this.fixOverlapCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.fixOverlapCheckBox.Location = new System.Drawing.Point(219, 148);
+            this.fixOverlapCheckBox.Name = "fixOverlapCheckBox";
+            this.fixOverlapCheckBox.Size = new System.Drawing.Size(84, 17);
+            this.fixOverlapCheckBox.TabIndex = 13;
+            this.fixOverlapCheckBox.Text = "Fix Overlaps";
+            this.fixOverlapCheckBox.UseVisualStyleBackColor = true;
             // 
             // AddBodiesForm
             // 
@@ -396,5 +410,6 @@
         private System.Windows.Forms.TextBox InOrbitRadiusTextBox;
         private System.Windows.Forms.Button PickColorButton;
         private System.Windows.Forms.ColorDialog colorDialog1;
+        private System.Windows.Forms.CheckBox fixOverlapCheckBox;
     }
 }
