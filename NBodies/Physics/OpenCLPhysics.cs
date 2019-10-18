@@ -30,7 +30,6 @@ namespace NBodies.Physics
         private static SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
         private static int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
         private static int[] _sortMap = new int[0]; // Reindexing map for spatial sorting.
-        private static int[] _cellIdx = new int[0]; // Buffer for cell index maps.
         private static int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
 
@@ -443,12 +442,12 @@ namespace NBodies.Physics
         private void CalcBodySpatialsAndSort(int cellSizeExp)
         {
             // Spatial info to be computed.
-            if (_bSpatials.Length != _bodies.Length)
+            if (_bSpatials.Length < _bodies.Length)
                 _bSpatials = new SpatialInfo[_bodies.Length];
 
             // Array of morton numbers used for sorting.
             // Using a key array when sorting is much faster than sorting an array of objects by a field.
-            if (_mortKeys.Length != _bodies.Length)
+            if (_mortKeys.Length < _bodies.Length)
                 _mortKeys = new int[_bodies.Length];
 
             var minMax = new MinMax(0);
@@ -482,20 +481,22 @@ namespace NBodies.Physics
 
             // Sort by morton number to produce a spatially sorted array.
             // Array.Sort(_mortKeys, _spatials);
-            Sort.ParallelQuickSort(_mortKeys, _bSpatials);
+            Sort.ParallelQuickSort(_mortKeys, _bSpatials, _bodies.Length);
 
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
             int val = int.MaxValue;
 
-            if (_cellIdx.Length < _bodies.Length)
-                _cellIdx = new int[_bodies.Length + 100];
+            var cellIdx = _levelInfo[0].CellIndex;
+
+            if (cellIdx == null || cellIdx.Length < _bodies.Length)
+                cellIdx = new int[_bodies.Length + 100];
 
             if (_sortMap.Length < _bodies.Length)
                 _sortMap = new int[_bodies.Length + 100];
 
-            for (int i = 0; i < _bSpatials.Length; i++)
+            for (int i = 0; i < _bodies.Length; i++)
             {
                 var mort = _mortKeys[i];
                 _sortMap[i] = _bSpatials[i].Index;
@@ -503,23 +504,20 @@ namespace NBodies.Physics
                 // Find the start of each new morton number and record location to build cell index.
                 if (val != mort)
                 {
-                    _cellIdx[count] = i;
+                    cellIdx[count] = i;
                     val = mort;
-
                     count++;
                 }
             }
 
-            _cellIdx[count] = _bSpatials.Length;
+            cellIdx[count] = _bodies.Length;
 
             // Write bodies and sort map to GPU and start reindexing.
             UploadAndReindexGPU(_sortMap);
 
+            _levelInfo[0].CellIndex = cellIdx;
             _levelInfo[0].Spatials = _bSpatials;
             _levelInfo[0].CellCount = count;
-            if (_levelInfo[0].CellIndex == null || _levelInfo[0].CellIndex.Length != (count + 1))
-                _levelInfo[0].CellIndex = new int[count + 1];
-            Array.Copy(_cellIdx, 0, _levelInfo[0].CellIndex, 0, count + 1);
         }
 
         private void UploadAndReindexGPU(int[] sortMap)
@@ -550,13 +548,14 @@ namespace NBodies.Physics
                 minMax.Reset();
 
                 LevelInfo childLevel = _levelInfo[level - 1];
+                int childCount = childLevel.CellCount;
 
-                if (_levelInfo[level].Spatials == null || _levelInfo[level].Spatials.Length != childLevel.CellCount)
-                    _levelInfo[level].Spatials = new SpatialInfo[childLevel.CellCount];
+                if (_levelInfo[level].Spatials == null || _levelInfo[level].Spatials.Length < childCount)
+                    _levelInfo[level].Spatials = new SpatialInfo[childCount];
 
                 SpatialInfo[] parentSpatials = _levelInfo[level].Spatials;
 
-                ParallelForSlim(childLevel.CellCount, _parallelPartitions, (start, len) =>
+                ParallelForSlim(childCount, _parallelPartitions, (start, len) =>
                 {
                     var mm = new MinMax(0);
 
@@ -581,31 +580,32 @@ namespace NBodies.Physics
 
                 AddGridDims(minMax, level);
 
+                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
+                    _levelInfo[level].CellIndex = new int[childCount + 1];
+
+                var cellIdx = _levelInfo[level].CellIndex;
                 int count = 0;
                 int val = int.MaxValue;
 
-                for (int i = 0; i < parentSpatials.Length; i++)
+                for (int i = 0; i < childCount; i++)
                 {
                     var mort = parentSpatials[i].Mort;
 
                     if (val != mort)
                     {
-                        _cellIdx[count] = i;
+                        cellIdx[count] = i;
+
                         val = mort;
 
                         count++;
                     }
                 }
 
-                _cellIdx[count] = parentSpatials.Length;
+                cellIdx[count] = childCount;
 
+                _levelInfo[level].CellIndex = cellIdx;
                 _levelInfo[level].Spatials = parentSpatials;
                 _levelInfo[level].CellCount = count;
-
-                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length != (count + 1))
-                    _levelInfo[level].CellIndex = new int[count + 1];
-
-                Array.Copy(_cellIdx, 0, _levelInfo[level].CellIndex, 0, count + 1);
             }
         }
 
@@ -619,22 +619,24 @@ namespace NBodies.Physics
 
             for (int i = 0; i < levelInfo.Length; i++)
             {
-                cellIdxLen += levelInfo[i].CellIndex.Length;
+                cellIdxLen += levelInfo[i].CellCount + 1;
             }
 
             // Build 1D array of cell index.
             if (_allCellIdx.Length < cellIdxLen)
                 _allCellIdx = new int[cellIdxLen + 1000]; // Add some padding to reduce future reallocations.
 
-            long cellIdxPos = 0;
+            int cellIdxPos = 0;
 
             // Append cell index from each level into 1D array.
             for (int i = 0; i < levelInfo.Length; i++)
             {
                 var cellIndex = levelInfo[i].CellIndex;
+                var count = levelInfo[i].CellCount + 1;
 
-                Array.Copy(cellIndex, 0, _allCellIdx, cellIdxPos, cellIndex.Length);
-                cellIdxPos += cellIndex.Length;
+                Array.Copy(cellIndex, 0, _allCellIdx, cellIdxPos, count);
+
+                cellIdxPos += count;
             }
 
             // Allocate and write to GPU.
@@ -718,7 +720,7 @@ namespace NBodies.Physics
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
-           
+
             // Calculate total size of 1D grid index.
             long gridSize = 0;
             foreach (var g in gridInfo)

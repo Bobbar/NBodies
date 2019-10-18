@@ -85,6 +85,12 @@ namespace NBodies.Physics
             }
         }
 
+        public static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int length)
+        {
+            ParallelQuickSort(keys, data, 0, length,
+                 (int)Math.Log(Environment.ProcessorCount, 2) + 4);
+        }
+
         public static void ParallelQuickSort(int[] keys, SpatialInfo[] data)
         {
             ParallelQuickSort(keys, data, 0, keys.Length,
