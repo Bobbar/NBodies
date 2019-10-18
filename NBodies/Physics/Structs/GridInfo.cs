@@ -33,5 +33,20 @@ namespace NBodies.Physics
 
             Size = ((cols + 1) * (rows + 1));
         }
+
+        public void Set(long offX, long offY, long idxOff, long minX, long minY, long maxX, long maxY, long cols, long rows)
+        {
+            OffsetX = offX;
+            OffsetY = offY;
+            IndexOffset = idxOff;
+            MinX = minX;
+            MinY = minY;
+            MaxX = maxX;
+            MaxY = maxY;
+            Columns = cols;
+            Rows = rows;
+
+            Size = ((cols + 1) * (rows + 1));
+        }
     }
 }

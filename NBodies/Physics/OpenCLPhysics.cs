@@ -58,6 +58,8 @@ namespace NBodies.Physics
         private ComputeBuffer<Vector2> _gpuCM;
         private ComputeBuffer<int> _gpuSortMap;
         private ComputeBuffer<int> _gpuCellIdx;
+        private ComputeBuffer<GridInfo> _gpuGridInfo;
+        private ComputeBuffer<int> _gpuPostNeeded;
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
 
@@ -191,6 +193,10 @@ namespace NBodies.Physics
             _gpuOutBodies.Dispose();
             _gpuGridIndex.Dispose();
             _gpuCM.Dispose();
+            _gpuSortMap.Dispose();
+            _gpuCellIdx.Dispose();
+            _gpuGridInfo.Dispose();
+            _gpuPostNeeded.Dispose();
             _mesh = new MeshCell[0];
             _bufferInfo.Clear();
 
@@ -219,6 +225,11 @@ namespace NBodies.Physics
 
             _gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
             Allocate(ref _gpuCellIdx, 0, true);
+
+            _gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
+            Allocate(ref _gpuGridInfo, 0, true);
+
+            _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
 
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
         }
@@ -250,47 +261,44 @@ namespace NBodies.Physics
             _queue.ExecuteTask(_calcCMKernel, null);
 
             int[] postNeeded = new int[1] { 0 };
-            using (var gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero))
-            {
-                _queue.WriteToBuffer(postNeeded, gpuPostNeeded, false, null);
+            _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
 
-                int argi = 0;
-                _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-                _forceKernel.SetValueArgument(argi++, _bodies.Length);
-                _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
-                _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _forceKernel.SetValueArgument(argi++, _levelIdx[_levels]);
-                _forceKernel.SetValueArgument(argi++, _meshLength);
-                _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _forceKernel.SetValueArgument(argi++, sim);
-                _forceKernel.SetValueArgument(argi++, _preCalcs);
-                _forceKernel.SetMemoryArgument(argi++, gpuPostNeeded);
-                _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            int argi = 0;
+            _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            _forceKernel.SetValueArgument(argi++, _bodies.Length);
+            _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _forceKernel.SetValueArgument(argi++, _levelIdx[_levels]);
+            _forceKernel.SetValueArgument(argi++, _meshLength);
+            _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _forceKernel.SetValueArgument(argi++, sim);
+            _forceKernel.SetValueArgument(argi++, _preCalcs);
+            _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-                argi = 0;
-                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
-                _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
-                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
-                _collisionElasticKernel.SetMemoryArgument(argi++, gpuPostNeeded);
-                _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            argi = 0;
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
+            _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-                argi = 0;
-                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
-                _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
-                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _collisionSPHKernel.SetMemoryArgument(argi++, _gpuCM);
-                _collisionSPHKernel.SetValueArgument(argi++, sim);
-                _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
-                _collisionSPHKernel.SetMemoryArgument(argi++, gpuPostNeeded);
-                _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            argi = 0;
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuCM);
+            _collisionSPHKernel.SetValueArgument(argi++, sim);
+            _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
+            _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-                postNeeded = ReadBuffer(gpuPostNeeded);
-                isPostNeeded = Convert.ToBoolean(postNeeded[0]);
-            }
+            postNeeded = ReadBuffer(_gpuPostNeeded);
+            isPostNeeded = Convert.ToBoolean(postNeeded[0]);
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
@@ -384,8 +392,7 @@ namespace NBodies.Physics
                 idxOff = _gridInfo[level - 1].IndexOffset + _gridInfo[level - 1].Size;
             }
 
-            _gridInfo[level] = new GridInfo(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
-
+            _gridInfo[level].Set(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
         }
 
         /// <summary>
@@ -395,7 +402,8 @@ namespace NBodies.Physics
         private void BuildMesh(int cellSizeExp)
         {
             // Grid info for each level.
-            _gridInfo = new GridInfo[_levels + 1];
+            if (_gridInfo.Length != (_levels + 1))
+                _gridInfo = new GridInfo[_levels + 1];
 
             // Mesh info for each level.
             if (_levelInfo.Length != (_levels + 1))
@@ -466,7 +474,7 @@ namespace NBodies.Physics
 
                     mm.Update(idxX, idxY);
 
-                    _bSpatials[b] = new SpatialInfo(morton, idxX, idxY, b);
+                    _bSpatials[b].Set(morton, idxX, idxY, b);
                     _mortKeys[b] = morton;
                 }
 
@@ -568,7 +576,7 @@ namespace NBodies.Physics
 
                         mm.Update(idxX, idxY);
 
-                        parentSpatials[b] = new SpatialInfo(morton, idxX, idxY, spatial.Index + b);
+                        parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
                     }
 
                     lock (sync)
@@ -580,7 +588,7 @@ namespace NBodies.Physics
 
                 AddGridDims(minMax, level);
 
-                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
+                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount + 1)
                     _levelInfo[level].CellIndex = new int[childCount + 1];
 
                 var cellIdx = _levelInfo[level].CellIndex;
@@ -754,46 +762,44 @@ namespace NBodies.Physics
                 stride = (int)_gpuGridIndex.Count;
             }
 
-            using (var gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, gridInfo.Length, IntPtr.Zero))
+            // Write Grid info to GPU.
+            Allocate(ref _gpuGridInfo, gridInfo.Length, true);
+            _queue.WriteToBuffer(gridInfo, _gpuGridInfo, false, null);
+
+            int workSize = BlockCount(meshSize) * _threadsPerBlock;
+
+            for (int i = 0; i < passes; i++)
             {
-                // Write Grid info to GPU.
-                _queue.WriteToBuffer(gridInfo, gpuGridInfo, false, null);
+                passOffset = stride * i;
 
-                int workSize = BlockCount(meshSize) * _threadsPerBlock;
+                // Pop compressed grid index array.
+                int argi = 0;
+                _popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
+                _popGridKernel.SetValueArgument(argi++, (int)stride);
+                _popGridKernel.SetValueArgument(argi++, (int)passOffset);
+                _popGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _popGridKernel.SetValueArgument(argi++, meshSize);
+                _queue.Execute(_popGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
-                for (int i = 0; i < passes; i++)
-                {
-                    passOffset = stride * i;
+                // Build neighbor list.
+                argi = 0;
+                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _buildNeighborsKernel.SetValueArgument(argi++, meshSize);
+                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
+                _buildNeighborsKernel.SetValueArgument(argi++, (int)stride);
+                _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
+                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
-                    // Pop compressed grid index array.
-                    int argi = 0;
-                    _popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                    _popGridKernel.SetValueArgument(argi++, (int)stride);
-                    _popGridKernel.SetValueArgument(argi++, (int)passOffset);
-                    _popGridKernel.SetMemoryArgument(argi++, gpuGridInfo);
-                    _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
-                    _popGridKernel.SetValueArgument(argi++, meshSize);
-                    _queue.Execute(_popGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-
-                    // Build neighbor list.
-                    argi = 0;
-                    _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMesh);
-                    _buildNeighborsKernel.SetValueArgument(argi++, meshSize);
-                    _buildNeighborsKernel.SetMemoryArgument(argi++, gpuGridInfo);
-                    _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                    _buildNeighborsKernel.SetValueArgument(argi++, (int)stride);
-                    _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
-                    _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                    _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-
-                    // We're done with the grid index array, so undo what we added to clear it for the next frame.
-                    _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
-                    _clearGridKernel.SetValueArgument(1, (int)stride);
-                    _clearGridKernel.SetValueArgument(2, (int)passOffset);
-                    _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
-                    _clearGridKernel.SetValueArgument(4, meshSize);
-                    _queue.Execute(_clearGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-                }
+                // We're done with the grid index array, so undo what we added to clear it for the next frame.
+                _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
+                _clearGridKernel.SetValueArgument(1, (int)stride);
+                _clearGridKernel.SetValueArgument(2, (int)passOffset);
+                _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
+                _clearGridKernel.SetValueArgument(4, meshSize);
+                _queue.Execute(_clearGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
             }
         }
 

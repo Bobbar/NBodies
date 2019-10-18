@@ -372,7 +372,7 @@ namespace NBodies
                             // Push the current field to rewind collection.
                             if (RewindBuffer)
                                 BodyManager.PushState(_bodiesBuffer);
-                          
+
                             // True if post processing is needed.
                             // GPU kernels set the flag if any bodies need removed/fractured.
                             bool postNeeded = false;
@@ -432,27 +432,33 @@ namespace NBodies
                         }
                     }
 
-                    // Check if renderer is ready for a new frame.
-                    if (_renderReadyWait.IsSet)
+                    if (DrawBodies)
                     {
-                        _renderReadyWait.Reset();
-
-                        // Get the most recent frame from the physics buffer.
-                        if (!_skipPhysics)
+                        // Check if renderer is ready for a new frame.
+                        if (_renderReadyWait.IsSet)
                         {
-                            if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
-                                BodyManager.Bodies = new Body[_bodiesBuffer.Length];
-                            Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
-                        }
+                            _renderReadyWait.Reset();
 
-                        // Draw the field asynchronously.
-                        Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
-                        _skippedFrames = 0;
+                            // Get the most recent frame from the physics buffer.
+                            if (!_skipPhysics)
+                            {
+                                if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
+                                    BodyManager.Bodies = new Body[_bodiesBuffer.Length];
+                                Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
+                            }
+
+                            // Draw the field asynchronously.
+                            Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
+                            _skippedFrames = 0;
+                        }
+                        else
+                        {
+                            _skippedFrames++;
+                        }
                     }
-                    else
-                    {
-                        _skippedFrames++;
-                    }
+
+
+                  
 
                     FPSLimiter();
                 }
