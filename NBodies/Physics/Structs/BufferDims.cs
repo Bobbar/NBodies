@@ -33,7 +33,5 @@ namespace NBodies.Physics
             Size = size;
             ExactSize = exactSize;
         }
-
-
     }
 }

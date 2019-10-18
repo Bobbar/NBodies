@@ -71,9 +71,7 @@ namespace NBodies.Physics
         {
             get
             {
-                //return _mesh;
                 return GetMesh();
-
             }
         }
 
@@ -232,8 +230,10 @@ namespace NBodies.Physics
             Allocate(ref _gpuGridInfo, 0, true);
 
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            Allocate(ref _gpuPostNeeded, 1, true);
 
             _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            Allocate(ref _gpuCM, 1, true);
         }
 
         public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool isPostNeeded)
@@ -327,12 +327,18 @@ namespace NBodies.Physics
 
         private MeshCell[] GetMesh()
         {
-            if (_mesh.Length != _meshLength)
-                _mesh = new MeshCell[_meshLength];
+            // Make sure the buffer is ready.
+            if (_meshLength > 0 && _gpuMesh.Count >= _meshLength)
+            {
+                if (_mesh.Length != _meshLength)
+                    _mesh = new MeshCell[_meshLength];
 
-            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-            _queue.Finish();
-            return _mesh;
+                _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+                _queue.Finish();
+                return _mesh;
+            }
+
+            return new MeshCell[0];
         }
 
         /// <summary>
@@ -947,14 +953,23 @@ namespace NBodies.Physics
             _gpuInBodies.Dispose();
             _gpuOutBodies.Dispose();
             _gpuGridIndex.Dispose();
+            _gpuCM.Dispose();
+            _gpuSortMap.Dispose();
+            _gpuCellIdx.Dispose();
+            _gpuGridInfo.Dispose();
+            _gpuPostNeeded.Dispose();
 
             _forceKernel.Dispose();
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _popGridKernel.Dispose();
-            _clearGridKernel.Dispose();
             _buildNeighborsKernel.Dispose();
+            _clearGridKernel.Dispose();
             _fixOverlapKernel.Dispose();
+            _buildBottomKernel.Dispose();
+            _buildTopKernel.Dispose();
+            _calcCMKernel.Dispose();
+            _reindexKernel.Dispose();
 
             _program.Dispose();
             _context.Dispose();
