@@ -18,6 +18,10 @@ namespace NBodies.Physics
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
+        private int _meshRequests = 0;
+        private int _meshRequestsPrev = 0;
+        private int _meshNoRequestsLoops = 0;
+        private const int _meshNumNoRequestsTillStop = 10;
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -71,7 +75,8 @@ namespace NBodies.Physics
         {
             get
             {
-                return GetMesh();
+                _meshRequests++;
+                return _mesh;
             }
         }
 
@@ -304,6 +309,34 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
+
+
+            // Try to only read mesh if it's being requested. :-/
+            // TODO: Find a better way...
+            if (_meshRequests > 0)
+            {
+                if (_meshRequests != _meshRequestsPrev)
+                {
+                    _meshRequestsPrev = _meshRequests;
+
+                    if (_mesh.Length != _meshLength)
+                        _mesh = new MeshCell[_meshLength];
+
+                    _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+                    _queue.Finish();
+                }
+                else
+                {
+                    _meshNoRequestsLoops++;
+                }
+            }
+           
+            if (_meshNoRequestsLoops >= _meshNumNoRequestsTillStop)
+            {
+                _meshRequests = 0;
+                _meshRequestsPrev = 0;
+                _meshNoRequestsLoops = 0;
+            }
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -323,22 +356,6 @@ namespace NBodies.Physics
 
                 bodies = ReadBuffer(outBodies);
             }
-        }
-
-        private MeshCell[] GetMesh()
-        {
-            // Make sure the buffer is ready.
-            if (_meshLength > 0 && _gpuMesh.Count >= _meshLength)
-            {
-                if (_mesh.Length != _meshLength)
-                    _mesh = new MeshCell[_meshLength];
-
-                _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-                _queue.Finish();
-                return _mesh;
-            }
-
-            return new MeshCell[0];
         }
 
         /// <summary>
