@@ -71,7 +71,9 @@ namespace NBodies.Physics
         {
             get
             {
-                return _mesh;
+                //return _mesh;
+                return GetMesh();
+
             }
         }
 
@@ -302,11 +304,6 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
-
-            if (_mesh.Length != _meshLength)
-                _mesh = new MeshCell[_meshLength];
-
-            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -326,6 +323,16 @@ namespace NBodies.Physics
 
                 bodies = ReadBuffer(outBodies);
             }
+        }
+
+        private MeshCell[] GetMesh()
+        {
+            if (_mesh.Length != _meshLength)
+                _mesh = new MeshCell[_meshLength];
+
+            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+            _queue.Finish();
+            return _mesh;
         }
 
         /// <summary>
