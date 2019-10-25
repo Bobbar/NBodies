@@ -6,6 +6,7 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace NBodies.Physics
 {
@@ -18,10 +19,6 @@ namespace NBodies.Physics
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
-        private int _meshRequests = 0;
-        private int _meshRequestsPrev = 0;
-        private int _meshNoRequestsLoops = 0;
-        private const int _meshNumNoRequestsTillStop = 10;
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -36,6 +33,7 @@ namespace NBodies.Physics
         private static int[] _sortMap = new int[0]; // Reindexing map for spatial sorting.
         private static int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
+        private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
@@ -75,7 +73,16 @@ namespace NBodies.Physics
         {
             get
             {
-                _meshRequests++;
+                // Only read mesh from GPU if it has changed.
+                if (_mesh.Length != _meshLength)
+                {
+                    // Wait for build to finish.
+                    _meshReadyWait.Wait();
+                    _mesh = new MeshCell[_meshLength];
+                    _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+                    _queue.Finish();
+                }
+
                 return _mesh;
             }
         }
@@ -192,6 +199,8 @@ namespace NBodies.Physics
 
         public void Flush()
         {
+            _meshReadyWait.Reset();
+            _meshLength = 0;
             _gpuMesh.Dispose();
             _gpuMeshNeighbors.Dispose();
             _gpuInBodies.Dispose();
@@ -257,8 +266,14 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(_bodies.Length);
 
+            // Block mesh reads until it's finised building.
+            _meshReadyWait.Reset();
+
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
+
+            // Allow mesh read.
+            _meshReadyWait.Set();
 
             // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
@@ -309,34 +324,6 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
-
-
-            // Try to only read mesh if it's being requested. :-/
-            // TODO: Find a better way...
-            if (_meshRequests > 0)
-            {
-                if (_meshRequests != _meshRequestsPrev)
-                {
-                    _meshRequestsPrev = _meshRequests;
-
-                    if (_mesh.Length != _meshLength)
-                        _mesh = new MeshCell[_meshLength];
-
-                    _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-                    _queue.Finish();
-                }
-                else
-                {
-                    _meshNoRequestsLoops++;
-                }
-            }
-           
-            if (_meshNoRequestsLoops >= _meshNumNoRequestsTillStop)
-            {
-                _meshRequests = 0;
-                _meshRequestsPrev = 0;
-                _meshNoRequestsLoops = 0;
-            }
         }
 
         public void FixOverLaps(ref Body[] bodies)
