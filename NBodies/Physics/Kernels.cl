@@ -331,8 +331,8 @@ __kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global 
 	Body firstBody = inBodies[firstIdx];
 
 	MeshCell newCell;
-	newCell.IdxX = (int)firstBody.PosX >> cellSizeExp;
-	newCell.IdxY = (int)firstBody.PosY >> cellSizeExp;
+	newCell.IdxX = (int)floor(firstBody.PosX) >> cellSizeExp;
+	newCell.IdxY = (int)floor(firstBody.PosY) >> cellSizeExp;
 	newCell.Size = (int)pown(2.0f, cellSizeExp);
 	newCell.BodyStartIdx = firstIdx;
 	newCell.BodyCount = 1;

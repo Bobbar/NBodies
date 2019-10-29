@@ -485,8 +485,8 @@ namespace NBodies.Physics
 
                 for (int b = start; b < len; b++)
                 {
-                    int idxX = (int)_bodies[b].PosX >> cellSizeExp;
-                    int idxY = (int)_bodies[b].PosY >> cellSizeExp;
+                    int idxX = (int)Math.Floor(_bodies[b].PosX) >> cellSizeExp;
+                    int idxY = (int)Math.Floor(_bodies[b].PosY) >> cellSizeExp;
                     int morton = MortonNumber(idxX, idxY);
 
                     mm.Update(idxX, idxY);
