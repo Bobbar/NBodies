@@ -13,6 +13,7 @@ namespace NBodies.Physics
         public float DeltaTime;
         public float Viscosity;
         public float CullDistance;
+        public float GasK;
         public int CollisionsOn;
         public int MeshLevels;
         public int CellSizeExponent;

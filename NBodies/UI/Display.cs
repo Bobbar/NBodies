@@ -99,6 +99,7 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new ViscosityKey());
             InputHandler.AddKeyAction(new KernelSizeKey());
             InputHandler.AddKeyAction(new ZeroVeloKey());
+            InputHandler.AddKeyAction(new GasKKey());
 
             PopulateDisplayStyleMenu();
 

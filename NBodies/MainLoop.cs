@@ -52,6 +52,17 @@ namespace NBodies
             }
         }
 
+        public static float GasK
+        {
+            get { return _gasK; }
+
+            set
+            {
+                // TODO: Clamp this to some range.
+                _gasK = value;
+            }
+        }
+
         public static float CurrentFPS
         {
             get { return _currentFPS; }
@@ -241,8 +252,11 @@ namespace NBodies
 
         #endregion Public Properties
 
+
+        private static float _timeStep = 0.008f;
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
+        private static float _gasK = 0.3f;
         private const float _cullDistance = 15000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
@@ -255,7 +269,7 @@ namespace NBodies
         private static Int64 _frameCount = 0;
         private static double _totalTime = 0;
         private static int _skippedFrames = 0;
-        private static float _timeStep = 0.008f;
+      
         private static Average _avgFPS = new Average(40);
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEventSlim _stopLoopWait = new ManualResetEventSlim(true);
@@ -482,11 +496,12 @@ namespace NBodies
             Array.Copy(BodyManager.Bodies, 0, _bodiesBuffer, 0, BodyManager.Bodies.Length);
         }
 
-        private static SimSettings GetSettings()
+        public static SimSettings GetSettings()
         {
             _settings.KernelSize = _kernelSize;
             _settings.DeltaTime = _timeStep;
             _settings.Viscosity = _viscosity;
+            _settings.GasK = _gasK;
             _settings.CullDistance = _cullDistance;
             _settings.CollisionsOn = Convert.ToInt32(Collisions);
             _settings.MeshLevels = _meshLevels;

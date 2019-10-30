@@ -77,6 +77,7 @@ typedef struct __attribute__((packed)) SimSettings
 	float DeltaTime;
 	float Viscosity;
 	float CullDistance;
+	float GasK;
 	int CollisionsOn;
 	int MeshLevels;
 	int CellSizeExponent;
@@ -87,7 +88,6 @@ typedef struct __attribute__((packed)) SimSettings
 constant float SPH_SOFTENING = 0.00001f; 
 constant float SOFTENING = 0.04f;
 constant float SOFTENING_SQRT = 0.2f;
-constant float GAS_K = 0.3f;
 
 // Flags
 constant int BLACKHOLE = 1;
@@ -576,7 +576,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 	}
 
 	// Calculate pressure from density.
-	outBody.Pressure = GAS_K * outBody.Density;
+	outBody.Pressure = sim.GasK * outBody.Density;
 
 	if (totForce > outBody.Mass * 4.0f)
 	{
