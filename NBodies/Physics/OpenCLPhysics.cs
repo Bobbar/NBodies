@@ -7,6 +7,8 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Runtime.CompilerServices;
+using NBodies.Extensions;
 
 namespace NBodies.Physics
 {
@@ -351,6 +353,7 @@ namespace NBodies.Physics
         /// <param name="len">Length of data set.</param>
         /// <param name="threads">Number of threads per block.</param>
         /// <returns>Number of blocks.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int BlockCount(int len, int threads = 0)
         {
             if (threads == 0)
@@ -368,6 +371,7 @@ namespace NBodies.Physics
         /// <summary>
         /// Calculate dimensionless morton number from X/Y coords.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int MortonNumber(int x, int y)
         {
             x &= 65535;
@@ -464,7 +468,7 @@ namespace NBodies.Physics
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all bodies.
         /// </summary>
         /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
-        private void CalcBodySpatialsAndSort(int cellSizeExp)
+        private unsafe void CalcBodySpatialsAndSort(int cellSizeExp)
         {
             // Spatial info to be computed.
             if (_bSpatials.Length < _bodies.Length)
@@ -521,17 +525,21 @@ namespace NBodies.Physics
             if (_sortMap.Length < _bodies.Length)
                 _sortMap = new int[_bodies.Length + 100];
 
-            for (int i = 0; i < _bodies.Length; i++)
+            fixed (int* mortPtr = _mortKeys, cellIdxPtr = cellIdx, sortMapPtr = _sortMap)
+            fixed (SpatialInfo* spaPtr = _bSpatials)
             {
-                var mort = _mortKeys[i];
-                _sortMap[i] = _bSpatials[i].Index;
-
-                // Find the start of each new morton number and record location to build cell index.
-                if (val != mort)
+                for (int i = 0; i < _bodies.Length; i++)
                 {
-                    cellIdx[count] = i;
-                    val = mort;
-                    count++;
+                    var mort = mortPtr[i];
+                    sortMapPtr[i] = spaPtr[i].Index;
+
+                    // Find the start of each new morton number and record location to build cell index.
+                    if (val != mort)
+                    {
+                        cellIdxPtr[count] = i;
+                        val = mort;
+                        count++;
+                    }
                 }
             }
 
@@ -563,7 +571,7 @@ namespace NBodies.Physics
         /// <summary>
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.
         /// </summary>
-        private void CalcTopSpatials()
+        private unsafe void CalcTopSpatials()
         {
             object sync = new object();
             MinMax minMax = new MinMax(0);
@@ -612,17 +620,19 @@ namespace NBodies.Physics
                 int count = 0;
                 int val = int.MaxValue;
 
-                for (int i = 0; i < childCount; i++)
+                fixed (int* cellIdxPtr = cellIdx)
+                fixed (SpatialInfo* spaPtr = parentSpatials)
                 {
-                    var mort = parentSpatials[i].Mort;
-
-                    if (val != mort)
+                    for (int i = 0; i < childCount; i++)
                     {
-                        cellIdx[count] = i;
+                        var mort = spaPtr[i].Mort;
 
-                        val = mort;
-
-                        count++;
+                        if (val != mort)
+                        {
+                            cellIdxPtr[count] = i;
+                            val = mort;
+                            count++;
+                        }
                     }
                 }
 
@@ -634,7 +644,7 @@ namespace NBodies.Physics
             }
         }
 
-        private void WriteCellIndex(LevelInfo[] levelInfo)
+        private unsafe void WriteCellIndex(LevelInfo[] levelInfo)
         {
             // Writing the cell index as a single large array
             // is much faster than chunking it in at each level.
