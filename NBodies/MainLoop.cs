@@ -263,6 +263,7 @@ namespace NBodies
         private static int _threadsPBExp = 8;
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
         private static int _targetFPS = 60;
+        private static int _pauseFPS = 60;
         private static float _currentFPS = 0;
         private static float _peakFPS = 0;
         private static int _minFrameTime = 0;
@@ -471,10 +472,12 @@ namespace NBodies
                         }
                     }
 
+                    // Fixed FPS limit while paused.
+                    if (!_skipPhysics && _bodiesBuffer.Length > 1)
+                        FPSLimiter(_targetFPS);
+                    else
+                        FPSLimiter(_pauseFPS);
 
-                  
-
-                    FPSLimiter();
                 }
             }
             catch (OperationCanceledException)
@@ -556,10 +559,10 @@ namespace NBodies
             _recorder.StopAll();
         }
 
-        private static void FPSLimiter()
+        private static void FPSLimiter(int targetFPS)
         {
             long ticksPerSecond = TimeSpan.TicksPerSecond;
-            float targetFrameTime = ticksPerSecond / (float)_targetFPS;
+            float targetFrameTime = ticksPerSecond / (float)targetFPS;
             long waitTime = 0;
 
             if (_fpsTimer.IsRunning)
