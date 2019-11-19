@@ -644,7 +644,7 @@ namespace NBodies.Physics
             }
         }
 
-        private unsafe void WriteCellIndex(LevelInfo[] levelInfo)
+        private void WriteCellIndex(LevelInfo[] levelInfo)
         {
             // Writing the cell index as a single large array
             // is much faster than chunking it in at each level.
