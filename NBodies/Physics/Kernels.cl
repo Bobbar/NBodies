@@ -85,7 +85,7 @@ typedef struct __attribute__((packed)) SimSettings
 } SimSettings;
 
 // Grav/SPH consts.
-constant float SPH_SOFTENING = 0.00001f; 
+constant float SPH_SOFTENING = 0.00001f;
 constant float SOFTENING = 0.04f;
 constant float SOFTENING_SQRT = 0.2f;
 
@@ -448,8 +448,8 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 	// Copy current body and mesh cell from memory.
 	Body outBody = inBodies[(a)];
 	MeshCell levelCell = inMesh[(outBody.MeshID)];
-	MeshCell levelCellParent = inMesh[(levelCell.ParentID)];
-	
+	MeshCell levelCellParent = levelCell;
+
 	// Reset forces.
 	float totForce = 0;
 	outBody.ForceX = 0.0f;
@@ -512,8 +512,10 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 
 	// *** Particle 2 Mesh ***
 	// Accumulate force from neighboring cells at each level.
-	for (int level = 0; level < sim.MeshLevels; level++)
+	while (levelCellParent.ParentID != -1)
 	{
+		levelCellParent = inMesh[(levelCellParent.ParentID)];
+
 		// Iterate parent cell neighbors.
 		int start = levelCellParent.NeighborStartIdx;
 		int len = start + levelCellParent.NeighborCount;
@@ -547,12 +549,6 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 		}
 
 		levelCell = levelCellParent;
-
-		// Move up to next level.
-		if (levelCellParent.ParentID != -1)
-		{ 
-			levelCellParent = inMesh[(levelCellParent.ParentID)];
-		}
 	}
 
 	// *** Particle 2 Mesh ***
@@ -675,7 +671,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global M
 							inBodies[a] = outBody;
 							inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 							postNeeded[0] = 1;
-						
+
 						}
 						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
 						{
@@ -753,7 +749,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							distSqrt = max(distSqrt, SPH_SOFTENING);
 
 							float kDiff = sph.kSize - distSqrt;
-						
+
 							// Pressure force
 							float pressScalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
 							float pressGrad = sph.fPressure * kDiff * kDiff / distSqrt;
