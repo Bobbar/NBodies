@@ -259,6 +259,11 @@ namespace NBodies.Physics
             _levels = sim.MeshLevels;
             int threadBlocks = 0;
 
+            // Allocate and start writing bodies to the GPU.
+            Allocate(ref _gpuInBodies, _bodies.Length);
+            Allocate(ref _gpuOutBodies, _bodies.Length);
+            _queue.WriteToBuffer(_bodies, _gpuOutBodies, false, 0, 0, _bodies.Length, null);
+
             if (_kernelSize != sim.KernelSize)
             {
                 _kernelSize = sim.KernelSize;
@@ -321,8 +326,7 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-            postNeeded = ReadBuffer(_gpuPostNeeded);
-            isPostNeeded = Convert.ToBoolean(postNeeded[0]);
+            isPostNeeded = Convert.ToBoolean(ReadBuffer(_gpuPostNeeded)[0]);
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
@@ -343,7 +347,7 @@ namespace NBodies.Physics
                 _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 _queue.Finish();
 
-                bodies = ReadBuffer(outBodies);
+                bodies = ReadBuffer(outBodies, true);
             }
         }
 
@@ -545,20 +549,17 @@ namespace NBodies.Physics
 
             cellIdx[count] = _bodies.Length;
 
-            // Write bodies and sort map to GPU and start reindexing.
-            UploadAndReindexGPU(_sortMap);
+            // Write sort map to GPU and start reindexing.
+            ReindexBodiesGPU(_sortMap);
 
             _levelInfo[0].CellIndex = cellIdx;
             _levelInfo[0].Spatials = _bSpatials;
             _levelInfo[0].CellCount = count;
         }
 
-        private void UploadAndReindexGPU(int[] sortMap)
+        private void ReindexBodiesGPU(int[] sortMap)
         {
             Allocate(ref _gpuSortMap, _bodies.Length);
-            Allocate(ref _gpuInBodies, _bodies.Length);
-            Allocate(ref _gpuOutBodies, _bodies.Length);
-            _queue.WriteToBuffer(_bodies, _gpuOutBodies, false, 0, 0, _bodies.Length, null);
             _queue.WriteToBuffer(sortMap, _gpuSortMap, false, 0, 0, _bodies.Length, null);
 
             _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
@@ -895,12 +896,12 @@ namespace NBodies.Physics
             return 0;
         }
 
-        private T[] ReadBuffer<T>(ComputeBuffer<T> buffer) where T : struct
+        private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, bool blocking = false) where T : struct
         {
             T[] buf = new T[buffer.Count];
 
             _queue.ReadFromBuffer(buffer, ref buf, true, null);
-            _queue.Finish();
+            if (blocking) _queue.Finish();
 
             return buf;
         }
