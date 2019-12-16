@@ -32,7 +32,6 @@ namespace NBodies.Physics
         // Static fields for large allocations.
         private static SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
         private static int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
-        private static int[] _sortMap = new int[0]; // Reindexing map for spatial sorting.
         private static int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
         private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
@@ -526,16 +525,18 @@ namespace NBodies.Physics
             if (cellIdx == null || cellIdx.Length < _bodies.Length)
                 cellIdx = new int[_bodies.Length + 100];
 
-            if (_sortMap.Length < _bodies.Length)
-                _sortMap = new int[_bodies.Length + 100];
+            // Allocate then map the sort map buffer so we can write to it directly.
+            Allocate(ref _gpuSortMap, _bodies.Length + 100);
+            var sortMapPtr = _queue.Map(_gpuSortMap, true, ComputeMemoryMappingFlags.Write, 0, _gpuSortMap.Count, null);
+            var sortMapNativePtr = (int*)sortMapPtr.ToPointer();
 
-            fixed (int* mortPtr = _mortKeys, cellIdxPtr = cellIdx, sortMapPtr = _sortMap)
+            fixed (int* mortPtr = _mortKeys, cellIdxPtr = cellIdx)
             fixed (SpatialInfo* spaPtr = _bSpatials)
             {
                 for (int i = 0; i < _bodies.Length; i++)
                 {
                     var mort = mortPtr[i];
-                    sortMapPtr[i] = spaPtr[i].Index;
+                    sortMapNativePtr[i] = spaPtr[i].Index;
 
                     // Find the start of each new morton number and record location to build cell index.
                     if (val != mort)
@@ -547,21 +548,22 @@ namespace NBodies.Physics
                 }
             }
 
+            // Add the last cell index value;
             cellIdx[count] = _bodies.Length;
 
-            // Write sort map to GPU and start reindexing.
-            ReindexBodiesGPU(_sortMap);
+            // Unmap the sort map buffer.
+            _queue.Unmap(_gpuSortMap, ref sortMapPtr, null);
+
+            // Start reindexing bodies on the GPU.
+            ReindexBodiesGPU();
 
             _levelInfo[0].CellIndex = cellIdx;
             _levelInfo[0].Spatials = _bSpatials;
             _levelInfo[0].CellCount = count;
         }
 
-        private void ReindexBodiesGPU(int[] sortMap)
+        private void ReindexBodiesGPU()
         {
-            Allocate(ref _gpuSortMap, _bodies.Length);
-            _queue.WriteToBuffer(sortMap, _gpuSortMap, false, 0, 0, _bodies.Length, null);
-
             _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
             _reindexKernel.SetValueArgument(1, _bodies.Length);
             _reindexKernel.SetMemoryArgument(2, _gpuSortMap);
@@ -614,8 +616,8 @@ namespace NBodies.Physics
 
                 AddGridDims(minMax, level);
 
-                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount + 1)
-                    _levelInfo[level].CellIndex = new int[childCount + 1];
+                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
+                    _levelInfo[level].CellIndex = new int[childCount + 1000];
 
                 var cellIdx = _levelInfo[level].CellIndex;
                 int count = 0;
@@ -649,7 +651,7 @@ namespace NBodies.Physics
         {
             // Writing the cell index as a single large array
             // is much faster than chunking it in at each level.
-
+        
             // Calc total size of cell index.
             long cellIdxLen = 0;
 
