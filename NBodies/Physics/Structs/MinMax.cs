@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace NBodies.Physics
 {
-    public struct MinMax
+    public class MinMax
     {
         public long MinX;
         public long MinY;
         public long MaxX;
         public long MaxY;
 
-        public MinMax(int dummy = 0)
+        public MinMax()
         {
             MinX = int.MaxValue;
             MinY = int.MaxValue;
@@ -29,13 +29,12 @@ namespace NBodies.Physics
             MaxY = maxY;
         }
 
-
-        public void Update(long X, long Y)
+        public void Update(long x, long y)
         {
-            MinX = Math.Min(MinX, X);
-            MinY = Math.Min(MinY, Y);
-            MaxX = Math.Max(MaxX, X);
-            MaxY = Math.Max(MaxY, Y);
+            MinX = Math.Min(MinX, x);
+            MinY = Math.Min(MinY, y);
+            MaxX = Math.Max(MaxX, x);
+            MaxY = Math.Max(MaxY, y);
         }
 
         public void Update(MinMax minMax)

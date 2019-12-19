@@ -27,6 +27,14 @@ namespace NBodies.Extensions
             timer.Restart();
         }
 
+        public static void PrintTicks(this Stopwatch timer)
+        {
+            Debug.WriteLine(timer.Elapsed.Ticks);
+
+            timer.Restart();
+        }
+
+
         public static void Log(this Stopwatch timer, string label = "")
         {
             System.IO.File.AppendAllText($@".\TimerLog.txt", $@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks} {Environment.NewLine}");

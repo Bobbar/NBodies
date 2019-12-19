@@ -149,7 +149,7 @@ bool HasFlagB(Body body, int check)
 
 __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
-	int i = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int i = get_global_id(0);
 
 	if (i >= inBodiesLen)
 	{
@@ -198,7 +198,7 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap
 
 __kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, global MeshCell* mesh, int meshLen)
 {
-	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int m = get_global_id(0);
 
 	if (m >= meshLen)
 	{
@@ -210,14 +210,13 @@ __kernel void ClearGrid(global int* gridIdx, int passStride, int passOffset, glo
 
 	if (idx >= 0 && idx < passStride)
 	{
-		gridIdx[idx] = 0;
+		gridIdx[idx] = -1;
 	}
-
 }
 
 __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, global GridInfo* gridInfo, global MeshCell* mesh, int meshLen)
 {
-	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int m = get_global_id(0);
 
 	if (m >= meshLen)
 	{
@@ -245,16 +244,7 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	// Make sure the bucket fits withing this pass.
 	if (bucket >= 0 && bucket < passStride)
 	{
-		// Unpopulated grid buckets = 0.
-		// Cell ID of 0 == bucked index of -1.
-		if (cell.ID == 0)
-		{
-			gridIdx[bucket] = -1;
-		}
-		else
-		{
-			gridIdx[bucket] = cell.ID;
-		}
+		gridIdx[bucket] = cell.ID;
 	}
 
 	mesh[m] = cell;
@@ -262,7 +252,7 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 
 __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, int passStride, int passOffset, global int* neighborIndex)
 {
-	int m = get_local_size(0) * get_group_id(0) + get_local_id(0);
+	int m = get_global_id(0);
 
 	if (m >= meshLen)
 	{
@@ -296,15 +286,10 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 					{
 						int idx = gridIdx[bucket];
 
-						// Check for populated bucket and poplate neighbor index list accordingly.
-						if (idx > 0)
-						{
+						// Check for populated bucket and poplate neighbor index.
+						if (idx >= 0)
+						{ 
 							neighborIndex[(offset + count)] = idx;
-							count++;
-						}
-						else if (idx == -1)
-						{
-							neighborIndex[(offset + count)] = 0;
 							count++;
 						}
 					}

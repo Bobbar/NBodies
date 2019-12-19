@@ -420,7 +420,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Builds the particle mesh and mesh-neighbor index for the current field.  Also begins writing the body array to GPU...
+        /// Builds the particle mesh and mesh-neighbor index for the current field.
         /// </summary>
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
         private void BuildMesh(int cellSizeExp)
@@ -433,22 +433,26 @@ namespace NBodies.Physics
             if (_levelInfo.Length != (_levels + 1))
                 _levelInfo = new LevelInfo[_levels + 1];
 
-            // Compute cell count and cell index maps.
-            // Also does spatial sorting of bodies.
-            CalcBodySpatialsAndSort(cellSizeExp);
-            CalcTopSpatials();
+            // [Bottom level]
+            // Compute cell count, cell index map and sort map.
+            ComputeBodySpatials(cellSizeExp);
+
+            // Start reindexing bodies on the GPU.
+            ReindexBodiesGPU();
+
+            // [Upper levels]
+            // Compute cell count and cell index maps for all upper levels.
+            ComputeUpperSpatials();
 
             // Get the total number of mesh cells to be created.
             int totCells = 0;
             foreach (var lvl in _levelInfo)
-            {
                 totCells += lvl.CellCount;
-            }
 
             _meshLength = totCells;
 
             // Allocate the mesh buffer on the GPU.
-            Allocate(ref _gpuMesh, totCells, false);
+            Allocate(ref _gpuMesh, _meshLength, false);
 
             // Index to hold the starting indexes for each level within the 1D mesh array.
             _levelIdx = new int[_levels + 1];
@@ -460,18 +464,18 @@ namespace NBodies.Physics
             // Build the first (bottom) level of the mesh.
             BuildBottomLevelGPU(_levelInfo[0], cellSizeExp);
 
-            // Build the remaining (top) levels of the mesh.
-            BuildTopLevelsGPU(_levelInfo, cellSizeExp, _levels);
+            // Build the remaining (upper) levels of the mesh.
+            BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
-            // Populate the grid index and mesh neighbor index.
-            PopGridAndNeighborsGPU(_gridInfo, totCells);
+            // Populate the grid index and mesh neighbor index list.
+            PopGridAndNeighborsGPU(_gridInfo, _meshLength);
         }
 
         /// <summary>
-        /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all bodies.
+        /// Computes spatial info (Morton number, X/Y indexes, mesh cell map and sort map) for all bodies.
         /// </summary>
         /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
-        private unsafe void CalcBodySpatialsAndSort(int cellSizeExp)
+        private unsafe void ComputeBodySpatials(int cellSizeExp)
         {
             // Spatial info to be computed.
             if (_bSpatials.Length < _bodies.Length)
@@ -482,13 +486,14 @@ namespace NBodies.Physics
             if (_mortKeys.Length < _bodies.Length)
                 _mortKeys = new int[_bodies.Length];
 
-            var minMax = new MinMax(0);
+            // MinMax object to record field bounds.
+            var minMax = new MinMax();
             var sync = new object();
 
             // Compute the spatial info in parallel.
             ParallelForSlim(_bodies.Length, _parallelPartitions, (start, len) =>
             {
-                var mm = new MinMax(0);
+                var mm = new MinMax();
 
                 for (int b = start; b < len; b++)
                 {
@@ -496,7 +501,7 @@ namespace NBodies.Physics
                     int idxY = (int)Math.Floor(_bodies[b].PosY) >> cellSizeExp;
                     int morton = MortonNumber(idxX, idxY);
 
-                    mm.Update(idxX, idxY);
+                     mm.Update(idxX, idxY);
 
                     _bSpatials[b].Set(morton, idxX, idxY, b);
                     _mortKeys[b] = morton;
@@ -506,9 +511,9 @@ namespace NBodies.Physics
                 {
                     minMax.Update(mm);
                 }
-
             });
 
+            // Compute grid dimensions and add to list for this level.
             AddGridDims(minMax, 0);
 
             // Sort by morton number to produce a spatially sorted array.
@@ -554,9 +559,7 @@ namespace NBodies.Physics
             // Unmap the sort map buffer.
             _queue.Unmap(_gpuSortMap, ref sortMapPtr, null);
 
-            // Start reindexing bodies on the GPU.
-            ReindexBodiesGPU();
-
+            // Set the computed info.
             _levelInfo[0].CellIndex = cellIdx;
             _levelInfo[0].Spatials = _bSpatials;
             _levelInfo[0].CellCount = count;
@@ -574,10 +577,10 @@ namespace NBodies.Physics
         /// <summary>
         /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.
         /// </summary>
-        private unsafe void CalcTopSpatials()
+        private unsafe void ComputeUpperSpatials()
         {
+            MinMax minMax = new MinMax();
             object sync = new object();
-            MinMax minMax = new MinMax(0);
 
             for (int level = 1; level <= _levels; level++)
             {
@@ -593,7 +596,7 @@ namespace NBodies.Physics
 
                 ParallelForSlim(childCount, _parallelPartitions, (start, len) =>
                 {
-                    var mm = new MinMax(0);
+                    var mm = new MinMax();
 
                     for (int b = start; b < len; b++)
                     {
@@ -611,7 +614,6 @@ namespace NBodies.Physics
                     {
                         minMax.Update(mm);
                     }
-
                 });
 
                 AddGridDims(minMax, level);
@@ -709,7 +711,7 @@ namespace NBodies.Physics
         /// <param name="cellSizeExp">Current cell size exponent.</param>
         /// <param name="levels">Current number of levels.</param>
         /// <remarks>The top level cell values are computed from the previous level (child) cells.</remarks>
-        private void BuildTopLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
+        private void BuildUpperLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
             int meshOffset = 0; // Write offset for new cells array location.
             int readOffset = 0; // Read offset for cell and location indexes.
@@ -770,8 +772,8 @@ namespace NBodies.Physics
             long newCap = Allocate(ref _gpuGridIndex, gridSize);
             if (newCap > 0)
             {
-                // Fill the new buffer with zeros.
-                _queue.FillBuffer(_gpuGridIndex, new int[1] { 0 }, 0, newCap, null);
+                // Fill the new buffer with -1s.
+                _queue.FillBuffer(_gpuGridIndex, new int[1] { -1 }, 0, newCap, null);
             }
 
             // Since the grid index can quickly exceed the maximum allocation size,
