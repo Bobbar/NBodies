@@ -285,7 +285,7 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 		{
 			for (int y = -1; y <= 1; y++)
 			{
-				int localIdx = offIdx + ((x * columns) + (y + x));
+				int localIdx = offIdx + ((y * columns) + (x + y));
 
 				if (localIdx > 0 && localIdx < gInfo.Size)
 				{
