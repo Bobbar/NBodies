@@ -17,7 +17,7 @@ namespace NBodies.Physics
         private int _gpuIndex = 4;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
-        private int _parallelPartitions = 12;//24;
+        private int _parallelPartitions = 8;//12;
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
