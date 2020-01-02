@@ -8,9 +8,10 @@ namespace NBodies.Physics
 {
     public static class Sort
     {
-        public static int Threshold = 150; // keys length to use InsertionSort instead of SequentialQuickSort
+        public static int Threshold = 4000; // keys length to use InsertionSort instead of SequentialQuickSort
+        public static int ProcessorCount = 5;
 
-        public static void InsertionSort(int[] keys, SpatialInfo[] data,  int from, int to)
+        public static void InsertionSort(int[] keys, SpatialInfo[] data, int from, int to)
         {
             for (int i = from + 1; i < to; i++)
             {
@@ -87,14 +88,12 @@ namespace NBodies.Physics
 
         public static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int length)
         {
-            ParallelQuickSort(keys, data, 0, length,
-                 (int)Math.Log(Environment.ProcessorCount, 2) + 4);
+            ParallelQuickSort(keys, data, 0, length, ProcessorCount);
         }
 
         public static void ParallelQuickSort(int[] keys, SpatialInfo[] data)
         {
-            ParallelQuickSort(keys, data, 0, keys.Length,
-                 (int)Math.Log(Environment.ProcessorCount, 2) + 4);
+            ParallelQuickSort(keys, data, 0, keys.Length, ProcessorCount);
         }
 
         static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int from, int to, int depthRemaining)
