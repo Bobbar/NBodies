@@ -575,11 +575,12 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 // Is the specified cell a neighbor of the test cell?
 bool IsNeighbor(MeshCell cell, MeshCell testCell)
 {
-	if (testCell.IdxX > cell.IdxX + -2 && testCell.IdxX < cell.IdxX + 2 && testCell.IdxY > cell.IdxY + -2 && testCell.IdxY < cell.IdxY + 2)
+	if (abs(cell.IdxX - testCell.IdxX) > 1 || abs(cell.IdxY - testCell.IdxY) > 1)
 	{
-		return true;
+		return false;
 	}
-	return false;
+
+	return true;
 }
 
 __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
