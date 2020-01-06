@@ -290,11 +290,11 @@ namespace NBodies.Physics
 
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
-
+         
             int argi = 0;
-            _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _forceKernel.SetValueArgument(argi++, _bodies.Length);
             _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _forceKernel.SetValueArgument(argi++, _bodies.Length);
+            _forceKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
             _forceKernel.SetValueArgument(argi++, _levelIdx[_levels]);
             _forceKernel.SetValueArgument(argi++, _meshLength);
@@ -305,7 +305,7 @@ namespace NBodies.Physics
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
@@ -314,9 +314,9 @@ namespace NBodies.Physics
             _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
-            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuCM);
@@ -327,7 +327,7 @@ namespace NBodies.Physics
 
             isPostNeeded = Convert.ToBoolean(ReadBuffer(_gpuPostNeeded)[0]);
 
-            _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
+            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
         }
 
@@ -536,19 +536,19 @@ namespace NBodies.Physics
                 var sortMapPtr = _queue.Map(_gpuSortMap, true, ComputeMemoryMappingFlags.Write, 0, _gpuSortMap.Count, null);
                 var sortMapNativePtr = (int*)sortMapPtr.ToPointer();
 
-                    for (int i = 0; i < _bodies.Length; i++)
-                    {
-                        var mort = mortPtr[i];
-                        sortMapNativePtr[i] = spaPtr[i].Index;
+                for (int i = 0; i < _bodies.Length; i++)
+                {
+                    var mort = mortPtr[i];
+                    sortMapNativePtr[i] = spaPtr[i].Index;
 
-                        // Find the start of each new morton number and record location to build cell index.
-                        if (val != mort)
-                        {
-                            cellIdxPtr[count] = i;
-                            val = mort;
-                            count++;
-                        }
+                    // Find the start of each new morton number and record location to build cell index.
+                    if (val != mort)
+                    {
+                        cellIdxPtr[count] = i;
+                        val = mort;
+                        count++;
                     }
+                }
 
                 // Add the last cell index value;
                 cellIdx[count] = _bodies.Length;
@@ -693,11 +693,11 @@ namespace NBodies.Physics
             int cellCount = levelInfo.CellCount;
 
             _buildBottomKernel.SetMemoryArgument(0, _gpuInBodies);
-            _buildBottomKernel.SetMemoryArgument(1, _gpuOutBodies);
-            _buildBottomKernel.SetMemoryArgument(2, _gpuMesh);
-            _buildBottomKernel.SetValueArgument(3, cellCount);
-            _buildBottomKernel.SetMemoryArgument(4, _gpuCellIdx);
-            _buildBottomKernel.SetValueArgument(5, cellSizeExp);
+            _buildBottomKernel.SetMemoryArgument(1, _gpuMesh);
+            _buildBottomKernel.SetValueArgument(2, cellCount);
+            _buildBottomKernel.SetMemoryArgument(3, _gpuCellIdx);
+            _buildBottomKernel.SetValueArgument(4, cellSizeExp);
+            _buildBottomKernel.SetValueArgument(5, (int)Math.Pow(2.0f, cellSizeExp));
 
             _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
@@ -736,10 +736,11 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(1, cellCount);
                 _buildTopKernel.SetMemoryArgument(2, _gpuCellIdx);
                 _buildTopKernel.SetValueArgument(3, cellSizeExpLevel);
-                _buildTopKernel.SetValueArgument(4, levelOffset);
-                _buildTopKernel.SetValueArgument(5, meshOffset);
-                _buildTopKernel.SetValueArgument(6, readOffset);
-                _buildTopKernel.SetValueArgument(7, level);
+                _buildTopKernel.SetValueArgument(4, (int)Math.Pow(2.0f, cellSizeExpLevel));
+                _buildTopKernel.SetValueArgument(5, levelOffset);
+                _buildTopKernel.SetValueArgument(6, meshOffset);
+                _buildTopKernel.SetValueArgument(7, readOffset);
+                _buildTopKernel.SetValueArgument(8, level);
 
                 _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
