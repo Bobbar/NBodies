@@ -275,6 +275,10 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 		{
 			for (int y = -1; y <= 1; y++)
 			{
+				// Skip this cell.
+				if (x == 0 && y == 0)
+					y++;
+
 				int localIdx = offIdx + ((y * columns) + (x + y));
 
 				if (localIdx > 0 && localIdx < gInfo.Size)
@@ -288,7 +292,7 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 
 						// Check for populated bucket and poplate neighbor index.
 						if (idx >= 0)
-						{ 
+						{
 							neighborIndex[(offset + count)] = idx;
 							count++;
 						}
@@ -296,6 +300,9 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 				}
 			}
 		}
+
+		// Add this cell to end.
+		neighborIndex[(offset + count++)] = m;
 
 		// Set cell neighbor index list pointers.
 		cell.NeighborStartIdx = offset;
@@ -501,9 +508,9 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 	{
 		levelCellParent = inMesh[(levelCellParent.ParentID)];
 
-		// Iterate parent cell neighbors.
+		// Iterate parent cell neighbors, skipping the last neighbor which is the parent.
 		int start = levelCellParent.NeighborStartIdx;
-		int len = start + levelCellParent.NeighborCount;
+		int len = start + levelCellParent.NeighborCount - 1;
 
 		for (int nc = start; nc < len; nc++)
 		{
