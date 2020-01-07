@@ -261,14 +261,17 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 
 	int offset = m * 9;
 	int count = 0;
-	MeshCell cell = mesh[m];
-	GridInfo gInfo = gridInfo[cell.Level];
+	int cellLevel = mesh[m].Level;
+	int cellGridIdx = mesh[m].GridIdx;
+
+	GridInfo gInfo = gridInfo[cellLevel];
+
 	int columns = gInfo.Columns;
-	int offsetIndex = cell.GridIdx - passOffset;
+	int offsetIndex = cellGridIdx - passOffset;
 
 	if (offsetIndex >= 0 && offsetIndex < passStride)
 	{
-		int offIdx = cell.GridIdx - gInfo.IndexOffset;
+		int offIdx = cellGridIdx - gInfo.IndexOffset;
 
 		// Shift bucket index around the cell and check for populated grid index buckets.
 		for (int x = -1; x <= 1; x++)
@@ -305,11 +308,9 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 		neighborIndex[(offset + count++)] = m;
 
 		// Set cell neighbor index list pointers.
-		cell.NeighborStartIdx = offset;
-		cell.NeighborCount = count;
+		mesh[m].NeighborStartIdx = offset;
+		mesh[m].NeighborCount = count;
 	}
-
-	mesh[m] = cell;
 }
 
 __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp, int cellSize)
@@ -435,7 +436,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float2* cm, int s
 	cm[0] = (float2)(cmX, cmY);
 }
 
-__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* outBodies, global MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -573,9 +574,10 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 
 	if (totForce > bMass * 4.0f)
 	{
-		if (!HasFlag(bFlags, INROCHE))
-		{
-			bFlags = SetFlag(bFlags, INROCHE, true);
+		int newFlags = SetFlag(bFlags, INROCHE, true);
+		if (newFlags != bFlags)
+		{ 
+			bFlags = newFlags;
 			postNeeded[0] = 1;
 		}
 	}
