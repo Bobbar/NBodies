@@ -8,8 +8,7 @@ namespace NBodies.Physics
 {
     public static class Sort
     {
-        private const int _minTheshold = 1000;
-        private static int _threshold = _minTheshold; // Length at which to use InsertionSort instead of QuickSort recurse/invoke.
+        private static int _threshold = 150; // Length at which to use InsertionSort instead of QuickSort recurse/invoke.
         private static int _processorCount = Environment.ProcessorCount - 3; // = # cores/threads - 3 threads. (2 loop tasks, 1 UI thread)
 
         public static unsafe void InsertionSort(int* keys, SpatialInfo* data, int from, int to)
@@ -61,11 +60,6 @@ namespace NBodies.Physics
 
         public static unsafe void ParallelQuickSort(int* keys, SpatialInfo* data, int length)
         {
-            // Try to compute a threshold that will allow maximum occupancy for large data sets.
-            _threshold = (length / _processorCount);
-            if (_threshold < _minTheshold)
-                _threshold = _minTheshold;
-
             ParallelQuickSort(keys, data, 0, length, _processorCount);
         }
 
