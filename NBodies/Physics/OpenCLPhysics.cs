@@ -290,7 +290,6 @@ namespace NBodies.Physics
 
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
-          
 
             int argi = 0;
             _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
@@ -812,11 +811,6 @@ namespace NBodies.Physics
                 _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                 _popGridKernel.SetValueArgument(argi++, meshSize);
                 _queue.Execute(_popGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-              
-
-                _queue.Finish();
-                timer.Restart();
-
 
                 // Build neighbor list.
                 argi = 0;
@@ -828,8 +822,7 @@ namespace NBodies.Physics
                 _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
                 _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-                _queue.Finish();
-                timer.Print("Ns");
+
                 // We're done with the grid index array, so undo what we added to clear it for the next frame.
                 _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
                 _clearGridKernel.SetValueArgument(1, (int)stride);
