@@ -8,29 +8,10 @@ namespace NBodies.Physics
 {
     public static class Sort
     {
-        private static int _threshold = 150; // Length at which to use InsertionSort instead of QuickSort recurse/invoke.
+        private static int _threshold = 500; // Length at which to use .NET Array.Sort instead of QuickSort recurse/invoke.
         private static int _processorCount = Environment.ProcessorCount - 3; // = # cores/threads - 3 threads. (2 loop tasks, 1 UI thread)
 
-        public static unsafe void InsertionSort(int* keys, SpatialInfo* data, int from, int to)
-        {
-            for (int i = from + 1; i < to; i++)
-            {
-                int a = keys[i];
-                SpatialInfo ad = data[i];
-                int j = i - 1;
-
-                while (j >= from && a > keys[j])
-                {
-                    keys[j + 1] = keys[j];
-                    data[j + 1] = data[j];
-                    j--;
-                }
-                keys[j + 1] = a;
-                data[j + 1] = ad;
-            }
-        }
-
-        static unsafe void SwapPtr(int* keys, SpatialInfo* data, int i, int j)
+        static void Swap(int[] keys, SpatialInfo[] data, int i, int j)
         {
             int temp = keys[i];
             keys[i] = keys[j];
@@ -41,33 +22,33 @@ namespace NBodies.Physics
             data[j] = temp2;
         }
 
-        static unsafe int Partition(int* keys, SpatialInfo* data, int from, int to, int pivot)
+        static int Partition(int[] keys, SpatialInfo[] data, int from, int to, int pivot)
         {
-            int arrayPivot = keys[pivot];  // pivot value
-            SwapPtr(keys, data, pivot, to - 1); // move pivot value to end for now, after this pivot not used
-            int newPivot = from; // new pivot 
+            var arrayPivot = keys[pivot];  // pivot value
+            Swap(keys, data, pivot, to - 1); // move pivot value to end for now, after this pivot not used
+            var newPivot = from; // new pivot 
             for (int i = from; i < to - 1; i++) // be careful to leave pivot value at the end
             {
-                if (keys[i] > arrayPivot)
+                if (keys[i] < arrayPivot)
                 {
-                    SwapPtr(keys, data, newPivot, i);  // move value smaller than arrayPivot down to newpivot
+                    Swap(keys, data, newPivot, i);  // move value smaller than arrayPivot down to newpivot
                     newPivot++;
                 }
             }
-            SwapPtr(keys, data, newPivot, to - 1); // move pivot value to its final place
+            Swap(keys, data, newPivot, to - 1); // move pivot value to its final place
             return newPivot; // new pivot
         }
 
-        public static unsafe void ParallelQuickSort(int* keys, SpatialInfo* data, int length)
+        public static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int length)
         {
             ParallelQuickSort(keys, data, 0, length, _processorCount);
         }
-
-        static unsafe void ParallelQuickSort(int* keys, SpatialInfo* data, int from, int to, int depthRemaining)
+       
+        static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int from, int to, int depthRemaining)
         {
             if (to - from <= _threshold)
             {
-                InsertionSort(keys, data, from, to);
+                Array.Sort(keys, data, from, to - from);
             }
             else
             {

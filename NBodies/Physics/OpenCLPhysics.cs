@@ -515,6 +515,20 @@ namespace NBodies.Physics
             // Compute grid dimensions and add to list for this level.
             AddGridDims(minMax, 0);
 
+            // Sort by morton number to produce a spatially sorted array.
+            Sort.ParallelQuickSort(_mortKeys, _bSpatials, _bodies.Length);
+
+            // Compute number of unique morton numbers to determine cell count,
+            // and build the start index of each cell.
+            int count = 0;
+            int val = int.MaxValue;
+
+            // Allocate then map the sort map buffer so we can write to it directly.
+            Allocate(ref _gpuSortMap, _bodies.Length + 100);
+            var sortMapPtr = _queue.Map(_gpuSortMap, true, ComputeMemoryMappingFlags.Write, 0, _gpuSortMap.Count, null);
+            var sortMapNativePtr = (int*)sortMapPtr.ToPointer();
+
+            // Check cellindex allocation.
             var cellIdx = _levelInfo[0].CellIndex;
             if (cellIdx == null || cellIdx.Length < _bodies.Length)
                 cellIdx = new int[_bodies.Length + 100];
@@ -522,19 +536,6 @@ namespace NBodies.Physics
             fixed (int* mortPtr = _mortKeys, cellIdxPtr = cellIdx)
             fixed (SpatialInfo* spaPtr = _bSpatials)
             {
-                // Sort by morton number to produce a spatially sorted array.
-                Sort.ParallelQuickSort(mortPtr, spaPtr, _bodies.Length);
-
-                // Compute number of unique morton numbers to determine cell count,
-                // and build the start index of each cell.
-                int count = 0;
-                int val = int.MaxValue;
-
-                // Allocate then map the sort map buffer so we can write to it directly.
-                Allocate(ref _gpuSortMap, _bodies.Length + 100);
-                var sortMapPtr = _queue.Map(_gpuSortMap, true, ComputeMemoryMappingFlags.Write, 0, _gpuSortMap.Count, null);
-                var sortMapNativePtr = (int*)sortMapPtr.ToPointer();
-
                 for (int i = 0; i < _bodies.Length; i++)
                 {
                     var mort = mortPtr[i];
@@ -548,18 +549,18 @@ namespace NBodies.Physics
                         count++;
                     }
                 }
-
-                // Add the last cell index value;
-                cellIdx[count] = _bodies.Length;
-
-                // Unmap the sort map buffer.
-                _queue.Unmap(_gpuSortMap, ref sortMapPtr, null);
-
-                // Set the computed info.
-                _levelInfo[0].CellIndex = cellIdx;
-                _levelInfo[0].Spatials = _bSpatials;
-                _levelInfo[0].CellCount = count;
             }
+
+            // Add the last cell index value;
+            cellIdx[count] = _bodies.Length;
+
+            // Unmap the sort map buffer.
+            _queue.Unmap(_gpuSortMap, ref sortMapPtr, null);
+
+            // Set the computed info.
+            _levelInfo[0].CellIndex = cellIdx;
+            _levelInfo[0].Spatials = _bSpatials;
+            _levelInfo[0].CellCount = count;
         }
 
         private void ReindexBodiesGPU()
@@ -801,7 +802,7 @@ namespace NBodies.Physics
             for (int i = 0; i < passes; i++)
             {
                 passOffset = stride * i;
-          
+
                 // Pop compressed grid index array.
                 int argi = 0;
                 _popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
