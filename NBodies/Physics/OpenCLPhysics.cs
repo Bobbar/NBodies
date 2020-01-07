@@ -290,7 +290,7 @@ namespace NBodies.Physics
 
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
-         
+
             int argi = 0;
             _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _forceKernel.SetValueArgument(argi++, _bodies.Length);
@@ -305,7 +305,7 @@ namespace NBodies.Physics
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuOutBodies);
+            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
@@ -314,9 +314,9 @@ namespace NBodies.Physics
             _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             argi = 0;
-            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
-            _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
+            _collisionSPHKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMesh);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuCM);
@@ -327,7 +327,7 @@ namespace NBodies.Physics
 
             isPostNeeded = Convert.ToBoolean(ReadBuffer(_gpuPostNeeded)[0]);
 
-            _queue.ReadFromBuffer(_gpuInBodies, ref bodies, true, 0, 0, bodies.Length, null);
+            _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
         }
 

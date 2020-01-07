@@ -443,19 +443,19 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 		return;
 
 	// Copy current body and mesh cell from memory.
-	Body outBody = inBodies[(a)];
-	MeshCell levelCell = inMesh[(outBody.MeshID)];
+	MeshCell levelCell = inMesh[(inBodies[(a)].MeshID)];
 	MeshCell levelCellParent = levelCell;
 
-	// Reset forces.
+	float2 bPos = (float2)(inBodies[(a)].PosX, inBodies[(a)].PosY);
+	float bMass = inBodies[(a)].Mass;
+	int bFlags = inBodies[(a)].Flag;
+	float2 bForce = (float2)(0.0f, 0.0f);
+	float bDensity = 0.0f;
+	float bPressure = 0.0f;
 	float totForce = 0;
-	outBody.ForceX = 0.0f;
-	outBody.ForceY = 0.0f;
-	outBody.Density = 0.0f;
-	outBody.Pressure = 0.0f;
 
-	// Resting density.	
-	outBody.Density = outBody.Mass * sph.fDensity;
+	// Resting Density.	
+	bDensity = bMass * sph.fDensity;
 
 	// *** Particle 2 Particle & SPH ***
 	// Accumulate forces from all bodies within neighboring cells. [THIS INCLUDES THE BODY'S OWN CELL]
@@ -476,8 +476,8 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 			{
 				Body inBody = inBodies[(mb)];
 
-				float distX = inBody.PosX - outBody.PosX;
-				float distY = inBody.PosY - outBody.PosY;
+				float distX = inBody.PosX - bPos.x;
+				float distY = inBody.PosY - bPos.y;
 				float dist = distX * distX + distY * distY;
 				float distSqrt = (float)native_sqrt(dist);
 
@@ -487,10 +487,10 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 					// Clamp SPH softening distance.
 					dist = max(dist, SPH_SOFTENING);
 
-					// Accumulate density.
+					// Accumulate bDensity.
 					float diff = sph.kSizeSq - dist;
 					float fac = sph.fDensity * diff * diff * diff;
-					outBody.Density += outBody.Mass * fac;
+					bDensity += bMass * fac;
 				}
 
 				// Clamp gravity softening distance.
@@ -498,11 +498,11 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 				distSqrt = max(distSqrt, SOFTENING_SQRT);
 
 				// Accumulate body-to-body force.
-				float force = inBody.Mass * outBody.Mass / dist;
+				float force = inBody.Mass * bMass / dist;
 
 				totForce += force;
-				outBody.ForceX += force * distX / distSqrt;
-				outBody.ForceY += force * distY / distSqrt;
+				bForce.x += force * distX / distSqrt;
+				bForce.y += force * distY / distSqrt;
 			}
 		}
 	}
@@ -532,15 +532,15 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 				if (!IsNeighbor(levelCell, cell))
 				{
 					// Calculate the force from the cells center of mass.
-					float distX = cell.CmX - outBody.PosX;
-					float distY = cell.CmY - outBody.PosY;
+					float distX = cell.CmX - bPos.x;
+					float distY = cell.CmY - bPos.y;
 					float dist = distX * distX + distY * distY;
 					float distSqrt = (float)native_sqrt(dist);
-					float force = cell.Mass * outBody.Mass / dist;
+					float force = cell.Mass * bMass / dist;
 
 					totForce += force;
-					outBody.ForceX += force * distX / distSqrt;
-					outBody.ForceY += force * distY / distSqrt;
+					bForce.x += force * distX / distSqrt;
+					bForce.y += force * distY / distSqrt;
 				}
 			}
 		}
@@ -556,32 +556,36 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global Body* out
 
 		if (!IsNeighbor(levelCell, cell))
 		{
-			float distX = cell.CmX - outBody.PosX;
-			float distY = cell.CmY - outBody.PosY;
+			float distX = cell.CmX - bPos.x;
+			float distY = cell.CmY - bPos.y;
 			float dist = distX * distX + distY * distY;
 			float distSqrt = (float)native_sqrt(dist);
-			float force = cell.Mass * outBody.Mass / dist;
+			float force = cell.Mass * bMass / dist;
 
 			totForce += force;
-			outBody.ForceX += force * distX / distSqrt;
-			outBody.ForceY += force * distY / distSqrt;
+			bForce.x += force * distX / distSqrt;
+			bForce.y += force * distY / distSqrt;
 		}
 	}
 
 	// Calculate pressure from density.
-	outBody.Pressure = sim.GasK * outBody.Density;
+	bPressure = sim.GasK * bDensity;
 
-	if (totForce > outBody.Mass * 4.0f)
+	if (totForce > bMass * 4.0f)
 	{
-		if (!HasFlagB(outBody, INROCHE))
+		if (!HasFlag(bFlags, INROCHE))
 		{
-			outBody = SetFlagB(outBody, INROCHE, true);
+			bFlags = SetFlag(bFlags, INROCHE, true);
 			postNeeded[0] = 1;
 		}
 	}
 
 	// Write back to memory.
-	outBodies[(a)] = outBody;
+	inBodies[(a)].ForceX = bForce.x;
+	inBodies[(a)].ForceY = bForce.y;
+	inBodies[(a)].Density = bDensity;
+	inBodies[(a)].Pressure = bPressure;
+	inBodies[(a)].Flag = bFlags;
 }
 
 // Is the specified cell a neighbor of the test cell?
