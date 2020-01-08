@@ -418,6 +418,18 @@ namespace NBodies.Physics
             _gridInfo[level].Set(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
         }
 
+        private void ComputeGridDims(MinMax first, int levels)
+        {
+            AddGridDims(first, 0);
+
+            for (int level = 1; level <= levels; level++)
+            {
+                // Reduce dimensions of the previous level to determine the dims of the next level.
+                var prev = _gridInfo[level - 1];
+                AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MaxX >> 1, prev.MaxY >> 1), level);
+            }
+        }
+
         /// <summary>
         /// Builds the particle mesh and mesh-neighbor index for the current field.
         /// </summary>
@@ -512,8 +524,8 @@ namespace NBodies.Physics
                 }
             });
 
-            // Compute grid dimensions and add to list for this level.
-            AddGridDims(minMax, 0);
+            // Compute grid dimensions for the rest of the levels and add to grid info array.
+            ComputeGridDims(minMax, _levels);
 
             // Sort by morton number to produce a spatially sorted array.
             Sort.ParallelQuickSort(_mortKeys, _bSpatials, _bodies.Length);
@@ -577,13 +589,8 @@ namespace NBodies.Physics
         /// </summary>
         private unsafe void ComputeUpperSpatials()
         {
-            MinMax minMax = new MinMax();
-            object sync = new object();
-
             for (int level = 1; level <= _levels; level++)
             {
-                minMax.Reset();
-
                 LevelInfo childLevel = _levelInfo[level - 1];
                 int childCount = childLevel.CellCount;
 
@@ -594,8 +601,6 @@ namespace NBodies.Physics
 
                 ParallelForSlim(childCount, _parallelPartitions, (start, len) =>
                 {
-                    var mm = new MinMax();
-
                     for (int b = start; b < len; b++)
                     {
                         var spatial = childLevel.Spatials[childLevel.CellIndex[b]];
@@ -603,18 +608,9 @@ namespace NBodies.Physics
                         int idxY = spatial.IdxY >> 1;
                         int morton = MortonNumber(idxX, idxY);
 
-                        mm.Update(idxX, idxY);
-
                         parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
                     }
-
-                    lock (sync)
-                    {
-                        minMax.Update(mm);
-                    }
                 });
-
-                AddGridDims(minMax, level);
 
                 if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
                     _levelInfo[level].CellIndex = new int[childCount + 1000];
