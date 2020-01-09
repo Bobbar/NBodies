@@ -650,11 +650,8 @@ namespace NBodies.Physics
 
             // Calc total size of cell index.
             long cellIdxLen = 0;
-
             for (int i = 0; i < levelInfo.Length; i++)
-            {
                 cellIdxLen += levelInfo[i].CellCount + 1;
-            }
 
             // Build 1D array of cell index.
             if (_allCellIdx.Length < cellIdxLen)
@@ -707,38 +704,32 @@ namespace NBodies.Physics
         /// <remarks>The top level cell values are computed from the previous level (child) cells.</remarks>
         private void BuildUpperLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
         {
-            int meshOffset = 0; // Write offset for new cells array location.
-            int readOffset = 0; // Read offset for cell and location indexes.
+            int cellIdxOffset = 0; // Read offset for cell index map.
+            int levelOffset = 0; // Offset for previous level mesh locations.  ( cellIndex[n] + levelOffset = mesh cells @ level - 1 )
 
             for (int level = 1; level <= levels; level++)
             {
                 int cellSizeExpLevel = cellSizeExp + level;
+                LevelInfo parentLevel = levelInfo[level];
+                LevelInfo childLevel = levelInfo[level - 1];
 
-                meshOffset += levelInfo[level - 1].CellCount;
-                _levelIdx[level] = meshOffset;
+                // Collect mesh level start indices.
+                _levelIdx[level] = _levelIdx[level - 1] + childLevel.CellCount;
 
-                int levelOffset = 0;
-
+                // Get offsets for this level.
+                cellIdxOffset += childLevel.CellCount + 1;
                 levelOffset = _levelIdx[level - 1];
-                readOffset += levelInfo[level - 1].CellCount;
-
-                if (level == 1)
-                    readOffset += 1;
-
-                LevelInfo current = levelInfo[level];
-                int cellCount = current.CellCount;
 
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
-                _buildTopKernel.SetValueArgument(1, cellCount);
+                _buildTopKernel.SetValueArgument(1, parentLevel.CellCount);
                 _buildTopKernel.SetMemoryArgument(2, _gpuCellIdx);
                 _buildTopKernel.SetValueArgument(3, cellSizeExpLevel);
                 _buildTopKernel.SetValueArgument(4, (int)Math.Pow(2.0f, cellSizeExpLevel));
                 _buildTopKernel.SetValueArgument(5, levelOffset);
-                _buildTopKernel.SetValueArgument(6, meshOffset);
-                _buildTopKernel.SetValueArgument(7, readOffset);
-                _buildTopKernel.SetValueArgument(8, level);
+                _buildTopKernel.SetValueArgument(6, cellIdxOffset);
+                _buildTopKernel.SetValueArgument(7, level);
 
-                _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(parentLevel.CellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
         }
 

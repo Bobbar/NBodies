@@ -363,16 +363,15 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	mesh[m] = newCell;
 }
 
-__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int cellSize, int levelOffset, int meshOffset, int readOffset, int level)
+__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int cellSize, int levelOffset, int cellIdxOffset, int level)
 {
 	int m = get_global_id(0);
 
 	if (m >= len)
 		return;
 
-	int locIdxOff = m + readOffset;
-	int cellIdxOff = locIdxOff + (level - 1);
-	int newIdx = m + meshOffset;
+	int cellIdxOff = m + cellIdxOffset;
+	int newIdx = m + (cellIdxOffset - level);
 
 	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
 	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset;
