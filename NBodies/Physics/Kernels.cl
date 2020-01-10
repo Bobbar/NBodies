@@ -219,12 +219,19 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	int m = get_global_id(0);
 
 	if (m >= meshLen)
-	{
 		return;
-	}
 
-	MeshCell cell = mesh[m];
-	GridInfo grid = gridInfo[cell.Level];
+	MeshCell cell;
+	cell.IdxX = mesh[m].IdxX;
+	cell.IdxY = mesh[m].IdxY;
+	cell.Level = mesh[m].Level;
+	cell.GridIdx = 0;
+
+	GridInfo grid;
+	grid.OffsetX = gridInfo[cell.Level].OffsetX;
+	grid.OffsetY = gridInfo[cell.Level].OffsetY;
+	grid.Columns = gridInfo[cell.Level].Columns;
+	grid.IndexOffset = gridInfo[cell.Level].IndexOffset;
 
 	// Compute bucket index.
 	int column = cell.IdxX + grid.OffsetX;
@@ -244,10 +251,10 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	// Make sure the bucket fits withing this pass.
 	if (bucket >= 0 && bucket < passStride)
 	{
-		gridIdx[bucket] = cell.ID;
+		gridIdx[bucket] = m;
 	}
-
-	mesh[m] = cell;
+	
+	mesh[m].GridIdx = cell.GridIdx;
 }
 
 __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, int passStride, int passOffset, global int* neighborIndex)

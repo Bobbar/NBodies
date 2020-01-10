@@ -1106,8 +1106,10 @@ UID: { body.UID }
 MeshID: { body.MeshID }
     Count: { mesh.BodyCount }
     Mass: { mesh.Mass }
-    Nieghbor Start: { mesh.NeighborStartIdx }
+    Neighbor Start: { mesh.NeighborStartIdx }
     Neighbors: { mesh.NeighborCount }
+    Child Start: { Mesh[mesh.ParentID].ChildStartIdx }
+    Child Count: { Mesh[mesh.ParentID].ChildCount }
     Cm (X,Y): { mesh.CmX }, { mesh.CmY }
     Loc (X,Y): { mesh.LocX }, { mesh.LocY }
     Idx (X,Y): { mesh.IdxX }, { mesh.IdxY }
