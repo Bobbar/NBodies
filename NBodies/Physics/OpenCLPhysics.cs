@@ -98,6 +98,8 @@ namespace NBodies.Physics
             }
         }
 
+        public static int GridPasses { get; private set; } = 1;
+
         public int[] LevelIndex
         {
             get
@@ -801,6 +803,8 @@ namespace NBodies.Physics
                 passes += (gridMem / _maxBufferSize);
                 stride = (int)_gpuGridIndex.Count;
             }
+
+            GridPasses = (int)passes;
 
             // Write Grid info to GPU.
             Allocate(ref _gpuGridInfo, gridInfo.Length, true);

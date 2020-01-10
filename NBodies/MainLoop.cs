@@ -257,7 +257,7 @@ namespace NBodies
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
-        private const float _cullDistance = 15000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
+        private const float _cullDistance = 30000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
