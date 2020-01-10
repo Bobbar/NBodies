@@ -255,50 +255,45 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 	int m = get_global_id(0);
 
 	if (m >= meshLen)
-	{
 		return;
-	}
 
 	int offset = m * 9;
 	int count = 0;
 	int cellLevel = mesh[m].Level;
 	int cellGridIdx = mesh[m].GridIdx;
 
-	GridInfo gInfo = gridInfo[cellLevel];
+	int2 shiftLut[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 }, { -1,1 }, { 0,1 }, { 1,1 } };
 
-	int columns = gInfo.Columns;
+	int gColumns = gridInfo[cellLevel].Columns;
+	int gIndexOffset = gridInfo[cellLevel].IndexOffset;
+	int gSize = gridInfo[cellLevel].Size;
 	int offsetIndex = cellGridIdx - passOffset;
 
 	if (offsetIndex >= 0 && offsetIndex < passStride)
 	{
-		int offIdx = cellGridIdx - gInfo.IndexOffset;
+		int offIdx = cellGridIdx - gIndexOffset;
 
 		// Shift bucket index around the cell and check for populated grid index buckets.
-		for (int x = -1; x <= 1; x++)
+		for (int i = 0; i < 8; i++)
 		{
-			for (int y = -1; y <= 1; y++)
+			int2 shift = shiftLut[i];
+			int localIdx = offIdx + ((shift.y * gColumns) + (shift.x + shift.y));
+
+			if (localIdx > 0 && localIdx < gSize)
 			{
-				// Skip this cell.
-				if (x == 0 && y == 0)
-					y++;
+				int bucket = localIdx + gIndexOffset;
 
-				int localIdx = offIdx + ((y * columns) + (x + y));
+				bucket -= passOffset;
 
-				if (localIdx > 0 && localIdx < gInfo.Size)
+				if (bucket >= 0 && bucket < passStride)
 				{
-					int bucket = localIdx + gInfo.IndexOffset;
-					bucket -= passOffset;
+					int idx = gridIdx[bucket];
 
-					if (bucket >= 0 && bucket < passStride)
+					// Check for populated bucket and poplate neighbor index.
+					if (idx >= 0)
 					{
-						int idx = gridIdx[bucket];
-
-						// Check for populated bucket and poplate neighbor index.
-						if (idx >= 0)
-						{
-							neighborIndex[(offset + count)] = idx;
-							count++;
-						}
+						neighborIndex[(offset + count)] = idx;
+						count++;
 					}
 				}
 			}
@@ -575,7 +570,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	{
 		int newFlags = SetFlag(bFlags, INROCHE, true);
 		if (newFlags != bFlags)
-		{ 
+		{
 			bFlags = newFlags;
 			postNeeded[0] = 1;
 		}
