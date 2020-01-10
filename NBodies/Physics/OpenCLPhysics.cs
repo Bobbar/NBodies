@@ -69,19 +69,29 @@ namespace NBodies.Physics
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
 
+        private long _currentFrame = 0;
+        private long _lastMeshRead = 0;
 
         public MeshCell[] CurrentMesh
         {
             get
             {
                 // Only read mesh from GPU if it has changed.
-                if (_mesh.Length != _meshLength)
+                if (_lastMeshRead != _currentFrame)
                 {
-                    // Wait for build to finish.
-                    _meshReadyWait.Wait();
-                    _mesh = new MeshCell[_meshLength];
-                    _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-                    _queue.Finish();
+                    // Read it now if it's ready.
+                    if (_meshReadyWait.IsSet)
+                    {
+                        ReadMesh();
+                    }
+                    else
+                    {
+                        // Wait until it's ready then read.
+                        _meshReadyWait.Wait();
+                        ReadMesh();
+                    }
+
+                    _lastMeshRead = _currentFrame;
                 }
 
                 return _mesh;
@@ -214,7 +224,8 @@ namespace NBodies.Physics
             _gpuPostNeeded.Dispose();
             _mesh = new MeshCell[0];
             _bufferInfo.Clear();
-
+            _currentFrame = 0;
+            _lastMeshRead = 0;
             InitBuffers();
         }
 
@@ -280,6 +291,8 @@ namespace NBodies.Physics
 
             // Allow mesh read.
             _meshReadyWait.Set();
+
+            _currentFrame++;
 
             // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
@@ -347,6 +360,15 @@ namespace NBodies.Physics
 
                 bodies = ReadBuffer(outBodies, true);
             }
+        }
+
+        private void ReadMesh()
+        {
+            if (_mesh.Length != _meshLength)
+                _mesh = new MeshCell[_meshLength];
+
+            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+            _queue.Finish();
         }
 
         /// <summary>

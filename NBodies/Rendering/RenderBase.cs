@@ -103,6 +103,7 @@ namespace NBodies.Rendering
 
             await Task.Run(() =>
             {
+                BodyManager.RebuildUIDIndex();
                 int maxUID = BodyManager.TopUID;
                 bool overlayVisible = OverlaysVisible();
                 var finalOffset = CalcFinalOffset();

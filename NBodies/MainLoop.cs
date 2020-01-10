@@ -443,7 +443,6 @@ namespace NBodies
                         if (frame != null && frame.Length > 0)
                         {
                             BodyManager.Bodies = frame;
-                            BodyManager.RebuildUIDIndex();
                         }
                     }
 
@@ -548,6 +547,9 @@ namespace NBodies
             Stop();
 
             _recorder.OpenRecording(file);
+
+            BodyManager.ReplaceBodies(_recorder.GetNextFrame());
+            _recorder.SeekIndex = 0;
 
             StartLoop();
 
