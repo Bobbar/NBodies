@@ -29,10 +29,10 @@ namespace NBodies.Physics
         private LevelInfo[] _levelInfo = new LevelInfo[0]; // Spatial info, cell index map and counts for each level.
         private Body[] _bodies = new Body[0]; // Local reference for the current body array.
 
-        // Static fields for large allocations.
-        private static SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
-        private static int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
-        private static int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
+        // Fields for large allocations.
+        private SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
+        private int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
+        private int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
         private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
 
@@ -155,7 +155,6 @@ namespace NBodies.Physics
                 Console.WriteLine(buildLog);
                 throw;
             }
-
 
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
