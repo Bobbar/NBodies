@@ -233,34 +233,34 @@ namespace NBodies.Physics
 
         private void InitBuffers()
         {
-            _gpuGridIndex = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuGridIndex = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuGridIndex, 0);
 
-            _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshNeighbors, 0);
 
-            _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuInBodies, 0, true);
 
-            _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuOutBodies, 0, true);
 
-            _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMesh, 0, true);
 
-            _gpuSortMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
+            _gpuSortMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1);
             Allocate(ref _gpuSortMap, 0, true);
 
-            _gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
+            _gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1);
             Allocate(ref _gpuCellIdx, 0, true);
 
-            _gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, 1, IntPtr.Zero);
+            _gpuGridInfo = new ComputeBuffer<GridInfo>(_context, ComputeMemoryFlags.ReadOnly, 1);
             Allocate(ref _gpuGridInfo, 0, true);
 
-            _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
 
-            _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1, IntPtr.Zero);
+            _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
         }
 
@@ -347,8 +347,8 @@ namespace NBodies.Physics
 
         public void FixOverLaps(ref Body[] bodies)
         {
-            using (var inBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
-            using (var outBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length, IntPtr.Zero))
+            using (var inBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length))
+            using (var outBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length))
             {
                 _queue.WriteToBuffer(bodies, inBodies, true, null);
                 _queue.Finish();
@@ -879,7 +879,7 @@ namespace NBodies.Physics
                         size = newCapacity;
                     }
 
-                    buffer = new ComputeBuffer<T>(_context, flags, newCapacity, IntPtr.Zero);
+                    buffer = new ComputeBuffer<T>(_context, flags, newCapacity);
 
                     long newHandle = buffer.Handle.Value.ToInt64();
                     var newDims = new BufferDims(newHandle, (int)newCapacity, (int)size, exactSize);
@@ -899,7 +899,7 @@ namespace NBodies.Physics
                     if (size * typeSize > _maxBufferSize)
                         size = maxCap;
 
-                    buffer = new ComputeBuffer<T>(_context, flags, size, IntPtr.Zero);
+                    buffer = new ComputeBuffer<T>(_context, flags, size);
 
                     long newHandle = buffer.Handle.Value.ToInt64();
                     var newDims = new BufferDims(newHandle, (int)size, (int)size, exactSize);
