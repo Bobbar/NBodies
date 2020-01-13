@@ -8,10 +8,10 @@ namespace NBodies.Physics
 {
     public class MinMax
     {
-        public long MinX;
-        public long MinY;
-        public long MaxX;
-        public long MaxY;
+        public int MinX;
+        public int MinY;
+        public int MaxX;
+        public int MaxY;
 
         public MinMax()
         {
@@ -21,7 +21,7 @@ namespace NBodies.Physics
             MaxY = int.MinValue;
         }
 
-        public MinMax(long minX, long minY, long maxX, long maxY)
+        public MinMax(int minX, int minY, int maxX, int maxY)
         {
             MinX = minX;
             MinY = minY;
@@ -29,7 +29,7 @@ namespace NBodies.Physics
             MaxY = maxY;
         }
 
-        public void Update(long x, long y)
+        public void Update(int x, int y)
         {
             MinX = Math.Min(MinX, x);
             MinY = Math.Min(MinY, y);

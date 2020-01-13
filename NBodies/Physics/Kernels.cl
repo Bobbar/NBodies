@@ -45,16 +45,16 @@ typedef struct __attribute__((packed)) MeshCell
 
 typedef struct __attribute__((packed)) GridInfo
 {
-	long OffsetX;
-	long OffsetY;
-	long MinX;
-	long MinY;
-	long MaxX;
-	long MaxY;
-	long Columns;
-	long Rows;
-	long Size;
-	long IndexOffset;
+	int OffsetX;
+	int OffsetY;
+	int MinX;
+	int MinY;
+	int MaxX;
+	int MaxY;
+	int Columns;
+	int Rows;
+	int Size;
+	int IndexOffset;
 
 } GridInfo;
 
