@@ -6,6 +6,7 @@ using NBodies.Helpers;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using OpenTK;
 
 namespace NBodies.UI
 {
@@ -38,13 +39,15 @@ namespace NBodies.UI
 
         private bool _useD2D = true;
 
+        private RWindow _window;
+
         public DisplayForm()
         {
             InitializeComponent();
 
-            _UIUpdateTimer.Interval = 250;
+            _UIUpdateTimer.Interval = 100;//250;
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
-            _UIUpdateTimer.Start();
+            //_UIUpdateTimer.Start();
 
             RenderBox.MouseWheel += RenderBox_MouseWheel;
 
@@ -81,7 +84,10 @@ namespace NBodies.UI
 
             //PhysicsProvider.InitPhysics();
 
-            MainLoop.Renderer = new D2DRenderer(RenderBox);
+            //MainLoop.Renderer = new D2DRenderer(RenderBox);
+             MainLoop.Renderer = new OpenTKRenderer(glControl);
+
+          
 
             RenderBase.OverLays.Add(_distLine);
             RenderBase.OverLays.Add(_distOver);
@@ -104,6 +110,17 @@ namespace NBodies.UI
             PopulateDisplayStyleMenu();
 
             MainLoop.StartLoop();
+
+            NBodies.IO.Serializer.LoadPreviousState();
+
+        //    MainLoop.StartLoop();
+
+            _UIUpdateTimer.Start();
+
+            //_window = new RWindow(this.ClientSize.Width, this.ClientSize.Height, "Test");
+            //_window.Run(60.0);
+            
+
         }
 
         private void SwitchRenderer()
@@ -117,7 +134,8 @@ namespace NBodies.UI
 
             if (_useD2D)
             {
-                MainLoop.Renderer = new D2DRenderer(RenderBox);
+                //  MainLoop.Renderer = new D2DRenderer(RenderBox);
+                MainLoop.Renderer = new OpenTKRenderer(RenderBox);
             }
             else
             {
@@ -154,6 +172,11 @@ namespace NBodies.UI
 
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
+
+          //  MainLoop.Renderer.DrawBodiesAsync(BodyManager.Bodies, true, null);
+
+
+
             PauseButton.Checked = MainLoop.PausePhysics;
 
             if (PauseButton.Checked)

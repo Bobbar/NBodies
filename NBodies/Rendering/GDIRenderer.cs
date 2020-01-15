@@ -53,6 +53,8 @@ namespace NBodies.Rendering
             _buffer.Graphics.Clear(color);
         }
 
+        public override void DrawBodiesRaw(Body[] bodies) { }
+
         public override void DrawBody(Color color, float X, float Y, float size, bool isBlackHole)
         {
             X -= size * 0.5f;

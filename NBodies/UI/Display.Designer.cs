@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            this.glControl = new OpenTK.GLControl();
             this.RootLayoutTable = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -84,6 +85,17 @@
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.SuspendLayout();
+            // 
+            // glControl
+            // 
+            this.glControl.BackColor = System.Drawing.Color.Black;
+            this.glControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.glControl.Location = new System.Drawing.Point(0, 0);
+            this.glControl.Margin = new System.Windows.Forms.Padding(4);
+            this.glControl.Name = "glControl";
+            this.glControl.Size = new System.Drawing.Size(1581, 744);
+            this.glControl.TabIndex = 0;
+            this.glControl.VSync = false;
             // 
             // RootLayoutTable
             // 
@@ -613,7 +625,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel1.Controls.Add(this.RenderBox);
+            this.panel1.Controls.Add(this.glControl);
             this.panel1.Location = new System.Drawing.Point(3, 66);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(1583, 746);
@@ -622,10 +634,9 @@
             // RenderBox
             // 
             this.RenderBox.BackColor = System.Drawing.Color.Black;
-            this.RenderBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.RenderBox.Location = new System.Drawing.Point(0, 0);
+            this.RenderBox.Location = new System.Drawing.Point(751, 222);
             this.RenderBox.Name = "RenderBox";
-            this.RenderBox.Size = new System.Drawing.Size(1581, 744);
+            this.RenderBox.Size = new System.Drawing.Size(736, 359);
             this.RenderBox.TabIndex = 0;
             this.RenderBox.TabStop = false;
             this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
@@ -647,7 +658,6 @@
             this.Text = "NBodies";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DisplayForm_FormClosing);
             this.Load += new System.EventHandler(this.DisplayForm_Load);
-            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
             this.RootLayoutTable.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
@@ -667,6 +677,7 @@
 
         #endregion
 
+        private OpenTK.GLControl glControl;
         private System.Windows.Forms.TableLayoutPanel RootLayoutTable;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.PictureBox RenderBox;

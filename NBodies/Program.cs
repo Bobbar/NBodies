@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.UI;
+using NBodies.Rendering;
 
 namespace NBodies
 {
@@ -56,7 +57,8 @@ namespace NBodies
                 
             }
 
-            Application.Run(new DisplayForm());
+             Application.Run(new DisplayForm());
+
 
         }
     }

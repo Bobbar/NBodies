@@ -58,6 +58,11 @@ namespace NBodies.Rendering
             }
         }
 
+        public Control TargetControl
+        {
+            get { return _targetControl; }
+        }
+
         private static float _styleScaleMax = 210;
         private static int _bodyAlpha = 210;
         private static float[] _styleScales = new float[1] { _styleScaleMax };
@@ -99,10 +104,10 @@ namespace NBodies.Rendering
 
         public async Task DrawBodiesAsync(Body[] bodies, bool drawBodies, ManualResetEventSlim completeCallback)
         {
-            completeCallback.Reset();
+           // completeCallback.Reset();
 
-            await Task.Run(() =>
-            {
+            //await Task.Run(() =>
+            //{
                 BodyManager.RebuildUIDIndex();
                 int maxUID = BodyManager.TopUID;
                 bool overlayVisible = OverlaysVisible();
@@ -203,89 +208,91 @@ namespace NBodies.Rendering
                     if (SortZOrder)
                         n = nVis;
 
-                    for (int i = 0; i < n; i++)
-                    {
-                        Body body;
+                    //for (int i = 0; i < n; i++)
+                    //{
+                    //    Body body;
 
-                        if (SortZOrder && _pointers.Length > 0)
-                        {
-                            body = bodies[_buckets[_pointers[i]]];
-                        }
-                        else
-                        {
-                            body = bodies[i];
-                        }
+                    //    if (SortZOrder && _pointers.Length > 0)
+                    //    {
+                    //        body = bodies[_buckets[_pointers[i]]];
+                    //    }
+                    //    else
+                    //    {
+                    //        body = bodies[i];
+                    //    }
 
-                        var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
+                    //    var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
 
-                        if (ClipView && !SortZOrder)
-                        {
-                            if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
-                        }
+                    //    if (ClipView && !SortZOrder)
+                    //    {
+                    //        if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
+                    //    }
 
-                        Color bodyColor = Color.White;
+                    //    Color bodyColor = Color.White;
 
-                        switch (DisplayStyle)
-                        {
-                            case DisplayStyle.Normal:
-                                bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
-                                _clearColor = _defaultClearColor;
+                    //    switch (DisplayStyle)
+                    //    {
+                    //        case DisplayStyle.Normal:
+                    //            bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
+                    //            _clearColor = _defaultClearColor;
 
-                                break;
+                    //            break;
 
-                            case DisplayStyle.Pressure:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
-                                _clearColor = _defaultClearColor;
+                    //        case DisplayStyle.Pressure:
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
+                    //            _clearColor = _defaultClearColor;
 
-                                break;
+                    //            break;
 
-                            case DisplayStyle.Density:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Density / body.Mass, true);
-                                _clearColor = _defaultClearColor;
+                    //        case DisplayStyle.Density:
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Density / body.Mass, true);
+                    //            _clearColor = _defaultClearColor;
 
-                                break;
+                    //            break;
 
-                            case DisplayStyle.Velocity:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
-                                _clearColor = _defaultClearColor;
+                    //        case DisplayStyle.Velocity:
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
+                    //            _clearColor = _defaultClearColor;
 
-                                break;
+                    //            break;
 
-                            case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, maxUID, body.UID, true);
-                                _clearColor = _defaultClearColor;
+                    //        case DisplayStyle.Index:
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, maxUID, body.UID, true);
+                    //            _clearColor = _defaultClearColor;
 
-                                break;
+                    //            break;
 
-                            case DisplayStyle.SpatialOrder:
-                                int orderIdx = 0;
-                                if (SortZOrder)
-                                    orderIdx = _buckets[body.UID];
-                                else
-                                    orderIdx = i;
-                                
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, orderIdx, true);
+                    //        case DisplayStyle.SpatialOrder:
+                    //            int orderIdx = 0;
+                    //            if (SortZOrder)
+                    //                orderIdx = _buckets[body.UID];
+                    //            else
+                    //                orderIdx = i;
 
-                                _clearColor = _defaultClearColor;
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, orderIdx, true);
 
-                                break;
+                    //            _clearColor = _defaultClearColor;
 
-                            case DisplayStyle.Force:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
-                                _clearColor = _defaultClearColor;
+                    //            break;
 
-                                break;
+                    //        case DisplayStyle.Force:
+                    //            bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                    //            _clearColor = _defaultClearColor;
 
-                            case DisplayStyle.HighContrast:
-                                bodyColor = Color.Black;
-                                _clearColor = Color.White;
+                    //            break;
 
-                                break;
-                        }
+                    //        case DisplayStyle.HighContrast:
+                    //            bodyColor = Color.Black;
+                    //            _clearColor = Color.White;
 
-                        //Draw body.
-                        DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
-                    }
+                    //            break;
+                    //    }
+
+                    //    //Draw body.
+                    //    DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
+                    //}
+
+                    DrawBodiesRaw(bodies);
 
                     //if (Trails && !overlayVisible)
                     //    DrawBlur(Color.FromArgb(10, _clearColor));
@@ -345,9 +352,9 @@ namespace NBodies.Rendering
                 DrawStats(GetStats(), Color.FromArgb(255, 0, 192, 0), Color.FromArgb(100, _clearColor));
 
                 EndDraw();
-            });
+            //});
 
-            completeCallback.Set();
+           // completeCallback.Set();
         }
 
         private string GetStats()
@@ -402,6 +409,9 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
         public abstract void SetAntiAliasing(bool enabled);
 
         public abstract void DrawBody(Color color, float X, float Y, float size, bool isBlackHole);
+
+        public abstract void DrawBodiesRaw(Body[] bodies);
+
 
         public abstract void DrawForceVectors(Body[] bodies, float offsetX, float offsetY);
 

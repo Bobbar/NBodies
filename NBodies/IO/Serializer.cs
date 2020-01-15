@@ -76,6 +76,9 @@ namespace NBodies.IO
 
         public static void LoadPreviousState()
         {
+            //_previousFile = $@"C:\Temp\States\TinyTest.nsta";
+            _previousFile = $@"C:\Temp\States\Test2.nsta";
+
             if (!string.IsNullOrEmpty(_previousFile))
                 ReadState(_previousFile);
         }

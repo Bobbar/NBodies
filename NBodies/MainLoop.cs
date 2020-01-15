@@ -253,7 +253,7 @@ namespace NBodies
         #endregion Public Properties
 
 
-        private static float _timeStep = 0.008f;
+        private static float _timeStep = 0.005f;
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
@@ -270,7 +270,7 @@ namespace NBodies
         private static Int64 _frameCount = 0;
         private static double _totalTime = 0;
         private static int _skippedFrames = 0;
-      
+
         private static Average _avgFPS = new Average(40);
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEventSlim _stopLoopWait = new ManualResetEventSlim(true);
@@ -449,26 +449,32 @@ namespace NBodies
                     if (DrawBodies)
                     {
                         // Check if renderer is ready for a new frame.
-                        if (_renderReadyWait.IsSet)
-                        {
-                            _renderReadyWait.Reset();
+                        //if (_renderReadyWait.IsSet)
+                        //{
+                        //    _renderReadyWait.Reset();
 
-                            // Get the most recent frame from the physics buffer.
-                            if (!_skipPhysics)
-                            {
-                                if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
-                                    BodyManager.Bodies = new Body[_bodiesBuffer.Length];
-                                Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
-                            }
-
-                            // Draw the field asynchronously.
-                            Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
-                            _skippedFrames = 0;
-                        }
-                        else
+                        // Get the most recent frame from the physics buffer.
+                        if (!_skipPhysics)
                         {
-                            _skippedFrames++;
+                            if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
+                                BodyManager.Bodies = new Body[_bodiesBuffer.Length];
+                            Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
                         }
+
+                        // Draw the field asynchronously.
+                        if (Renderer.TargetControl != null && Renderer.TargetControl.InvokeRequired)
+                        {
+                            var del = new Action(() => Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait));
+                            Renderer.TargetControl.BeginInvoke(del);
+
+                        }
+                      //  Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
+                        //    _skippedFrames = 0;
+                        //}
+                        //else
+                        //{
+                        //    _skippedFrames++;
+                        //}
                     }
 
                     // Fixed FPS limit while paused.

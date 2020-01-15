@@ -110,6 +110,8 @@ namespace NBodies.Rendering
             }
         }
 
+        public override void DrawBodiesRaw(Body[] bodies) { }
+
         public override void DrawBody(System.Drawing.Color color, float X, float Y, float size, bool isBlackHole)
         {
             _bodyColor.A = color.A / 255f;
