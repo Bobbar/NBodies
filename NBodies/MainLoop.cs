@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using OpenTK;
 
 namespace NBodies
 {
@@ -21,6 +22,8 @@ namespace NBodies
         public static bool SyncRenderer = false;
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
+
+        public static GLControl GLRenderer;
 
         #region Public Properties
         public static bool RewindBuffer
@@ -462,13 +465,22 @@ namespace NBodies
                         }
 
                         // Draw the field asynchronously.
-                        if (Renderer.TargetControl != null && Renderer.TargetControl.InvokeRequired)
+                        //if (Renderer.TargetControl != null && Renderer.TargetControl.InvokeRequired)
+                        //{
+                        //    var del = new Action(() => Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait));
+                        //    Renderer.TargetControl.BeginInvoke(del);
+
+                        //}
+
+
+                        if (GLRenderer != null && GLRenderer.InvokeRequired)
                         {
-                            var del = new Action(() => Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait));
-                            Renderer.TargetControl.BeginInvoke(del);
+                            var del = new Action(() => GLRenderer.Invalidate());
+                            GLRenderer.BeginInvoke(del);
 
                         }
-                      //  Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
+
+                        //  Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
                         //    _skippedFrames = 0;
                         //}
                         //else

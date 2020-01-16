@@ -12,6 +12,9 @@ namespace NBodies.UI
 
         private static List<KeyAction> _actions = new List<KeyAction>();
 
+        public static Dictionary<Keys, bool> KeyDownStates = new Dictionary<Keys, bool>();
+
+
         public static void AddKeyAction(KeyAction keyaction)
         {
             _actions.Add(keyaction);
@@ -26,40 +29,60 @@ namespace NBodies.UI
         {
             KeysDown = true;
 
-            foreach (var action in _actions)
-            {
-                if (action.KeyDownStates.ContainsKey(key))
-                {
-                    if (!action.KeyDownStates[key])
-                    {
-                        action.KeyDownStates[key] = true;
-                        action.KeyDown();
-                    }
-                }
-            }
+            if (!KeyDownStates.ContainsKey(key))
+                KeyDownStates.Add(key, true);
+
+            if (!KeyDownStates[key])
+                KeyDownStates[key] = true;
+
+
+            //foreach (var action in _actions)
+            //{
+            //    if (action.KeyDownStates.ContainsKey(key))
+            //    {
+            //        if (!action.KeyDownStates[key])
+            //        {
+            //            action.KeyDownStates[key] = true;
+            //            action.KeyDown();
+            //        }
+            //    }
+            //}
         }
 
         public static void KeyUp(Keys key)
         {
             bool keysDown = false;
 
-            foreach (var action in _actions)
-            {
-                if (action.KeyDownStates.ContainsKey(key))
-                {
-                    action.KeyDownStates[key] = false;
-                    action.KeyUp();
-                }
+            if (!KeyDownStates.ContainsKey(key))
+                KeyDownStates.Add(key, false);
 
-                // Check if any keys are down.
-                foreach (var state in action.KeyDownStates.Values)
-                {
-                    if (state == true)
-                    {
-                        keysDown = true;
-                    }
-                }
+            if (KeyDownStates[key])
+                KeyDownStates[key] = false;
+
+            foreach (var state in KeyDownStates.Values)
+            {
+                if (state)
+                    keysDown = true;
             }
+
+
+            //foreach (var action in _actions)
+            //{
+            //    if (action.KeyDownStates.ContainsKey(key))
+            //    {
+            //        action.KeyDownStates[key] = false;
+            //        action.KeyUp();
+            //    }
+
+            //    // Check if any keys are down.
+            //    foreach (var state in action.KeyDownStates.Values)
+            //    {
+            //        if (state == true)
+            //        {
+            //            keysDown = true;
+            //        }
+            //    }
+            //}
 
             KeysDown = keysDown;
         }
@@ -109,15 +132,21 @@ namespace NBodies.UI
 
         public static bool KeyIsDown(Keys key)
         {
-            foreach (var action in _actions)
+            if (KeyDownStates.ContainsKey(key))
             {
-                if (action.KeyDownStates.ContainsKey(key))
-                {
-                    return action.KeyDownStates[key];
-                }
+                return KeyDownStates[key];
             }
 
             return false;
+            //foreach (var action in _actions)
+            //{
+            //    if (action.KeyDownStates.ContainsKey(key))
+            //    {
+            //        return action.KeyDownStates[key];
+            //    }
+            //}
+
+           // return false;
         }
     }
 }

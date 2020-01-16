@@ -273,8 +273,8 @@ namespace NBodies.Rendering
             //_glControl.Width = _width;
             //_glControl.Height = _height;
             //_glControl.VSync = false;
-            _glControl.MouseWheel += _glControl_MouseWheel;
-            _glControl.MouseMove += _glControl_MouseMove;
+            //_glControl.MouseWheel += _glControl_MouseWheel;
+            //_glControl.MouseMove += _glControl_MouseMove;
 
             // _glControl.Click += _glControl_Click;
             //var parent = _targetControl.Parent;

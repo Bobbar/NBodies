@@ -7,6 +7,9 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using OpenTK;
+using OpenTK.Input;
+using OpenTK.Graphics;
+using OpenTK.Graphics.OpenGL4;
 
 namespace NBodies.UI
 {
@@ -39,7 +42,14 @@ namespace NBodies.UI
 
         private bool _useD2D = true;
 
-        private RWindow _window;
+        private Camera _camera;
+        private bool _firstMove = true;
+        private Vector2 _lastPos;
+        private int _vertexBufferObject;
+        private int _vertexArrayObject;
+        private float[] _vertices = new float[0];
+        private Shader _shader;
+       
 
         public DisplayForm()
         {
@@ -82,30 +92,59 @@ namespace NBodies.UI
                 }
             }
 
+            _camera = new Camera(Vector3.UnitZ, glControl.ClientSize.Width / (float)glControl.ClientSize.Height);
+            glControl.MouseWheel += GlControl_MouseWheel;
+            glControl.MouseMove += GlControl_MouseMove;
+            glControl.Paint += GlControl_Paint;
+            glControl.KeyDown += GlControl_KeyDown;
+            glControl.KeyUp += GlControl_KeyUp;
+            glControl.MakeCurrent();
+            MainLoop.GLRenderer = glControl;
+
+            GL.PointSize(5.0f);
+
+            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+            GL.Enable(EnableCap.DepthTest);
+
+            _vertexBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
+
+            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.frag");
+            _shader.Use();
+
+            var vertexLocation = _shader.GetAttribLocation("aPosition");
+            GL.EnableVertexAttribArray(vertexLocation);
+            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, true, 3 * sizeof(float), 0);
+
+
+
+
             //PhysicsProvider.InitPhysics();
 
             //MainLoop.Renderer = new D2DRenderer(RenderBox);
-             MainLoop.Renderer = new OpenTKRenderer(glControl);
+          //  MainLoop.Renderer = new OpenTKRenderer(glControl);
 
           
 
             RenderBase.OverLays.Add(_distLine);
             RenderBase.OverLays.Add(_distOver);
 
-            InputHandler.AddKeyAction(new FPSKey());
-            InputHandler.AddKeyAction(new ExplosionKey());
-            InputHandler.AddKeyAction(new CellSizeKey());
-            InputHandler.AddKeyAction(new DisplayStyleKey());
-            InputHandler.AddKeyAction(new AlphaKey());
-            InputHandler.AddKeyAction(new SimpleKey(Keys.D));
-            InputHandler.AddKeyAction(new TimeStepKey());
-            InputHandler.AddKeyAction(new RewindKey());
-            InputHandler.AddKeyAction(new LevelKey());
-            InputHandler.AddKeyAction(new ThreadsKey());
-            InputHandler.AddKeyAction(new ViscosityKey());
-            InputHandler.AddKeyAction(new KernelSizeKey());
-            InputHandler.AddKeyAction(new ZeroVeloKey());
-            InputHandler.AddKeyAction(new GasKKey());
+            //InputHandler.AddKeyAction(new FPSKey());
+            //InputHandler.AddKeyAction(new ExplosionKey());
+            //InputHandler.AddKeyAction(new CellSizeKey());
+            //InputHandler.AddKeyAction(new DisplayStyleKey());
+            //InputHandler.AddKeyAction(new AlphaKey());
+            //InputHandler.AddKeyAction(new SimpleKey(Keys.D));
+            //InputHandler.AddKeyAction(new TimeStepKey());
+            //InputHandler.AddKeyAction(new RewindKey());
+            //InputHandler.AddKeyAction(new LevelKey());
+            //InputHandler.AddKeyAction(new ThreadsKey());
+            //InputHandler.AddKeyAction(new ViscosityKey());
+            //InputHandler.AddKeyAction(new KernelSizeKey());
+            //InputHandler.AddKeyAction(new ZeroVeloKey());
+            //InputHandler.AddKeyAction(new GasKKey());
 
             PopulateDisplayStyleMenu();
 
@@ -121,6 +160,122 @@ namespace NBodies.UI
             //_window.Run(60.0);
             
 
+        }
+
+        private void GlControl_KeyUp(object sender, KeyEventArgs e)
+        {
+            InputHandler.KeyUp(e.KeyCode);
+
+        }
+
+        private void GlControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            InputHandler.KeyDown(e.KeyCode);
+
+        }
+
+        private void GlControl_Paint(object sender, PaintEventArgs e)
+        {
+          //  var input = Keyboard.GetState(0);
+
+            const float cameraSpeed = 30f;//1.5f;
+            const float sensitivity = 0.2f;
+            const float time = 0.016f;
+
+            if (InputHandler.KeyIsDown(Keys.W))
+                _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
+            if (InputHandler.KeyIsDown(Keys.S))
+                _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
+            if (InputHandler.KeyIsDown(Keys.A))
+                _camera.Position -= _camera.Right * cameraSpeed * time; // Left
+            if (InputHandler.KeyIsDown(Keys.D))
+                _camera.Position += _camera.Right * cameraSpeed * time; // Right
+            if (InputHandler.KeyIsDown(Keys.Space))
+                _camera.Position += _camera.Up * cameraSpeed * time; // Up 
+            if (InputHandler.KeyIsDown(Keys.LShiftKey))
+                _camera.Position -= _camera.Up * cameraSpeed * time; // Down
+
+            Console.WriteLine($@"{_camera.Position.ToString()}");
+
+
+
+            // Render Bodies
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+
+            var bodies = BodyManager.Bodies;
+
+            if (bodies.Length == 0)
+                return;
+
+            _vertices = new float[bodies.Length * 3];
+
+            for (int i = 0; i < bodies.Length; i++)
+            {
+                var b = bodies[i];
+
+                _vertices[i * 3] = b.PosX;
+                _vertices[(i * 3) + 1] = b.PosY;
+                _vertices[(i * 3) + 2] = 0.0f; // PosZ?
+
+            }
+
+            GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
+
+            _shader.Use();
+
+
+            var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
+            _shader.SetMatrix4("model", model);
+            _shader.SetMatrix4("view", _camera.GetViewMatrix());
+            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+
+            GL.DrawArrays(PrimitiveType.Points, 0, _vertices.Length);
+            glControl.SwapBuffers();
+
+        }
+
+        private void GlControl_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            const float sensitivity = 0.2f;
+
+            // var mouse = Mouse.GetState();
+
+            //    Console.WriteLine($@"M: {e.Location.ToString()}   {mouse.X},{mouse.Y}   Conn:{mouse.IsConnected}");
+
+            if (e.Button == MouseButtons.Right)
+            {
+                if (_firstMove) // this bool variable is initially set to true
+                {
+                    _lastPos = new Vector2(e.X, e.Y);
+                    _firstMove = false;
+                }
+                else
+                {
+                    // Calculate the offset of the mouse position
+                    var deltaX = e.X - _lastPos.X;
+                    var deltaY = e.Y - _lastPos.Y;
+                    _lastPos = new Vector2(e.X, e.Y);
+
+                    // Apply the camera pitch and yaw (we clamp the pitch in the camera class)
+                    _camera.Yaw += deltaX * sensitivity;
+                    _camera.Pitch -= deltaY * sensitivity; // reversed since y-coordinates range from bottom to top
+                }
+
+                Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
+            }
+
+            
+
+        }
+
+        private void GlControl_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (e.Delta > 0)
+                _camera.Fov -= 1;
+            else
+                _camera.Fov -= -1;
+            Console.WriteLine(_camera.Fov);
         }
 
         private void SwitchRenderer()
@@ -433,7 +588,7 @@ namespace NBodies.UI
             }
         }
 
-        private void RenderBox_MouseDown(object sender, MouseEventArgs e)
+        private void RenderBox_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseDown(e.Button, e.Location);
 
@@ -504,7 +659,7 @@ namespace NBodies.UI
             }
         }
 
-        private void RenderBox_MouseUp(object sender, MouseEventArgs e)
+        private void RenderBox_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseUp(e.Button, e.Location);
 
@@ -535,7 +690,7 @@ namespace NBodies.UI
             _flingPrevScreenPos = new Point();
         }
 
-        private void RenderBox_MouseMove(object sender, MouseEventArgs e)
+        private void RenderBox_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseMove(e.Location);
             _mouseLocation = e.Location;
@@ -628,7 +783,7 @@ namespace NBodies.UI
 
         }
 
-        private void RenderBox_MouseWheel(object sender, MouseEventArgs e)
+        private void RenderBox_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseWheel(e.Delta);
 
