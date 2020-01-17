@@ -96,6 +96,8 @@ namespace NBodies
                 if (value >= 1 && value <= 8)
                 {
                     _cellSizeExp = value;
+
+                    Debug.WriteLine($@"Cell Size: { Math.Pow(2, _cellSizeExp) }");
                 }
             }
         }
@@ -112,6 +114,8 @@ namespace NBodies
                 if (value >= 1 & value <= 10)
                 {
                     _meshLevels = value;
+                    Debug.WriteLine($@"Levels: { _meshLevels }");
+
                 }
             }
         }
@@ -144,6 +148,8 @@ namespace NBodies
                 if (value >= 0.0001f && value <= 1f)
                 {
                     _timeStep = value;
+                    Debug.WriteLine($@"Timestep: { _timeStep }");
+
                 }
             }
         }

@@ -36,17 +36,17 @@ namespace NBodies.UI
                 KeyDownStates[key] = true;
 
 
-            //foreach (var action in _actions)
-            //{
-            //    if (action.KeyDownStates.ContainsKey(key))
-            //    {
-            //        if (!action.KeyDownStates[key])
-            //        {
-            //            action.KeyDownStates[key] = true;
-            //            action.KeyDown();
-            //        }
-            //    }
-            //}
+            foreach (var action in _actions)
+            {
+                if (action.KeyDownStates.ContainsKey(key))
+                {
+                    if (!action.KeyDownStates[key])
+                    {
+                        action.KeyDownStates[key] = true;
+                        action.KeyDown();
+                    }
+                }
+            }
         }
 
         public static void KeyUp(Keys key)
@@ -66,23 +66,23 @@ namespace NBodies.UI
             }
 
 
-            //foreach (var action in _actions)
-            //{
-            //    if (action.KeyDownStates.ContainsKey(key))
-            //    {
-            //        action.KeyDownStates[key] = false;
-            //        action.KeyUp();
-            //    }
+            foreach (var action in _actions)
+            {
+                if (action.KeyDownStates.ContainsKey(key))
+                {
+                    action.KeyDownStates[key] = false;
+                    action.KeyUp();
+                }
 
-            //    // Check if any keys are down.
-            //    foreach (var state in action.KeyDownStates.Values)
-            //    {
-            //        if (state == true)
-            //        {
-            //            keysDown = true;
-            //        }
-            //    }
-            //}
+                // Check if any keys are down.
+                foreach (var state in action.KeyDownStates.Values)
+                {
+                    if (state == true)
+                    {
+                        keysDown = true;
+                    }
+                }
+            }
 
             KeysDown = keysDown;
         }
@@ -138,6 +138,7 @@ namespace NBodies.UI
             }
 
             return false;
+
             //foreach (var action in _actions)
             //{
             //    if (action.KeyDownStates.ContainsKey(key))

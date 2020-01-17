@@ -107,6 +107,7 @@ namespace NBodies.UI
             _camera = new Camera(Vector3.UnitZ, glControl.ClientSize.Width / (float)glControl.ClientSize.Height);
 
             glControl.MouseDown += GlControl_MouseDown;
+            glControl.MouseUp += GlControl_MouseUp; ;
             glControl.MouseWheel += GlControl_MouseWheel;
             glControl.MouseMove += GlControl_MouseMove;
             glControl.Paint += GlControl_Paint;
@@ -147,20 +148,20 @@ namespace NBodies.UI
             RenderBase.OverLays.Add(_distLine);
             RenderBase.OverLays.Add(_distOver);
 
-            //InputHandler.AddKeyAction(new FPSKey());
-            //InputHandler.AddKeyAction(new ExplosionKey());
-            //InputHandler.AddKeyAction(new CellSizeKey());
-            //InputHandler.AddKeyAction(new DisplayStyleKey());
-            //InputHandler.AddKeyAction(new AlphaKey());
-            //InputHandler.AddKeyAction(new SimpleKey(Keys.D));
-            //InputHandler.AddKeyAction(new TimeStepKey());
-            //InputHandler.AddKeyAction(new RewindKey());
-            //InputHandler.AddKeyAction(new LevelKey());
-            //InputHandler.AddKeyAction(new ThreadsKey());
-            //InputHandler.AddKeyAction(new ViscosityKey());
-            //InputHandler.AddKeyAction(new KernelSizeKey());
-            //InputHandler.AddKeyAction(new ZeroVeloKey());
-            //InputHandler.AddKeyAction(new GasKKey());
+            InputHandler.AddKeyAction(new FPSKey());
+            InputHandler.AddKeyAction(new ExplosionKey());
+            InputHandler.AddKeyAction(new CellSizeKey());
+            InputHandler.AddKeyAction(new DisplayStyleKey());
+            InputHandler.AddKeyAction(new AlphaKey());
+            InputHandler.AddKeyAction(new SimpleKey(Keys.D));
+            InputHandler.AddKeyAction(new TimeStepKey());
+            InputHandler.AddKeyAction(new RewindKey());
+            InputHandler.AddKeyAction(new LevelKey());
+            InputHandler.AddKeyAction(new ThreadsKey());
+            InputHandler.AddKeyAction(new ViscosityKey());
+            InputHandler.AddKeyAction(new KernelSizeKey());
+            InputHandler.AddKeyAction(new ZeroVeloKey());
+            InputHandler.AddKeyAction(new GasKKey());
 
             PopulateDisplayStyleMenu();
 
@@ -171,6 +172,11 @@ namespace NBodies.UI
             //    MainLoop.StartLoop();
 
             _UIUpdateTimer.Start();
+        }
+
+        private void GlControl_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            InputHandler.MouseUp(e.Button, e.Location);
         }
 
         private void GlControl_Resize(object sender, EventArgs e)
@@ -251,6 +257,8 @@ namespace NBodies.UI
 
         private void GlControl_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+            InputHandler.MouseDown(e.Button, e.Location);
+
             if (e.Button == MouseButtons.Right)
                 _lastPos = new Vector2(e.X, e.Y);
         }
@@ -258,6 +266,8 @@ namespace NBodies.UI
 
         private void GlControl_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+            InputHandler.MouseMove(e.Location);
+
             const float sensitivity = 0.2f;
 
             // var mouse = Mouse.GetState();
@@ -292,6 +302,8 @@ namespace NBodies.UI
 
         private void GlControl_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+            InputHandler.MouseWheel(e.Delta);
+
             if (e.Delta > 0)
                 _camera.Fov -= 1;
             else
@@ -567,47 +579,47 @@ namespace NBodies.UI
             }
         }
 
-        private void DisplayForm_KeyUp(object sender, KeyEventArgs e)
-        {
-            InputHandler.KeyUp(e.KeyCode);
+        //private void DisplayForm_KeyUp(object sender, KeyEventArgs e)
+        //{
+        //    InputHandler.KeyUp(e.KeyCode);
 
-            if (!InputHandler.KeyIsDown(Keys.D))
-            {
-                _distLine.Hide();
-                _distOver.Hide();
+        //    if (!InputHandler.KeyIsDown(Keys.D))
+        //    {
+        //        _distLine.Hide();
+        //        _distOver.Hide();
 
-                _distLine.Location = new PointF();
-                _distLine.Location2 = new PointF();
-                _distOver.Location = new PointF();
-            }
+        //        _distLine.Location = new PointF();
+        //        _distLine.Location2 = new PointF();
+        //        _distOver.Location = new PointF();
+        //    }
 
-            switch (e.KeyCode)
-            {
-                case Keys.ShiftKey:
-                    _shiftDown = false;
+        //    switch (e.KeyCode)
+        //    {
+        //        case Keys.ShiftKey:
+        //            _shiftDown = false;
 
-                    break;
+        //            break;
 
-                case Keys.ControlKey:
-                    _ctrlDown = false;
-                    MainLoop.ResumePhysics();
+        //        case Keys.ControlKey:
+        //            _ctrlDown = false;
+        //            MainLoop.ResumePhysics();
 
-                    break;
+        //            break;
 
-                case Keys.P:
+        //        case Keys.P:
 
-                    if (MainLoop.PausePhysics)
-                    {
-                        MainLoop.ResumePhysics(true);
-                    }
-                    else
-                    {
-                        MainLoop.WaitForPause();
-                    }
+        //            if (MainLoop.PausePhysics)
+        //            {
+        //                MainLoop.ResumePhysics(true);
+        //            }
+        //            else
+        //            {
+        //                MainLoop.WaitForPause();
+        //            }
 
-                    break;
-            }
-        }
+        //            break;
+        //    }
+        //}
 
         private void RenderBox_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
@@ -934,7 +946,11 @@ namespace NBodies.UI
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
         {
-            ViewportHelpers.CenterCurrentField();
+            var cm = BodyManager.CenterOfMass3D();
+            _camera.Position = cm;
+
+
+         // ViewportHelpers.CenterCurrentField();
         }
 
         private void ToggleRendererButton_Click(object sender, EventArgs e)

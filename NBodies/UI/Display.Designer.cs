@@ -658,7 +658,7 @@
             this.Text = "NBodies";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DisplayForm_FormClosing);
             this.Load += new System.EventHandler(this.DisplayForm_Load);
-            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
+          //  this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
             this.RootLayoutTable.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();

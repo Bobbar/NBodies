@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Diagnostics;
-
+using OpenTK;
 namespace NBodies.Physics
 {
     public static class BodyManager
@@ -499,6 +499,33 @@ namespace NBodies.Physics
             cmY = (cmY / totMass);
 
             return new PointF((float)cmX, (float)cmY);
+        }
+
+        public static Vector3 CenterOfMass3D()
+        {
+            double totMass = 0;
+
+            Vector3 cm = new Vector3();
+
+            for (int i = 0; i < Bodies.Length; i++)
+            {
+                var body = Bodies[i];
+
+                if (double.IsNaN(body.PosX) || double.IsNaN(body.PosY) || double.IsNaN(body.PosZ))
+                    continue;
+
+                totMass += body.Mass;
+
+                cm.X += body.Mass * body.PosX;
+                cm.Y += body.Mass * body.PosY;
+                cm.Z += body.Mass * body.PosZ;
+            }
+
+            cm.X /= (float)totMass;
+            cm.Y /= (float)totMass;
+            cm.Z /= (float)totMass;
+
+            return cm;
         }
 
         public static void TotEnergy()
