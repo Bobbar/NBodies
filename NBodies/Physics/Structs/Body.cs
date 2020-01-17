@@ -109,6 +109,18 @@ namespace NBodies.Physics
         [Key(15)]
         public float Pressure;
 
+        [ProtoMember(17)]
+        [Key(16)]
+        public float PosZ;
+
+        [ProtoMember(18)]
+        [Key(17)]
+        public float VeloZ;
+
+        [ProtoMember(19)]
+        [Key(18)]
+        public float ForceZ;
+
         [IgnoreMember]
         public float Lifetime;
 

@@ -11,8 +11,12 @@ namespace NBodies.Physics
         public int ID;
         public int IdxX;
         public int IdxY;
+        public int IdxZ;
+
         public float CmX;
         public float CmY;
+        public float CmZ;
+
         public float Mass;
         public int Size;
         public int BodyStartIdx;
@@ -41,6 +45,15 @@ namespace NBodies.Physics
             {
                 int exp = (int)Math.Log(Size, 2);
                 return (IdxY << exp) + (Size * 0.5f);
+            }
+        }
+
+        public float LocZ
+        {
+            get
+            {
+                int exp = (int)Math.Log(Size, 2);
+                return (IdxZ << exp) + (Size * 0.5f);
             }
         }
     }

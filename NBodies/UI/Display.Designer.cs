@@ -93,7 +93,7 @@
             this.glControl.Location = new System.Drawing.Point(0, 0);
             this.glControl.Margin = new System.Windows.Forms.Padding(4);
             this.glControl.Name = "glControl";
-            this.glControl.Size = new System.Drawing.Size(1581, 744);
+            this.glControl.Size = new System.Drawing.Size(1787, 902);
             this.glControl.TabIndex = 0;
             this.glControl.VSync = false;
             // 
@@ -109,7 +109,7 @@
             this.RootLayoutTable.RowCount = 2;
             this.RootLayoutTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
             this.RootLayoutTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.RootLayoutTable.Size = new System.Drawing.Size(1589, 815);
+            this.RootLayoutTable.Size = new System.Drawing.Size(1795, 973);
             this.RootLayoutTable.TabIndex = 0;
             // 
             // tableLayoutPanel2
@@ -125,7 +125,7 @@
             this.tableLayoutPanel2.RowCount = 2;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 39.43662F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 60.56338F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(1583, 57);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(1789, 57);
             this.tableLayoutPanel2.TabIndex = 1;
             // 
             // menuStrip1
@@ -135,7 +135,7 @@
             this.toolsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1583, 22);
+            this.menuStrip1.Size = new System.Drawing.Size(1789, 22);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -377,7 +377,7 @@
             this.tableLayoutPanel3.RowCount = 1;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(1577, 29);
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(1783, 29);
             this.tableLayoutPanel3.TabIndex = 1;
             // 
             // LoadRecordingButton
@@ -628,7 +628,7 @@
             this.panel1.Controls.Add(this.glControl);
             this.panel1.Location = new System.Drawing.Point(3, 66);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1583, 746);
+            this.panel1.Size = new System.Drawing.Size(1789, 904);
             this.panel1.TabIndex = 0;
             // 
             // RenderBox
@@ -648,7 +648,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1589, 815);
+            this.ClientSize = new System.Drawing.Size(1795, 973);
             this.Controls.Add(this.RootLayoutTable);
             this.DoubleBuffered = true;
             this.KeyPreview = true;

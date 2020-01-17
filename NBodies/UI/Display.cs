@@ -93,17 +93,21 @@ namespace NBodies.UI
             }
 
             _camera = new Camera(Vector3.UnitZ, glControl.ClientSize.Width / (float)glControl.ClientSize.Height);
+
+            glControl.MouseDown += GlControl_MouseDown;
             glControl.MouseWheel += GlControl_MouseWheel;
             glControl.MouseMove += GlControl_MouseMove;
             glControl.Paint += GlControl_Paint;
             glControl.KeyDown += GlControl_KeyDown;
             glControl.KeyUp += GlControl_KeyUp;
+            glControl.Resize += GlControl_Resize;
             glControl.MakeCurrent();
             MainLoop.GLRenderer = glControl;
 
             GL.PointSize(5.0f);
 
-            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            GL.ClearColor(Color.Black);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -162,6 +166,12 @@ namespace NBodies.UI
 
         }
 
+        private void GlControl_Resize(object sender, EventArgs e)
+        {
+           // _camera = new Camera(Vector3.UnitZ, glControl.ClientSize.Width / (float)glControl.ClientSize.Height);
+           _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
+        }
+
         private void GlControl_KeyUp(object sender, KeyEventArgs e)
         {
             InputHandler.KeyUp(e.KeyCode);
@@ -195,7 +205,7 @@ namespace NBodies.UI
             if (InputHandler.KeyIsDown(Keys.LShiftKey))
                 _camera.Position -= _camera.Up * cameraSpeed * time; // Down
 
-            Console.WriteLine($@"{_camera.Position.ToString()}");
+         //   Console.WriteLine($@"{_camera.Position.ToString()}");
 
 
 
@@ -216,7 +226,7 @@ namespace NBodies.UI
 
                 _vertices[i * 3] = b.PosX;
                 _vertices[(i * 3) + 1] = b.PosY;
-                _vertices[(i * 3) + 2] = 0.0f; // PosZ?
+                _vertices[(i * 3) + 2] = b.PosZ;//0.0f; // PosZ?
 
             }
 
@@ -234,6 +244,14 @@ namespace NBodies.UI
             glControl.SwapBuffers();
 
         }
+
+
+        private void GlControl_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+                _lastPos = new Vector2(e.X, e.Y);
+        }
+
 
         private void GlControl_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
@@ -262,7 +280,7 @@ namespace NBodies.UI
                     _camera.Pitch -= deltaY * sensitivity; // reversed since y-coordinates range from bottom to top
                 }
 
-                Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
+            //    Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
             }
 
             
@@ -275,7 +293,7 @@ namespace NBodies.UI
                 _camera.Fov -= 1;
             else
                 _camera.Fov -= -1;
-            Console.WriteLine(_camera.Fov);
+          //  Console.WriteLine(_camera.Fov);
         }
 
         private void SwitchRenderer()

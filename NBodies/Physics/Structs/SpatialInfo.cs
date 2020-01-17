@@ -11,6 +11,7 @@ namespace NBodies.Physics
         public int Mort;
         public int IdxX;
         public int IdxY;
+        public int IdxZ;
         public int Index;
 
         public SpatialInfo(int mort, int idX, int idY, int index)
@@ -18,6 +19,7 @@ namespace NBodies.Physics
             Mort = mort;
             IdxX = idX;
             IdxY = idY;
+            IdxZ = 0;
             Index = index;
         }
 
@@ -26,6 +28,15 @@ namespace NBodies.Physics
             Mort = mort;
             IdxX = idX;
             IdxY = idY;
+            Index = index;
+        }
+
+        public void Set(int mort, int idX, int idY, int idZ, int index)
+        {
+            Mort = mort;
+            IdxX = idX;
+            IdxY = idY;
+            IdxZ = idZ;
             Index = index;
         }
     }

@@ -58,7 +58,7 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuInBodies;
         private ComputeBuffer<Body> _gpuOutBodies;
         private ComputeBuffer<int> _gpuGridIndex;
-        private ComputeBuffer<Vector2> _gpuCM;
+        private ComputeBuffer<Vector3> _gpuCM;
         private ComputeBuffer<int> _gpuSortMap;
         private ComputeBuffer<int> _gpuCellIdx;
         private ComputeBuffer<GridInfo> _gpuGridInfo;
@@ -259,7 +259,7 @@ namespace NBodies.Physics
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
 
-            _gpuCM = new ComputeBuffer<Vector2>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            _gpuCM = new ComputeBuffer<Vector3>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
         }
 
@@ -269,6 +269,7 @@ namespace NBodies.Physics
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
             int threadBlocks = 0;
+
 
             // Allocate and start writing bodies to the GPU.
             Allocate(ref _gpuInBodies, _bodies.Length);
@@ -342,6 +343,11 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
+
+            var bods = bodies;
+            var mesh = ReadBuffer(_gpuMesh);
+
+
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -414,17 +420,41 @@ namespace NBodies.Physics
             return x | (y << 1);
         }
 
+        private int MortonNumber(int x, int y, int z)
+        {
+            x &= 65535;
+            x = (x | (x << 8)) & 16711935;
+            x = (x | (x << 4)) & 252645135;
+            x = (x | (x << 2)) & 858993459;
+            x = (x | (x << 1)) & 1431655765;
+
+            y &= 65535;
+            y = (y | (y << 8)) & 16711935;
+            y = (y | (y << 4)) & 252645135;
+            y = (y | (y << 2)) & 858993459;
+            y = (y | (y << 1)) & 1431655765;
+
+            z &= 65535;
+            z = (z | (z << 8)) & 16711935;
+            z = (z | (z << 4)) & 252645135;
+            z = (z | (z << 2)) & 858993459;
+            z = (z | (z << 1)) & 1431655765;
+
+            return x | (y << 1) | (z << 2);
+        }
+
         private void AddGridDims(MinMax minMax, int level)
         {
             int offsetX = (minMax.MinX - 1) * -1;
             int offsetY = (minMax.MinY - 1) * -1;
+            int offsetZ = (minMax.MinZ - 1) * -1;
 
             int columns = Math.Abs(minMax.MinX - minMax.MaxX - 1);
             int rows = Math.Abs(minMax.MinY - minMax.MaxY - 1);
-
+            int layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 1);
             int idxOff = 0;
 
-            if (minMax.MinX < -400000 || minMax.MinY < -400000)
+            if (minMax.MinX < -65000 || minMax.MinY < -65000)
             {
                 Debugger.Break();
             }
@@ -438,7 +468,9 @@ namespace NBodies.Physics
                 idxOff = _gridInfo[level - 1].IndexOffset + _gridInfo[level - 1].Size;
             }
 
-            _gridInfo[level].Set(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
+            //_gridInfo[level].Set(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
+            _gridInfo[level].Set(offsetX, offsetY, offsetZ, idxOff, minMax.MinX, minMax.MinY, minMax.MinZ, minMax.MaxX, minMax.MaxY, minMax.MaxZ, columns, rows, layers);
+
         }
 
         private void ComputeGridDims(MinMax first, int levels)
@@ -449,7 +481,9 @@ namespace NBodies.Physics
             {
                 // Reduce dimensions of the previous level to determine the dims of the next level.
                 var prev = _gridInfo[level - 1];
-                AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MaxX >> 1, prev.MaxY >> 1), level);
+                //AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MaxX >> 1, prev.MaxY >> 1), level);
+                AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MinZ >> 1, prev.MaxX >> 1, prev.MaxY >> 1, prev.MaxZ >> 1), level);
+
             }
         }
 
@@ -533,11 +567,13 @@ namespace NBodies.Physics
                 {
                     int idxX = (int)Math.Floor(_bodies[b].PosX) >> cellSizeExp;
                     int idxY = (int)Math.Floor(_bodies[b].PosY) >> cellSizeExp;
-                    int morton = MortonNumber(idxX, idxY);
+                    int idxZ = (int)Math.Floor(_bodies[b].PosZ) >> cellSizeExp;
 
-                    mm.Update(idxX, idxY);
+                    int morton = MortonNumber(idxX, idxY, idxZ);
 
-                    _bSpatials[b].Set(morton, idxX, idxY, b);
+                    mm.Update(idxX, idxY, idxZ);
+
+                    _bSpatials[b].Set(morton, idxX, idxY, idxZ, b);
                     _mortKeys[b] = morton;
                 }
 
@@ -605,6 +641,8 @@ namespace NBodies.Physics
             _reindexKernel.SetMemoryArgument(2, _gpuSortMap);
             _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
             _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+
+
         }
 
         /// <summary>
@@ -629,9 +667,12 @@ namespace NBodies.Physics
                         var spatial = childLevel.Spatials[childLevel.CellIndex[b]];
                         int idxX = spatial.IdxX >> 1;
                         int idxY = spatial.IdxY >> 1;
-                        int morton = MortonNumber(idxX, idxY);
+                        int idxZ = spatial.IdxZ >> 1;
 
-                        parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
+                        int morton = MortonNumber(idxX, idxY, idxZ);
+
+                      //  parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
+                        parentSpatials[b].Set(morton, idxX, idxY, idxZ, spatial.Index + b);
                     }
                 });
 
@@ -716,6 +757,10 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(5, (int)Math.Pow(2.0f, cellSizeExp));
 
             _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            //_queue.Finish();
+
+            //var mesh = ReadBuffer(_gpuMesh);
+
         }
 
         /// <summary>
@@ -765,7 +810,7 @@ namespace NBodies.Physics
         {
             // Calulate total size of 1D mesh neighbor list.
             // Each cell can have a max of 9 neighbors, including itself.
-            int neighborLen = meshSize * 9;
+            int neighborLen = meshSize * 27;
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);

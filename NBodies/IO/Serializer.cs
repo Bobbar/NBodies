@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using ProtoBuf;
+using NBodies.Helpers;
 
 namespace NBodies.IO
 {
@@ -77,7 +78,9 @@ namespace NBodies.IO
         public static void LoadPreviousState()
         {
             //_previousFile = $@"C:\Temp\States\TinyTest.nsta";
-            _previousFile = $@"C:\Temp\States\Test2.nsta";
+            //_previousFile = $@"C:\Temp\States\Test2.nsta";
+            _previousFile = $@"C:\Temp\States\SimpleBlob.nsta";
+
 
             if (!string.IsNullOrEmpty(_previousFile))
                 ReadState(_previousFile);
@@ -96,7 +99,20 @@ namespace NBodies.IO
             catch // Try to load an old style state.
             {
                 stateStream.Position = 0;
-                BodyManager.ReplaceBodies(ProtoBuf.Serializer.Deserialize<Body[]>(stateStream));
+                var bodies = ProtoBuf.Serializer.Deserialize<Body[]>(stateStream);
+
+                for (int i = 0; i < bodies.Length; i++)
+                {
+                    if (!bodies[i].HasFlag(Flags.BlackHole))
+                    {
+                        float rndZ = Numbers.GetRandomFloat(-10.0f, 10.0f);
+                        bodies[i].PosZ = rndZ;
+                    }
+                    
+                }
+
+
+                BodyManager.ReplaceBodies(bodies);
             }
 
             MainLoop.StartLoop();
