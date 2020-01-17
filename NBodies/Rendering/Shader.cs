@@ -140,6 +140,16 @@ namespace NBodies.Rendering
             return GL.GetAttribLocation(Handle, attribName);
         }
 
+        public void BindAttribLocation(int index, string name)
+        {
+            GL.BindAttribLocation(Handle, index, name);
+        }
+
+
+        public void BindFragDataLocation(int index, string name)
+        {
+            GL.BindFragDataLocation(Handle, index, name);
+        }
 
         // Just loads the entire file into a string.
         private static string LoadSource(string path)

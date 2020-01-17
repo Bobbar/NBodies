@@ -79,7 +79,7 @@ namespace NBodies.IO
         {
             //_previousFile = $@"C:\Temp\States\TinyTest.nsta";
             //_previousFile = $@"C:\Temp\States\Test2.nsta";
-            _previousFile = $@"C:\Temp\States\SimpleBlob.nsta";
+          //  _previousFile = $@"C:\Temp\States\SimpleBlob.nsta";
 
 
             if (!string.IsNullOrEmpty(_previousFile))

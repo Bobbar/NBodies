@@ -10,6 +10,7 @@ using OpenTK;
 using OpenTK.Input;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
+using System.Runtime.InteropServices;
 
 namespace NBodies.UI
 {
@@ -46,10 +47,21 @@ namespace NBodies.UI
         private bool _firstMove = true;
         private Vector2 _lastPos;
         private int _vertexBufferObject;
+        private int _colorBufferObject;
+
         private int _vertexArrayObject;
+        private int _colorArrayObject;
+
         private float[] _vertices = new float[0];
+        private float[] _colors = new float[0];
+
         private Shader _shader;
-       
+
+
+        private Vertex[] _verts = new Vertex[0];
+
+
+        private int[] _vboID = new int[2];
 
         public DisplayForm()
         {
@@ -107,30 +119,30 @@ namespace NBodies.UI
             GL.PointSize(5.0f);
 
             //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            GL.ClearColor(Color.Black);
+            GL.ClearColor(Color.Gray);
 
             GL.Enable(EnableCap.DepthTest);
 
-            _vertexBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
-
             _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.frag");
+            _shader.BindFragDataLocation(0, "FragColor");
+            _shader.BindAttribLocation(0, "aPosition");
+            _shader.BindAttribLocation(1, "aObjColor");
             _shader.Use();
 
-            var vertexLocation = _shader.GetAttribLocation("aPosition");
-            GL.EnableVertexAttribArray(vertexLocation);
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, true, 3 * sizeof(float), 0);
+            _vertexBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * sizeof(float), _verts, BufferUsageHint.StaticDraw);
 
+            _vertexArrayObject = GL.GenVertexArray();
+            GL.BindVertexArray(_vertexArrayObject);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
 
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 28, 0);
+            GL.EnableVertexAttribArray(0);
+            GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
+            GL.EnableVertexAttribArray(1);
+            GL.BindVertexArray(0);
 
-
-            //PhysicsProvider.InitPhysics();
-
-            //MainLoop.Renderer = new D2DRenderer(RenderBox);
-          //  MainLoop.Renderer = new OpenTKRenderer(glControl);
-
-          
 
             RenderBase.OverLays.Add(_distLine);
             RenderBase.OverLays.Add(_distOver);
@@ -154,22 +166,16 @@ namespace NBodies.UI
 
             MainLoop.StartLoop();
 
-            NBodies.IO.Serializer.LoadPreviousState();
+            //    NBodies.IO.Serializer.LoadPreviousState();
 
-        //    MainLoop.StartLoop();
+            //    MainLoop.StartLoop();
 
             _UIUpdateTimer.Start();
-
-            //_window = new RWindow(this.ClientSize.Width, this.ClientSize.Height, "Test");
-            //_window.Run(60.0);
-            
-
         }
 
         private void GlControl_Resize(object sender, EventArgs e)
         {
-           // _camera = new Camera(Vector3.UnitZ, glControl.ClientSize.Width / (float)glControl.ClientSize.Height);
-           _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
+            _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
         }
 
         private void GlControl_KeyUp(object sender, KeyEventArgs e)
@@ -186,10 +192,7 @@ namespace NBodies.UI
 
         private void GlControl_Paint(object sender, PaintEventArgs e)
         {
-          //  var input = Keyboard.GetState(0);
-
-            const float cameraSpeed = 30f;//1.5f;
-            const float sensitivity = 0.2f;
+            const float cameraSpeed = 100f;//1.5f;
             const float time = 0.016f;
 
             if (InputHandler.KeyIsDown(Keys.W))
@@ -205,9 +208,7 @@ namespace NBodies.UI
             if (InputHandler.KeyIsDown(Keys.LShiftKey))
                 _camera.Position -= _camera.Up * cameraSpeed * time; // Down
 
-         //   Console.WriteLine($@"{_camera.Position.ToString()}");
-
-
+            //   Console.WriteLine($@"{_camera.Position.ToString()}");
 
             // Render Bodies
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -218,31 +219,33 @@ namespace NBodies.UI
             if (bodies.Length == 0)
                 return;
 
-            _vertices = new float[bodies.Length * 3];
+            _verts = new Vertex[bodies.Length];
 
             for (int i = 0; i < bodies.Length; i++)
             {
                 var b = bodies[i];
+                var bColor = Color.FromArgb(bodies[i].Color);
 
-                _vertices[i * 3] = b.PosX;
-                _vertices[(i * 3) + 1] = b.PosY;
-                _vertices[(i * 3) + 2] = b.PosZ;//0.0f; // PosZ?
-
+                _verts[i].Position = new Vector3(b.PosX, b.PosY, b.PosZ);
+                _verts[i].Color = new Color4(bColor.R, bColor.G, bColor.B, 200);
             }
 
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
+
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
 
             _shader.Use();
-
-
             var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
             _shader.SetMatrix4("model", model);
             _shader.SetMatrix4("view", _camera.GetViewMatrix());
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
 
-            GL.DrawArrays(PrimitiveType.Points, 0, _vertices.Length);
+            GL.BindVertexArray(_vertexArrayObject);
+            GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
             glControl.SwapBuffers();
 
+            // GL.BindVertexArray(0);
         }
 
 
@@ -280,10 +283,10 @@ namespace NBodies.UI
                     _camera.Pitch -= deltaY * sensitivity; // reversed since y-coordinates range from bottom to top
                 }
 
-            //    Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
+                //    Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
             }
 
-            
+
 
         }
 
@@ -293,7 +296,7 @@ namespace NBodies.UI
                 _camera.Fov -= 1;
             else
                 _camera.Fov -= -1;
-          //  Console.WriteLine(_camera.Fov);
+            //  Console.WriteLine(_camera.Fov);
         }
 
         private void SwitchRenderer()
@@ -346,7 +349,7 @@ namespace NBodies.UI
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
 
-          //  MainLoop.Renderer.DrawBodiesAsync(BodyManager.Bodies, true, null);
+            //  MainLoop.Renderer.DrawBodiesAsync(BodyManager.Bodies, true, null);
 
 
 
@@ -1020,5 +1023,12 @@ namespace NBodies.UI
         {
             MainLoop.SyncRenderer = syncRendererToolStripMenuItem.Checked;
         }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct Vertex
+    {
+        public Vector3 Position;
+        public Color4 Color;
     }
 }
