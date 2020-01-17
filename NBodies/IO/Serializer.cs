@@ -101,15 +101,15 @@ namespace NBodies.IO
                 stateStream.Position = 0;
                 var bodies = ProtoBuf.Serializer.Deserialize<Body[]>(stateStream);
 
-                //for (int i = 0; i < bodies.Length; i++)
-                //{
-                //    if (!bodies[i].HasFlag(Flags.BlackHole))
-                //    {
-                //        float rndZ = Numbers.GetRandomFloat(-10.0f, 10.0f);
-                //        bodies[i].PosZ = rndZ;
-                //    }
-                    
-                //}
+                for (int i = 0; i < bodies.Length; i++)
+                {
+                    if (!bodies[i].HasFlag(Flags.BlackHole))
+                    {
+                        float rndZ = Numbers.GetRandomFloat(-200.0f, 200.0f);
+                        bodies[i].PosZ = rndZ;
+                    }
+
+                }
 
 
                 BodyManager.ReplaceBodies(bodies);

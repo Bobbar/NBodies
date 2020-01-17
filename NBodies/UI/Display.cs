@@ -48,20 +48,107 @@ namespace NBodies.UI
         private Vector2 _lastPos;
         private int _vertexBufferObject;
         private int _colorBufferObject;
+        private int _cubeVertBufferObject;
+        private int _cubeVertArrayObject;
 
         private int _vertexArrayObject;
-        private int _colorArrayObject;
-
-        private float[] _vertices = new float[0];
-        private float[] _colors = new float[0];
-
         private Shader _shader;
-
-
         private Vertex[] _verts = new Vertex[0];
 
 
-        private int[] _vboID = new int[2];
+        private readonly float[] _cubeVerts =
+       {
+             // Position
+            -1.0f, -1.0f, -1.0f, // Front face
+             1.0f, -1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f, // Back face
+             1.0f, -1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            -1.0f,  1.0f,  1.0f, // Left face
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+
+             1.0f,  1.0f,  1.0f, // Right face
+             1.0f,  1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+
+            -1.0f, -1.0f, -1.0f, // Bottom face
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f, -1.0f,
+
+            -1.0f,  1.0f, -1.0f, // Top face
+             1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f
+        };
+
+
+        //private readonly float[] _cubeVerts =
+        //{
+        //     // Position
+        //    -0.5f, -0.5f, -0.5f, // Front face
+        //     0.5f, -0.5f, -0.5f,
+        //     0.5f,  0.5f, -0.5f,
+        //     0.5f,  0.5f, -0.5f,
+        //    -0.5f,  0.5f, -0.5f,
+        //    -0.5f, -0.5f, -0.5f,
+
+        //    -0.5f, -0.5f,  0.5f, // Back face
+        //     0.5f, -0.5f,  0.5f,
+        //     0.5f,  0.5f,  0.5f,
+        //     0.5f,  0.5f,  0.5f,
+        //    -0.5f,  0.5f,  0.5f,
+        //    -0.5f, -0.5f,  0.5f,
+
+        //    -0.5f,  0.5f,  0.5f, // Left face
+        //    -0.5f,  0.5f, -0.5f,
+        //    -0.5f, -0.5f, -0.5f,
+        //    -0.5f, -0.5f, -0.5f,
+        //    -0.5f, -0.5f,  0.5f,
+        //    -0.5f,  0.5f,  0.5f,
+
+        //     0.5f,  0.5f,  0.5f, // Right face
+        //     0.5f,  0.5f, -0.5f,
+        //     0.5f, -0.5f, -0.5f,
+        //     0.5f, -0.5f, -0.5f,
+        //     0.5f, -0.5f,  0.5f,
+        //     0.5f,  0.5f,  0.5f,
+
+        //    -0.5f, -0.5f, -0.5f, // Bottom face
+        //     0.5f, -0.5f, -0.5f,
+        //     0.5f, -0.5f,  0.5f,
+        //     0.5f, -0.5f,  0.5f,
+        //    -0.5f, -0.5f,  0.5f,
+        //    -0.5f, -0.5f, -0.5f,
+
+        //    -0.5f,  0.5f, -0.5f, // Top face
+        //     0.5f,  0.5f, -0.5f,
+        //     0.5f,  0.5f,  0.5f,
+        //     0.5f,  0.5f,  0.5f,
+        //    -0.5f,  0.5f,  0.5f,
+        //    -0.5f,  0.5f, -0.5f
+        //};
+
 
         public DisplayForm()
         {
@@ -142,6 +229,20 @@ namespace NBodies.UI
             GL.EnableVertexAttribArray(0);
             GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
             GL.EnableVertexAttribArray(1);
+            GL.BindVertexArray(0);
+
+
+
+            _cubeVertBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
+
+            _cubeVertArrayObject = GL.GenVertexArray();
+            GL.BindVertexArray(_cubeVertArrayObject);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.EnableVertexAttribArray(0);
+            //GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
+            //GL.EnableVertexAttribArray(1);
             GL.BindVertexArray(0);
 
 
@@ -240,6 +341,7 @@ namespace NBodies.UI
 
             GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
+            GL.BindVertexArray(_vertexArrayObject);
 
             _shader.Use();
             var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
@@ -247,12 +349,46 @@ namespace NBodies.UI
             _shader.SetMatrix4("view", _camera.GetViewMatrix());
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
 
-            GL.BindVertexArray(_vertexArrayObject);
             GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
+
+
+            // Draw mesh
+            //if (BodyManager.Mesh.Length > 1)
+            //{
+            //    GL.BindVertexArray(0);
+            //    GL.BindVertexArray(_cubeVertArrayObject);
+
+            // //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+               
+            //    for (int m = 0; m < BodyManager.Mesh.Length; m++)
+            //    {
+            //        var mesh = BodyManager.Mesh[m];
+
+            //        _shader.Use();
+            //        var meshModel = Matrix4.Identity;
+            //        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
+            //        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
+
+            //        _shader.SetMatrix4("model", meshModel);
+            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
+            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+
+            //        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
+            //    }
+            //    GL.BindVertexArray(0);
+            //}
+
+
+            
+
+
             glControl.SwapBuffers();
+
+
 
             // GL.BindVertexArray(0);
         }
+
 
 
         private void GlControl_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -950,7 +1086,7 @@ namespace NBodies.UI
             _camera.Position = cm;
 
 
-         // ViewportHelpers.CenterCurrentField();
+            // ViewportHelpers.CenterCurrentField();
         }
 
         private void ToggleRendererButton_Click(object sender, EventArgs e)

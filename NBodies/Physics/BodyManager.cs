@@ -804,14 +804,19 @@ namespace NBodies.Physics
                 {
                     var px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
                     var py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                    var pz = Numbers.GetRandomFloat(0.0f - 0.5f, 0.0f + 0.5f);
 
-                    while (!PointExtensions.PointInsideCircle(location, 0.5f, new PointF(px, py)))
+
+
+                    while (!PointExtensions.PointInsideCircle(location, 0.5f, new PointF(px, py), pz))
                     {
                         px = Numbers.GetRandomFloat(location.X - 0.5f, location.X + 0.5f);
                         py = Numbers.GetRandomFloat(location.Y - 0.5f, location.Y + 0.5f);
+                        pz = Numbers.GetRandomFloat(0.0f - 0.5f, 0.0f + 0.5f);
+
                     }
 
-                    particles.Add(NewBody(px, py, 1.0f, 1, Color.Orange, lifetime, 1));
+                    particles.Add(NewBody(px, py, pz, 1.0f, 1, Color.Orange, lifetime, 1));
                 }
 
                 Bodies = Bodies.Add(particles.ToArray());
@@ -938,6 +943,31 @@ namespace NBodies.Physics
 
             b.PosX = locX;
             b.PosY = locY;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+            b.Lifetime = lifetime;
+            b.IsExplosion = Convert.ToBoolean(isExplosion);
+
+            if (isExplosion == 1)
+            {
+                b.InRoche = 1;
+            }
+
+            //b.DeltaTime = 0.0005f;
+
+            b.UID = NextUID();
+
+            return b;
+        }
+
+        public static Body NewBody(float locX, float locY, float locZ, float size, float mass, Color color, float lifetime, int isExplosion = 0)
+        {
+            var b = new Body();
+
+            b.PosX = locX;
+            b.PosY = locY;
+            b.PosZ = locZ;
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();

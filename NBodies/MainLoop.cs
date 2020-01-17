@@ -132,6 +132,8 @@ namespace NBodies
                 if (value >= 1 && value <= 2000)
                 {
                     _targetFPS = value;
+                    Debug.WriteLine($@"FPS: { _targetFPS }");
+
                 }
             }
         }

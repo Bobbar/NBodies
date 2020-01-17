@@ -604,7 +604,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 
 		// Iterate parent cell neighbors, skipping the last neighbor which is the parent.
 		int start = levelCellParent.NeighborStartIdx;
-		int len = start + levelCellParent.NeighborCount - 1;
+		int len = start + levelCellParent.NeighborCount;  // - 1;
 
 		for (int nc = start; nc < len; nc++)
 		{

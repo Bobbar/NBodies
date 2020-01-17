@@ -128,6 +128,30 @@ namespace NBodies.Extensions
 
         }
 
+
+        public static bool PointInsideCircle(PointF circleLoc, float circleRadius, PointF testPoint, float testPointZ)
+        {
+            //var dist = testPoint.DistanceSqrt(circleLoc);
+
+            //if (dist <= circleRadius)
+            //    return true;
+
+            //return false;
+
+
+            var dist = Math.Pow((testPoint.X - circleLoc.X), 2) + Math.Pow((testPoint.Y - circleLoc.Y), 2) + Math.Pow((testPointZ - 0.0f), 2);
+
+            if (dist <= circleRadius * circleRadius)
+            {
+                return true;
+            }
+
+            return false;
+
+        }
+
+
+
         public static bool IsIntersecting(PointF a, PointF b, PointF c, PointF d)
         {
             float denominator = ((b.X - a.X) * (d.Y - c.Y)) - ((b.Y - a.Y) * (d.X - c.X));
