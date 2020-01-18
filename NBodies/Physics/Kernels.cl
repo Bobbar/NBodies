@@ -341,8 +341,8 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 			}
 		}
 
-		// Add this cell to end.
-		neighborIndex[(offset + count++)] = m;
+		//// Add this cell to end.
+		//neighborIndex[(offset + count++)] = m;
 
 		// Set cell neighbor index list pointers.
 		mesh[m].NeighborStartIdx = offset;
@@ -895,13 +895,13 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		outBody.Lifetime -= sim.DeltaTime * 4.0f;
 	}
 
-	//// Check for and cull NANs.
-	//int nanCheck = isnan(outBody.PosX) + isnan(outBody.PosY);
-	//if (nanCheck > 0)
-	//{
-	//	outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
-	//	postNeeded[0] = 1;
-	//}
+	// Check for and cull NANs.
+	int nanCheck = isnan(outBody.PosX) + isnan(outBody.PosY) + isnan(outBody.PosZ);
+	if (nanCheck > 0)
+	{
+		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
+		postNeeded[0] = 1;
+	}
 
 	// Cull distant bodies.
 	float3 cm = centerMass[0];

@@ -203,11 +203,12 @@ namespace NBodies.UI
             glControl.Resize += GlControl_Resize;
             glControl.MakeCurrent();
             MainLoop.GLRenderer = glControl;
+           
 
             GL.PointSize(5.0f);
 
             //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            GL.ClearColor(Color.Gray);
+            GL.ClearColor(Color.DarkGray);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -283,6 +284,7 @@ namespace NBodies.UI
         private void GlControl_Resize(object sender, EventArgs e)
         {
             _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
+            GL.Viewport(glControl.ClientSize);
         }
 
         private void GlControl_KeyUp(object sender, KeyEventArgs e)
@@ -352,34 +354,34 @@ namespace NBodies.UI
             GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
 
 
-            // Draw mesh
-            //if (BodyManager.Mesh.Length > 1)
-            //{
-            //    GL.BindVertexArray(0);
-            //    GL.BindVertexArray(_cubeVertArrayObject);
+          ////  Draw mesh
+          //  if (BodyManager.Mesh.Length > 1)
+          //  {
+          //      GL.BindVertexArray(0);
+          //      GL.BindVertexArray(_cubeVertArrayObject);
 
-            // //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-               
-            //    for (int m = 0; m < BodyManager.Mesh.Length; m++)
-            //    {
-            //        var mesh = BodyManager.Mesh[m];
+          //      //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
 
-            //        _shader.Use();
-            //        var meshModel = Matrix4.Identity;
-            //        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
-            //        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
+          //      for (int m = 0; m < BodyManager.Mesh.Length; m++)
+          //      {
+          //          var mesh = BodyManager.Mesh[m];
 
-            //        _shader.SetMatrix4("model", meshModel);
-            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+          //          _shader.Use();
+          //          var meshModel = Matrix4.Identity;
+          //          meshModel *= Matrix4.CreateScale(mesh.Size / 2);
+          //          meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
 
-            //        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
-            //    }
-            //    GL.BindVertexArray(0);
-            //}
+          //          _shader.SetMatrix4("model", meshModel);
+          //          _shader.SetMatrix4("view", _camera.GetViewMatrix());
+          //          _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+
+          //          GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
+          //      }
+          //      GL.BindVertexArray(0);
+          //  }
 
 
-            
+
 
 
             glControl.SwapBuffers();
