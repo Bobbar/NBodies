@@ -14,7 +14,7 @@ namespace NBodies.Physics
     {
         public static Body[] Bodies = new Body[0];
 
-        public static MeshCell[] Mesh
+        public static MeshCell[] Mesh  // = new MeshCell[0];
         {
             get
             {

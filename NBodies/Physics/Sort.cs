@@ -11,9 +11,9 @@ namespace NBodies.Physics
         private static int _threshold = 5000; // Length at which to use .NET Array.Sort instead of QuickSort recurse/invoke.
         private static int _processorCount = Environment.ProcessorCount - 3; // = # cores/threads - 3 threads. (2 loop tasks, 1 UI thread)
 
-        static void Swap(int[] keys, SpatialInfo[] data, int i, int j)
+        static void Swap(long[] keys, SpatialInfo[] data, int i, int j)
         {
-            int temp = keys[i];
+            long temp = keys[i];
             keys[i] = keys[j];
             keys[j] = temp;
 
@@ -22,7 +22,7 @@ namespace NBodies.Physics
             data[j] = temp2;
         }
 
-        static int Partition(int[] keys, SpatialInfo[] data, int from, int to, int pivot)
+        static int Partition(long[] keys, SpatialInfo[] data, int from, int to, int pivot)
         {
             var arrayPivot = keys[pivot];  // pivot value
             Swap(keys, data, pivot, to - 1); // move pivot value to end for now, after this pivot not used
@@ -39,12 +39,12 @@ namespace NBodies.Physics
             return newPivot; // new pivot
         }
 
-        public static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int length)
+        public static void ParallelQuickSort(long[] keys, SpatialInfo[] data, int length)
         {
             ParallelQuickSort(keys, data, 0, length, _processorCount);
         }
        
-        static void ParallelQuickSort(int[] keys, SpatialInfo[] data, int from, int to, int depthRemaining)
+        static void ParallelQuickSort(long[] keys, SpatialInfo[] data, int from, int to, int depthRemaining)
         {
             if (to - from <= _threshold)
             {

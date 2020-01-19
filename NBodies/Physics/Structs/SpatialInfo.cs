@@ -8,13 +8,13 @@ namespace NBodies.Physics
 {
     public struct SpatialInfo
     {
-        public int Mort;
+        public long Mort;
         public int IdxX;
         public int IdxY;
         public int IdxZ;
         public int Index;
 
-        public SpatialInfo(int mort, int idX, int idY, int index)
+        public SpatialInfo(long mort, int idX, int idY, int index)
         {
             Mort = mort;
             IdxX = idX;
@@ -23,7 +23,7 @@ namespace NBodies.Physics
             Index = index;
         }
 
-        public void Set(int mort, int idX, int idY, int index)
+        public void Set(long mort, int idX, int idY, int index)
         {
             Mort = mort;
             IdxX = idX;
@@ -31,7 +31,7 @@ namespace NBodies.Physics
             Index = index;
         }
 
-        public void Set(int mort, int idX, int idY, int idZ, int index)
+        public void Set(long mort, int idX, int idY, int idZ, int index)
         {
             Mort = mort;
             IdxX = idX;

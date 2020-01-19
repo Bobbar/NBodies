@@ -353,7 +353,7 @@
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 81F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 107F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 110F));
-            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 294F));
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 500F));
             this.tableLayoutPanel3.Controls.Add(this.LoadRecordingButton, 16, 0);
             this.tableLayoutPanel3.Controls.Add(this.RecordButton, 15, 0);
             this.tableLayoutPanel3.Controls.Add(this.ToggleRendererButton, 14, 0);
@@ -480,11 +480,6 @@
             0,
             0,
             196608});
-            this.TimeStepUpDown.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            262144});
             this.TimeStepUpDown.Name = "TimeStepUpDown";
             this.TimeStepUpDown.Size = new System.Drawing.Size(62, 20);
             this.TimeStepUpDown.TabIndex = 3;
@@ -658,7 +653,6 @@
             this.Text = "NBodies";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DisplayForm_FormClosing);
             this.Load += new System.EventHandler(this.DisplayForm_Load);
-          //  this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.DisplayForm_KeyUp);
             this.RootLayoutTable.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();

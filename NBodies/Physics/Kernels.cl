@@ -204,7 +204,7 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap
 		return;
 
 	/*if (inBodies[sortMap[b]].PosY > 0.0f)
-	{ 
+	{
 		printf("%i\n", b);
 	}*/
 
@@ -248,6 +248,9 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	GridInfo grid;
 	grid.OffsetX = gridInfo[cell.Level].OffsetX;
 	grid.OffsetY = gridInfo[cell.Level].OffsetY;
+	grid.OffsetZ = gridInfo[cell.Level].OffsetZ;
+
+	grid.Rows = gridInfo[cell.Level].Rows;
 	grid.Columns = gridInfo[cell.Level].Columns;
 	grid.IndexOffset = gridInfo[cell.Level].IndexOffset;
 
@@ -275,12 +278,12 @@ __kernel void PopGrid(global int* gridIdx, int passStride, int passOffset, globa
 	{
 		gridIdx[bucket] = m;
 	}
-	
+
 	mesh[m].GridIdx = cell.GridIdx;
 }
 
 int GridHash(int column, int row, int layer, GridInfo grid)
-{ 
+{
 	return ((layer * grid.Rows) * grid.Columns) + (row * grid.Columns) + column;
 }
 
@@ -291,13 +294,13 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 	if (m >= meshLen)
 		return;
 
-	int offset = m * 9;
+	int offset = m * 27;
+
 	int count = 0;
 	int cellLevel = mesh[m].Level;
 	int cellGridIdx = mesh[m].GridIdx;
 
-	//int2 shiftLut[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 }, { -1,1 }, { 0,1 }, { 1,1 } };
-	int3 shiftLut[] = { { -1,-1,-1 },{ 0,-1,-1 },{ 1,-1,-1 },{ -1,0,-1 },{ 0,0,-1 },{ 1,0,-1 },{ -1,1,-1 },{ 0,1,-1 },{ 1,1,-1 },{ -1,-1,0 },{ 0,-1,0 },{ 1,-1,0 },{ -1,0,0 },{ 0,0,0 },{ 1,0,0 },{ -1,1,0 },{ 0,1,0 },{ 1,1,0 },{ -1,-1,1 },{ 0,-1,1 },{ 1,-1,1 },{ -1,0,1 },{ 0,0,1 },{ 1,0,1 },{ -1,1,1 },{ 0,1,1 },{ 1,1,1 } };
+	//	int3 shiftLut[] = { { -1,-1,-1 },{ 0,-1,-1 },{ 1,-1,-1 },{ -1,0,-1 },{ 0,0,-1 },{ 1,0,-1 },{ -1,1,-1 },{ 0,1,-1 },{ 1,1,-1 },{ -1,-1,0 },{ 0,-1,0 },{ 1,-1,0 },{ -1,0,0 },{ 0,0,0 },{ 1,0,0 },{ -1,1,0 },{ 0,1,0 },{ 1,1,0 },{ -1,-1,1 },{ 0,-1,1 },{ 1,-1,1 },{ -1,0,1 },{ 0,0,1 },{ 1,0,1 },{ -1,1,1 },{ 0,1,1 },{ 1,1,1 } };
 
 	GridInfo grid = gridInfo[cellLevel];
 
@@ -315,31 +318,62 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 		int offIdx = cellGridIdx - gIndexOffset;
 
 		// Shift bucket index around the cell and check for populated grid index buckets.
-		for (int i = 0; i < 27; i++)
+
+		for (int x = -1; x <= 1; x++)
 		{
-			int3 shift = shiftLut[i];
-			//int localIdx = offIdx + ((shift.y * gColumns) + (shift.x + shift.y));
-			int localIdx = offIdx + GridHash(shift.x, shift.y, shift.z, grid);
-
-			if (localIdx > 0 && localIdx < gSize)
+			for (int y = -1; y <= 1; y++)
 			{
-				int bucket = localIdx + gIndexOffset;
-
-				bucket -= passOffset;
-
-				if (bucket >= 0 && bucket < passStride)
+				for (int z = -1; z <= 1; z++)
 				{
-					int idx = gridIdx[bucket];
+					int localIdx = offIdx + GridHash(x, y, z, grid);  // Does this work with the new hash algo?
 
-					// Check for populated bucket and poplate neighbor index.
-					if (idx >= 0)
+					if (localIdx > 0 && localIdx < gSize)
 					{
-						neighborIndex[(offset + count)] = idx;
-						count++;
+						int bucket = localIdx + gIndexOffset;
+
+						bucket -= passOffset;
+
+						if (bucket >= 0 && bucket < passStride)
+						{
+							int idx = gridIdx[bucket];
+
+							// Check for populated bucket and poplate neighbor index.
+							if (idx >= 0)
+							{
+								neighborIndex[(offset + count)] = idx;
+								count++;
+							}
+						}
 					}
 				}
 			}
 		}
+
+		//for (int i = 0; i < 27; i++)
+		//{
+		//	int3 shift = shiftLut[i];
+		//	//int localIdx = offIdx + ((shift.y * gColumns) + (shift.x + shift.y));
+		//	int localIdx = offIdx + GridHash(shift.x, shift.y, shift.z, grid);
+
+		//	if (localIdx > 0 && localIdx < gSize)
+		//	{
+		//		int bucket = localIdx + gIndexOffset;
+
+		//		bucket -= passOffset;
+
+		//		if (bucket >= 0 && bucket < passStride)
+		//		{
+		//			int idx = gridIdx[bucket];
+
+		//			// Check for populated bucket and poplate neighbor index.
+		//			if (idx >= 0)
+		//			{
+		//				neighborIndex[(offset + count)] = idx;
+		//				count++;
+		//			}
+		//		}
+		//	}
+		//}
 
 		//// Add this cell to end.
 		//neighborIndex[(offset + count++)] = m;
@@ -371,7 +405,7 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
 	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
 
-	
+
 
 	newCell.Size = cellSize;
 	newCell.BodyStartIdx = firstIdx;
@@ -501,7 +535,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 }
 
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
-{ 
+{
 	float distX = posA.x - posB.x;
 	float distY = posA.y - posB.y;
 	float distZ = posA.z - posB.z;
@@ -511,13 +545,13 @@ float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 	dist = max(dist, SOFTENING);
 	distSqrt = max(distSqrt, SOFTENING_SQRT);
 	float force = massA * massB / dist;
-	
-	float3 out;
-	out.x = force * distX / distSqrt;
-	out.y = force * distY / distSqrt;
-	out.z = force * distZ / distSqrt;
 
-	return out;
+	float3 ret;
+	ret.x = force * distX / distSqrt;
+	ret.y = force * distY / distSqrt;
+	ret.z = force * distZ / distSqrt;
+
+	return ret;
 }
 
 __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
@@ -652,15 +686,15 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 			float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
 			bForce += ComputeForce(cellPos, bPos, cell.Mass, bMass);
 
-		/*	float distX = cell.CmX - bPos.x;
-			float distY = cell.CmY - bPos.y;
-			float dist = distX * distX + distY * distY;
-			float distSqrt = (float)native_sqrt(dist);
-			float force = cell.Mass * bMass / dist;
+			/*	float distX = cell.CmX - bPos.x;
+				float distY = cell.CmY - bPos.y;
+				float dist = distX * distX + distY * distY;
+				float distSqrt = (float)native_sqrt(dist);
+				float force = cell.Mass * bMass / dist;
 
-			totForce += force;
-			bForce.x += force * distX / distSqrt;
-			bForce.y += force * distY / distSqrt;*/
+				totForce += force;
+				bForce.x += force * distX / distSqrt;
+				bForce.y += force * distY / distSqrt;*/
 		}
 	}
 
@@ -690,7 +724,14 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 // Is the specified cell a neighbor of the test cell?
 bool IsNeighbor(MeshCell cell, MeshCell testCell)
 {
-	if (abs(cell.IdxX - testCell.IdxX) > 1 || abs(cell.IdxY - testCell.IdxY) > 1 || abs(cell.IdxZ - testCell.IdxZ))
+	/*if (testCell.IdxX > cell.IdxX + -2 && testCell.IdxX < cell.IdxX + 2 && testCell.IdxY > cell.IdxY + -2 && testCell.IdxY < cell.IdxY + 2 && testCell.IdxZ > cell.IdxZ + -2 && testCell.IdxZ < cell.IdxZ + 2)
+	{
+		return true;
+	}
+	return false;*/
+
+
+	if (abs(cell.IdxX - testCell.IdxX) > 1 || abs(cell.IdxY - testCell.IdxY) > 1 || abs(cell.IdxZ - testCell.IdxZ) > 1)
 	{
 		return false;
 	}
@@ -834,10 +875,11 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 					float distZ = outBody.PosZ - inBody.PosZ;
 
 					float dist = distX * distX + distY * distY + distZ * distZ;
-
+					float distSqrt = (float)native_sqrt(dist);
 					// Calc the distance and check for collision.
 					//float colDist = (sph.kSize * 0.5f) * 2.0f;
-					if (dist <= sph.kSize * sph.kSize)
+					//if (dist <= sph.kSize * sph.kSize)
+					if (distSqrt <= sph.kSize)
 					{
 						//// Handle exact overlaps.
 						//if (dist == 0)
@@ -852,7 +894,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 						// SPH collision.
 						if (HasFlagB(outBody, INROCHE) && HasFlagB(inBody, INROCHE))
 						{
-							float distSqrt = (float)native_sqrt(dist);
+							//float distSqrt = (float)native_sqrt(dist);
 							distSqrt = max(distSqrt, SPH_SOFTENING);
 
 							float kDiff = sph.kSize - distSqrt;

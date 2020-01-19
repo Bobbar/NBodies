@@ -11,14 +11,12 @@ namespace NBodies.Physics
         public int OffsetX;
         public int OffsetY;
         public int OffsetZ;
-
         public int MinX;
         public int MinY;
         public int MinZ;
         public int MaxX;
         public int MaxY;
         public int MaxZ;
-
         public int Columns;
         public int Rows;
         public int Layers;

@@ -94,6 +94,17 @@ namespace NBodies.IO
             try
             {
                 var state = ProtoBuf.Serializer.Deserialize<StateParams>(stateStream);
+
+                for (int i = 0; i < state.Bodies.Length; i++)
+                {
+                    if (!state.Bodies[i].HasFlag(Flags.BlackHole))
+                    {
+                        float rndZ = Numbers.GetRandomFloat(-1.0f, 1.0f);
+                        state.Bodies[i].PosZ = rndZ;
+                    }
+
+                }
+
                 LoadStateParams(state);
             }
             catch // Try to load an old style state.
@@ -105,10 +116,9 @@ namespace NBodies.IO
                 {
                     if (!bodies[i].HasFlag(Flags.BlackHole))
                     {
-                        float rndZ = Numbers.GetRandomFloat(-200.0f, 200.0f);
+                        float rndZ = Numbers.GetRandomFloat(-10.0f, 10.0f);
                         bodies[i].PosZ = rndZ;
                     }
-
                 }
 
 

@@ -12,11 +12,9 @@ namespace NBodies.Physics
         public int IdxX;
         public int IdxY;
         public int IdxZ;
-
         public float CmX;
         public float CmY;
         public float CmZ;
-
         public float Mass;
         public int Size;
         public int BodyStartIdx;

@@ -147,7 +147,7 @@ namespace NBodies
 
             set
             {
-                if (value >= 0.0001f && value <= 1f)
+                if (value >= 0.0f && value <= 1f)
                 {
                     _timeStep = value;
                     Debug.WriteLine($@"Timestep: { _timeStep }");
@@ -268,7 +268,7 @@ namespace NBodies
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
-        private const float _cullDistance = 7000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
+        private const float _cullDistance = 5000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
@@ -470,6 +470,11 @@ namespace NBodies
                             if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
                                 BodyManager.Bodies = new Body[_bodiesBuffer.Length];
                             Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
+
+                            //var mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
+                            //if (BodyManager.Mesh.Length != mesh.Length)
+                            //    BodyManager.Mesh = new MeshCell[mesh.Length];
+                            //Array.Copy(mesh, 0, BodyManager.Mesh, 0, mesh.Length);
                         }
 
                         // Draw the field asynchronously.

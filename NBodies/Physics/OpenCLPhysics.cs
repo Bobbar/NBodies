@@ -31,7 +31,7 @@ namespace NBodies.Physics
 
         // Fields for large allocations.
         private SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
-        private int[] _mortKeys = new int[0]; // Array of Morton numbers for spatials sorting.
+        private long[] _mortKeys = new long[0]; // Array of Morton numbers for spatials sorting.
         private int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
         private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
@@ -344,8 +344,8 @@ namespace NBodies.Physics
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
 
-            var bods = bodies;
-            var mesh = ReadBuffer(_gpuMesh);
+            //var bods = bodies;
+            //var mesh = ReadBuffer(_gpuMesh);3
 
 
         }
@@ -420,38 +420,64 @@ namespace NBodies.Physics
             return x | (y << 1);
         }
 
-        private int MortonNumber(int x, int y, int z)
+        private long MortonNumber(long x, long y, long z)
         {
-            x &= 65535;
-            x = (x | (x << 8)) & 16711935;
-            x = (x | (x << 4)) & 252645135;
-            x = (x | (x << 2)) & 858993459;
-            x = (x | (x << 1)) & 1431655765;
 
-            y &= 65535;
-            y = (y | (y << 8)) & 16711935;
-            y = (y | (y << 4)) & 252645135;
-            y = (y | (y << 2)) & 858993459;
-            y = (y | (y << 1)) & 1431655765;
 
-            z &= 65535;
-            z = (z | (z << 8)) & 16711935;
-            z = (z | (z << 4)) & 252645135;
-            z = (z | (z << 2)) & 858993459;
-            z = (z | (z << 1)) & 1431655765;
+            x &= 0x1fffff; // we only look at the first 21 bits
+            x = (x | x << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+            x = (x | x << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+            x = (x | x << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+            x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            x = (x | x << 2) & 0x1249249249249249;
+
+            y &= 0x1fffff; // we only look at the first 21 bits
+            y = (y | y << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+            y = (y | y << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+            y = (y | y << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+            y = (y | y << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            y = (y | y << 2) & 0x1249249249249249;
+
+            z &= 0x1fffff; // we only look at the first 21 bits
+            z = (z | z << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+            z = (z | z << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+            z = (z | z << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+            z = (z | z << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            z = (z | z << 2) & 0x1249249249249249;
+
+
+
+            //x &= 65535;
+            //x = (x | (x << 8)) & 16711935;
+            //x = (x | (x << 4)) & 252645135;
+            //x = (x | (x << 2)) & 858993459;
+            //x = (x | (x << 1)) & 1431655765;
+
+            //y &= 65535;
+            //y = (y | (y << 8)) & 16711935;
+            //y = (y | (y << 4)) & 252645135;
+            //y = (y | (y << 2)) & 858993459;
+            //y = (y | (y << 1)) & 1431655765;
+
+            //z &= 65535;
+            //z = (z | (z << 8)) & 16711935;
+            //z = (z | (z << 4)) & 252645135;
+            //z = (z | (z << 2)) & 858993459;
+            //z = (z | (z << 1)) & 1431655765;
 
             return x | (y << 1) | (z << 2);
         }
 
         private void AddGridDims(MinMax minMax, int level)
         {
-            int offsetX = (minMax.MinX - 1) * -1;
-            int offsetY = (minMax.MinY - 1) * -1;
-            int offsetZ = (minMax.MinZ - 1) * -1;
+            int offsetX = (minMax.MinX - 2) * -1;
+            int offsetY = (minMax.MinY - 2) * -1;
+            int offsetZ = (minMax.MinZ - 2) * -1;
 
-            int columns = Math.Abs(minMax.MinX - minMax.MaxX - 1);
-            int rows = Math.Abs(minMax.MinY - minMax.MaxY - 1);
-            int layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 1);
+            int columns = Math.Abs(minMax.MinX - minMax.MaxX - 2);
+            int rows = Math.Abs(minMax.MinY - minMax.MaxY - 2);
+            int layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 2);
+
             int idxOff = 0;
 
             if (minMax.MinX < -65000 || minMax.MinY < -65000)
@@ -519,6 +545,8 @@ namespace NBodies.Physics
 
             _meshLength = totCells;
 
+            //Debug.WriteLine(_meshLength);
+
             // Allocate the mesh buffer on the GPU.
             Allocate(ref _gpuMesh, _meshLength, false);
 
@@ -536,7 +564,7 @@ namespace NBodies.Physics
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
             // Populate the grid index and mesh neighbor index list.
-            PopGridAndNeighborsGPU(_gridInfo, _meshLength);
+             PopGridAndNeighborsGPU(_gridInfo, _meshLength);
         }
 
         /// <summary>
@@ -552,7 +580,7 @@ namespace NBodies.Physics
             // Array of morton numbers used for sorting.
             // Using a key array when sorting is much faster than sorting an array of objects by a field.
             if (_mortKeys.Length < _bodies.Length)
-                _mortKeys = new int[_bodies.Length];
+                _mortKeys = new long[_bodies.Length];
 
             // MinMax object to record field bounds.
             var minMax = new MinMax();
@@ -569,7 +597,7 @@ namespace NBodies.Physics
                     int idxY = (int)Math.Floor(_bodies[b].PosY) >> cellSizeExp;
                     int idxZ = (int)Math.Floor(_bodies[b].PosZ) >> cellSizeExp;
 
-                    int morton = MortonNumber(idxX, idxY, idxZ);
+                    long morton = MortonNumber(idxX, idxY, idxZ);
 
                     mm.Update(idxX, idxY, idxZ);
 
@@ -592,7 +620,7 @@ namespace NBodies.Physics
             // Compute number of unique morton numbers to determine cell count,
             // and build the start index of each cell.
             int count = 0;
-            int val = int.MaxValue;
+            long val = long.MaxValue;
 
             // Allocate then map the sort map buffer so we can write to it directly.
             Allocate(ref _gpuSortMap, _bodies.Length + 100);
@@ -604,7 +632,8 @@ namespace NBodies.Physics
             if (cellIdx == null || cellIdx.Length < _bodies.Length)
                 cellIdx = new int[_bodies.Length + 100];
 
-            fixed (int* mortPtr = _mortKeys, cellIdxPtr = cellIdx)
+            fixed (long* mortPtr = _mortKeys)
+            fixed (int* cellIdxPtr = cellIdx)
             fixed (SpatialInfo* spaPtr = _bSpatials)
             {
                 for (int i = 0; i < _bodies.Length; i++)
@@ -621,6 +650,9 @@ namespace NBodies.Physics
                     }
                 }
             }
+
+          //  Debug.WriteLine($@"[0] {count}");
+
 
             // Add the last cell index value;
             cellIdx[count] = _bodies.Length;
@@ -641,8 +673,6 @@ namespace NBodies.Physics
             _reindexKernel.SetMemoryArgument(2, _gpuSortMap);
             _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
             _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-
-
         }
 
         /// <summary>
@@ -669,7 +699,7 @@ namespace NBodies.Physics
                         int idxY = spatial.IdxY >> 1;
                         int idxZ = spatial.IdxZ >> 1;
 
-                        int morton = MortonNumber(idxX, idxY, idxZ);
+                        long morton = MortonNumber(idxX, idxY, idxZ);
 
                       //  parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
                         parentSpatials[b].Set(morton, idxX, idxY, idxZ, spatial.Index + b);
@@ -681,7 +711,7 @@ namespace NBodies.Physics
 
                 var cellIdx = _levelInfo[level].CellIndex;
                 int count = 0;
-                int val = int.MaxValue;
+                long val = long.MaxValue;
 
                 fixed (int* cellIdxPtr = cellIdx)
                 fixed (SpatialInfo* spaPtr = parentSpatials)
@@ -698,6 +728,7 @@ namespace NBodies.Physics
                         }
                     }
                 }
+             //   Debug.WriteLine($@"[{level}] {count}");
 
                 cellIdx[count] = childCount;
 

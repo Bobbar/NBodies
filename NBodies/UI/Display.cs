@@ -208,7 +208,7 @@ namespace NBodies.UI
             GL.PointSize(5.0f);
 
             //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            GL.ClearColor(Color.DarkGray);
+            GL.ClearColor(Color.Black);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -297,11 +297,43 @@ namespace NBodies.UI
         {
             InputHandler.KeyDown(e.KeyCode);
 
+            if (InputHandler.KeyIsDown(Keys.F11))
+            {
+                if (!_hideToolbar)
+                {
+                    _ogToolbarHeight = RootLayoutTable.RowStyles[0].Height;
+                    RootLayoutTable.RowStyles[0].Height = 0;
+                    this.FormBorderStyle = FormBorderStyle.None;
+                    _hideToolbar = true;
+                }
+                else
+                {
+                    RootLayoutTable.RowStyles[0].Height = _ogToolbarHeight;
+                    this.FormBorderStyle = FormBorderStyle.Sizable;
+                    _hideToolbar = false;
+                }
+            }
+
+
+            if (InputHandler.KeyIsDown(Keys.P))
+            {
+                if (MainLoop.PausePhysics)
+                {
+                    MainLoop.ResumePhysics(true);
+                }
+                else
+                {
+                    MainLoop.WaitForPause();
+                }
+            }
+
+            if (InputHandler.KeyIsDown(Keys.F9))
+                IO.Serializer.LoadPreviousState();
         }
 
         private void GlControl_Paint(object sender, PaintEventArgs e)
         {
-            const float cameraSpeed = 100f;//1.5f;
+            const float cameraSpeed = 200f;//1.5f;
             const float time = 0.016f;
 
             if (InputHandler.KeyIsDown(Keys.W))
@@ -314,7 +346,7 @@ namespace NBodies.UI
                 _camera.Position += _camera.Right * cameraSpeed * time; // Right
             if (InputHandler.KeyIsDown(Keys.Space))
                 _camera.Position += _camera.Up * cameraSpeed * time; // Up 
-            if (InputHandler.KeyIsDown(Keys.LShiftKey))
+            if (InputHandler.KeyIsDown(Keys.ShiftKey))
                 _camera.Position -= _camera.Up * cameraSpeed * time; // Down
 
             //   Console.WriteLine($@"{_camera.Position.ToString()}");
@@ -350,35 +382,63 @@ namespace NBodies.UI
             _shader.SetMatrix4("model", model);
             _shader.SetMatrix4("view", _camera.GetViewMatrix());
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            _shader.SetInt("isMesh", 0);
+
 
             GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
 
 
-          ////  Draw mesh
-          //  if (BodyManager.Mesh.Length > 1)
-          //  {
-          //      GL.BindVertexArray(0);
-          //      GL.BindVertexArray(_cubeVertArrayObject);
 
-          //      //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
 
-          //      for (int m = 0; m < BodyManager.Mesh.Length; m++)
-          //      {
-          //          var mesh = BodyManager.Mesh[m];
 
-          //          _shader.Use();
-          //          var meshModel = Matrix4.Identity;
-          //          meshModel *= Matrix4.CreateScale(mesh.Size / 2);
-          //          meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
 
-          //          _shader.SetMatrix4("model", meshModel);
-          //          _shader.SetMatrix4("view", _camera.GetViewMatrix());
-          //          _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            ////  Draw Body cubes. (No color yet)
+            //GL.BindVertexArray(0);
+            //GL.BindVertexArray(_cubeVertArrayObject);
+            //for (int i = 0; i < bodies.Length; i++)
+            //    {
+            //        var body = bodies[i];
 
-          //          GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
-          //      }
-          //      GL.BindVertexArray(0);
-          //  }
+            //        _shader.Use();
+            //        var meshModel = Matrix4.Identity;
+            //        meshModel *= Matrix4.CreateScale(body.Size / 2);
+            //        meshModel *= Matrix4.CreateTranslation(body.PosX, body.PosY, body.PosZ);
+
+            //        _shader.SetMatrix4("model", meshModel);
+            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
+            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            //        _shader.SetInt("isMesh", 1);
+            //        GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
+            //    }
+            //    GL.BindVertexArray(0);
+
+
+
+            ////  Draw mesh
+            //if (BodyManager.Mesh.Length > 1)
+            //{
+            //    GL.BindVertexArray(0);
+            //    GL.BindVertexArray(_cubeVertArrayObject);
+
+            //    //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+
+            //    for (int m = 0; m < BodyManager.Mesh.Length; m++)
+            //    {
+            //        var mesh = BodyManager.Mesh[m];
+
+            //        _shader.Use();
+            //        var meshModel = Matrix4.Identity;
+            //        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
+            //        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
+
+            //        _shader.SetMatrix4("model", meshModel);
+            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
+            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            //        _shader.SetInt("isMesh", 1);
+            //        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
+            //    }
+            //    GL.BindVertexArray(0);
+            //}
 
 
 
