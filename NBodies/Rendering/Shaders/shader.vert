@@ -9,6 +9,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform int isMesh;
+uniform vec3 meshColor;
 
 void main(void)
 {
@@ -18,7 +19,8 @@ void main(void)
 	{
 		// Red color for mesh cubes...
 		//objColor = vec4(1, 0, 0, 1);
-		objColor = vec4(0.92, 0.58, 0.12, 0.8);
+		//objColor = vec4(0.92, 0.58, 0.12, 0.8);
+		objColor = vec4(meshColor, 0.5f);
 	}
 	else 
 	{

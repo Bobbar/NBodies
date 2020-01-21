@@ -203,7 +203,7 @@ namespace NBodies.UI
             glControl.Resize += GlControl_Resize;
             glControl.MakeCurrent();
             MainLoop.GLRenderer = glControl;
-           
+
 
             GL.PointSize(5.0f);
 
@@ -360,85 +360,106 @@ namespace NBodies.UI
             if (bodies.Length == 0)
                 return;
 
-            _verts = new Vertex[bodies.Length];
+            //_verts = new Vertex[bodies.Length];
+
+            //for (int i = 0; i < bodies.Length; i++)
+            //{
+            //    var b = bodies[i];
+            //    var bColor = Color.FromArgb(bodies[i].Color);
+
+            //    _verts[i].Position = new Vector3(b.PosX, b.PosY, b.PosZ);
+            //    //_verts[i].Color = new Color4(bColor.R, bColor.G, bColor.B, 200);
+            //    _verts[i].Color = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
+
+            //}
+
+
+
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            //GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
+            //GL.BindVertexArray(_vertexArrayObject);
+
+            //_shader.Use();
+            //var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
+            //_shader.SetMatrix4("model", model);
+            //_shader.SetMatrix4("view", _camera.GetViewMatrix());
+            //_shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            //_shader.SetInt("isMesh", 0);
+
+
+            //GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
+
+            //  Draw Body cubes.
+            GL.BindVertexArray(0);
+            GL.BindVertexArray(_cubeVertArrayObject);
+
+            //GL.Enable(EnableCap.LineSmooth); // This is Optional 
+            //                                 //      GL.Enable(EnableCap.Normalize);  
+            //GL.Enable(EnableCap.RescaleNormal);
+
+
+            //GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+            //GL.Enable(EnableCap.PolygonOffsetFill);
+
+            //GL.Enable(EnableCap.Blend);
+            //GL.DepthMask(false);
+
+            
 
             for (int i = 0; i < bodies.Length; i++)
             {
-                var b = bodies[i];
-                var bColor = Color.FromArgb(bodies[i].Color);
+                var body = bodies[i];
 
-                _verts[i].Position = new Vector3(b.PosX, b.PosY, b.PosZ);
-                _verts[i].Color = new Color4(bColor.R, bColor.G, bColor.B, 200);
+                _shader.Use();
+                var meshModel = Matrix4.Identity;
+                meshModel *= Matrix4.CreateScale(body.Size / 2);
+                meshModel *= Matrix4.CreateTranslation(body.PosX, body.PosY, body.PosZ);
+
+                _shader.SetMatrix4("model", meshModel);
+                _shader.SetMatrix4("view", _camera.GetViewMatrix());
+                _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                _shader.SetInt("isMesh", 1);
+                var bColor = Color.FromArgb(body.Color);
+                var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
+                //_shader.SetVector3("meshColor", new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f));
+                _shader.SetVector3("meshColor", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
+
+                GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
+            }
+            GL.BindVertexArray(0);
+
+            //GL.Disable(EnableCap.Blend);
+            //GL.DepthMask(true);
+
+            if (RenderBase.ShowMesh)
+            {
+                //  Draw mesh
+                if (BodyManager.Mesh.Length > 1)
+                {
+                    GL.BindVertexArray(0);
+                    GL.BindVertexArray(_cubeVertArrayObject);
+
+                    //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+
+                    for (int m = 0; m < BodyManager.Mesh.Length; m++)
+                    {
+                        var mesh = BodyManager.Mesh[m];
+
+                        _shader.Use();
+                        var meshModel = Matrix4.Identity;
+                        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
+                        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
+
+                        _shader.SetMatrix4("model", meshModel);
+                        _shader.SetMatrix4("view", _camera.GetViewMatrix());
+                        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                        _shader.SetInt("isMesh", 1);
+                        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
+                    }
+                    GL.BindVertexArray(0);
+                }
             }
 
-
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
-            GL.BindVertexArray(_vertexArrayObject);
-
-            _shader.Use();
-            var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
-            _shader.SetMatrix4("model", model);
-            _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            _shader.SetInt("isMesh", 0);
-
-
-            GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
-
-
-
-
-
-
-            ////  Draw Body cubes. (No color yet)
-            //GL.BindVertexArray(0);
-            //GL.BindVertexArray(_cubeVertArrayObject);
-            //for (int i = 0; i < bodies.Length; i++)
-            //    {
-            //        var body = bodies[i];
-
-            //        _shader.Use();
-            //        var meshModel = Matrix4.Identity;
-            //        meshModel *= Matrix4.CreateScale(body.Size / 2);
-            //        meshModel *= Matrix4.CreateTranslation(body.PosX, body.PosY, body.PosZ);
-
-            //        _shader.SetMatrix4("model", meshModel);
-            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            //        _shader.SetInt("isMesh", 1);
-            //        GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
-            //    }
-            //    GL.BindVertexArray(0);
-
-
-
-            ////  Draw mesh
-            //if (BodyManager.Mesh.Length > 1)
-            //{
-            //    GL.BindVertexArray(0);
-            //    GL.BindVertexArray(_cubeVertArrayObject);
-
-            //    //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-
-            //    for (int m = 0; m < BodyManager.Mesh.Length; m++)
-            //    {
-            //        var mesh = BodyManager.Mesh[m];
-
-            //        _shader.Use();
-            //        var meshModel = Matrix4.Identity;
-            //        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
-            //        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
-
-            //        _shader.SetMatrix4("model", meshModel);
-            //        _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            //        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            //        _shader.SetInt("isMesh", 1);
-            //        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
-            //    }
-            //    GL.BindVertexArray(0);
-            //}
 
 
 
@@ -491,6 +512,7 @@ namespace NBodies.UI
                     _camera.Pitch -= deltaY * sensitivity; // reversed since y-coordinates range from bottom to top
                 }
 
+                //Cursor.Position = e.Location;
                 //    Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
             }
 

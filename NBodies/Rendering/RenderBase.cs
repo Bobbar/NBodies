@@ -549,7 +549,7 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
             }
         }
 
-        internal Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        public static Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
         {
             const int maxIntensity = 255;
             float intensity = 0;
