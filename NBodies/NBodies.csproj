@@ -142,6 +142,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\VectorExtensions.cs" />
     <Compile Include="Physics\Sort.cs" />
     <Compile Include="Physics\StateRewinder.cs" />
     <Compile Include="Physics\Structs\BufferDims.cs" />

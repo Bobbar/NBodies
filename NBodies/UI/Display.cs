@@ -55,7 +55,6 @@ namespace NBodies.UI
         private Shader _shader;
         private Vertex[] _verts = new Vertex[0];
 
-
         private readonly float[] _cubeVerts =
        {
              // Position
@@ -218,19 +217,19 @@ namespace NBodies.UI
             _shader.BindAttribLocation(1, "aObjColor");
             _shader.Use();
 
-            _vertexBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * sizeof(float), _verts, BufferUsageHint.StaticDraw);
+            //_vertexBufferObject = GL.GenBuffer();
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            //GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * sizeof(float), _verts, BufferUsageHint.StaticDraw);
 
-            _vertexArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObject);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+            //_vertexArrayObject = GL.GenVertexArray();
+            //GL.BindVertexArray(_vertexArrayObject);
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 28, 0);
-            GL.EnableVertexAttribArray(0);
-            GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
-            GL.EnableVertexAttribArray(1);
-            GL.BindVertexArray(0);
+            //GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 28, 0);
+            //GL.EnableVertexAttribArray(0);
+            //GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
+            //GL.EnableVertexAttribArray(1);
+            //GL.BindVertexArray(0);
 
 
 
@@ -276,84 +275,41 @@ namespace NBodies.UI
             _UIUpdateTimer.Start();
         }
 
-        private void GlControl_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
-        {
-            InputHandler.MouseUp(e.Button, e.Location);
-        }
-
-        private void GlControl_Resize(object sender, EventArgs e)
-        {
-            _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
-            GL.Viewport(glControl.ClientSize);
-        }
-
-        private void GlControl_KeyUp(object sender, KeyEventArgs e)
-        {
-            InputHandler.KeyUp(e.KeyCode);
-
-        }
-
-        private void GlControl_KeyDown(object sender, KeyEventArgs e)
-        {
-            InputHandler.KeyDown(e.KeyCode);
-
-            if (InputHandler.KeyIsDown(Keys.F11))
-            {
-                if (!_hideToolbar)
-                {
-                    _ogToolbarHeight = RootLayoutTable.RowStyles[0].Height;
-                    RootLayoutTable.RowStyles[0].Height = 0;
-                    this.FormBorderStyle = FormBorderStyle.None;
-                    _hideToolbar = true;
-                }
-                else
-                {
-                    RootLayoutTable.RowStyles[0].Height = _ogToolbarHeight;
-                    this.FormBorderStyle = FormBorderStyle.Sizable;
-                    _hideToolbar = false;
-                }
-            }
-
-
-            if (InputHandler.KeyIsDown(Keys.P))
-            {
-                if (MainLoop.PausePhysics)
-                {
-                    MainLoop.ResumePhysics(true);
-                }
-                else
-                {
-                    MainLoop.WaitForPause();
-                }
-            }
-
-            if (InputHandler.KeyIsDown(Keys.F9))
-                IO.Serializer.LoadPreviousState();
-        }
+   
 
         private void GlControl_Paint(object sender, PaintEventArgs e)
         {
             const float cameraSpeed = 200f;//1.5f;
             const float time = 0.016f;
 
-            if (InputHandler.KeyIsDown(Keys.W))
-                _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
-            if (InputHandler.KeyIsDown(Keys.S))
-                _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
-            if (InputHandler.KeyIsDown(Keys.A))
-                _camera.Position -= _camera.Right * cameraSpeed * time; // Left
-            if (InputHandler.KeyIsDown(Keys.D))
-                _camera.Position += _camera.Right * cameraSpeed * time; // Right
-            if (InputHandler.KeyIsDown(Keys.Space))
-                _camera.Position += _camera.Up * cameraSpeed * time; // Up 
-            if (InputHandler.KeyIsDown(Keys.ShiftKey))
-                _camera.Position -= _camera.Up * cameraSpeed * time; // Down
+
+            if (!InputHandler.KeyIsDown(Keys.ControlKey))
+            {
+                if (InputHandler.KeyIsDown(Keys.W))
+                    _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
+                if (InputHandler.KeyIsDown(Keys.S))
+                    _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
+                if (InputHandler.KeyIsDown(Keys.A))
+                    _camera.Position -= _camera.Right * cameraSpeed * time; // Left
+                if (InputHandler.KeyIsDown(Keys.D))
+                    _camera.Position += _camera.Right * cameraSpeed * time; // Right
+                if (InputHandler.KeyIsDown(Keys.Space))
+                    _camera.Position += _camera.Up * cameraSpeed * time; // Up 
+                if (InputHandler.KeyIsDown(Keys.ShiftKey))
+                    _camera.Position -= _camera.Up * cameraSpeed * time; // Down
+            }
+
+          
 
             //   Console.WriteLine($@"{_camera.Position.ToString()}");
 
             // Render Bodies
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
+            GL.Enable(EnableCap.LineSmooth);
+            GL.Enable(EnableCap.Blend);
+            GL.Disable(EnableCap.CullFace);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+ 
 
             var bodies = BodyManager.Bodies;
 
@@ -418,12 +374,20 @@ namespace NBodies.UI
                 _shader.SetMatrix4("model", meshModel);
                 _shader.SetMatrix4("view", _camera.GetViewMatrix());
                 _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-                _shader.SetInt("isMesh", 1);
+              
                 var bColor = Color.FromArgb(body.Color);
-                var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
-                //_shader.SetVector3("meshColor", new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f));
-                _shader.SetVector3("meshColor", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
+                var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                // var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
 
+                if (body.UID == _selectedUid)
+                    _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
+
+                else
+                    _shader.SetVector3("color", normColor);
+                
+                
+                //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
+                _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
                 GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
             }
             GL.BindVertexArray(0);
@@ -472,26 +436,122 @@ namespace NBodies.UI
             // GL.BindVertexArray(0);
         }
 
+     
+        private void GlControl_Resize(object sender, EventArgs e)
+        {
+            _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
+            GL.Viewport(glControl.ClientSize);
+        }
 
+        private void GlControl_KeyUp(object sender, KeyEventArgs e)
+        {
+            InputHandler.KeyUp(e.KeyCode);
+
+        }
+
+        private void GlControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            InputHandler.KeyDown(e.KeyCode);
+
+            if (InputHandler.KeyIsDown(Keys.F11))
+            {
+                if (!_hideToolbar)
+                {
+                    _ogToolbarHeight = RootLayoutTable.RowStyles[0].Height;
+                    RootLayoutTable.RowStyles[0].Height = 0;
+                    this.FormBorderStyle = FormBorderStyle.None;
+                    _hideToolbar = true;
+                }
+                else
+                {
+                    RootLayoutTable.RowStyles[0].Height = _ogToolbarHeight;
+                    this.FormBorderStyle = FormBorderStyle.Sizable;
+                    _hideToolbar = false;
+                }
+            }
+
+
+            if (InputHandler.KeyIsDown(Keys.P))
+            {
+                if (MainLoop.PausePhysics)
+                {
+                    MainLoop.ResumePhysics(true);
+                }
+                else
+                {
+                    MainLoop.WaitForPause();
+                }
+            }
+
+            if (InputHandler.KeyIsDown(Keys.F9))
+                IO.Serializer.LoadPreviousState();
+        }
+
+        private void GlControl_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            InputHandler.MouseUp(e.Button, e.Location);
+        }
 
         private void GlControl_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseDown(e.Button, e.Location);
+
+            var mousePos = e.Location;
+
+            FindClickedBody(e.Location);
 
             if (e.Button == MouseButtons.Right)
                 _lastPos = new Vector2(e.X, e.Y);
         }
 
 
+        private Tuple<Vector3, Vector3> MouseRay(int x, int y)
+        {
+            var modelMatrix = _camera.GetViewMatrix();
+            var projMatrix = _camera.GetProjectionMatrix();
+            var viewport = glControl.Size;
+
+            var start = new Vector3(x, y, 0.0f).UnProject(projMatrix, modelMatrix, viewport);
+            var end = new Vector3(x, y, 1.0f).UnProject(projMatrix, modelMatrix, viewport);
+            return new Tuple<Vector3, Vector3>(start, end);
+        }
+
+        private bool HitSphere(Body body, Vector3 start, Vector3 end)
+        {
+            var pos = body.PositionVec();
+            var cross = Vector3.Cross(Vector3.Subtract(pos, start), Vector3.Subtract(pos, end)).Length / Vector3.Subtract(end, start).Length;
+
+            if (cross < body.Size / 2f)
+                return true;
+
+            return false;
+        }
+
+        private void FindClickedBody(Point mousePos)
+        {
+            var mouseRays = MouseRay(mousePos.X, mousePos.Y);
+            bool hitFound = false;
+
+            foreach (var body in BodyManager.Bodies)
+            {
+                bool hit = HitSphere(body, mouseRays.Item1, mouseRays.Item2);
+                if (hit)
+                {
+                    _selectedUid = body.UID;
+                    hitFound = true;
+                    break;
+                }
+            }
+
+            if (!hitFound)
+                _selectedUid = -1;
+        }
+
         private void GlControl_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseMove(e.Location);
 
             const float sensitivity = 0.2f;
-
-            // var mouse = Mouse.GetState();
-
-            //    Console.WriteLine($@"M: {e.Location.ToString()}   {mouse.X},{mouse.Y}   Conn:{mouse.IsConnected}");
 
             if (e.Button == MouseButtons.Right)
             {
@@ -512,22 +572,17 @@ namespace NBodies.UI
                     _camera.Pitch -= deltaY * sensitivity; // reversed since y-coordinates range from bottom to top
                 }
 
-                //Cursor.Position = e.Location;
-                //    Console.WriteLine($@"{_camera.Yaw}  {_camera.Pitch}");
             }
-
-
-
         }
 
         private void GlControl_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseWheel(e.Delta);
 
-            if (e.Delta > 0)
-                _camera.Fov -= 1;
-            else
-                _camera.Fov -= -1;
+            //if (e.Delta > 0)
+            //    _camera.Fov -= 1;
+            //else
+            //    _camera.Fov -= -1;
             //  Console.WriteLine(_camera.Fov);
         }
 

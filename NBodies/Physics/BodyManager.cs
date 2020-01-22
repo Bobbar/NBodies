@@ -1149,6 +1149,11 @@ namespace NBodies.Physics
             return new PointF((float)body.PosX, (float)body.PosY);
         }
 
+        public static OpenTK.Vector3 PositionVec(this Body body)
+        {
+            return new Vector3(body.PosX, body.PosY, body.PosZ);
+        }
+
         public static void PrintInfo(this Body body)
         {
             MeshCell mesh = new MeshCell();
