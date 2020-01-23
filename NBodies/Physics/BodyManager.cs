@@ -122,6 +122,7 @@ namespace NBodies.Physics
             int position = 0;
             int newSize = 0;
             double totMass = 0;
+            //int maxUID = 0;
             List<Body> fractures = new List<Body>(0);
 
             // Make sure the preallocated store is large enough.
@@ -131,6 +132,22 @@ namespace NBodies.Physics
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
+
+                //int uid = body.UID;
+                //if (UIDBuckets.Count > uid)
+                //{
+                //    UIDBuckets[uid] = i;
+                //}
+                //else
+                //{
+                //    int diff = (uid - UIDBuckets.Count) + 1;
+                //    UIDBuckets.AddRange(new int[diff]);
+                //    UIDBuckets[uid] = i;
+                //}
+
+                //maxUID = Math.Max(maxUID, uid);
+
+
 
                 // Fracture large bodies in roche.
                 if (processRoche)
@@ -184,6 +201,7 @@ namespace NBodies.Physics
             }
 
             _totalMass = totMass;
+            //_currentUID = maxUID;
 
             // Resize the main body array and copy from the cull store.
             if (realloc)

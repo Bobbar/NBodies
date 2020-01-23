@@ -44,6 +44,10 @@ namespace NBodies.UI
         private bool _useD2D = true;
 
         private Camera _camera;
+        const float cameraSpeedFast = 200f;
+        const float cameraSpeedSlow = 10f;
+        private float cameraSpeed = cameraSpeedFast;
+
         private bool _firstMove = true;
         private Vector2 _lastPos;
         private int _vertexBufferObject;
@@ -153,7 +157,7 @@ namespace NBodies.UI
         {
             InitializeComponent();
 
-            _UIUpdateTimer.Interval = 100;//250;
+            _UIUpdateTimer.Interval = 250;
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
             //_UIUpdateTimer.Start();
 
@@ -275,13 +279,11 @@ namespace NBodies.UI
             _UIUpdateTimer.Start();
         }
 
-   
+
 
         private void GlControl_Paint(object sender, PaintEventArgs e)
         {
-            const float cameraSpeed = 200f;//1.5f;
             const float time = 0.016f;
-
 
             if (!InputHandler.KeyIsDown(Keys.ControlKey))
             {
@@ -298,10 +300,8 @@ namespace NBodies.UI
                 if (InputHandler.KeyIsDown(Keys.ShiftKey))
                     _camera.Position -= _camera.Up * cameraSpeed * time; // Down
             }
+         //   Console.WriteLine($@"Pos: {_camera.Position.ToString()}  Yaw: {_camera.Yaw}  Pitch: {_camera.Pitch} ");
 
-          
-
-            //   Console.WriteLine($@"{_camera.Position.ToString()}");
 
             // Render Bodies
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -309,7 +309,7 @@ namespace NBodies.UI
             GL.Enable(EnableCap.Blend);
             GL.Disable(EnableCap.CullFace);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
- 
+
 
             var bodies = BodyManager.Bodies;
 
@@ -349,32 +349,31 @@ namespace NBodies.UI
             GL.BindVertexArray(0);
             GL.BindVertexArray(_cubeVertArrayObject);
 
-            //GL.Enable(EnableCap.LineSmooth); // This is Optional 
-            //                                 //      GL.Enable(EnableCap.Normalize);  
-            //GL.Enable(EnableCap.RescaleNormal);
+            if (BodyManager.FollowSelected && _selectedUid != -1)
+            {
+                var bPos = BodyManager.FollowBody().PositionVec();
+                _shader.SetMatrix4("view", _camera.GetViewMatrix(bPos));
+            }
+            else
+            {
+                _shader.SetMatrix4("view", _camera.GetViewMatrix());
 
+            }
 
-            //GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-            //GL.Enable(EnableCap.PolygonOffsetFill);
-
-            //GL.Enable(EnableCap.Blend);
-            //GL.DepthMask(false);
-
-            
+            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
 
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
+                var bPos = body.PositionVec();
 
                 _shader.Use();
-                var meshModel = Matrix4.Identity;
-                meshModel *= Matrix4.CreateScale(body.Size / 2);
-                meshModel *= Matrix4.CreateTranslation(body.PosX, body.PosY, body.PosZ);
+                var bodyModel = Matrix4.Identity;
+                bodyModel *= Matrix4.CreateScale(body.Size / 2);
+                bodyModel *= Matrix4.CreateTranslation(bPos);
 
-                _shader.SetMatrix4("model", meshModel);
-                _shader.SetMatrix4("view", _camera.GetViewMatrix());
-                _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-              
+                _shader.SetMatrix4("model", bodyModel);
+
                 var bColor = Color.FromArgb(body.Color);
                 var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
                 // var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
@@ -384,8 +383,8 @@ namespace NBodies.UI
 
                 else
                     _shader.SetVector3("color", normColor);
-                
-                
+
+
                 //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
                 _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
                 GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
@@ -397,6 +396,8 @@ namespace NBodies.UI
 
             if (RenderBase.ShowMesh)
             {
+                _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
+
                 //  Draw mesh
                 if (BodyManager.Mesh.Length > 1)
                 {
@@ -415,28 +416,17 @@ namespace NBodies.UI
                         meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
 
                         _shader.SetMatrix4("model", meshModel);
-                        _shader.SetMatrix4("view", _camera.GetViewMatrix());
-                        _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-                        _shader.SetInt("isMesh", 1);
                         GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
                     }
                     GL.BindVertexArray(0);
                 }
             }
 
-
-
-
-
-
             glControl.SwapBuffers();
-
-
 
             // GL.BindVertexArray(0);
         }
 
-     
         private void GlControl_Resize(object sender, EventArgs e)
         {
             _camera.AspectRatio = glControl.ClientSize.Width / (float)glControl.ClientSize.Height;
@@ -452,6 +442,15 @@ namespace NBodies.UI
         private void GlControl_KeyDown(object sender, KeyEventArgs e)
         {
             InputHandler.KeyDown(e.KeyCode);
+
+            if (InputHandler.KeyIsDown(Keys.Q))
+            {
+                if (cameraSpeed == cameraSpeedFast)
+                    cameraSpeed = cameraSpeedSlow;
+                else
+                    cameraSpeed = cameraSpeedFast;
+            }
+
 
             if (InputHandler.KeyIsDown(Keys.F11))
             {
@@ -498,7 +497,8 @@ namespace NBodies.UI
 
             var mousePos = e.Location;
 
-            FindClickedBody(e.Location);
+            if (InputHandler.KeyIsDown(Keys.ControlKey))
+                FindClickedBody(e.Location);
 
             if (e.Button == MouseButtons.Right)
                 _lastPos = new Vector2(e.X, e.Y);
@@ -538,13 +538,24 @@ namespace NBodies.UI
                 if (hit)
                 {
                     _selectedUid = body.UID;
+                    BodyManager.FollowBodyUID = _selectedUid;
+                    BodyManager.FollowSelected = true;
                     hitFound = true;
+                    // Offset camera position to keep selected body in view.
+                   _camera.Position = _camera.Position - body.PositionVec();
                     break;
                 }
             }
 
             if (!hitFound)
+            {
+                // Restore the original position then unselect.
+                _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
+            
                 _selectedUid = -1;
+                BodyManager.FollowBodyUID = _selectedUid;
+                BodyManager.FollowSelected = false;
+            }
         }
 
         private void GlControl_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -635,11 +646,6 @@ namespace NBodies.UI
 
         private void _UIUpdateTimer_Tick(object sender, EventArgs e)
         {
-
-            //  MainLoop.Renderer.DrawBodiesAsync(BodyManager.Bodies, true, null);
-
-
-
             PauseButton.Checked = MainLoop.PausePhysics;
 
             if (PauseButton.Checked)
@@ -675,15 +681,15 @@ namespace NBodies.UI
         {
             if (_selectedUid != -1)
             {
-                var selectBody = BodyManager.BodyFromUID(_selectedUid);
+                //var selectBody = BodyManager.BodyFromUID(_selectedUid);
 
-                VeloXTextBox.Text = selectBody.VeloX.ToString();
-                VeloYTextBox.Text = selectBody.VeloY.ToString();
-                RadiusTextBox.Text = selectBody.Size.ToString();
-                MassTextBox.Text = selectBody.Mass.ToString();
-                FlagsTextBox.Text = selectBody.Flag.ToString();
+                //VeloXTextBox.Text = selectBody.VeloX.ToString();
+                //VeloYTextBox.Text = selectBody.VeloY.ToString();
+                //RadiusTextBox.Text = selectBody.Size.ToString();
+                //MassTextBox.Text = selectBody.Mass.ToString();
+                //FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                selectBody.PrintInfo();
+                //  selectBody.PrintInfo();
             }
         }
 

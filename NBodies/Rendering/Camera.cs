@@ -7,7 +7,7 @@ namespace NBodies.Rendering
     // It is important to note there are a few ways you could have set up this camera, for example
     // you could have also managed the player input inside the camera class, and a lot of the properties could have
     // been made into functions.
-    
+
     // TL;DR: This is just one of many ways in which we could have set up the camera
     // Check out the web version if you don't know why we are doing a specific thing or want to know more about the code
     public class Camera
@@ -29,16 +29,16 @@ namespace NBodies.Rendering
             Position = position;
             AspectRatio = aspectRatio;
         }
-        
+
         // The position of the camera
         public Vector3 Position { get; set; }
         // This is simply the aspect ratio of the viewport, used for the projection matrix
         public float AspectRatio { private get; set; }
-        
+
         public Vector3 Front => _front;
         public Vector3 Up => _up;
         public Vector3 Right => _right;
-        
+
         // We convert from degrees to radians as soon as the property is set to improve performance
         public float Pitch
         {
@@ -53,7 +53,7 @@ namespace NBodies.Rendering
                 UpdateVectors();
             }
         }
-        
+
         // We convert from degrees to radians as soon as the property is set to improve performance
         public float Yaw
         {
@@ -77,11 +77,19 @@ namespace NBodies.Rendering
                 _fov = MathHelper.DegreesToRadians(angle);
             }
         }
-        
+
         // Get the view matrix using the amazing LookAt function described more in depth on the web tutorials
         public Matrix4 GetViewMatrix()
         {
             return Matrix4.LookAt(Position, Position + _front, _up);
+        }
+
+        public Matrix4 GetViewMatrix(Vector3 lookAt)
+        {
+            var view = Matrix4.Identity;
+            view *= Matrix4.CreateTranslation(-lookAt);
+            view *= Matrix4.LookAt(Position, Position + _front, _up);
+            return view;
         }
 
         // Get the projection matrix using the same method we have used up until this point
@@ -94,13 +102,13 @@ namespace NBodies.Rendering
         private void UpdateVectors()
         {
             // First the front matrix is calculated using some basic trigonometry
-            _front.X = (float) Math.Cos(_pitch) * (float) Math.Cos(_yaw);
-            _front.Y = (float) Math.Sin(_pitch);
-            _front.Z = (float) Math.Cos(_pitch) * (float) Math.Sin(_yaw);
-            
+            _front.X = (float)Math.Cos(_pitch) * (float)Math.Cos(_yaw);
+            _front.Y = (float)Math.Sin(_pitch);
+            _front.Z = (float)Math.Cos(_pitch) * (float)Math.Sin(_yaw);
+
             // We need to make sure the vectors are all normalized, as otherwise we would get some funky results
             _front = Vector3.Normalize(_front);
-            
+
             // Calculate both the right and the up vector using cross product
             // Note that we are calculating the right from the global up, this behaviour might
             // not be what you need for all cameras so keep this in mind if you do not want a FPS camera

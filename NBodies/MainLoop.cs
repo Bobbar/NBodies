@@ -471,6 +471,8 @@ namespace NBodies
                                 BodyManager.Bodies = new Body[_bodiesBuffer.Length];
                             Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
 
+                            BodyManager.RebuildUIDIndex();
+
                             //var mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
                             //if (BodyManager.Mesh.Length != mesh.Length)
                             //    BodyManager.Mesh = new MeshCell[mesh.Length];
