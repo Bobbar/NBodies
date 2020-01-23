@@ -39,6 +39,10 @@ namespace NBodies.Rendering
         public Vector3 Up => _up;
         public Vector3 Right => _right;
 
+        public const float ZNear = 0.01f;
+        public const float ZFar = 50000f;
+
+
         // We convert from degrees to radians as soon as the property is set to improve performance
         public float Pitch
         {
@@ -95,7 +99,7 @@ namespace NBodies.Rendering
         // Get the projection matrix using the same method we have used up until this point
         public Matrix4 GetProjectionMatrix()
         {
-            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 0.01f, 50000f);
+            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, ZNear, ZFar);
         }
 
         // This function is going to update the direction vertices using some of the math learned in the web tutorials

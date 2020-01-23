@@ -105,54 +105,6 @@ namespace NBodies.UI
             -1.0f,  1.0f, -1.0f
         };
 
-
-        //private readonly float[] _cubeVerts =
-        //{
-        //     // Position
-        //    -0.5f, -0.5f, -0.5f, // Front face
-        //     0.5f, -0.5f, -0.5f,
-        //     0.5f,  0.5f, -0.5f,
-        //     0.5f,  0.5f, -0.5f,
-        //    -0.5f,  0.5f, -0.5f,
-        //    -0.5f, -0.5f, -0.5f,
-
-        //    -0.5f, -0.5f,  0.5f, // Back face
-        //     0.5f, -0.5f,  0.5f,
-        //     0.5f,  0.5f,  0.5f,
-        //     0.5f,  0.5f,  0.5f,
-        //    -0.5f,  0.5f,  0.5f,
-        //    -0.5f, -0.5f,  0.5f,
-
-        //    -0.5f,  0.5f,  0.5f, // Left face
-        //    -0.5f,  0.5f, -0.5f,
-        //    -0.5f, -0.5f, -0.5f,
-        //    -0.5f, -0.5f, -0.5f,
-        //    -0.5f, -0.5f,  0.5f,
-        //    -0.5f,  0.5f,  0.5f,
-
-        //     0.5f,  0.5f,  0.5f, // Right face
-        //     0.5f,  0.5f, -0.5f,
-        //     0.5f, -0.5f, -0.5f,
-        //     0.5f, -0.5f, -0.5f,
-        //     0.5f, -0.5f,  0.5f,
-        //     0.5f,  0.5f,  0.5f,
-
-        //    -0.5f, -0.5f, -0.5f, // Bottom face
-        //     0.5f, -0.5f, -0.5f,
-        //     0.5f, -0.5f,  0.5f,
-        //     0.5f, -0.5f,  0.5f,
-        //    -0.5f, -0.5f,  0.5f,
-        //    -0.5f, -0.5f, -0.5f,
-
-        //    -0.5f,  0.5f, -0.5f, // Top face
-        //     0.5f,  0.5f, -0.5f,
-        //     0.5f,  0.5f,  0.5f,
-        //     0.5f,  0.5f,  0.5f,
-        //    -0.5f,  0.5f,  0.5f,
-        //    -0.5f,  0.5f, -0.5f
-        //};
-
-
         public DisplayForm()
         {
             InitializeComponent();
@@ -213,7 +165,7 @@ namespace NBodies.UI
             //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             GL.ClearColor(Color.Black);
 
-            GL.Enable(EnableCap.DepthTest);
+            //GL.Enable(EnableCap.DepthTest);
 
             _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.frag");
             _shader.BindFragDataLocation(0, "FragColor");
@@ -309,7 +261,10 @@ namespace NBodies.UI
             GL.Enable(EnableCap.Blend);
             GL.Disable(EnableCap.CullFace);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.CullFace(CullFaceMode.Back);
 
+            GL.DepthFunc(DepthFunction.Never);
+            GL.Disable(EnableCap.DepthTest);
 
             var bodies = BodyManager.Bodies;
 
@@ -346,6 +301,7 @@ namespace NBodies.UI
             //GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
 
             //  Draw Body cubes.
+            _shader.Use();
             GL.BindVertexArray(0);
             GL.BindVertexArray(_cubeVertArrayObject);
 
@@ -361,17 +317,21 @@ namespace NBodies.UI
             }
 
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
+
+            ComputeZOrder(bodies);
+
 
             for (int i = 0; i < bodies.Length; i++)
             {
-                var body = bodies[i];
+                //var body = bodies[i];
+                var body = bodies[_orderIdx[i]];
+
                 var bPos = body.PositionVec();
 
-                _shader.Use();
                 var bodyModel = Matrix4.Identity;
                 bodyModel *= Matrix4.CreateScale(body.Size / 2);
                 bodyModel *= Matrix4.CreateTranslation(bPos);
-
                 _shader.SetMatrix4("model", bodyModel);
 
                 var bColor = Color.FromArgb(body.Color);
@@ -386,7 +346,7 @@ namespace NBodies.UI
 
 
                 //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
-                _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
+               
                 GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
             }
             GL.BindVertexArray(0);
@@ -396,6 +356,7 @@ namespace NBodies.UI
 
             if (RenderBase.ShowMesh)
             {
+                GL.Disable(EnableCap.Blend);
                 _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
 
                 //  Draw mesh
@@ -426,6 +387,34 @@ namespace NBodies.UI
 
             // GL.BindVertexArray(0);
         }
+
+        private float[] _orderDist = new float[0];
+        private int[] _orderIdx = new int[0];
+
+
+        private void ComputeZOrder(Body[] bodies)
+        {
+            if (_orderDist.Length != bodies.Length)
+            {
+                _orderDist = new float[bodies.Length];
+                _orderIdx = new int[bodies.Length];
+            }
+
+            for (int i = 0; i < bodies.Length; i++)
+            {
+                var body = bodies[i];
+                var pos = body.PositionVec();
+
+                float dist = Vector3.Distance(pos, _camera.Position);
+                _orderDist[i] = dist;
+                _orderIdx[i] = i;
+            }
+
+            Array.Sort(_orderDist, _orderIdx);
+            Array.Reverse(_orderIdx);
+
+        }
+
 
         private void GlControl_Resize(object sender, EventArgs e)
         {
@@ -1328,4 +1317,7 @@ namespace NBodies.UI
         public Vector3 Position;
         public Color4 Color;
     }
+
+
+
 }
