@@ -50,8 +50,6 @@ namespace NBodies.UI.KeyActions
             if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.A])
             {
                 RenderBase.BodyAlpha += wheelValue;
-                Console.WriteLine(RenderBase.BodyAlpha);
-
                 Overlay.Value = "Alpha: " + RenderBase.BodyAlpha;
             }
         }

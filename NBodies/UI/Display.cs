@@ -4,6 +4,7 @@ using NBodies.Rendering;
 using NBodies.UI.KeyActions;
 using NBodies.Helpers;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using OpenTK;
@@ -18,7 +19,7 @@ namespace NBodies.UI
     {
         private AddBodiesForm _addFormInstance = new AddBodiesForm();
         private PlaybackControlForm _playbackControl;
-
+        private Stopwatch _timer = new Stopwatch();
         private bool _shiftDown = false;
         private bool _ctrlDown = false;
         private bool _mouseRightDown = false;
@@ -59,51 +60,87 @@ namespace NBodies.UI
         private Shader _shader;
         private Vertex[] _verts = new Vertex[0];
 
+        // private readonly float[] _cubeVerts =
+        //{
+        //         // Position
+        //        -1.0f, -1.0f, -1.0f, // Front face
+        //         1.0f, -1.0f, -1.0f,
+        //         1.0f,  1.0f, -1.0f,
+        //         1.0f,  1.0f, -1.0f,
+        //        -1.0f,  1.0f, -1.0f,
+        //        -1.0f, -1.0f, -1.0f,
+
+        //        -1.0f, -1.0f,  1.0f, // Back face
+        //         1.0f, -1.0f,  1.0f,
+        //         1.0f,  1.0f,  1.0f,
+        //         1.0f,  1.0f,  1.0f,
+        //        -1.0f,  1.0f,  1.0f,
+        //        -1.0f, -1.0f,  1.0f,
+
+        //        -1.0f,  1.0f,  1.0f, // Left face
+        //        -1.0f,  1.0f, -1.0f,
+        //        -1.0f, -1.0f, -1.0f,
+        //        -1.0f, -1.0f, -1.0f,
+        //        -1.0f, -1.0f,  1.0f,
+        //        -1.0f,  1.0f,  1.0f,
+
+        //         1.0f,  1.0f,  1.0f, // Right face
+        //         1.0f,  1.0f, -1.0f,
+        //         1.0f, -1.0f, -1.0f,
+        //         1.0f, -1.0f, -1.0f,
+        //         1.0f, -1.0f,  1.0f,
+        //         1.0f,  1.0f,  1.0f,
+
+        //        -1.0f, -1.0f, -1.0f, // Bottom face
+        //         1.0f, -1.0f, -1.0f,
+        //         1.0f, -1.0f,  1.0f,
+        //         1.0f, -1.0f,  1.0f,
+        //        -1.0f, -1.0f,  1.0f,
+        //        -1.0f, -1.0f, -1.0f,
+
+        //        -1.0f,  1.0f, -1.0f, // Top face
+        //         1.0f,  1.0f, -1.0f,
+        //         1.0f,  1.0f,  1.0f,
+        //         1.0f,  1.0f,  1.0f,
+        //        -1.0f,  1.0f,  1.0f,
+        //        -1.0f,  1.0f, -1.0f
+        //    };
+
+
         private readonly float[] _cubeVerts =
-       {
-             // Position
-            -1.0f, -1.0f, -1.0f, // Front face
-             1.0f, -1.0f, -1.0f,
-             1.0f,  1.0f, -1.0f,
-             1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
+        {
+            // front
             -1.0f, -1.0f, -1.0f,
-
-            -1.0f, -1.0f,  1.0f, // Back face
-             1.0f, -1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-
-            -1.0f,  1.0f,  1.0f, // Left face
-            -1.0f,  1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-
-             1.0f,  1.0f,  1.0f, // Right face
-             1.0f,  1.0f, -1.0f,
              1.0f, -1.0f, -1.0f,
+             1.0f, 1.0f, -1.0f,
+             -1.0f, 1.0f, -1.0f,
+            // back
+             -1.0f, -1.0f, 1.0f,
+             1.0f, -1.0f, 1.0f,
+             1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+            // right
              1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-
-            -1.0f, -1.0f, -1.0f, // Bottom face
+             1.0f, -1.0f, 1.0f,
+             1.0f, 1.0f, 1.0f,
+             1.0f, 1.0f, -1.0f,
+            // left
+             -1.0f, -1.0f, -1.0f,
+             -1.0f, -1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, -1.0f,
+            // top
+             -1.0f, 1.0f, -1.0f,
+             1.0f, 1.0f, -1.0f,
+             1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+            // bottom
+             -1.0f, -1.0f, -1.0f,
              1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f,  1.0f,
-             1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f, -1.0f,
-
-            -1.0f,  1.0f, -1.0f, // Top face
-             1.0f,  1.0f, -1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f, -1.0f
+             1.0f, -1.0f, 1.0f,
+             -1.0f, -1.0f, 1.0f
         };
+
 
         public DisplayForm()
         {
@@ -252,7 +289,9 @@ namespace NBodies.UI
                 if (InputHandler.KeyIsDown(Keys.ShiftKey))
                     _camera.Position -= _camera.Up * cameraSpeed * time; // Down
             }
-         //   Console.WriteLine($@"Pos: {_camera.Position.ToString()}  Yaw: {_camera.Yaw}  Pitch: {_camera.Pitch} ");
+            //   Console.WriteLine($@"Pos: {_camera.Position.ToString()}  Yaw: {_camera.Yaw}  Pitch: {_camera.Pitch} ");
+
+            //  _timer.Restart();
 
 
             // Render Bodies
@@ -265,6 +304,9 @@ namespace NBodies.UI
 
             GL.DepthFunc(DepthFunction.Never);
             GL.Disable(EnableCap.DepthTest);
+
+            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+
 
             var bodies = BodyManager.Bodies;
 
@@ -284,8 +326,6 @@ namespace NBodies.UI
 
             //}
 
-
-
             //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
             //GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
             //GL.BindVertexArray(_vertexArrayObject);
@@ -296,8 +336,6 @@ namespace NBodies.UI
             //_shader.SetMatrix4("view", _camera.GetViewMatrix());
             //_shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
             //_shader.SetInt("isMesh", 0);
-
-
             //GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
 
             //  Draw Body cubes.
@@ -321,12 +359,10 @@ namespace NBodies.UI
 
             ComputeZOrder(bodies);
 
-
             for (int i = 0; i < bodies.Length; i++)
             {
                 //var body = bodies[i];
                 var body = bodies[_orderIdx[i]];
-
                 var bPos = body.PositionVec();
 
                 var bodyModel = Matrix4.Identity;
@@ -337,53 +373,51 @@ namespace NBodies.UI
                 var bColor = Color.FromArgb(body.Color);
                 var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
                 // var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
+                //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
 
                 if (body.UID == _selectedUid)
-                    _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
+                    _shader.SetVector3("color", new Vector3(0f, 1.0f, 0f));
 
                 else
                     _shader.SetVector3("color", normColor);
 
-
-                //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
-               
-                GL.DrawArrays(PrimitiveType.Triangles, 0, _cubeVerts.Length);
+                GL.DrawArrays(PrimitiveType.Quads, 0, _cubeVerts.Length);
             }
+
             GL.BindVertexArray(0);
 
-            //GL.Disable(EnableCap.Blend);
-            //GL.DepthMask(true);
 
-            if (RenderBase.ShowMesh)
+            //  Draw mesh
+            if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
             {
-                GL.Disable(EnableCap.Blend);
+                GL.BindVertexArray(0);
+                GL.BindVertexArray(_cubeVertArrayObject);
+
+                GL.Disable(EnableCap.CullFace);
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+
                 _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
+                _shader.SetFloat("alpha", 0.4f);
 
-                //  Draw mesh
-                if (BodyManager.Mesh.Length > 1)
+                for (int m = 0; m < BodyManager.Mesh.Length; m++)
                 {
-                    GL.BindVertexArray(0);
-                    GL.BindVertexArray(_cubeVertArrayObject);
+                    var mesh = BodyManager.Mesh[m];
 
-                    //   GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                    var meshModel = Matrix4.Identity;
+                    meshModel *= Matrix4.CreateScale(mesh.Size / 2);
+                    meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
 
-                    for (int m = 0; m < BodyManager.Mesh.Length; m++)
-                    {
-                        var mesh = BodyManager.Mesh[m];
-
-                        _shader.Use();
-                        var meshModel = Matrix4.Identity;
-                        meshModel *= Matrix4.CreateScale(mesh.Size / 2);
-                        meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
-
-                        _shader.SetMatrix4("model", meshModel);
-                        GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
-                    }
-                    GL.BindVertexArray(0);
+                    _shader.SetMatrix4("model", meshModel);
+                    //   GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
+                    GL.DrawArrays(PrimitiveType.Quads, 0, _cubeVerts.Length);
                 }
+
+                GL.BindVertexArray(0);
             }
 
             glControl.SwapBuffers();
+
+            //  _timer.Print("Draw");
 
             // GL.BindVertexArray(0);
         }
@@ -531,7 +565,7 @@ namespace NBodies.UI
                     BodyManager.FollowSelected = true;
                     hitFound = true;
                     // Offset camera position to keep selected body in view.
-                   _camera.Position = _camera.Position - body.PositionVec();
+                    _camera.Position = _camera.Position - body.PositionVec();
                     break;
                 }
             }
@@ -540,7 +574,7 @@ namespace NBodies.UI
             {
                 // Restore the original position then unselect.
                 _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
-            
+
                 _selectedUid = -1;
                 BodyManager.FollowBodyUID = _selectedUid;
                 BodyManager.FollowSelected = false;
