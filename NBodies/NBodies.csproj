@@ -272,6 +272,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <None Include="Rendering\Shaders\lighting.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Rendering\Shaders\shader.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

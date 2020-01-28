@@ -124,6 +124,9 @@ namespace NBodies.Rendering
             if (code != (int) All.True)
             {
                 // We can use `GL.GetProgramInfoLog(program)` to get information about the error.
+                var log = GL.GetProgramInfoLog(program);
+                Console.WriteLine(log);
+
                 throw new Exception($"Error occurred whilst linking Program({program})");
             }
         }

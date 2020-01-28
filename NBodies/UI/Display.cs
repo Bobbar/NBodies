@@ -55,6 +55,9 @@ namespace NBodies.UI
         private int _cubeVertBufferObject;
         private int _cubeVertArrayObject;
 
+        private int _normVertBufferObject;
+        private int _normVertArrayObject;
+
         private int _offsetBufferObject;
         private int _offsetArrayObject;
 
@@ -64,60 +67,106 @@ namespace NBodies.UI
         private Vector4[] _offsets = new Vector4[0];
         private Vector3[] _colors = new Vector3[0];
 
+
+        private int _normAttrib;
         private int _posAttrib;
         private int _offsetAttrib;
         private int _colorAttrib;
 
 
         private Shader _shader;
+        //  private Shader _shader;
 
+
+        private float[] _orderDist = new float[0];
+        private int[] _orderIdx = new int[0];
+
+
+        // Triangle based cube.
         // private readonly float[] _cubeVerts =
         //{
-        //         // Position
-        //        -1.0f, -1.0f, -1.0f, // Front face
-        //         1.0f, -1.0f, -1.0f,
-        //         1.0f,  1.0f, -1.0f,
-        //         1.0f,  1.0f, -1.0f,
-        //        -1.0f,  1.0f, -1.0f,
-        //        -1.0f, -1.0f, -1.0f,
+        //          // Position
+        //         -1.0f, -1.0f, -1.0f, // Front face
+        //          1.0f, -1.0f, -1.0f,
+        //          1.0f,  1.0f, -1.0f,
+        //          1.0f,  1.0f, -1.0f,
+        //         -1.0f,  1.0f, -1.0f,
+        //         -1.0f, -1.0f, -1.0f,
 
-        //        -1.0f, -1.0f,  1.0f, // Back face
-        //         1.0f, -1.0f,  1.0f,
-        //         1.0f,  1.0f,  1.0f,
-        //         1.0f,  1.0f,  1.0f,
-        //        -1.0f,  1.0f,  1.0f,
-        //        -1.0f, -1.0f,  1.0f,
+        //         -1.0f, -1.0f,  1.0f, // Back face
+        //          1.0f, -1.0f,  1.0f,
+        //          1.0f,  1.0f,  1.0f,
+        //          1.0f,  1.0f,  1.0f,
+        //         -1.0f,  1.0f,  1.0f,
+        //         -1.0f, -1.0f,  1.0f,
 
-        //        -1.0f,  1.0f,  1.0f, // Left face
-        //        -1.0f,  1.0f, -1.0f,
-        //        -1.0f, -1.0f, -1.0f,
-        //        -1.0f, -1.0f, -1.0f,
-        //        -1.0f, -1.0f,  1.0f,
-        //        -1.0f,  1.0f,  1.0f,
+        //         -1.0f,  1.0f,  1.0f, // Left face
+        //         -1.0f,  1.0f, -1.0f,
+        //         -1.0f, -1.0f, -1.0f,
+        //         -1.0f, -1.0f, -1.0f,
+        //         -1.0f, -1.0f,  1.0f,
+        //         -1.0f,  1.0f,  1.0f,
 
-        //         1.0f,  1.0f,  1.0f, // Right face
-        //         1.0f,  1.0f, -1.0f,
-        //         1.0f, -1.0f, -1.0f,
-        //         1.0f, -1.0f, -1.0f,
-        //         1.0f, -1.0f,  1.0f,
-        //         1.0f,  1.0f,  1.0f,
+        //          1.0f,  1.0f,  1.0f, // Right face
+        //          1.0f,  1.0f, -1.0f,
+        //          1.0f, -1.0f, -1.0f,
+        //          1.0f, -1.0f, -1.0f,
+        //          1.0f, -1.0f,  1.0f,
+        //          1.0f,  1.0f,  1.0f,
 
-        //        -1.0f, -1.0f, -1.0f, // Bottom face
-        //         1.0f, -1.0f, -1.0f,
-        //         1.0f, -1.0f,  1.0f,
-        //         1.0f, -1.0f,  1.0f,
-        //        -1.0f, -1.0f,  1.0f,
-        //        -1.0f, -1.0f, -1.0f,
+        //         -1.0f, -1.0f, -1.0f, // Bottom face
+        //          1.0f, -1.0f, -1.0f,
+        //          1.0f, -1.0f,  1.0f,
+        //          1.0f, -1.0f,  1.0f,
+        //         -1.0f, -1.0f,  1.0f,
+        //         -1.0f, -1.0f, -1.0f,
 
-        //        -1.0f,  1.0f, -1.0f, // Top face
-        //         1.0f,  1.0f, -1.0f,
-        //         1.0f,  1.0f,  1.0f,
-        //         1.0f,  1.0f,  1.0f,
-        //        -1.0f,  1.0f,  1.0f,
-        //        -1.0f,  1.0f, -1.0f
-        //    };
+        //         -1.0f,  1.0f, -1.0f, // Top face
+        //          1.0f,  1.0f, -1.0f,
+        //          1.0f,  1.0f,  1.0f,
+        //          1.0f,  1.0f,  1.0f,
+        //         -1.0f,  1.0f,  1.0f,
+        //         -1.0f,  1.0f, -1.0f
+        //     };
+
+        // Triangle based cube normals.
+        //      private readonly float[] _normalVerts =
+        //{
+        //          // front
+        //          0.0f, 0.0f, -1.0f,
+        //          0.0f, 0.0f, -1.0f,
+        //          0.0f, 0.0f, -1.0f,
+        //          0.0f, 0.0f, -1.0f, 
+        //          // back
+        //          0.0f, 0.0f, 1.0f,
+        //          0.0f, 0.0f, 1.0f,
+        //          0.0f, 0.0f, 1.0f,
+        //          0.0f, 0.0f, 1.0f, 
+        //            // left
+        //          -1.0f, 0.0f, 0.0f,
+        //          -1.0f, 0.0f, 0.0f,
+        //          -1.0f, 0.0f, 0.0f,
+        //          -1.0f, 0.0f, 0.0f, 
+        //          // right
+        //          1.0f, 0.0f, 0.0f,
+        //          1.0f, 0.0f, 0.0f,
+        //          1.0f, 0.0f, 0.0f,
+        //          1.0f, 0.0f, 0.0f, 
+        //        // bottom
+        //          0.0f, -1.0f, 0.0f,
+        //          0.0f, -1.0f, 0.0f,
+        //          0.0f, -1.0f, 0.0f,
+        //          0.0f, -1.0f, 0.0f,
+        //          // top
+        //          0.0f, 1.0f, 0.0f,
+        //          0.0f, 1.0f, 0.0f,
+        //          0.0f, 1.0f, 0.0f,
+        //          0.0f, 1.0f, 0.0f,
+
+        //      };
 
 
+        // Quad based cube.
         private readonly float[] _cubeVerts =
         {
             // front
@@ -151,6 +200,42 @@ namespace NBodies.UI
              1.0f, -1.0f, 1.0f,
              -1.0f, -1.0f, 1.0f
         };
+
+        // Quad based cube normals.
+        private readonly float[] _normalVerts =
+        {
+            // front
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f, 
+            // back
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 
+            // right
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f, 
+            // left
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f, 
+            // top
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            // bottom
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+        };
+
 
         public DisplayForm()
         {
@@ -210,11 +295,10 @@ namespace NBodies.UI
             GL.PointSize(5.0f);
             GL.ClearColor(Color.Black);
 
-            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.frag");
-            _shader.Use();
 
+            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/lighting.frag");
 
-
+            // Cube instance buffers.
             _cubeVertBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
@@ -226,8 +310,19 @@ namespace NBodies.UI
             GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.BindVertexArray(0);
 
+            // Normals instance buffers.
+            _normVertBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _normalVerts.Length * sizeof(float), _normalVerts, BufferUsageHint.StaticDraw);
 
+            _normVertArrayObject = GL.GenVertexArray();
+            GL.BindVertexArray(_normVertArrayObject);
+            _normAttrib = _shader.GetAttribLocation("aNormal");
+            GL.EnableVertexAttribArray(_normAttrib);
+            GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.BindVertexArray(0);
 
+            // Body offset buffers.
             _offsetBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
@@ -239,8 +334,7 @@ namespace NBodies.UI
             GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
             GL.BindVertexArray(0);
 
-
-
+            // Body color buffers.
             _colorBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
@@ -253,7 +347,7 @@ namespace NBodies.UI
             GL.BindVertexArray(0);
 
 
-
+            GL.VertexAttribDivisor(_normAttrib, 0);
             GL.VertexAttribDivisor(_posAttrib, 0);
             GL.VertexAttribDivisor(_offsetAttrib, 1);
             GL.VertexAttribDivisor(_colorAttrib, 1);
@@ -288,8 +382,6 @@ namespace NBodies.UI
             _UIUpdateTimer.Start();
         }
 
-
-
         private void GlControl_Paint(object sender, PaintEventArgs e)
         {
             const float time = 0.016f;
@@ -311,20 +403,16 @@ namespace NBodies.UI
             }
             //   Console.WriteLine($@"Pos: {_camera.Position.ToString()}  Yaw: {_camera.Yaw}  Pitch: {_camera.Pitch} ");
 
-        //     _timer.Restart();
+            //     _timer.Restart();
 
 
             // Render Bodies
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.LineSmooth);
             GL.Enable(EnableCap.Blend);
             GL.Disable(EnableCap.CullFace);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.CullFace(CullFaceMode.Back);
-
-            GL.DepthFunc(DepthFunction.Never);
-            GL.Disable(EnableCap.DepthTest);
-
             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
             var bodies = BodyManager.Bodies;
@@ -333,26 +421,7 @@ namespace NBodies.UI
                 return;
 
             //  Draw Body cubes.
-            _shader.Use();
-            GL.BindVertexArray(0);
-
-            if (BodyManager.FollowSelected && _selectedUid != -1)
-            {
-                var bPos = BodyManager.FollowBody().PositionVec();
-                _shader.SetMatrix4("view", _camera.GetViewMatrix(bPos));
-            }
-            else
-            {
-                _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            }
-
-
-            var bodyModel = Matrix4.Identity;
-            _shader.SetMatrix4("model", bodyModel);
-            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
-
-            ComputeZOrder(bodies);
+            var zOrder = ComputeZOrder(bodies);
 
             if (_offsets.Length != bodies.Length)
             {
@@ -365,10 +434,11 @@ namespace NBodies.UI
                 GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
             }
 
-
             GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
             GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
 
+            // Update body position offsets and colors via mem map.
             unsafe
             {
                 var offsetPtr = GL.MapNamedBuffer(_offsetArrayObject, BufferAccess.ReadWrite);
@@ -379,8 +449,8 @@ namespace NBodies.UI
 
                 for (int i = 0; i < bodies.Length; i++)
                 {
-                    //var body = bodies[i];
-                    var body = bodies[_orderIdx[i]];
+                    // var body = bodies[i];
+                    var body = bodies[zOrder[i]];
                     var bPos = body.PositionVec();
 
                     var bColor = Color.FromArgb(body.Color);
@@ -414,14 +484,44 @@ namespace NBodies.UI
             GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
             GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
 
+            GL.EnableVertexAttribArray(_normAttrib);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
+            GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+
+            _shader.Use();
+
+            var lightPos = _camera.Position;
+
+            _shader.SetMatrix4("model", Matrix4.Identity);
+
+            if (BodyManager.FollowSelected && _selectedUid != -1)
+            {
+                var bPos = BodyManager.FollowBody().PositionVec();
+                _shader.SetMatrix4("view", _camera.GetViewMatrix(bPos));
+                lightPos = Vector3.Add(lightPos, bPos);
+            }
+            else
+            {
+                _shader.SetMatrix4("view", _camera.GetViewMatrix());
+            }
+
+            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
+            _shader.SetVector3("lightPos", lightPos);
+            _shader.SetVector3("viewPos", _camera.Position);
+            _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
+            _shader.SetInt("noLight", 0);
+
             GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
 
 
-         //   GL.BindVertexArray(0);
+
 
             //  Draw mesh
             if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
             {
+                _shader.SetInt("noLight", 1);
+
                 var mesh = BodyManager.Mesh;
 
                 if (_offsets.Length < mesh.Length)
@@ -464,22 +564,6 @@ namespace NBodies.UI
 
                 }
 
-                //GL.EnableVertexAttribArray(_posAttrib);
-                //GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
-                //GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-
-                //GL.EnableVertexAttribArray(_colorAttrib);
-                //GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-                //GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-
-                //GL.EnableVertexAttribArray(_offsetAttrib);
-                //GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                //GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
-
-                //GL.VertexAttribDivisor(_posAttrib, 0);
-                //GL.VertexAttribDivisor(_offsetAttrib, 1);
-                //GL.VertexAttribDivisor(_colorAttrib, 1);
-
                 GL.Disable(EnableCap.CullFace);
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
 
@@ -488,15 +572,11 @@ namespace NBodies.UI
 
             glControl.SwapBuffers();
 
-         //    _timer.Print("Draw");
+            //    _timer.Print("Draw");
 
         }
 
-        private float[] _orderDist = new float[0];
-        private int[] _orderIdx = new int[0];
-
-
-        private void ComputeZOrder(Body[] bodies)
+        private int[] ComputeZOrder(Body[] bodies)
         {
             if (_orderDist.Length != bodies.Length)
             {
@@ -517,8 +597,8 @@ namespace NBodies.UI
             Array.Sort(_orderDist, _orderIdx);
             Array.Reverse(_orderIdx);
 
+            return _orderIdx;
         }
-
 
         private void GlControl_Resize(object sender, EventArgs e)
         {

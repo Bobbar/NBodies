@@ -39,7 +39,8 @@ namespace NBodies.Rendering
         public Vector3 Up => _up;
         public Vector3 Right => _right;
 
-        public const float ZNear = 0.01f;
+        // Setting Z-Near to small will cause z-depth artifacts.
+        public const float ZNear = 2.0f; //0.01f;
         public const float ZFar = 50000f;
 
 
