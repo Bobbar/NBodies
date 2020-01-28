@@ -96,6 +96,11 @@ namespace NBodies.Rendering
             _targetControl = targetControl;
             InitGraphics();
 
+            SetStyleScales();
+        }
+
+        public static void SetStyleScales()
+        {
             int styleCount = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max() + 1;
             _styleScales = new float[styleCount];
             for (int i = 0; i < _styleScales.Length; i++)

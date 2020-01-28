@@ -256,6 +256,7 @@ namespace NBodies.UI
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
+            RenderBase.SetStyleScales();
             ViewportOffsets.ScreenCenter = new PointF(this.RenderBox.Width / 2f, this.RenderBox.Height / 2f);
             ViewportOffsets.ScaleOffset = ViewportHelpers.FieldPointToScreenNoOffset(ViewportOffsets.ScreenCenter);
             MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
@@ -452,8 +453,8 @@ namespace NBodies.UI
                     // var body = bodies[i];
                     var body = bodies[zOrder[i]];
                     var bPos = body.PositionVec();
-
-                    var bColor = Color.FromArgb(body.Color);
+                    var bColor = GetStyleColor(body, i);
+                    //var bColor = Color.FromArgb(body.Color);
                     var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
                     var offset = new Vector4(bPos, body.Size / 2);
 
@@ -508,7 +509,9 @@ namespace NBodies.UI
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
             _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
             _shader.SetVector3("lightPos", lightPos);
-            _shader.SetVector3("viewPos", _camera.Position);
+            //_shader.SetVector3("viewPos", _camera.Position);
+            _shader.SetVector3("viewPos", lightPos);
+
             _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
             _shader.SetInt("noLight", 0);
 
@@ -598,6 +601,64 @@ namespace NBodies.UI
             Array.Reverse(_orderIdx);
 
             return _orderIdx;
+        }
+
+        private Color GetStyleColor(Body body, int index)
+        {
+            Color bodyColor = Color.White;
+
+            switch (RenderBase.DisplayStyle)
+            {
+                case DisplayStyle.Normal:
+                    bodyColor = Color.FromArgb(RenderBase.BodyAlpha, Color.FromArgb(body.Color));
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.Pressure:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.Density:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Density / body.Mass, true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.Velocity:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.AggregateSpeed(), true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.Index:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.SpatialOrder:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.Force:
+                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, (body.ForceTot / body.Mass), true);
+                    GL.ClearColor(Color.Black);
+
+                    break;
+
+                case DisplayStyle.HighContrast:
+                    bodyColor = Color.Black;
+                    GL.ClearColor(Color.White);
+
+                    break;
+            }
+
+            return bodyColor;
         }
 
         private void GlControl_Resize(object sender, EventArgs e)

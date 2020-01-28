@@ -15,17 +15,18 @@ namespace NBodies.UI.KeyActions
         {
             AddKey(Keys.S);
             AddKey(Keys.ShiftKey);
+            AddKey(Keys.ControlKey);
 
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
+            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
             {
                 Overlay.Value = "Display: " + RenderBase.DisplayStyle.ToString();
                 Overlay.Show();
             }
-            else if (!KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
+            else if (!KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
             {
                 Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
                 Overlay.Show();
@@ -54,7 +55,7 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.S])
+            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
             {
                 if (KeyDownStates[Keys.ShiftKey])
                 {
