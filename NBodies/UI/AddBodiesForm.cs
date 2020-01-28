@@ -241,7 +241,10 @@ namespace NBodies
                     color = matter.Color;
                 }
 
-                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
+                float rndZ = Numbers.GetRandomFloat(-100, 100);
+                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, rndZ, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
+
+                //newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
             }
 
             var bodyArr = newBodies.ToArray();

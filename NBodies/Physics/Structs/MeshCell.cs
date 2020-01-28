@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OpenTK;
 
 namespace NBodies.Physics
 {
@@ -54,5 +55,11 @@ namespace NBodies.Physics
                 return (IdxZ << exp) + (Size * 0.5f);
             }
         }
+
+        public Vector3 PositionVec()
+        {
+            return new Vector3(LocX, LocY, LocZ);
+        }
+
     }
 }

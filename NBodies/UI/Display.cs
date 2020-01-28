@@ -51,14 +51,25 @@ namespace NBodies.UI
 
         private bool _firstMove = true;
         private Vector2 _lastPos;
-        private int _vertexBufferObject;
-        private int _colorBufferObject;
+
         private int _cubeVertBufferObject;
         private int _cubeVertArrayObject;
 
-        private int _vertexArrayObject;
+        private int _offsetBufferObject;
+        private int _offsetArrayObject;
+
+        private int _colorBufferObject;
+        private int _colorArrayObject;
+
+        private Vector4[] _offsets = new Vector4[0];
+        private Vector3[] _colors = new Vector3[0];
+
+        private int _posAttrib;
+        private int _offsetAttrib;
+        private int _colorAttrib;
+
+
         private Shader _shader;
-        private Vertex[] _verts = new Vertex[0];
 
         // private readonly float[] _cubeVerts =
         //{
@@ -141,7 +152,6 @@ namespace NBodies.UI
              -1.0f, -1.0f, 1.0f
         };
 
-
         public DisplayForm()
         {
             InitializeComponent();
@@ -198,31 +208,10 @@ namespace NBodies.UI
 
 
             GL.PointSize(5.0f);
-
-            //GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             GL.ClearColor(Color.Black);
 
-            //GL.Enable(EnableCap.DepthTest);
-
             _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.frag");
-            _shader.BindFragDataLocation(0, "FragColor");
-            _shader.BindAttribLocation(0, "aPosition");
-            _shader.BindAttribLocation(1, "aObjColor");
             _shader.Use();
-
-            //_vertexBufferObject = GL.GenBuffer();
-            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            //GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * sizeof(float), _verts, BufferUsageHint.StaticDraw);
-
-            //_vertexArrayObject = GL.GenVertexArray();
-            //GL.BindVertexArray(_vertexArrayObject);
-            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-
-            //GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 28, 0);
-            //GL.EnableVertexAttribArray(0);
-            //GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
-            //GL.EnableVertexAttribArray(1);
-            //GL.BindVertexArray(0);
 
 
 
@@ -232,11 +221,42 @@ namespace NBodies.UI
 
             _cubeVertArrayObject = GL.GenVertexArray();
             GL.BindVertexArray(_cubeVertArrayObject);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.EnableVertexAttribArray(0);
-            //GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 28, 12);
-            //GL.EnableVertexAttribArray(1);
+            _posAttrib = _shader.GetAttribLocation("aPosition");
+            GL.EnableVertexAttribArray(_posAttrib);
+            GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.BindVertexArray(0);
+
+
+
+            _offsetBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
+
+            _offsetArrayObject = GL.GenVertexArray();
+            GL.BindVertexArray(_offsetArrayObject);
+            _offsetAttrib = _shader.GetAttribLocation("aOffset");
+            GL.EnableVertexAttribArray(_offsetAttrib);
+            GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
+            GL.BindVertexArray(0);
+
+
+
+            _colorBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+
+            _colorArrayObject = GL.GenVertexArray();
+            GL.BindVertexArray(_colorArrayObject);
+            _colorAttrib = _shader.GetAttribLocation("aObjColor");
+            GL.EnableVertexAttribArray(_colorAttrib);
+            GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+            GL.BindVertexArray(0);
+
+
+
+            GL.VertexAttribDivisor(_posAttrib, 0);
+            GL.VertexAttribDivisor(_offsetAttrib, 1);
+            GL.VertexAttribDivisor(_colorAttrib, 1);
 
 
             RenderBase.OverLays.Add(_distLine);
@@ -291,7 +311,7 @@ namespace NBodies.UI
             }
             //   Console.WriteLine($@"Pos: {_camera.Position.ToString()}  Yaw: {_camera.Yaw}  Pitch: {_camera.Pitch} ");
 
-            //  _timer.Restart();
+        //     _timer.Restart();
 
 
             // Render Bodies
@@ -307,41 +327,14 @@ namespace NBodies.UI
 
             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
-
             var bodies = BodyManager.Bodies;
 
             if (bodies.Length == 0)
                 return;
 
-            //_verts = new Vertex[bodies.Length];
-
-            //for (int i = 0; i < bodies.Length; i++)
-            //{
-            //    var b = bodies[i];
-            //    var bColor = Color.FromArgb(bodies[i].Color);
-
-            //    _verts[i].Position = new Vector3(b.PosX, b.PosY, b.PosZ);
-            //    //_verts[i].Color = new Color4(bColor.R, bColor.G, bColor.B, 200);
-            //    _verts[i].Color = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, i, true);
-
-            //}
-
-            //GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            //GL.BufferData(BufferTarget.ArrayBuffer, _verts.Length * 28, _verts, BufferUsageHint.StaticDraw);
-            //GL.BindVertexArray(_vertexArrayObject);
-
-            //_shader.Use();
-            //var model = Matrix4.Identity;// * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
-            //_shader.SetMatrix4("model", model);
-            //_shader.SetMatrix4("view", _camera.GetViewMatrix());
-            //_shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            //_shader.SetInt("isMesh", 0);
-            //GL.DrawArrays(PrimitiveType.Points, 0, _verts.Length);
-
             //  Draw Body cubes.
             _shader.Use();
             GL.BindVertexArray(0);
-            GL.BindVertexArray(_cubeVertArrayObject);
 
             if (BodyManager.FollowSelected && _selectedUid != -1)
             {
@@ -351,75 +344,152 @@ namespace NBodies.UI
             else
             {
                 _shader.SetMatrix4("view", _camera.GetViewMatrix());
-
             }
 
+
+            var bodyModel = Matrix4.Identity;
+            _shader.SetMatrix4("model", bodyModel);
             _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
             _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
 
             ComputeZOrder(bodies);
 
-            for (int i = 0; i < bodies.Length; i++)
+            if (_offsets.Length != bodies.Length)
             {
-                //var body = bodies[i];
-                var body = bodies[_orderIdx[i]];
-                var bPos = body.PositionVec();
+                _offsets = new Vector4[bodies.Length];
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+                GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
 
-                var bodyModel = Matrix4.Identity;
-                bodyModel *= Matrix4.CreateScale(body.Size / 2);
-                bodyModel *= Matrix4.CreateTranslation(bPos);
-                _shader.SetMatrix4("model", bodyModel);
-
-                var bColor = Color.FromArgb(body.Color);
-                var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
-                // var styleColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
-                //_shader.SetVector3("color", new Vector3(styleColor.R / 255f, styleColor.G / 255f, styleColor.B / 255f));
-
-                if (body.UID == _selectedUid)
-                    _shader.SetVector3("color", new Vector3(0f, 1.0f, 0f));
-
-                else
-                    _shader.SetVector3("color", normColor);
-
-                GL.DrawArrays(PrimitiveType.Quads, 0, _cubeVerts.Length);
+                _colors = new Vector3[bodies.Length];
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+                GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
             }
 
-            GL.BindVertexArray(0);
 
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+
+            unsafe
+            {
+                var offsetPtr = GL.MapNamedBuffer(_offsetArrayObject, BufferAccess.ReadWrite);
+                var offNativePtr = (Vector4*)offsetPtr.ToPointer();
+
+                var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
+                var colorNativePtr = (Vector3*)colorPtr.ToPointer();
+
+                for (int i = 0; i < bodies.Length; i++)
+                {
+                    //var body = bodies[i];
+                    var body = bodies[_orderIdx[i]];
+                    var bPos = body.PositionVec();
+
+                    var bColor = Color.FromArgb(body.Color);
+                    var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                    var offset = new Vector4(bPos, body.Size / 2);
+
+                    offNativePtr[i] = offset;
+
+                    if (body.UID == _selectedUid)
+                        colorNativePtr[i] = new Vector3(0f, 1.0f, 0f);
+
+                    else
+                        colorNativePtr[i] = normColor;
+
+                }
+
+                GL.UnmapNamedBuffer(_offsetArrayObject);
+                GL.UnmapNamedBuffer(_colorBufferObject);
+
+            }
+
+            GL.EnableVertexAttribArray(_posAttrib);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
+            GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+
+            GL.EnableVertexAttribArray(_colorAttrib);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+            GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+
+            GL.EnableVertexAttribArray(_offsetAttrib);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+            GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
+
+            GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
+
+
+         //   GL.BindVertexArray(0);
 
             //  Draw mesh
             if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
             {
-                GL.BindVertexArray(0);
-                GL.BindVertexArray(_cubeVertArrayObject);
+                var mesh = BodyManager.Mesh;
+
+                if (_offsets.Length < mesh.Length)
+                {
+                    _offsets = new Vector4[mesh.Length];
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+                    GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
+
+                    _colors = new Vector3[mesh.Length];
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+                    GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+                }
+
+
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+
+                unsafe
+                {
+                    var offsetPtr = GL.MapNamedBuffer(_offsetArrayObject, BufferAccess.ReadWrite);
+                    var offNativePtr = (Vector4*)offsetPtr.ToPointer();
+
+                    var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
+                    var colorNativePtr = (Vector3*)colorPtr.ToPointer();
+
+                    for (int i = 0; i < mesh.Length; i++)
+                    {
+                        var cell = mesh[i];
+                        var pos = cell.PositionVec();
+                        var color = Color.Red;
+                        var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
+                        var offset = new Vector4(pos, cell.Size / 2);
+
+                        offNativePtr[i] = offset;
+                        colorNativePtr[i] = normColor;
+                    }
+
+                    GL.UnmapNamedBuffer(_offsetArrayObject);
+                    GL.UnmapNamedBuffer(_colorBufferObject);
+
+                }
+
+                //GL.EnableVertexAttribArray(_posAttrib);
+                //GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
+                //GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+
+                //GL.EnableVertexAttribArray(_colorAttrib);
+                //GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+                //GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
+
+                //GL.EnableVertexAttribArray(_offsetAttrib);
+                //GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+                //GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
+
+                //GL.VertexAttribDivisor(_posAttrib, 0);
+                //GL.VertexAttribDivisor(_offsetAttrib, 1);
+                //GL.VertexAttribDivisor(_colorAttrib, 1);
 
                 GL.Disable(EnableCap.CullFace);
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
 
-                _shader.SetVector3("color", new Vector3(1.0f, 0f, 0f));
-                _shader.SetFloat("alpha", 0.4f);
-
-                for (int m = 0; m < BodyManager.Mesh.Length; m++)
-                {
-                    var mesh = BodyManager.Mesh[m];
-
-                    var meshModel = Matrix4.Identity;
-                    meshModel *= Matrix4.CreateScale(mesh.Size / 2);
-                    meshModel *= Matrix4.CreateTranslation(mesh.LocX, mesh.LocY, mesh.LocZ);
-
-                    _shader.SetMatrix4("model", meshModel);
-                    //   GL.DrawArrays(PrimitiveType.LineLoop, 0, _cubeVerts.Length);
-                    GL.DrawArrays(PrimitiveType.Quads, 0, _cubeVerts.Length);
-                }
-
-                GL.BindVertexArray(0);
+                GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
             }
 
             glControl.SwapBuffers();
 
-            //  _timer.Print("Draw");
+         //    _timer.Print("Draw");
 
-            // GL.BindVertexArray(0);
         }
 
         private float[] _orderDist = new float[0];
