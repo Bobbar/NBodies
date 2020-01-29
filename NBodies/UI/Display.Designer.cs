@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.glControl = new OpenTK.GLControl();
+            this.glControl = new Rendering.OpenTKControl(new OpenTK.Graphics.GraphicsMode(new OpenTK.Graphics.ColorFormat(8), 24, 8, 2));
             this.RootLayoutTable = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -73,7 +73,6 @@
             this.StyleScaleUpDown = new System.Windows.Forms.NumericUpDown();
             this.AlphaUpDown = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -83,7 +82,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.StyleScaleUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.AlphaUpDown)).BeginInit();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).BeginInit();
             this.SuspendLayout();
             // 
             // glControl
@@ -95,7 +93,7 @@
             this.glControl.Name = "glControl";
             this.glControl.Size = new System.Drawing.Size(1787, 902);
             this.glControl.TabIndex = 0;
-            this.glControl.VSync = false;
+            this.glControl.VSync = true;
             // 
             // RootLayoutTable
             // 
@@ -626,19 +624,6 @@
             this.panel1.Size = new System.Drawing.Size(1789, 904);
             this.panel1.TabIndex = 0;
             // 
-            // RenderBox
-            // 
-            this.RenderBox.BackColor = System.Drawing.Color.Black;
-            this.RenderBox.Location = new System.Drawing.Point(751, 222);
-            this.RenderBox.Name = "RenderBox";
-            this.RenderBox.Size = new System.Drawing.Size(736, 359);
-            this.RenderBox.TabIndex = 0;
-            this.RenderBox.TabStop = false;
-            this.RenderBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseDown);
-            this.RenderBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseMove);
-            this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
-            this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
-            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -664,17 +649,15 @@
             ((System.ComponentModel.ISupportInitialize)(this.StyleScaleUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.AlphaUpDown)).EndInit();
             this.panel1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.RenderBox)).EndInit();
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private OpenTK.GLControl glControl;
+        private Rendering.OpenTKControl glControl;
         private System.Windows.Forms.TableLayoutPanel RootLayoutTable;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.PictureBox RenderBox;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.MenuStrip menuStrip1;
         private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;

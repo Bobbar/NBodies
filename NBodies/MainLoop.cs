@@ -23,7 +23,7 @@ namespace NBodies
         public const int DefaultThreadsPerBlock = 256;
         public static RenderBase Renderer;
 
-        public static GLControl GLRenderer;
+        public static OpenTKControl GLRenderer;
 
         #region Public Properties
         public static bool RewindBuffer
@@ -433,7 +433,7 @@ namespace NBodies
                     }
 
                     // If the wait handle is nonsignaled, a pause has been requested.
-                    if (!_pausePhysicsWait.Wait(0))
+                    if (!_pausePhysicsWait.IsSet)
                     {
                         // Set the skip flag then set the wait handle.
                         // This allows the thread which originally called the pause to continue.
@@ -443,7 +443,9 @@ namespace NBodies
 
                     // Make sure the drawing thread is finished.
                     if (SyncRenderer)
+                    {
                         _renderReadyWait.Wait(5000);
+                    }
 
                     // If we are playing back a recording, get the current field frame
                     // from the recorder and bring it in to be rendered.
@@ -460,48 +462,27 @@ namespace NBodies
                     if (DrawBodies && _bodiesBuffer.Length > 0)
                     {
                         // Check if renderer is ready for a new frame.
-                        //if (_renderReadyWait.IsSet)
-                        //{
-                        //    _renderReadyWait.Reset();
-
-                        // Get the most recent frame from the physics buffer.
-                        if (!_skipPhysics)
+                        if (_renderReadyWait.IsSet)
                         {
-                            if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
-                                BodyManager.Bodies = new Body[_bodiesBuffer.Length];
-                            Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
+                            _renderReadyWait.Reset();
 
-                            BodyManager.RebuildUIDIndex();
+                            // Get the most recent frame from the physics buffer.
+                            if (!_skipPhysics)
+                            {
+                                if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
+                                    BodyManager.Bodies = new Body[_bodiesBuffer.Length];
+                                Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
 
-                            //var mesh = PhysicsProvider.PhysicsCalc.CurrentMesh;
-                            //if (BodyManager.Mesh.Length != mesh.Length)
-                            //    BodyManager.Mesh = new MeshCell[mesh.Length];
-                            //Array.Copy(mesh, 0, BodyManager.Mesh, 0, mesh.Length);
+                                BodyManager.RebuildUIDIndex();
+                            }
+
+                            // Draw the field asynchronously.
+                            if (GLRenderer != null && GLRenderer.InvokeRequired)
+                            {
+                                var del = new Action(() => GLRenderer.Render(BodyManager.Bodies, _renderReadyWait));
+                                var res = GLRenderer.BeginInvoke(del);
+                            }
                         }
-
-                        // Draw the field asynchronously.
-                        //if (Renderer.TargetControl != null && Renderer.TargetControl.InvokeRequired)
-                        //{
-                        //    var del = new Action(() => Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait));
-                        //    Renderer.TargetControl.BeginInvoke(del);
-
-                        //}
-
-
-                        if (GLRenderer != null && GLRenderer.InvokeRequired)
-                        {
-                            var del = new Action(() => GLRenderer.Invalidate());
-                            GLRenderer.BeginInvoke(del);
-
-                        }
-
-                        //  Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
-                        //    _skippedFrames = 0;
-                        //}
-                        //else
-                        //{
-                        //    _skippedFrames++;
-                        //}
                     }
 
                     // Fixed FPS limit while paused.

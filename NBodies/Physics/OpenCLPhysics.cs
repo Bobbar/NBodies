@@ -343,9 +343,6 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
-
-            //var bods = bodies;
-            //var mesh = ReadBuffer(_gpuMesh);3
         }
 
         public void FixOverLaps(ref Body[] bodies)

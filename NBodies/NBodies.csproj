@@ -158,6 +158,9 @@
     <Compile Include="Rendering\Camera.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
+    <Compile Include="Rendering\OpenTKControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Rendering\OpenTKRenderer.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Rendering\RWindow.cs" />
