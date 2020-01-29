@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using NBodies.Rendering;
 using NBodies.Extensions;
+using OpenTK;
 
 namespace NBodies.UI
 {
@@ -31,11 +32,17 @@ namespace NBodies.UI
         public abstract void DoKeyUp();
         public abstract void DoMouseMove(PointF mouseLoc);
         public abstract void DoMouseDown(MouseButtons button, PointF mouseLoc);
+        public abstract void DoMouseDown(MouseButtons button, Vector3 loc);
         public abstract void DoMouseUp(MouseButtons button, PointF mouseLoc);
 
         public void MouseDown(MouseButtons button, PointF mouseLoc)
         {
             DoMouseDown(button, mouseLoc);
+        }
+
+        public void MouseDown(MouseButtons button, Vector3 loc)
+        {
+            DoMouseDown(button, loc);
         }
 
         public void MouseUp(MouseButtons button, PointF mouseLoc)

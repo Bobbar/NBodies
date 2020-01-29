@@ -26,7 +26,7 @@ namespace NBodies.Physics
         public int ChildCount;
         public int ParentID;
         public int Level;
-        public int GridIdx;
+        public long GridIdx;
 
 
         public float LocX

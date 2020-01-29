@@ -296,7 +296,6 @@ namespace NBodies.UI
             GL.PointSize(5.0f);
             GL.ClearColor(Color.Black);
 
-
             _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/lighting.frag");
 
             // Cube instance buffers.
@@ -435,9 +434,9 @@ namespace NBodies.UI
                 GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
             }
 
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
 
             // Update body position offsets and colors via mem map.
             unsafe
@@ -472,6 +471,11 @@ namespace NBodies.UI
                 GL.UnmapNamedBuffer(_colorBufferObject);
 
             }
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
+
 
             GL.EnableVertexAttribArray(_posAttrib);
             GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
@@ -573,10 +577,11 @@ namespace NBodies.UI
                 GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
             }
 
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+
+
             glControl.SwapBuffers();
-
             //    _timer.Print("Draw");
-
         }
 
         private int[] ComputeZOrder(Body[] bodies)
@@ -640,6 +645,8 @@ namespace NBodies.UI
                     break;
 
                 case DisplayStyle.SpatialOrder:
+                    //bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, index, true);
+
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
                     GL.ClearColor(Color.Black);
 
@@ -728,6 +735,8 @@ namespace NBodies.UI
         private void GlControl_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             InputHandler.MouseDown(e.Button, e.Location);
+            InputHandler.MouseDown(e.Button, _camera.Position);
+
 
             var mousePos = e.Location;
 

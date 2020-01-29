@@ -5,7 +5,8 @@ using System.Threading;
 using System.Windows.Forms;
 using ProtoBuf;
 using NBodies.Helpers;
-
+using System.Linq;
+using System.Collections.Generic;
 namespace NBodies.IO
 {
     public static class Serializer
@@ -79,7 +80,7 @@ namespace NBodies.IO
         {
             //_previousFile = $@"C:\Temp\States\TinyTest.nsta";
             //_previousFile = $@"C:\Temp\States\Test2.nsta";
-          //  _previousFile = $@"C:\Temp\States\SimpleBlob.nsta";
+            //  _previousFile = $@"C:\Temp\States\SimpleBlob.nsta";
 
 
             if (!string.IsNullOrEmpty(_previousFile))
@@ -95,15 +96,19 @@ namespace NBodies.IO
             {
                 var state = ProtoBuf.Serializer.Deserialize<StateParams>(stateStream);
 
-                for (int i = 0; i < state.Bodies.Length; i++)
+                var zmax = state.Bodies.Max(b => b.PosZ);
+                if (zmax <= 0)
                 {
-                    if (!state.Bodies[i].HasFlag(Flags.BlackHole))
+                    for (int i = 0; i < state.Bodies.Length; i++)
                     {
-                        float rndZ = Numbers.GetRandomFloat(-1.0f, 1.0f);
-                        state.Bodies[i].PosZ = rndZ;
+                        if (!state.Bodies[i].HasFlag(Flags.BlackHole))
+                        {
+                            float rndZ = Numbers.GetRandomFloat(-1.0f, 1.0f);
+                            state.Bodies[i].PosZ = rndZ;
+                        }
                     }
-
                 }
+
 
                 LoadStateParams(state);
             }
@@ -112,15 +117,18 @@ namespace NBodies.IO
                 stateStream.Position = 0;
                 var bodies = ProtoBuf.Serializer.Deserialize<Body[]>(stateStream);
 
-                for (int i = 0; i < bodies.Length; i++)
+                var zmax = bodies.Max(b => b.PosZ);
+                if (zmax <= 0)
                 {
-                    if (!bodies[i].HasFlag(Flags.BlackHole))
+                    for (int i = 0; i < bodies.Length; i++)
                     {
-                        float rndZ = Numbers.GetRandomFloat(-10.0f, 10.0f);
-                        bodies[i].PosZ = rndZ;
+                        if (!bodies[i].HasFlag(Flags.BlackHole))
+                        {
+                            float rndZ = Numbers.GetRandomFloat(-10.0f, 10.0f);
+                            bodies[i].PosZ = rndZ;
+                        }
                     }
                 }
-
 
                 BodyManager.ReplaceBodies(bodies);
             }

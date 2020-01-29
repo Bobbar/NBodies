@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using OpenTK;
 
 namespace NBodies.UI
 {
@@ -96,6 +97,17 @@ namespace NBodies.UI
                 action.MouseDown(buttons, mouseLoc);
             }
         }
+
+        public static void MouseDown(MouseButtons buttons, Vector3 loc)
+        {
+            MouseIsDown = true;
+
+            foreach (var action in _actions)
+            {
+                action.MouseDown(buttons, loc);
+            }
+        }
+
 
         public static void MouseUp(MouseButtons buttons, PointF mouseLoc)
         {

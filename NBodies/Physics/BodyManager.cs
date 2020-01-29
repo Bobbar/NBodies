@@ -194,7 +194,7 @@ namespace NBodies.Physics
                         _cullStore[position] = body;
                         newSize++;
                     }
-                   
+
                     // Update our current position for the cull store.
                     position++;
                 }
@@ -806,6 +806,36 @@ namespace NBodies.Physics
 
         //    return lineList.ToArray();
         //}
+
+        public static void InsertExplosion(Vector3 location, int count)
+        {
+            MainLoop.WaitForPause();
+
+            float lifetime = 0.08f;//0.1f;
+            float r = 0.5f;
+            var particles = new List<Body>();
+
+            for (int i = 0; i < count; i++)
+            {
+                var px = Numbers.GetRandomFloat(location.X - r, location.X + r);
+                var py = Numbers.GetRandomFloat(location.Y - r, location.Y + r);
+                var pz = Numbers.GetRandomFloat(location.Z - r, location.Z + r);
+
+                while (!PointExtensions.PointInsideCircle(location, r, new Vector3(px, py, pz)))
+                {
+                    px = Numbers.GetRandomFloat(location.X - r, location.X + r);
+                    py = Numbers.GetRandomFloat(location.Y - r, location.Y + r);
+                    pz = Numbers.GetRandomFloat(location.Z - r, location.Z + r);
+
+                }
+
+                particles.Add(NewBody(px, py, pz, 1.0f, 1, Color.Orange, lifetime, 1));
+            }
+
+            Bodies = Bodies.Add(particles.ToArray());
+
+            MainLoop.ResumePhysics();
+        }
 
         public static void InsertExplosion(PointF location, int count)
         {

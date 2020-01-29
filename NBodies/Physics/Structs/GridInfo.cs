@@ -17,47 +17,14 @@ namespace NBodies.Physics
         public int MaxX;
         public int MaxY;
         public int MaxZ;
-        public int Columns;
-        public int Rows;
-        public int Layers;
-        public int Size;
-        public int IndexOffset;
+        public long Columns;
+        public long Rows;
+        public long Layers;
+        public long Size;
+        public long IndexOffset;
 
-        public GridInfo(int offX, int offY, int idxOff, int minX, int minY, int maxX, int maxY, int cols, int rows)
-        {
-            OffsetX = offX;
-            OffsetY = offY;
-            OffsetZ = 0;
-            IndexOffset = idxOff;
-            MinX = minX;
-            MinY = minY;
-            MinZ = 0;
-            MaxX = maxX;
-            MaxY = maxY;
-            MaxZ = 0;
-            Columns = cols;
-            Rows = rows;
-            Layers = 0;
-
-            Size = ((cols + 1) * (rows + 1));
-        }
-
-        public void Set(int offX, int offY, int idxOff, int minX, int minY, int maxX, int maxY, int cols, int rows)
-        {
-            OffsetX = offX;
-            OffsetY = offY;
-            IndexOffset = idxOff;
-            MinX = minX;
-            MinY = minY;
-            MaxX = maxX;
-            MaxY = maxY;
-            Columns = cols;
-            Rows = rows;
-
-            Size = ((cols + 1) * (rows + 1));
-        }
-
-        public void Set(int offX, int offY, int offZ, int idxOff, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int cols, int rows, int layers)
+        
+        public void Set(int offX, int offY, int offZ, long idxOff, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, long cols, long rows, long layers)
         {
             OffsetX = offX;
             OffsetY = offY;

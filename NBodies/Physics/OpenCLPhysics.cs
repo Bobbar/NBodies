@@ -346,8 +346,6 @@ namespace NBodies.Physics
 
             //var bods = bodies;
             //var mesh = ReadBuffer(_gpuMesh);3
-
-
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -474,11 +472,11 @@ namespace NBodies.Physics
             int offsetY = (minMax.MinY - 2) * -1;
             int offsetZ = (minMax.MinZ - 2) * -1;
 
-            int columns = Math.Abs(minMax.MinX - minMax.MaxX - 2);
-            int rows = Math.Abs(minMax.MinY - minMax.MaxY - 2);
-            int layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 2);
+            long columns = Math.Abs(minMax.MinX - minMax.MaxX - 2);
+            long rows = Math.Abs(minMax.MinY - minMax.MaxY - 2);
+            long layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 2);
 
-            int idxOff = 0;
+            long idxOff = 0;
 
             if (minMax.MinX < -65000 || minMax.MinY < -65000)
             {
@@ -494,7 +492,6 @@ namespace NBodies.Physics
                 idxOff = _gridInfo[level - 1].IndexOffset + _gridInfo[level - 1].Size;
             }
 
-            //_gridInfo[level].Set(offsetX, offsetY, idxOff, minMax.MinX, minMax.MinY, minMax.MaxX, minMax.MaxY, columns, rows);
             _gridInfo[level].Set(offsetX, offsetY, offsetZ, idxOff, minMax.MinX, minMax.MinY, minMax.MinZ, minMax.MaxX, minMax.MaxY, minMax.MaxZ, columns, rows, layers);
 
         }
@@ -507,9 +504,7 @@ namespace NBodies.Physics
             {
                 // Reduce dimensions of the previous level to determine the dims of the next level.
                 var prev = _gridInfo[level - 1];
-                //AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MaxX >> 1, prev.MaxY >> 1), level);
                 AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MinZ >> 1, prev.MaxX >> 1, prev.MaxY >> 1, prev.MaxZ >> 1), level);
-
             }
         }
 
@@ -564,7 +559,7 @@ namespace NBodies.Physics
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
             // Populate the grid index and mesh neighbor index list.
-             PopGridAndNeighborsGPU(_gridInfo, _meshLength);
+            PopGridAndNeighborsGPU(_gridInfo, _meshLength);
         }
 
         /// <summary>
@@ -651,7 +646,7 @@ namespace NBodies.Physics
                 }
             }
 
-          //  Debug.WriteLine($@"[0] {count}");
+            //  Debug.WriteLine($@"[0] {count}");
 
 
             // Add the last cell index value;
@@ -701,7 +696,7 @@ namespace NBodies.Physics
 
                         long morton = MortonNumber(idxX, idxY, idxZ);
 
-                      //  parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
+                        //  parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
                         parentSpatials[b].Set(morton, idxX, idxY, idxZ, spatial.Index + b);
                     }
                 });
@@ -728,7 +723,7 @@ namespace NBodies.Physics
                         }
                     }
                 }
-             //   Debug.WriteLine($@"[{level}] {count}");
+                //   Debug.WriteLine($@"[{level}] {count}");
 
                 cellIdx[count] = childCount;
 
@@ -788,10 +783,6 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(5, (int)Math.Pow(2.0f, cellSizeExp));
 
             _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-            //_queue.Finish();
-
-            //var mesh = ReadBuffer(_gpuMesh);
-
         }
 
         /// <summary>
@@ -894,8 +885,8 @@ namespace NBodies.Physics
                 // Pop compressed grid index array.
                 int argi = 0;
                 _popGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                _popGridKernel.SetValueArgument(argi++, (int)stride);
-                _popGridKernel.SetValueArgument(argi++, (int)passOffset);
+                _popGridKernel.SetValueArgument(argi++, stride);
+                _popGridKernel.SetValueArgument(argi++, passOffset);
                 _popGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
                 _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                 _popGridKernel.SetValueArgument(argi++, meshSize);
@@ -907,15 +898,15 @@ namespace NBodies.Physics
                 _buildNeighborsKernel.SetValueArgument(argi++, meshSize);
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridInfo);
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                _buildNeighborsKernel.SetValueArgument(argi++, (int)stride);
-                _buildNeighborsKernel.SetValueArgument(argi++, (int)passOffset);
+                _buildNeighborsKernel.SetValueArgument(argi++, stride);
+                _buildNeighborsKernel.SetValueArgument(argi++, passOffset);
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
                 _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                 // We're done with the grid index array, so undo what we added to clear it for the next frame.
                 _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
-                _clearGridKernel.SetValueArgument(1, (int)stride);
-                _clearGridKernel.SetValueArgument(2, (int)passOffset);
+                _clearGridKernel.SetValueArgument(1, stride);
+                _clearGridKernel.SetValueArgument(2, passOffset);
                 _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
                 _clearGridKernel.SetValueArgument(4, meshSize);
                 _queue.Execute(_clearGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);

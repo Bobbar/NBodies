@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using NBodies.Rendering;
 using NBodies.Extensions;
+using OpenTK;
 
 namespace NBodies.UI.KeyActions
 {
@@ -31,6 +32,11 @@ namespace NBodies.UI.KeyActions
         public override void DoKeyUp()
         {
             Overlay.Hide();
+        }
+
+        public override void DoMouseDown(MouseButtons button, Vector3 loc)
+        {
+            //throw new NotImplementedException();
         }
 
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)

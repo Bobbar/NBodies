@@ -3,6 +3,7 @@ using NBodies.Physics;
 using NBodies.Rendering;
 using System.Drawing;
 using System.Windows.Forms;
+using OpenTK;
 
 namespace NBodies.UI.KeyActions
 {
@@ -27,8 +28,14 @@ namespace NBodies.UI.KeyActions
 
         public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
         {
+            //if (KeyDownStates[Keys.E])
+            //    BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
+        }
+
+        public override void DoMouseDown(MouseButtons button, Vector3 loc)
+        {
             if (KeyDownStates[Keys.E])
-                BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
+                BodyManager.InsertExplosion(loc, 2500);
         }
 
         public override void DoMouseMove(PointF mouseLoc)

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
 using NBodies.Physics;
-
+using OpenTK;
 
 namespace NBodies.Extensions
 {
@@ -148,6 +148,17 @@ namespace NBodies.Extensions
 
             return false;
 
+        }
+
+        public static bool PointInsideCircle(Vector3 circleLoc, float circleRadius, Vector3 testPoint)
+        {
+            var dist = Vector3.DistanceSquared(circleLoc, testPoint);
+            if (dist <= circleRadius * circleRadius)
+            {
+                return true;
+            }
+
+            return false;
         }
 
 
