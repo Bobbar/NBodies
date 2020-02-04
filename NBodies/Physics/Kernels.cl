@@ -103,7 +103,7 @@ constant int CULLED = 4;
 constant int INROCHE = 8;
 
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
-long GridHash(long column, long row, long layer, GridInfo grid);
+long GridHash(long x, long y, long z, GridInfo grid);
 bool IsNeighbor(MeshCell cell, MeshCell testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY, float forceZ);
 int SetFlag(int flags, int flag, bool enabled);
@@ -205,11 +205,6 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap
 	if (b >= blen)
 		return;
 
-	/*if (inBodies[sortMap[b]].PosY > 0.0f)
-	{
-		printf("%i\n", b);
-	}*/
-
 	outBodies[b] = inBodies[sortMap[b]];
 }
 
@@ -231,6 +226,7 @@ __kernel void ClearGrid(global int* gridIdx, long passStride, long passOffset, g
 		gridIdx[idx] = -1;
 	}
 }
+
 
 __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, global GridInfo* gridInfo, global MeshCell* mesh, int meshLen)
 {
@@ -257,12 +253,7 @@ __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, glo
 	grid.IndexOffset = gridInfo[cell.Level].IndexOffset;
 
 	// Compute bucket index.
-	long column = cell.IdxX + grid.OffsetX;
-	long row = cell.IdxY + grid.OffsetY;
-	long layer = cell.IdxZ + grid.OffsetZ;
-
-	//int bucket = (row * grid.Columns) + column + row;
-	long bucket = GridHash(column, row, layer, grid);//((layer * grid.Rows) * grid.Columns) + (row * gird.Columns) + column;
+	long bucket = GridHash(cell.IdxX, cell.IdxY, cell.IdxZ, grid);
 
 	// Offset bucket for this level.
 	bucket += grid.IndexOffset;
@@ -283,10 +274,16 @@ __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, glo
 	mesh[m].GridIdx = cell.GridIdx;
 }
 
-long GridHash(long column, long row, long layer, GridInfo grid)
+
+long GridHash(long x, long y, long z, GridInfo grid)
 {
+	long column = x + grid.OffsetX;
+	long row = y + grid.OffsetY;
+	long layer = z + grid.OffsetZ;
+
 	return ((layer * grid.Rows) * grid.Columns) + (row * grid.Columns) + column;
 }
+
 
 __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, long passStride, long passOffset, global int* neighborIndex)
 {
@@ -297,93 +294,56 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 
 	long offset = m * 27;
 
-	long count = 0;
 	int cellLevel = mesh[m].Level;
 	long cellGridIdx = mesh[m].GridIdx;
+	long count = mesh[m].NeighborCount;
+
+	long IdxX = mesh[m].IdxX;
+	long IdxY = mesh[m].IdxY;
+	long IdxZ = mesh[m].IdxZ;
 
 	//	int3 shiftLut[] = { { -1,-1,-1 },{ 0,-1,-1 },{ 1,-1,-1 },{ -1,0,-1 },{ 0,0,-1 },{ 1,0,-1 },{ -1,1,-1 },{ 0,1,-1 },{ 1,1,-1 },{ -1,-1,0 },{ 0,-1,0 },{ 1,-1,0 },{ -1,0,0 },{ 0,0,0 },{ 1,0,0 },{ -1,1,0 },{ 0,1,0 },{ 1,1,0 },{ -1,-1,1 },{ 0,-1,1 },{ 1,-1,1 },{ -1,0,1 },{ 0,0,1 },{ 1,0,1 },{ -1,1,1 },{ 0,1,1 },{ 1,1,1 } };
 
 	GridInfo grid = gridInfo[cellLevel];
 
-	//int gColumns = grid.Columns;
 	long gIndexOffset = grid.IndexOffset;
 	long gSize = grid.Size;
 
-	//int gColumns = gridInfo[cellLevel].Columns;
-	//int gIndexOffset = gridInfo[cellLevel].IndexOffset;
-	//int gSize = gridInfo[cellLevel].Size;
-	long offsetIndex = cellGridIdx - passOffset;
-
-	if (offsetIndex >= 0 && offsetIndex < passStride)
+	// Shift bucket index around the cell and check for populated grid index buckets.
+	for (int x = IdxX - 1; x <= IdxX + 1; x++)
 	{
-		long offIdx = cellGridIdx - gIndexOffset;
-
-		// Shift bucket index around the cell and check for populated grid index buckets.
-
-		for (int x = -1; x <= 1; x++)
+		for (int y = IdxY - 1; y <= IdxY + 1; y++)
 		{
-			for (int y = -1; y <= 1; y++)
+			for (int z = IdxZ - 1; z <= IdxZ + 1; z++)
 			{
-				for (int z = -1; z <= 1; z++)
+
+				long localIdx = GridHash(x, y, z, grid);
+
+				if (localIdx > 0 && localIdx < gSize)
 				{
-					long localIdx = offIdx + GridHash(x, y, z, grid);  // Does this work with the new hash algo?
+					long bucket = localIdx + gIndexOffset - passOffset;
 
-					if (localIdx > 0 && localIdx < gSize)
+					if (bucket >= 0 && bucket < passStride)
 					{
-						long bucket = localIdx + gIndexOffset;
+						long idx = gridIdx[bucket];
 
-						bucket -= passOffset;
-
-						if (bucket >= 0 && bucket < passStride)
+						// Check for populated bucket and poplate neighbor index.
+						if (idx >= 0)
 						{
-							long idx = gridIdx[bucket];
-
-							// Check for populated bucket and poplate neighbor index.
-							if (idx >= 0)
-							{
-								neighborIndex[(offset + count)] = idx;
-								count++;
-							}
+							neighborIndex[(offset + count)] = idx;
+							count++;
 						}
 					}
 				}
+
 			}
 		}
-
-		//for (int i = 0; i < 27; i++)
-		//{
-		//	int3 shift = shiftLut[i];
-		//	//int localIdx = offIdx + ((shift.y * gColumns) + (shift.x + shift.y));
-		//	int localIdx = offIdx + GridHash(shift.x, shift.y, shift.z, grid);
-
-		//	if (localIdx > 0 && localIdx < gSize)
-		//	{
-		//		int bucket = localIdx + gIndexOffset;
-
-		//		bucket -= passOffset;
-
-		//		if (bucket >= 0 && bucket < passStride)
-		//		{
-		//			int idx = gridIdx[bucket];
-
-		//			// Check for populated bucket and poplate neighbor index.
-		//			if (idx >= 0)
-		//			{
-		//				neighborIndex[(offset + count)] = idx;
-		//				count++;
-		//			}
-		//		}
-		//	}
-		//}
-
-		//// Add this cell to end.
-		//neighborIndex[(offset + count++)] = m;
-
-		// Set cell neighbor index list pointers.
-		mesh[m].NeighborStartIdx = offset;
-		mesh[m].NeighborCount = count;
 	}
+
+	mesh[m].NeighborStartIdx = offset;
+	mesh[m].NeighborCount = count;
 }
+
 
 __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp, int cellSize)
 {
@@ -416,6 +376,8 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.CmY = fMass * fPosY;
 	newCell.CmZ = fMass * fPosZ;
 	newCell.Mass = fMass;
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
 
 	inBodies[firstIdx].MeshID = m;
 
@@ -443,6 +405,7 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 
 	mesh[m] = newCell;
 }
+
 
 __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int cellSize, int levelOffset, int cellIdxOffset, int level)
 {
@@ -474,8 +437,10 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	newCell.CmX = mass * mesh[firstIdx].CmX;
 	newCell.CmY = mass * mesh[firstIdx].CmY;
 	newCell.CmZ = mass * mesh[firstIdx].CmZ;
-
 	newCell.Mass = mass;
+
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
 
 	mesh[firstIdx].ParentID = newIdx;
 
@@ -530,6 +495,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 	cm[0] = (float3)(cmX, cmY, cmZ);
 }
 
+
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 {
 	float distX = posA.x - posB.x;
@@ -549,6 +515,7 @@ float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 
 	return ret;
 }
+
 
 __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, int meshTopStart, int meshTopEnd, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {

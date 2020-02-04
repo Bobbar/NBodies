@@ -1209,20 +1209,24 @@ namespace NBodies.Physics
             {
                 mesh = Mesh[body.MeshID];
             }
-            int index = Bodies.ToList().IndexOf(body);
+            int index = UIDToIndex(body.UID);
+            //  int index = Bodies.ToList().IndexOf(body);
             string info = $@"
 Index: { index }
 UID: { body.UID }
 MeshID: { body.MeshID }
+    GridIdx: { mesh.GridIdx }
+    Start: { mesh.BodyStartIdx }
     Count: { mesh.BodyCount }
     Mass: { mesh.Mass }
     Neighbor Start: { mesh.NeighborStartIdx }
     Neighbors: { mesh.NeighborCount }
-    Child Start: { Mesh[mesh.ParentID].ChildStartIdx }
-    Child Count: { Mesh[mesh.ParentID].ChildCount }
-    Cm (X,Y): { mesh.CmX }, { mesh.CmY }
-    Loc (X,Y): { mesh.LocX }, { mesh.LocY }
-    Idx (X,Y): { mesh.IdxX }, { mesh.IdxY }
+    ParentID: { mesh.ParentID }
+        Child Start: { Mesh[mesh.ParentID].ChildStartIdx }
+        Child Count: { Mesh[mesh.ParentID].ChildCount }
+    Cm (X,Y,Z): { mesh.CmX }, { mesh.CmY }, { mesh.CmZ }
+    Loc (X,Y,Z): { mesh.LocX }, { mesh.LocY }, { mesh.LocZ }
+    Idx (X,Y,Z): { mesh.IdxX }, { mesh.IdxY }, { mesh.IdxZ }
 
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }
@@ -1231,9 +1235,9 @@ InRoche: { body.InRoche }
 Density: { body.Density }
 Pressure: { body.Pressure }
 Agg. Speed: { body.AggregateSpeed() }
-Speed (X,Y): { body.VeloX }, { body.VeloY }
-Position (X,Y): { body.PosX }, { body.PosY }
-Force (X,Y): { body.ForceX }, { body.ForceY }
+Speed (X,Y,Z): { body.VeloX }, { body.VeloY }, { body.VeloZ }
+Position (X,Y,Z): { body.PosX }, { body.PosY }, { body.PosZ }
+Force (X,Y,Z): { body.ForceX }, { body.ForceY }, { body.ForceZ }
 Tot Force: { body.ForceTot }
 ";
             // if (index > -1)

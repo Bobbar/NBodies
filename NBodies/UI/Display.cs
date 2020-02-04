@@ -154,7 +154,7 @@ namespace NBodies.UI
             StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
             SetDisplayStyle(RenderBase.DisplayStyle);
 
-            if (_selectedUid != -1 && !MainLoop.PausePhysics)
+            if (BodyManager.FollowBodyUID != -1 && !MainLoop.PausePhysics)
             {
                 SetSelectedInfo();
             }
@@ -171,17 +171,18 @@ namespace NBodies.UI
 
         private void SetSelectedInfo()
         {
-            if (_selectedUid != -1)
+            if (BodyManager.FollowBodyUID != -1)
             {
-                //var selectBody = BodyManager.BodyFromUID(_selectedUid);
+                var selectBody = BodyManager.FollowBody();
 
-                //VeloXTextBox.Text = selectBody.VeloX.ToString();
-                //VeloYTextBox.Text = selectBody.VeloY.ToString();
-                //RadiusTextBox.Text = selectBody.Size.ToString();
-                //MassTextBox.Text = selectBody.Mass.ToString();
-                //FlagsTextBox.Text = selectBody.Flag.ToString();
-
-                //  selectBody.PrintInfo();
+                VeloXTextBox.Text = selectBody.VeloX.ToString();
+                VeloYTextBox.Text = selectBody.VeloY.ToString();
+                RadiusTextBox.Text = selectBody.Size.ToString();
+                MassTextBox.Text = selectBody.Mass.ToString();
+                FlagsTextBox.Text = selectBody.Flag.ToString();
+#if DEBUG
+                selectBody.PrintInfo();
+#endif
             }
         }
 

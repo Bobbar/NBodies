@@ -417,8 +417,6 @@ namespace NBodies.Physics
 
         private long MortonNumber(long x, long y, long z)
         {
-
-
             x &= 0x1fffff; // we only look at the first 21 bits
             x = (x | x << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
             x = (x | x << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
@@ -426,39 +424,18 @@ namespace NBodies.Physics
             x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
             x = (x | x << 2) & 0x1249249249249249;
 
-            y &= 0x1fffff; // we only look at the first 21 bits
-            y = (y | y << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
-            y = (y | y << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
-            y = (y | y << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
-            y = (y | y << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            y &= 0x1fffff; 
+            y = (y | y << 32) & 0x1f00000000ffff;
+            y = (y | y << 16) & 0x1f0000ff0000ff;
+            y = (y | y << 8) & 0x100f00f00f00f00f;
+            y = (y | y << 4) & 0x10c30c30c30c30c3;
             y = (y | y << 2) & 0x1249249249249249;
 
-            z &= 0x1fffff; // we only look at the first 21 bits
-            z = (z | z << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
-            z = (z | z << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
-            z = (z | z << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
-            z = (z | z << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            z = (z | z << 32) & 0x1f00000000ffff;
+            z = (z | z << 16) & 0x1f0000ff0000ff;
+            z = (z | z << 8) & 0x100f00f00f00f00f;
+            z = (z | z << 4) & 0x10c30c30c30c30c3;
             z = (z | z << 2) & 0x1249249249249249;
-
-
-
-            //x &= 65535;
-            //x = (x | (x << 8)) & 16711935;
-            //x = (x | (x << 4)) & 252645135;
-            //x = (x | (x << 2)) & 858993459;
-            //x = (x | (x << 1)) & 1431655765;
-
-            //y &= 65535;
-            //y = (y | (y << 8)) & 16711935;
-            //y = (y | (y << 4)) & 252645135;
-            //y = (y | (y << 2)) & 858993459;
-            //y = (y | (y << 1)) & 1431655765;
-
-            //z &= 65535;
-            //z = (z | (z << 8)) & 16711935;
-            //z = (z | (z << 4)) & 252645135;
-            //z = (z | (z << 2)) & 858993459;
-            //z = (z | (z << 1)) & 1431655765;
 
             return x | (y << 1) | (z << 2);
         }
@@ -536,8 +513,6 @@ namespace NBodies.Physics
                 totCells += lvl.CellCount;
 
             _meshLength = totCells;
-
-            //Debug.WriteLine(_meshLength);
 
             // Allocate the mesh buffer on the GPU.
             Allocate(ref _gpuMesh, _meshLength, false);
@@ -643,9 +618,6 @@ namespace NBodies.Physics
                 }
             }
 
-            //  Debug.WriteLine($@"[0] {count}");
-
-
             // Add the last cell index value;
             cellIdx[count] = _bodies.Length;
 
@@ -693,7 +665,6 @@ namespace NBodies.Physics
 
                         long morton = MortonNumber(idxX, idxY, idxZ);
 
-                        //  parentSpatials[b].Set(morton, idxX, idxY, spatial.Index + b);
                         parentSpatials[b].Set(morton, idxX, idxY, idxZ, spatial.Index + b);
                     }
                 });
@@ -720,7 +691,6 @@ namespace NBodies.Physics
                         }
                     }
                 }
-                //   Debug.WriteLine($@"[{level}] {count}");
 
                 cellIdx[count] = childCount;
 

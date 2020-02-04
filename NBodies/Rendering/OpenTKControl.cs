@@ -448,7 +448,6 @@ namespace NBodies.Rendering
 
                         GL.UnmapNamedBuffer(_offsetArrayObject);
                         GL.UnmapNamedBuffer(_colorBufferObject);
-
                     }
 
                     GL.Disable(EnableCap.CullFace);
