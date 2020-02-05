@@ -27,11 +27,13 @@ namespace NBodies.Physics
         public StateRewinder()
         {
             _serializerLoop = new Task(SerializerLoop);
-            _serializerLoop.Start();
         }
 
         public void PushState(Body[] frame, float dt)
         {
+            if (_serializerLoop.Status == TaskStatus.Created)
+                _serializerLoop.Start();
+
             if (_elap >= _interval)
             {
                 var copy = new Body[frame.Length];
