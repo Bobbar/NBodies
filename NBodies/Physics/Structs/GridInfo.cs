@@ -41,7 +41,7 @@ namespace NBodies.Physics
             Columns = cols;
             Rows = rows;
             Layers = layers;
-            Size = ((cols + 1) * (rows + 1) * (layers + 1));
+            Size = cols * rows * layers;
         }
     }
 }
