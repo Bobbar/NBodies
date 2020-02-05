@@ -1204,10 +1204,10 @@ namespace NBodies.Physics
 
         public static void PrintInfo(this Body body)
         {
-            MeshCell mesh = new MeshCell();
-            if (body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
+            MeshCell parentCell = new MeshCell();
+            if (Mesh.Length > 0 && body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
             {
-                mesh = Mesh[body.MeshID];
+                parentCell = Mesh[body.MeshID];
             }
             int index = UIDToIndex(body.UID);
             //  int index = Bodies.ToList().IndexOf(body);
@@ -1215,18 +1215,18 @@ namespace NBodies.Physics
 Index: { index }
 UID: { body.UID }
 MeshID: { body.MeshID }
-    GridIdx: { mesh.GridIdx }
-    Start: { mesh.BodyStartIdx }
-    Count: { mesh.BodyCount }
-    Mass: { mesh.Mass }
-    Neighbor Start: { mesh.NeighborStartIdx }
-    Neighbors: { mesh.NeighborCount }
-    ParentID: { mesh.ParentID }
-        Child Start: { Mesh[mesh.ParentID].ChildStartIdx }
-        Child Count: { Mesh[mesh.ParentID].ChildCount }
-    Cm (X,Y,Z): { mesh.CmX }, { mesh.CmY }, { mesh.CmZ }
-    Loc (X,Y,Z): { mesh.LocX }, { mesh.LocY }, { mesh.LocZ }
-    Idx (X,Y,Z): { mesh.IdxX }, { mesh.IdxY }, { mesh.IdxZ }
+    GridIdx: { parentCell.GridIdx }
+    Start: { parentCell.BodyStartIdx }
+    Count: { parentCell.BodyCount }
+    Mass: { parentCell.Mass }
+    Neighbor Start: { parentCell.NeighborStartIdx }
+    Neighbors: { parentCell.NeighborCount }
+    ParentID: { parentCell.ParentID }
+        Child Start: { Mesh[parentCell.ParentID].ChildStartIdx }
+        Child Count: { Mesh[parentCell.ParentID].ChildCount }
+    Cm (X,Y,Z): { parentCell.CmX }, { parentCell.CmY }, { parentCell.CmZ }
+    Loc (X,Y,Z): { parentCell.LocX }, { parentCell.LocY }, { parentCell.LocZ }
+    Idx (X,Y,Z): { parentCell.IdxX }, { parentCell.IdxY }, { parentCell.IdxZ }
 
 IsExplosion: { body.IsExplosion }
 Mass: { body.Mass }

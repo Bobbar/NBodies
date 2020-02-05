@@ -700,6 +700,14 @@ namespace NBodies.Rendering
             InputHandler.MouseWheel(e.Delta);
 
             base.OnMouseWheel(e);
+
+            if (!InputHandler.KeysDown)
+            {
+                if (e.Delta > 0)
+                    _camera.Fov -= 1;
+                else
+                    _camera.Fov -= -1;
+            }
         }
 
     }

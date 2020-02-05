@@ -295,7 +295,6 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 	long offset = m * 27;
 
 	int cellLevel = mesh[m].Level;
-	long cellGridIdx = mesh[m].GridIdx;
 	long count = mesh[m].NeighborCount;
 
 	long IdxX = mesh[m].IdxX;
@@ -316,7 +315,6 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 		{
 			for (int z = IdxZ - 1; z <= IdxZ + 1; z++)
 			{
-
 				long localIdx = GridHash(x, y, z, grid);
 
 				if (localIdx > 0 && localIdx < gSize)
@@ -335,7 +333,6 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 						}
 					}
 				}
-
 			}
 		}
 	}

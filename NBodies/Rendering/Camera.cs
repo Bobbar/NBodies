@@ -78,7 +78,7 @@ namespace NBodies.Rendering
             get { return MathHelper.RadiansToDegrees(_fov); }
             set
             {
-                var angle = MathHelper.Clamp(value, 1f, 45f);
+                var angle = MathHelper.Clamp(value, 1f, 120f);
                 _fov = MathHelper.DegreesToRadians(angle);
             }
         }
