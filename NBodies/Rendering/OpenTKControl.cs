@@ -17,6 +17,8 @@ using NBodies.UI.KeyActions;
 using NBodies.Helpers;
 using System.Drawing;
 using System.Diagnostics;
+using NBodies.Rendering.Renderables;
+using NBodies.Rendering.GameObjects;
 
 namespace NBodies.Rendering
 {
@@ -178,16 +180,11 @@ namespace NBodies.Rendering
         #endregion Triangle based cube verts
 
         private int _cubeVertBufferObject;
-        private int _cubeVertArrayObject;
-
         private int _normVertBufferObject;
-        private int _normVertArrayObject;
-
         private int _offsetBufferObject;
-        private int _offsetArrayObject;
-
         private int _colorBufferObject;
-        private int _colorArrayObject;
+
+        private int _cubesVAO;
 
         private Vector4[] _offsets = new Vector4[0];
         private Vector3[] _colors = new Vector3[0];
@@ -206,9 +203,14 @@ namespace NBodies.Rendering
         private Vector2 _lastPos;
 
         private Shader _shader;
+        private Shader _textShader;
 
         private float[] _orderDist = new float[0];
         private int[] _orderIdx = new int[0];
+
+        private RenderText _text;
+
+        private Stopwatch _timer = new Stopwatch();
 
         public OpenTKControl(GraphicsMode mode) : base(mode)
         {
@@ -218,62 +220,56 @@ namespace NBodies.Rendering
 
             GL.ClearColor(Color.Black);
 
-            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shader.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/lighting.frag");
+            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.c");
+            _textShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/textVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/textFrag.c");
+
+            var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
+            _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
+
+            _cubesVAO = GL.GenVertexArray();
+            GL.BindVertexArray(_cubesVAO);
 
             // Cube instance buffers.
             _cubeVertBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
 
-            _cubeVertArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_cubeVertArrayObject);
             _posAttrib = _shader.GetAttribLocation("aPosition");
-            GL.EnableVertexAttribArray(_posAttrib);
             GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.BindVertexArray(0);
+            GL.VertexAttribDivisor(_posAttrib, 0);
+            GL.EnableVertexAttribArray(_posAttrib);
 
             // Normals instance buffers.
             _normVertBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _normalVerts.Length * sizeof(float), _normalVerts, BufferUsageHint.StaticDraw);
 
-            _normVertArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_normVertArrayObject);
             _normAttrib = _shader.GetAttribLocation("aNormal");
-            GL.EnableVertexAttribArray(_normAttrib);
             GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.BindVertexArray(0);
+            GL.VertexAttribDivisor(_normAttrib, 0);
+            GL.EnableVertexAttribArray(_normAttrib);
 
             // Body offset buffers.
             _offsetBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
 
-            _offsetArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_offsetArrayObject);
             _offsetAttrib = _shader.GetAttribLocation("aOffset");
-            GL.EnableVertexAttribArray(_offsetAttrib);
             GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
-            GL.BindVertexArray(0);
+            GL.VertexAttribDivisor(_offsetAttrib, 1);
+            GL.EnableVertexAttribArray(_offsetAttrib);
 
             // Body color buffers.
             _colorBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
 
-            _colorArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_colorArrayObject);
             _colorAttrib = _shader.GetAttribLocation("aObjColor");
-            GL.EnableVertexAttribArray(_colorAttrib);
             GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-            GL.BindVertexArray(0);
-
-            // Instance divisors.
-            GL.VertexAttribDivisor(_normAttrib, 0);
-            GL.VertexAttribDivisor(_posAttrib, 0);
-            GL.VertexAttribDivisor(_offsetAttrib, 1);
             GL.VertexAttribDivisor(_colorAttrib, 1);
+            GL.EnableVertexAttribArray(_colorAttrib);
 
+            GL.BindVertexArray(0);
         }
 
         public void Render(Body[] bodies, ManualResetEventSlim completeCallback)
@@ -310,9 +306,11 @@ namespace NBodies.Rendering
                 GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
-                // var bodies = BodyManager.Bodies;
-
                 this.MakeCurrent();
+
+                _shader.Use();
+
+                GL.BindVertexArray(_cubesVAO);
 
                 //  Draw Body cubes.
                 var zOrder = ComputeZOrder(bodies);
@@ -331,7 +329,7 @@ namespace NBodies.Rendering
                 // Update body position offsets and colors via mem map.
                 unsafe
                 {
-                    var offsetPtr = GL.MapNamedBuffer(_offsetArrayObject, BufferAccess.ReadWrite);
+                    var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
                     var offNativePtr = (Vector4*)offsetPtr.ToPointer();
 
                     var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
@@ -357,27 +355,9 @@ namespace NBodies.Rendering
 
                     }
 
-                    GL.UnmapNamedBuffer(_offsetArrayObject);
+                    GL.UnmapNamedBuffer(_offsetBufferObject);
                     GL.UnmapNamedBuffer(_colorBufferObject);
                 }
-
-                GL.EnableVertexAttribArray(_posAttrib);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
-                GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-
-                GL.EnableVertexAttribArray(_colorAttrib);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-                GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-
-                GL.EnableVertexAttribArray(_offsetAttrib);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
-
-                GL.EnableVertexAttribArray(_normAttrib);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
-                GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-
-                _shader.Use();
 
                 var lightPos = _camera.Position;
 
@@ -428,7 +408,7 @@ namespace NBodies.Rendering
 
                     unsafe
                     {
-                        var offsetPtr = GL.MapNamedBuffer(_offsetArrayObject, BufferAccess.ReadWrite);
+                        var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
                         var offNativePtr = (Vector4*)offsetPtr.ToPointer();
 
                         var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
@@ -446,7 +426,7 @@ namespace NBodies.Rendering
                             colorNativePtr[i] = normColor;
                         }
 
-                        GL.UnmapNamedBuffer(_offsetArrayObject);
+                        GL.UnmapNamedBuffer(_offsetBufferObject);
                         GL.UnmapNamedBuffer(_colorBufferObject);
                     }
 
@@ -456,12 +436,64 @@ namespace NBodies.Rendering
                     GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
                 }
 
-                GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+                GL.BindVertexArray(0);
+
+                // Draw stats text.
+                DrawStats();
 
                 this.SwapBuffers();
             }
 
             completeCallback.Set();
+        }
+
+        private void DrawStats()
+        {
+            var elapTime = TimeSpan.FromSeconds(MainLoop.TotalTime * 10000);
+
+            var stats = new List<string>();
+
+            stats.Add($@"FPS: {MainLoop.CurrentFPS}  ({Math.Round(MainLoop.PeakFPS, 2)})");
+            stats.Add($@"Count: {MainLoop.FrameCount}");
+            stats.Add($@"Time: {elapTime.Days} days {elapTime.Hours} hr {elapTime.Minutes} min");
+            stats.Add($@"Bodies: {BodyManager.BodyCount}");
+            stats.Add($@"Grid Passes: {OpenCLPhysics.GridPasses}");
+
+            if (BodyManager.FollowSelected)
+            {
+                var body = BodyManager.FollowBody();
+
+                stats.Add($@"Density: {body.Density}");
+                stats.Add($@"Press: {body.Pressure}");
+                stats.Add($@"Agg. Speed: {body.AggregateSpeed()}");
+            }
+
+            if (MainLoop.Recorder.RecordingActive)
+            {
+                stats.Add($@"Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}");
+            }
+
+            GL.Enable(EnableCap.DepthTest);
+            GL.Enable(EnableCap.LineSmooth);
+            GL.Enable(EnableCap.Blend);
+            GL.Disable(EnableCap.CullFace);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+
+            _textShader.Use();
+            var proj = Matrix4.CreateOrthographicOffCenter(0, ClientSize.Width, 0, ClientSize.Height, -100f, 400f);
+            GL.UniformMatrix4(20, false, ref proj);
+
+            float lineHeight = 20f;
+            float yPos = ClientSize.Height - 20f;
+
+            foreach (var stat in stats)
+            {
+                _text.SetPosition(new Vector4(20f, yPos, 0, 1));
+                _text.SetText(stat);
+                yPos -= lineHeight;
+                _text.Render(_camera);
+            }
         }
 
         public void MoveCameraToCenterMass()

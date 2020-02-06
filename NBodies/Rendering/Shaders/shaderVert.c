@@ -12,19 +12,11 @@ out vec3 Normal;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-//uniform float alpha;
 
 void main(void)
 {
 	gl_Position = vec4((aPosition * aOffset.w) + aOffset.xyz, 1.0) * model * view * projection;
-
 	FragPos = vec3(vec4((aPosition * aOffset.w) + aOffset.xyz, 1.0) * model);
-	//FragPos = vec3(vec4(aPosition, 1.0) * model);
-
 	Normal = aNormal * mat3(transpose(inverse(model)));
-	//Normal = aNormal * aOffset.w * mat3(transpose(inverse(model)));
-
-   // objectColor = vec4(aObjColor, alpha);
     objectColor = aObjColor;
-
 }

@@ -442,13 +442,13 @@ namespace NBodies.Physics
 
         private void AddGridDims(MinMax minMax, int level)
         {
-            int offsetX = minMax.MinX * -1;
-            int offsetY = minMax.MinY * -1;
-            int offsetZ = minMax.MinZ * -1;
+            int offsetX = (minMax.MinX - 1) * -1;
+            int offsetY = (minMax.MinY - 1) * -1;
+            int offsetZ = (minMax.MinZ - 1) * -1;
 
-            long columns = Math.Abs(minMax.MinX - minMax.MaxX - 1);
-            long rows = Math.Abs(minMax.MinY - minMax.MaxY - 1);
-            long layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 1);
+            long columns = Math.Abs(minMax.MinX - minMax.MaxX - 2);
+            long rows = Math.Abs(minMax.MinY - minMax.MaxY - 2);
+            long layers = Math.Abs(minMax.MinZ - minMax.MaxZ - 2);
 
             long idxOff = 0;
 

@@ -287,8 +287,8 @@ namespace NBodies
         private static ManualResetEventSlim _stopLoopWait = new ManualResetEventSlim(true);
         private static ManualResetEventSlim _renderReadyWait = new ManualResetEventSlim(true);
 
-        private static bool _skipPhysics = false;
-        private static bool _wasPaused = false;
+        private static bool _skipPhysics = true;
+        private static bool _wasPaused = true;
         private static bool _rewindBuffer = false;
 
         private static Task _loopTask;

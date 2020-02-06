@@ -1204,8 +1204,11 @@ namespace NBodies.Physics
 
         public static void PrintInfo(this Body body)
         {
+            if (Mesh.Length < 1)
+                return;
+
             MeshCell parentCell = new MeshCell();
-            if (Mesh.Length > 0 && body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
+            if (body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
             {
                 parentCell = Mesh[body.MeshID];
             }
