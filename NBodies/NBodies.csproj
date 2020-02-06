@@ -172,7 +172,6 @@
     <Compile Include="Rendering\Renderables\TexturedVertex.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Rendering\RenderObjectFactory.cs" />
-    <Compile Include="Rendering\RWindow.cs" />
     <Compile Include="Rendering\Shader.cs" />
     <Compile Include="Shapes\ColoredLine.cs" />
     <Compile Include="UI\AddBodiesForm.cs">

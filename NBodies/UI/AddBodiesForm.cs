@@ -15,6 +15,7 @@ namespace NBodies
     {
         private Color _pickedColor = Color.Transparent;
         private bool _colorWasPicked = false;
+        private Vector3 _centerLocation;
 
         public AddBodiesForm()
         {
@@ -43,24 +44,46 @@ namespace NBodies
             return new PointF(vx, vy);
         }
 
+        private Vector3 OrbitVel(Vector3 bodyALoc, Vector3 bodyBLoc, float bodyAMass)
+        {
+            var offsetP = bodyBLoc - bodyALoc;
+
+            float magV = CircleV(offsetP.X, offsetP.Y, bodyAMass);
+            float absAngle = (float)Math.Atan(Math.Abs(offsetP.Y / offsetP.X));
+            float thetaV = (float)Math.PI * 0.5f - absAngle;
+            float vx = -1 * (float)(Math.Sign(offsetP.Y) * Math.Cos(thetaV) * magV);
+            float vy = (float)(Math.Sign(offsetP.X) * Math.Sin(thetaV) * magV);
+
+            return new Vector3(vx, vy, 0);
+        }
+
         private void AddBodiesToOrbit(int count, int maxSize, int minSize, int bodyMass, bool includeCenterMass, float centerMass)
         {
             MainLoop.WaitForPause();
 
+            _centerLocation = ViewportHelpers.CameraPos;
+
             var newBodies = new List<Body>();
-            float px, py;
+            float px, py, pz;
             float radius = float.Parse(OrbitRadiusTextBox.Text);
             float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
 
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
             centerMass *= Rules.Matter.Density * 2;
 
-            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
-            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
+            var ellipse = new Ellipse3D(_centerLocation, radius);
+            var inEllipse = new Ellipse3D(_centerLocation, innerRadius);
+
+            var sysVelo = new Vector3(Convert.ToSingle(VeloXText.Text.Trim()), Convert.ToSingle(VeloYText.Text.Trim()), Convert.ToSingle(VeloZText.Text.Trim()));
 
             if (includeCenterMass)
             {
-                newBodies.Add(BodyManager.NewBody(ellipse.Location, 3, centerMass, Color.Black, 1));
+                var cm = BodyManager.NewBody(ellipse.Location, 3, centerMass, Color.Black, 1);
+                cm.VeloX += sysVelo.X;
+                cm.VeloY += sysVelo.Y;
+                cm.VeloZ += sysVelo.Z;
+
+                newBodies.Add(cm);
             }
 
             for (int i = 0; i < count; i++)
@@ -68,12 +91,13 @@ namespace NBodies
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
+                pz = Numbers.GetRandomFloat(ellipse.Location.Z - 10, ellipse.Location.Z + 10);
 
                 int its = 0;
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                PointF newLoc = new PointF(px, py);
+                var newLoc = new Vector3(px, py, pz);
 
                 while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
@@ -87,7 +111,9 @@ namespace NBodies
                     bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-                    newLoc = new PointF(px, py);
+                    pz = Numbers.GetRandomFloat(ellipse.Location.Z - 10, ellipse.Location.Z + 10);
+
+                    newLoc = new Vector3(px, py, pz);
                     its++;
                 }
 
@@ -103,7 +129,7 @@ namespace NBodies
 
                 if (byDist)
                 {
-                    var dist = newLoc.DistanceSqrt(ellipse.Location);
+                    var dist = Vector3.Distance(newLoc, ellipse.Location);
                     matter = Matter.GetForDistance(dist, radius);
                 }
                 else
@@ -140,13 +166,43 @@ namespace NBodies
                     color = matter.Color;
                 }
 
-                newBodies.Add(BodyManager.NewBody(px, py, bodyVelo.X, bodyVelo.Y, bodySize, newMass, color));
+                var velo = new Vector3(bodyVelo.X, bodyVelo.Y, 0);
+                velo += sysVelo;
+                newBodies.Add(BodyManager.NewBody(newLoc, velo, bodySize, newMass, color));
             }
 
             var bodyArr = newBodies.ToArray();
 
             if (fixOverlapCheckBox.Checked)
                 FixOverlaps(ref bodyArr, 3);
+
+            float rotX = Convert.ToSingle(RotXText.Text.Trim());
+            float rotY = Convert.ToSingle(RotYText.Text.Trim());
+            float rotZ = Convert.ToSingle(RotZText.Text.Trim());
+
+            var rot = Matrix4.Identity;
+            rot *= Matrix4.CreateRotationX(rotX);
+            rot *= Matrix4.CreateRotationY(rotY);
+            rot *= Matrix4.CreateRotationZ(rotZ);
+
+            for (int i = 0; i < bodyArr.Length; i++)
+            {
+                var body = bodyArr[i];
+                var pos = new Vector4(body.PositionVec(), 1);
+                var velo = new Vector4(body.VelocityVec(), 1);
+                pos *= rot;
+                velo *= rot;
+
+                body.PosX = pos.X;
+                body.PosY = pos.Y;
+                body.PosZ = pos.Z;
+
+                body.VeloX = velo.X;
+                body.VeloY = velo.Y;
+                body.VeloZ = velo.Z;
+
+                bodyArr[i] = body;
+            }
 
             BodyManager.Add(bodyArr);
 
@@ -182,7 +238,7 @@ namespace NBodies
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-              //  PointF newLoc = new PointF(px, py);
+                //  PointF newLoc = new PointF(px, py);
                 Vector3 newLoc = new Vector3(px, py, pz);
 
 
@@ -253,7 +309,7 @@ namespace NBodies
                     color = matter.Color;
                 }
 
-              //  float rndZ = Numbers.GetRandomFloat(-100, 100);
+                //  float rndZ = Numbers.GetRandomFloat(-100, 100);
                 newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, newLoc.Z, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
 
                 //newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));

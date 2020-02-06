@@ -1,11 +1,14 @@
 ﻿using NBodies.Extensions;
 using NBodies.Physics;
 using System.Drawing;
+using OpenTK;
 
 namespace NBodies.Helpers
 {
     public static class ViewportHelpers
     {
+        public static Vector3 CameraPos = new Vector3();
+
         public static PointF ScreenPointToField(PointF point)
         {
             PointF convertedPos = new PointF((point.X / ViewportOffsets.CurrentScale) - ViewportOffsets.ViewportOffset.X - ViewportOffsets.ScaleOffset.X, (point.Y / ViewportOffsets.CurrentScale) - ViewportOffsets.ViewportOffset.Y - ViewportOffsets.ScaleOffset.Y);

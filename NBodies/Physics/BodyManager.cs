@@ -985,6 +985,27 @@ namespace NBodies.Physics
             return b;
         }
 
+        public static Body NewBody(Vector3 loc, Vector3 velo, float size, float mass, Color color)
+        {
+            var b = new Body();
+
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
+            b.PosZ = loc.Z;
+
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+            b.VeloX = velo.X;
+            b.VeloY = velo.Y;
+            b.VeloZ = velo.Z;
+
+            b.ForceX = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
         public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
             var b = new Body();
@@ -1056,6 +1077,23 @@ namespace NBodies.Physics
 
             b.PosX = loc.X;
             b.PosY = loc.Y;
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+            b.IsBlackHole = Convert.ToBoolean(isBlackhole);
+            b.UID = NextUID();
+
+            return b;
+        }
+
+        public static Body NewBody(Vector3 loc, float size, float mass, Color color, int isBlackhole = 0)
+        {
+            var b = new Body();
+
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
+            b.PosZ = loc.Z;
+
             b.Mass = mass;
             b.Size = size;
             b.Color = color.ToArgb();
@@ -1190,6 +1228,11 @@ namespace NBodies.Physics
         public static PointF Velocity(this Body body)
         {
             return new PointF(body.VeloX, body.VeloY);
+        }
+
+        public static Vector3 VelocityVec(this Body body)
+        {
+            return new Vector3(body.VeloX, body.VeloY, body.VeloZ);
         }
 
         public static PointF Position(this Body body)

@@ -798,7 +798,7 @@ namespace NBodies.Physics
         private void PopGridAndNeighborsGPU(GridInfo[] gridInfo, int meshSize)
         {
             // Calulate total size of 1D mesh neighbor list.
-            // Each cell can have a max of 9 neighbors, including itself.
+            // Each cell can have a max of 27 neighbors, including itself.
             int neighborLen = meshSize * 27;
 
             // Reallocate and resize GPU buffer as needed.
@@ -870,7 +870,7 @@ namespace NBodies.Physics
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
                 _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
-                // We're done with the grid index array, so undo what we added to clear it for the next frame.
+                // We're done with the grid index array, so undo what we added to clear it for the next pass.
                 _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
                 _clearGridKernel.SetValueArgument(1, stride);
                 _clearGridKernel.SetValueArgument(2, passOffset);

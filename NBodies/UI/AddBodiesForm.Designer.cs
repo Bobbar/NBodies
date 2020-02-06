@@ -30,6 +30,7 @@
         {
             this.BodyParamsGroup = new System.Windows.Forms.GroupBox();
             this.CirOrbitGroup = new System.Windows.Forms.GroupBox();
+            this.fixOverlapCheckBox = new System.Windows.Forms.CheckBox();
             this.label10 = new System.Windows.Forms.Label();
             this.InOrbitRadiusTextBox = new System.Windows.Forms.TextBox();
             this.layeredCheckBox = new System.Windows.Forms.CheckBox();
@@ -57,7 +58,20 @@
             this.label1 = new System.Windows.Forms.Label();
             this.NumToAddTextBox = new System.Windows.Forms.TextBox();
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
-            this.fixOverlapCheckBox = new System.Windows.Forms.CheckBox();
+            this.RotXText = new System.Windows.Forms.TextBox();
+            this.RotYText = new System.Windows.Forms.TextBox();
+            this.RotZText = new System.Windows.Forms.TextBox();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.label15 = new System.Windows.Forms.Label();
+            this.VeloYText = new System.Windows.Forms.TextBox();
+            this.label16 = new System.Windows.Forms.Label();
+            this.VeloXText = new System.Windows.Forms.TextBox();
+            this.label17 = new System.Windows.Forms.Label();
+            this.label18 = new System.Windows.Forms.Label();
+            this.VeloZText = new System.Windows.Forms.TextBox();
             this.BodyParamsGroup.SuspendLayout();
             this.CirOrbitGroup.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -79,6 +93,20 @@
             // 
             // CirOrbitGroup
             // 
+            this.CirOrbitGroup.Controls.Add(this.label15);
+            this.CirOrbitGroup.Controls.Add(this.VeloYText);
+            this.CirOrbitGroup.Controls.Add(this.label16);
+            this.CirOrbitGroup.Controls.Add(this.VeloXText);
+            this.CirOrbitGroup.Controls.Add(this.label17);
+            this.CirOrbitGroup.Controls.Add(this.label18);
+            this.CirOrbitGroup.Controls.Add(this.VeloZText);
+            this.CirOrbitGroup.Controls.Add(this.label14);
+            this.CirOrbitGroup.Controls.Add(this.RotYText);
+            this.CirOrbitGroup.Controls.Add(this.label13);
+            this.CirOrbitGroup.Controls.Add(this.RotXText);
+            this.CirOrbitGroup.Controls.Add(this.label12);
+            this.CirOrbitGroup.Controls.Add(this.label11);
+            this.CirOrbitGroup.Controls.Add(this.RotZText);
             this.CirOrbitGroup.Controls.Add(this.fixOverlapCheckBox);
             this.CirOrbitGroup.Controls.Add(this.label10);
             this.CirOrbitGroup.Controls.Add(this.InOrbitRadiusTextBox);
@@ -96,6 +124,18 @@
             this.CirOrbitGroup.TabIndex = 1;
             this.CirOrbitGroup.TabStop = false;
             this.CirOrbitGroup.Text = "System Params";
+            // 
+            // fixOverlapCheckBox
+            // 
+            this.fixOverlapCheckBox.AutoSize = true;
+            this.fixOverlapCheckBox.Checked = true;
+            this.fixOverlapCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.fixOverlapCheckBox.Location = new System.Drawing.Point(219, 148);
+            this.fixOverlapCheckBox.Name = "fixOverlapCheckBox";
+            this.fixOverlapCheckBox.Size = new System.Drawing.Size(84, 17);
+            this.fixOverlapCheckBox.TabIndex = 13;
+            this.fixOverlapCheckBox.Text = "Fix Overlaps";
+            this.fixOverlapCheckBox.UseVisualStyleBackColor = true;
             // 
             // label10
             // 
@@ -137,7 +177,7 @@
             // 
             // AddOrbitButton
             // 
-            this.AddOrbitButton.Location = new System.Drawing.Point(185, 39);
+            this.AddOrbitButton.Location = new System.Drawing.Point(185, 67);
             this.AddOrbitButton.Name = "AddOrbitButton";
             this.AddOrbitButton.Size = new System.Drawing.Size(145, 33);
             this.AddOrbitButton.TabIndex = 8;
@@ -348,17 +388,125 @@
             this.NumToAddTextBox.TabIndex = 0;
             this.NumToAddTextBox.Text = "5000";
             // 
-            // fixOverlapCheckBox
+            // RotXText
             // 
-            this.fixOverlapCheckBox.AutoSize = true;
-            this.fixOverlapCheckBox.Checked = true;
-            this.fixOverlapCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.fixOverlapCheckBox.Location = new System.Drawing.Point(219, 148);
-            this.fixOverlapCheckBox.Name = "fixOverlapCheckBox";
-            this.fixOverlapCheckBox.Size = new System.Drawing.Size(84, 17);
-            this.fixOverlapCheckBox.TabIndex = 13;
-            this.fixOverlapCheckBox.Text = "Fix Overlaps";
-            this.fixOverlapCheckBox.UseVisualStyleBackColor = true;
+            this.RotXText.Location = new System.Drawing.Point(210, 13);
+            this.RotXText.Name = "RotXText";
+            this.RotXText.Size = new System.Drawing.Size(27, 20);
+            this.RotXText.TabIndex = 14;
+            this.RotXText.Text = "0";
+            // 
+            // RotYText
+            // 
+            this.RotYText.Location = new System.Drawing.Point(255, 13);
+            this.RotYText.Name = "RotYText";
+            this.RotYText.Size = new System.Drawing.Size(27, 20);
+            this.RotYText.TabIndex = 15;
+            this.RotYText.Text = "0";
+            // 
+            // RotZText
+            // 
+            this.RotZText.Location = new System.Drawing.Point(303, 13);
+            this.RotZText.Name = "RotZText";
+            this.RotZText.Size = new System.Drawing.Size(27, 20);
+            this.RotZText.TabIndex = 16;
+            this.RotZText.Text = "0";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(145, 16);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(27, 13);
+            this.label11.TabIndex = 17;
+            this.label11.Text = "Rot:";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(198, 16);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(14, 13);
+            this.label12.TabIndex = 18;
+            this.label12.Text = "X";
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(243, 16);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(14, 13);
+            this.label13.TabIndex = 19;
+            this.label13.Text = "Y";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(289, 16);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(14, 13);
+            this.label14.TabIndex = 20;
+            this.label14.Text = "Z";
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(289, 42);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(14, 13);
+            this.label15.TabIndex = 27;
+            this.label15.Text = "Z";
+            // 
+            // VeloYText
+            // 
+            this.VeloYText.Location = new System.Drawing.Point(255, 39);
+            this.VeloYText.Name = "VeloYText";
+            this.VeloYText.Size = new System.Drawing.Size(27, 20);
+            this.VeloYText.TabIndex = 22;
+            this.VeloYText.Text = "0";
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(243, 42);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(14, 13);
+            this.label16.TabIndex = 26;
+            this.label16.Text = "Y";
+            // 
+            // VeloXText
+            // 
+            this.VeloXText.Location = new System.Drawing.Point(210, 39);
+            this.VeloXText.Name = "VeloXText";
+            this.VeloXText.Size = new System.Drawing.Size(27, 20);
+            this.VeloXText.TabIndex = 21;
+            this.VeloXText.Text = "0";
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(198, 42);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(14, 13);
+            this.label17.TabIndex = 25;
+            this.label17.Text = "X";
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(145, 42);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(25, 13);
+            this.label18.TabIndex = 24;
+            this.label18.Text = "Vel:";
+            // 
+            // VeloZText
+            // 
+            this.VeloZText.Location = new System.Drawing.Point(303, 39);
+            this.VeloZText.Name = "VeloZText";
+            this.VeloZText.Size = new System.Drawing.Size(27, 20);
+            this.VeloZText.TabIndex = 23;
+            this.VeloZText.Text = "0";
             // 
             // AddBodiesForm
             // 
@@ -411,5 +559,19 @@
         private System.Windows.Forms.Button PickColorButton;
         private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.CheckBox fixOverlapCheckBox;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.TextBox RotYText;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.TextBox RotXText;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.TextBox RotZText;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.TextBox VeloYText;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.TextBox VeloXText;
+        private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.Label label18;
+        private System.Windows.Forms.TextBox VeloZText;
     }
 }

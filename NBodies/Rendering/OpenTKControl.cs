@@ -294,6 +294,7 @@ namespace NBodies.Rendering
                     _camera.Position -= _camera.Up * cameraSpeed * time; // Down
             }
 
+            ViewportHelpers.CameraPos = _camera.Position;
 
             if (bodies.Length > 0)
             {
@@ -458,6 +459,9 @@ namespace NBodies.Rendering
             stats.Add($@"Time: {elapTime.Days} days {elapTime.Hours} hr {elapTime.Minutes} min");
             stats.Add($@"Bodies: {BodyManager.BodyCount}");
             stats.Add($@"Grid Passes: {OpenCLPhysics.GridPasses}");
+            stats.Add($@"Cell Size: {Math.Pow(2, MainLoop.CellSizeExp)}");
+            stats.Add($@"Mesh Levels: {MainLoop.MeshLevels}");
+
 
             if (BodyManager.FollowSelected)
             {
