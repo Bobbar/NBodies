@@ -109,20 +109,20 @@ namespace NBodies.Extensions
 
         public static bool PointInsideCircle(PointF circleLoc, float circleRadius, PointF testPoint)
         {
-            //var dist = testPoint.DistanceSqrt(circleLoc);
+            var dist = testPoint.DistanceSqrt(circleLoc);
 
-            //if (dist <= circleRadius)
-            //    return true;
-
-            //return false;
-
-
-            var dist = Math.Pow((testPoint.X - circleLoc.X), 2) + Math.Pow((testPoint.Y - circleLoc.Y), 2);
-
-            if (dist <= circleRadius * circleRadius)
-            {
+            if (dist < circleRadius)
                 return true;
-            }
+
+            return false;
+
+
+            //var dist = Math.Pow((testPoint.X - circleLoc.X), 2) + Math.Pow((testPoint.Y - circleLoc.Y), 2);
+
+            //if (dist <= circleRadius * circleRadius)
+            //{
+            //    return true;
+            //}
 
             return false;
 

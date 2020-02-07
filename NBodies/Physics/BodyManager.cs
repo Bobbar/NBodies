@@ -161,7 +161,7 @@ namespace NBodies.Physics
                             if (fractures.Count == 0)
                                 fractures = new List<Body>(2000);
 
-                            fractures.AddRange(FractureBody(bodies[i]));
+                            fractures.AddRange(FractureBody3D(bodies[i]));
                         }
                     }
                 }
@@ -239,70 +239,87 @@ namespace NBodies.Physics
             Console.WriteLine($@"{before - Bodies.Length} bodies removed.");
         }
 
-        private static Body[] FractureBody(Body body)
+        private static Body[] FractureBody3D(Body body)
         {
             float newMass;
             float prevMass;
-            bool flipflop = true;
 
             float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
-
             newMass = CalcMass(_minBodySize, density);
-
-            int num = (int)(body.Mass / newMass);
-
             prevMass = body.Mass;
 
-            var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), body.Size * 0.5f);
-
-            bool done = false;
             float stepSize = MainLoop.KernelSize * 0.98f;
-
-            float startXpos = ellipse.Location.X - ellipse.Size;
-            float startYpos = ellipse.Location.Y - ellipse.Size;
-
-            float Xpos = startXpos;
-            float Ypos = startYpos;
+            float radius = (body.Size / 2f);
+            float stepRadius = radius;
+            int zSteps = (int)(radius / stepSize) + 1; 
+            int totZSteps = zSteps * 2;
+            float zPos = body.PosZ + (stepSize / 2f);
 
             var newBodies = new List<Body>();
 
-            int its = 0;
-
-            while (!done)
+            // Build a sphere out of circular "layers"
+            // The layers are built with squarse of reducing sizes which are then "masked" into circles with the PointInsideCircle condition.
+            for (int i = 0; i < totZSteps; i++)
             {
-                var testPoint = new PointF(Xpos, Ypos);
+                // Start a new layer.
+                var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), stepRadius + stepSize);
 
-                if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
+                float startXpos = ellipse.Location.X - ellipse.Size - stepSize;
+                float startYpos = ellipse.Location.Y - ellipse.Size - stepSize;
+
+                float Xpos = startXpos;
+                float Ypos = startYpos;
+
+                bool done = false;
+                while (!done)
                 {
-                    var newbody = NewBody(testPoint.X, testPoint.Y, body.VeloX, body.VeloY, _minBodySize, newMass, Color.FromArgb(body.Color), 1);
-                    newbody.ForceTot = body.ForceTot;
-                    newBodies.Add(newbody);
-                }
-
-                Xpos += stepSize;
-
-                if (Xpos > ellipse.Location.X + (ellipse.Size))
-                {
-                    if (flipflop)
+                    // Only keep points that are within the layer ellipse. 
+                    var testPoint = new PointF(Xpos, Ypos);
+                    if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
                     {
-                        Xpos = startXpos + (MainLoop.KernelSize / 2f);
-                        flipflop = false;
+                        var newPos = new Vector3(testPoint.X, testPoint.Y, zPos);
+                        var newbody = NewBody(newPos, body.VelocityVec(), _minBodySize, newMass, Color.FromArgb(body.Color), 1);
+                        newbody.ForceTot = body.ForceTot;
+                        newBodies.Add(newbody);
+                    }
+
+                    if (Xpos > ellipse.Location.X + ellipse.Size + stepSize)
+                    {
+                        // Move X back to start, move Y one step verically.
+                        Xpos = startXpos;
+                        Ypos += stepSize;// - 0.20f;
                     }
                     else
                     {
-                        Xpos = startXpos;
-                        flipflop = true;
+                        // Move X one step sideways.
+                        Xpos += stepSize;
                     }
 
-                    Ypos += stepSize - 0.20f;
+                    // If we are at the bottom we are finished with this layer.
+                    if (Ypos > ellipse.Location.Y + ellipse.Size + stepSize)
+                        done = true;
                 }
 
-                if (newBodies.Count == num || its > num * 4)
+              
+                if (i < zSteps - 1)
                 {
-                    done = true;
+                    // Move Z one step forwards.
+                    zPos += stepSize;
+                    stepRadius -= stepSize;
                 }
-
-                its++;
+                else if (i == zSteps - 1)
+                {
+                    // One hemisphere complete. Move Z back to start minus 1/2 step.
+                    // Future Z steps will move the opposite direction to finish the other hemisphere. 
+                    zPos = body.PosZ - (stepSize / 2f);
+                    stepRadius = radius;
+                }
+                else if (i > zSteps - 1)
+                {
+                    // Move Z one step backwards.
+                    zPos -= stepSize;
+                    stepRadius -= stepSize;
+                }
             }
 
             // Adjust new bodies mass if we missed by a lot.
@@ -1001,6 +1018,27 @@ namespace NBodies.Physics
             b.VeloZ = velo.Z;
 
             b.ForceX = 0;
+            b.UID = NextUID();
+
+            return b;
+        }
+
+        public static Body NewBody(Vector3 loc, Vector3 velo, float size, float mass, Color color, int inRoche)
+        {
+            var b = new Body();
+
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
+            b.PosZ = loc.Z;
+
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+            b.VeloX = velo.X;
+            b.VeloY = velo.Y;
+            b.VeloZ = velo.Z;
+            b.InRoche = inRoche;
+
             b.UID = NextUID();
 
             return b;
