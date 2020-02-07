@@ -501,6 +501,7 @@ namespace NBodies
             if (_cancelTokenSource.IsCancellationRequested)
             {
                 _stopLoopWait.Set();
+                _renderReadyWait.Set();
             }
         }
 
