@@ -280,6 +280,50 @@ __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, glo
 	mesh[m].GridIdx = cell.GridIdx;
 }
 
+
+__kernel void BuildNeighborsBrute(global MeshCell* mesh, int meshLen, global int* levelIdx, global int* neighborIndex, int levels)
+{
+	int m = get_global_id(0);
+
+	if (m >= meshLen)
+		return;
+
+	long offset = m * 27;
+
+	MeshCell cell;
+	cell.IdxX = mesh[m].IdxX;
+	cell.IdxY = mesh[m].IdxY;
+	cell.IdxZ = mesh[m].IdxZ;
+	cell.Level = mesh[m].Level;
+
+	long count = 0;
+	int levelStart = levelIdx[levels];
+	int levelEnd = meshLen;
+
+	if (cell.Level < levels)
+	{
+		levelStart = levelIdx[cell.Level];
+		levelEnd = levelIdx[cell.Level + 1];
+	}
+
+	for (int i = levelStart; i < levelEnd; i++)
+	{
+		MeshCell check;
+		check.IdxX = mesh[i].IdxX;
+		check.IdxY = mesh[i].IdxY;
+		check.IdxZ = mesh[i].IdxZ;
+
+		if (!IsFar(cell, check))
+		{
+			neighborIndex[(offset + count++)] = i;
+		}
+	}
+
+	mesh[m].NeighborStartIdx = offset;
+	mesh[m].NeighborCount = count;
+}
+
+
 __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, long passStride, long passOffset, global int* neighborIndex)
 {
 	int m = get_global_id(0);

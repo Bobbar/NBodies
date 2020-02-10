@@ -458,10 +458,19 @@ namespace NBodies.Rendering
             stats.Add($@"Count: {MainLoop.FrameCount}");
             stats.Add($@"Time: {elapTime.Days} days {elapTime.Hours} hr {elapTime.Minutes} min");
             stats.Add($@"Bodies: {BodyManager.BodyCount}");
-            stats.Add($@"Grid Passes: {OpenCLPhysics.GridPasses}");
             stats.Add($@"Cell Size: {Math.Pow(2, MainLoop.CellSizeExp)}");
             stats.Add($@"Mesh Levels: {MainLoop.MeshLevels}");
 
+            if (OpenCLPhysics.NNUsingBrute)
+            {
+                stats.Add($@"NN Search: Brute");
+
+            }
+            else
+            {
+                stats.Add($@"NN Search: Grid");
+                stats.Add($@"Grid Passes: {OpenCLPhysics.GridPasses}");
+            }
 
             if (BodyManager.FollowSelected)
             {

@@ -16,6 +16,7 @@ namespace NBodies.Physics
     {
         private int _gpuIndex = 4;
         private int _levels = 4;
+        private bool _useBrute = false;
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 8;//12;
         private long _maxBufferSize = 0;
@@ -47,6 +48,7 @@ namespace NBodies.Physics
         private ComputeKernel _popGridKernel;
         private ComputeKernel _clearGridKernel;
         private ComputeKernel _buildNeighborsKernel;
+        private ComputeKernel _buildNeighborsBruteKernel;
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
@@ -63,6 +65,7 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuCellIdx;
         private ComputeBuffer<GridInfo> _gpuGridInfo;
         private ComputeBuffer<int> _gpuPostNeeded;
+        private ComputeBuffer<int> _gpuLevelIndex;
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
 
@@ -99,6 +102,9 @@ namespace NBodies.Physics
         }
 
         public static int GridPasses { get; private set; } = 1;
+
+        public static bool NNUsingBrute { get; private set; } = true;
+
 
         public int[] LevelIndex
         {
@@ -164,6 +170,7 @@ namespace NBodies.Physics
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _popGridKernel = _program.CreateKernel("PopGrid");
             _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
+            _buildNeighborsBruteKernel = _program.CreateKernel("BuildNeighborsBrute");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
@@ -223,6 +230,7 @@ namespace NBodies.Physics
             _gpuCellIdx.Dispose();
             _gpuGridInfo.Dispose();
             _gpuPostNeeded.Dispose();
+            _gpuLevelIndex.Dispose();
             _mesh = new MeshCell[0];
             _bufferInfo.Clear();
             _currentFrame = 0;
@@ -261,6 +269,9 @@ namespace NBodies.Physics
 
             _gpuCM = new ComputeBuffer<Vector3>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
+
+            _gpuLevelIndex = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuLevelIndex, 1, true);
         }
 
         public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool isPostNeeded)
@@ -530,8 +541,35 @@ namespace NBodies.Physics
             // Build the remaining (upper) levels of the mesh.
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
+            // Compute spatial grid size.
+            long gridSize = 0;
+            foreach (var g in _gridInfo)
+            {
+                gridSize += g.Size;
+            }
+
+            // Determine if we should use a grid based or brute force nearest neighbor search.
+            // Compute a "sparseness" ratio.  Very sparse and large fields will require a large number 
+            // of grid passes to complete the neighbor list. In these cases a brute force search may potentially
+            // be faster and will require far less memory. 
+            long ratio = gridSize / _meshLength;
+            long bruteCutoff = 400000;
+            if (ratio >= bruteCutoff)
+                _useBrute = true;
+            else
+                _useBrute = false;
+
+            NNUsingBrute = _useBrute;
+
             // Populate the grid index and mesh neighbor index list.
-            PopGridAndNeighborsGPU(_gridInfo, _meshLength);
+            if (!_useBrute)
+            {
+                PopGridAndNeighborsGPU(_gridInfo, _meshLength, gridSize);
+            }
+            else
+            {
+                PopNeighborsBrute(_meshLength);
+            }
         }
 
         /// <summary>
@@ -791,11 +829,10 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Populates a compressed sparse grid array (grid index) and computes the neighbor list for all mesh cells on the GPU.
+        /// Populates a compressed sparse grid array (grid index) and computes the neighbor list for all mesh cells on the GPU.  **USES BRUTE FORCE KERNEL**
         /// </summary>
-        /// <param name="gridInfo"></param>
         /// <param name="meshSize"></param>
-        private void PopGridAndNeighborsGPU(GridInfo[] gridInfo, int meshSize)
+        private void PopNeighborsBrute(int meshSize)
         {
             // Calulate total size of 1D mesh neighbor list.
             // Each cell can have a max of 27 neighbors, including itself.
@@ -804,12 +841,34 @@ namespace NBodies.Physics
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
 
-            // Calculate total size of 1D grid index.
-            long gridSize = 0;
-            foreach (var g in gridInfo)
-            {
-                gridSize += g.Size;
-            }
+            Allocate(ref _gpuLevelIndex, _levelIdx.Length, true);
+            _queue.WriteToBuffer(_levelIdx, _gpuLevelIndex, false, null);
+
+            int workSize = BlockCount(meshSize) * _threadsPerBlock;
+
+            // Build neighbor list.
+            int argi = 0;
+            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _buildNeighborsBruteKernel.SetValueArgument(argi++, meshSize);
+            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
+            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _buildNeighborsBruteKernel.SetValueArgument(argi++, _levels);
+            _queue.Execute(_buildNeighborsBruteKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+        }
+
+        /// <summary>
+        /// Populates a compressed sparse grid array (grid index) and computes the neighbor list for all mesh cells on the GPU.
+        /// </summary>
+        /// <param name="gridInfo"></param>
+        /// <param name="meshSize"></param>
+        private void PopGridAndNeighborsGPU(GridInfo[] gridInfo, int meshSize, long gridSize)
+        {
+            // Calulate total size of 1D mesh neighbor list.
+            // Each cell can have a max of 27 neighbors, including itself.
+            int neighborLen = meshSize * 27;
+
+            // Reallocate and resize GPU buffer as needed.
+            Allocate(ref _gpuMeshNeighbors, neighborLen);
 
             // Reallocate and resize GPU buffer as needed.
             long newCap = Allocate(ref _gpuGridIndex, gridSize);
@@ -1022,12 +1081,14 @@ namespace NBodies.Physics
             _gpuCellIdx.Dispose();
             _gpuGridInfo.Dispose();
             _gpuPostNeeded.Dispose();
+            _gpuLevelIndex.Dispose();
 
             _forceKernel.Dispose();
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _popGridKernel.Dispose();
             _buildNeighborsKernel.Dispose();
+            _buildNeighborsBruteKernel.Dispose();
             _clearGridKernel.Dispose();
             _fixOverlapKernel.Dispose();
             _buildBottomKernel.Dispose();
