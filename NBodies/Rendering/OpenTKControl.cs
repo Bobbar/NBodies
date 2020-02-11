@@ -195,6 +195,19 @@ namespace NBodies.Rendering
         private int _colorAttrib;
 
         private Camera _camera;
+
+        private float[] _camSpeeds = new float[]
+        {
+            10f,
+            50f,
+            200f,
+            600f,
+            1000f,
+            3000f,
+            10000f,
+            30000f
+        };
+
         const float cameraSpeedFast = 200f;
         const float cameraSpeedSlow = 10f;
         private float cameraSpeed = cameraSpeedFast;
@@ -678,12 +691,17 @@ namespace NBodies.Rendering
 
             base.OnKeyDown(e);
 
-            if (InputHandler.KeyIsDown(Keys.Q))
+            const int oneKey = 49;
+            const int eightKey = 56;
+
+            int spdIdx = 0;
+            for (int i = oneKey; i <= eightKey; i++)
             {
-                if (cameraSpeed == cameraSpeedFast)
-                    cameraSpeed = cameraSpeedSlow;
-                else
-                    cameraSpeed = cameraSpeedFast;
+                var key = (Keys)i;
+                var spd = _camSpeeds[spdIdx++];
+
+                if (InputHandler.KeyIsDown(key))
+                    cameraSpeed = spd;
             }
         }
 
