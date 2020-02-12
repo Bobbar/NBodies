@@ -281,7 +281,6 @@ namespace NBodies.Physics
             _levels = sim.MeshLevels;
             int threadBlocks = 0;
 
-
             // Allocate and start writing bodies to the GPU.
             Allocate(ref _gpuInBodies, _bodies.Length);
             Allocate(ref _gpuOutBodies, _bodies.Length);
@@ -405,27 +404,7 @@ namespace NBodies.Physics
             return blocks;
         }
 
-        /// <summary>
-        /// Calculate dimensionless morton number from X/Y coords.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int MortonNumber(int x, int y)
-        {
-            x &= 65535;
-            x = (x | (x << 8)) & 16711935;
-            x = (x | (x << 4)) & 252645135;
-            x = (x | (x << 2)) & 858993459;
-            x = (x | (x << 1)) & 1431655765;
-
-            y &= 65535;
-            y = (y | (y << 8)) & 16711935;
-            y = (y | (y << 4)) & 252645135;
-            y = (y | (y << 2)) & 858993459;
-            y = (y | (y << 1)) & 1431655765;
-
-            return x | (y << 1);
-        }
-
         private long MortonNumber(long x, long y, long z)
         {
             x &= 0x1fffff; // we only look at the first 21 bits
@@ -435,7 +414,7 @@ namespace NBodies.Physics
             x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
             x = (x | x << 2) & 0x1249249249249249;
 
-            y &= 0x1fffff; 
+            y &= 0x1fffff;
             y = (y | y << 32) & 0x1f00000000ffff;
             y = (y | y << 16) & 0x1f0000ff0000ff;
             y = (y | y << 8) & 0x100f00f00f00f00f;
@@ -470,7 +449,7 @@ namespace NBodies.Physics
 
             if (level == 1)
             {
-                idxOff = _gridInfo[level - 1].Size;
+                idxOff = 0;
             }
             else if (level > 1)
             {
@@ -478,7 +457,6 @@ namespace NBodies.Physics
             }
 
             _gridInfo[level].Set(offsetX, offsetY, offsetZ, idxOff, minMax.MinX, minMax.MinY, minMax.MinZ, minMax.MaxX, minMax.MaxY, minMax.MaxZ, columns, rows, layers);
-
         }
 
         private void ComputeGridDims(MinMax first, int levels)
@@ -541,11 +519,11 @@ namespace NBodies.Physics
             // Build the remaining (upper) levels of the mesh.
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
-            // Compute spatial grid size.
+            // Compute spatial grid size for top levels.
             long gridSize = 0;
-            foreach (var g in _gridInfo)
+            for (int l = 1; l <= _levels; l++)
             {
-                gridSize += g.Size;
+                gridSize += _gridInfo[l].Size;
             }
 
             // Determine if we should use a grid based or brute force nearest neighbor search.
@@ -836,7 +814,9 @@ namespace NBodies.Physics
         {
             // Calulate total size of 1D mesh neighbor list.
             // Each cell can have a max of 27 neighbors, including itself.
-            int neighborLen = meshSize * 27;
+            int topStart = _levelIdx[1];
+            int topSize = meshSize - _levelIdx[1];
+            int neighborLen = topSize * 27;
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
@@ -853,6 +833,7 @@ namespace NBodies.Physics
             _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
             _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _buildNeighborsBruteKernel.SetValueArgument(argi++, _levels);
+            _buildNeighborsBruteKernel.SetValueArgument(argi++, topStart);
             _queue.Execute(_buildNeighborsBruteKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
         }
 
@@ -865,7 +846,9 @@ namespace NBodies.Physics
         {
             // Calulate total size of 1D mesh neighbor list.
             // Each cell can have a max of 27 neighbors, including itself.
-            int neighborLen = meshSize * 27;
+            int topStart = _levelIdx[1];
+            int topSize = meshSize - _levelIdx[1];
+            int neighborLen = topSize * 27;
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
@@ -902,7 +885,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuGridInfo, gridInfo.Length, true);
             _queue.WriteToBuffer(gridInfo, _gpuGridInfo, false, null);
 
-            int workSize = BlockCount(meshSize) * _threadsPerBlock;
+            int workSize = BlockCount(topSize) * _threadsPerBlock;
 
             for (int i = 0; i < passes; i++)
             {
@@ -916,6 +899,7 @@ namespace NBodies.Physics
                 _popGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
                 _popGridKernel.SetMemoryArgument(argi++, _gpuMesh);
                 _popGridKernel.SetValueArgument(argi++, meshSize);
+                _popGridKernel.SetValueArgument(argi++, topStart);
                 _queue.Execute(_popGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                 // Build neighbor list.
@@ -927,6 +911,7 @@ namespace NBodies.Physics
                 _buildNeighborsKernel.SetValueArgument(argi++, stride);
                 _buildNeighborsKernel.SetValueArgument(argi++, passOffset);
                 _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _buildNeighborsKernel.SetValueArgument(argi++, topStart);
                 _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                 // We're done with the grid index array, so undo what we added to clear it for the next pass.
@@ -935,6 +920,7 @@ namespace NBodies.Physics
                 _clearGridKernel.SetValueArgument(2, passOffset);
                 _clearGridKernel.SetMemoryArgument(3, _gpuMesh);
                 _clearGridKernel.SetValueArgument(4, meshSize);
+                _clearGridKernel.SetValueArgument(5, topStart);
                 _queue.Execute(_clearGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
             }
         }
