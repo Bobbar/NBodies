@@ -21,6 +21,10 @@ namespace NBodies.Physics
         [Key(1)]
         public float PosY;
 
+        [ProtoMember(17)]
+        [Key(16)]
+        public float PosZ;
+
         [ProtoMember(3)]
         [Key(2)]
         public float Mass;
@@ -33,6 +37,10 @@ namespace NBodies.Physics
         [Key(4)]
         public float VeloY;
 
+        [ProtoMember(18)]
+        [Key(17)]
+        public float VeloZ;
+
         [ProtoMember(6)]
         [Key(5)]
         public float ForceX;
@@ -40,6 +48,10 @@ namespace NBodies.Physics
         [ProtoMember(7)]
         [Key(6)]
         public float ForceY;
+
+        [ProtoMember(19)]
+        [Key(18)]
+        public float ForceZ;
 
         [ProtoMember(8)]
         [Key(7)]
@@ -108,18 +120,6 @@ namespace NBodies.Physics
         [ProtoMember(16)]
         [Key(15)]
         public float Pressure;
-
-        [ProtoMember(17)]
-        [Key(16)]
-        public float PosZ;
-
-        [ProtoMember(18)]
-        [Key(17)]
-        public float VeloZ;
-
-        [ProtoMember(19)]
-        [Key(18)]
-        public float ForceZ;
 
         [IgnoreMember]
         public float Lifetime;

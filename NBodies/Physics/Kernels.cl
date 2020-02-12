@@ -4,20 +4,20 @@ typedef struct __attribute__((packed)) Body
 {
 	float PosX;
 	float PosY;
+	float PosZ;
 	float Mass;
 	float VeloX;
 	float VeloY;
+	float VeloZ;
 	float ForceX;
 	float ForceY;
+	float ForceZ;
 	int Color;
 	float Size;
 	int Flag;
 	int UID;
 	float Density;
 	float Pressure;
-	float PosZ;
-	float VeloZ;
-	float ForceZ;
 	float Lifetime;
 	int MeshID;
 
