@@ -326,57 +326,8 @@ namespace NBodies.Rendering
 
                 GL.BindVertexArray(_cubesVAO);
 
-                //  Draw Body cubes.
-                var zOrder = ComputeZOrder(bodies);
-
-                if (_offsets.Length != bodies.Length)
-                {
-                    _offsets = new Vector4[bodies.Length];
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                    GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
-
-                    _colors = new Vector3[bodies.Length];
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-                    GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
-                }
-
-                // Update body position offsets and colors via mem map.
-                unsafe
-                {
-                    var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
-                    var offNativePtr = (Vector4*)offsetPtr.ToPointer();
-
-                    var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
-                    var colorNativePtr = (Vector3*)colorPtr.ToPointer();
-
-                    for (int i = 0; i < bodies.Length; i++)
-                    {
-                        //  var body = bodies[i];
-                        var body = bodies[zOrder[i]];
-                        var bPos = body.PositionVec();
-                        var bColor = GetStyleColor(body, i);
-                        //var bColor = Color.FromArgb(body.Color);
-                        var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
-                        var offset = new Vector4(bPos, body.Size / 2);
-
-                        offNativePtr[i] = offset;
-
-                        if (body.UID == BodyManager.FollowBodyUID)
-                            colorNativePtr[i] = new Vector3(0f, 1.0f, 0f);
-
-                        else
-                            colorNativePtr[i] = normColor;
-
-                    }
-
-                    GL.UnmapNamedBuffer(_offsetBufferObject);
-                    GL.UnmapNamedBuffer(_colorBufferObject);
-                }
-
                 var lightPos = _camera.Position;
-
                 _shader.SetMatrix4("model", Matrix4.Identity);
-
                 if (BodyManager.FollowSelected)
                 {
                     var bPos = BodyManager.FollowBody().PositionVec();
@@ -391,17 +342,68 @@ namespace NBodies.Rendering
                 _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
                 _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
                 _shader.SetVector3("lightPos", lightPos);
-                //_shader.SetVector3("viewPos", _camera.Position);
                 _shader.SetVector3("viewPos", lightPos);
-
                 _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
                 _shader.SetInt("noLight", 0);
 
-                GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
+
+                // Don't draw bodies if alpha is 0.
+                if (RenderBase.BodyAlpha > 0)
+                {
+                    //  Draw Body cubes.
+                    var zOrder = ComputeZOrder(bodies);
+
+                    if (_offsets.Length != bodies.Length)
+                    {
+                        _offsets = new Vector4[bodies.Length];
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
+                        GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
+
+                        _colors = new Vector3[bodies.Length];
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
+                        GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+                    }
+
+                    // Update body position offsets and colors via mem map.
+                    unsafe
+                    {
+                        var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
+                        var offNativePtr = (Vector4*)offsetPtr.ToPointer();
+
+                        var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
+                        var colorNativePtr = (Vector3*)colorPtr.ToPointer();
+
+                        for (int i = 0; i < bodies.Length; i++)
+                        {
+                            //  var body = bodies[i];
+                            var body = bodies[zOrder[i]];
+                            var bPos = body.PositionVec();
+                            var bColor = GetStyleColor(body, i);
+                            //var bColor = Color.FromArgb(body.Color);
+                            var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                            var offset = new Vector4(bPos, body.Size / 2);
+
+                            offNativePtr[i] = offset;
+
+                            if (body.UID == BodyManager.FollowBodyUID)
+                                colorNativePtr[i] = new Vector3(0f, 1.0f, 0f);
+
+                            else
+                                colorNativePtr[i] = normColor;
+
+                        }
+
+                        GL.UnmapNamedBuffer(_offsetBufferObject);
+                        GL.UnmapNamedBuffer(_colorBufferObject);
+                    }
+
+                    GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
+                }
 
                 //  Draw mesh
                 if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
                 {
+                    _shader.SetFloat("alpha", 1.0f);
                     _shader.SetInt("noLight", 1);
 
                     var mesh = BodyManager.Mesh;
@@ -734,7 +736,7 @@ namespace NBodies.Rendering
 
             base.OnMouseMove(e);
 
-            const float sensitivity = 0.2f;
+            const float sensitivity = 0.13f;
 
             if (e.Button == MouseButtons.Right)
             {

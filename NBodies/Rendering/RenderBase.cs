@@ -51,7 +51,7 @@ namespace NBodies.Rendering
 
             set
             {
-                if (value >= 1 && value <= 255)
+                if (value >= 0 && value <= 255)
                 {
                     _bodyAlpha = value;
                 }
