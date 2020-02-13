@@ -196,6 +196,9 @@ namespace NBodies.Rendering
 
         private Camera _camera;
 
+        private Color _clearColor = Color.Black;
+        private Color _defaultBodyColor = Color.White;
+
         private float[] _camSpeeds = new float[]
         {
             10f,
@@ -312,6 +315,7 @@ namespace NBodies.Rendering
             if (bodies.Length > 0)
             {
                 // Render Bodies
+                GL.ClearColor(_clearColor);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 GL.Enable(EnableCap.DepthTest);
                 GL.Enable(EnableCap.LineSmooth);
@@ -563,37 +567,37 @@ namespace NBodies.Rendering
 
         private Color GetStyleColor(Body body, int index)
         {
-            Color bodyColor = Color.White;
+            Color bodyColor = _defaultBodyColor;
 
             switch (RenderBase.DisplayStyle)
             {
                 case DisplayStyle.Normal:
                     bodyColor = Color.FromArgb(RenderBase.BodyAlpha, Color.FromArgb(body.Color));
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Pressure:
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Density:
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Density / body.Mass, true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Velocity:
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.AggregateSpeed(), true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Index:
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
@@ -601,19 +605,19 @@ namespace NBodies.Rendering
                     //bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, index, true);
 
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Force:
                     bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, (body.ForceTot / body.Mass), true);
-                    GL.ClearColor(Color.Black);
+                    _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.HighContrast:
                     bodyColor = Color.Black;
-                    GL.ClearColor(Color.White);
+                    _clearColor = Color.White;
 
                     break;
             }
