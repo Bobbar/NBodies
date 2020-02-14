@@ -49,7 +49,6 @@ void main()
     //and makes sure the alpha value is 1
     vec3 result = (ambient + diffuse + specular) * objectColor;
     FragColor = vec4(result, alpha);
-    //FragColor = vec4(result, 1.0);
     
     //Note we still use the light color * object color from the last tutorial.
     //This time the light values are in the phong model (ambient, diffuse and specular)
