@@ -15,6 +15,7 @@ namespace NBodies.UI
     {
         public Cloo.ComputeDevice SelectedDevice;
         public int MaxThreadsPerBlock = 0;
+        public bool FastMath => fastMathCheckBox.Checked;
 
         private List<Cloo.ComputeDevice> _devices = new List<Cloo.ComputeDevice>();
 

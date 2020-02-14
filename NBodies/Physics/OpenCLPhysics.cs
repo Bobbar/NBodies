@@ -14,6 +14,7 @@ namespace NBodies.Physics
 {
     public class OpenCLPhysics : IPhysicsCalc, IDisposable
     {
+        private bool _useFastMath = true;
         private int _gpuIndex = 4;
         private int _levels = 4;
         private bool _useBrute = false;
@@ -114,18 +115,10 @@ namespace NBodies.Physics
             }
         }
 
-        public OpenCLPhysics(int gpuIdx, int threadsperblock)
-        {
-            if (gpuIdx != -1)
-                _gpuIndex = gpuIdx;
-
-            if (threadsperblock != -1)
-                _threadsPerBlock = threadsperblock;
-        }
-
-        public OpenCLPhysics(ComputeDevice device, int threadsperblock)
+        public OpenCLPhysics(ComputeDevice device, int threadsperblock, bool useFastMath)
         {
             _device = device;
+            _useFastMath = useFastMath;
 
             if (threadsperblock != -1)
                 _threadsPerBlock = threadsperblock;
@@ -152,7 +145,14 @@ namespace NBodies.Physics
 
             try
             {
-                _program.Build(null, "-cl-std=CL1.2 -cl-fast-relaxed-math", null, IntPtr.Zero);
+                string options;
+
+                if (_useFastMath)
+                    options = "-cl-std=CL1.2 -cl-fast-relaxed-math -D FASTMATH";
+                else
+                    options = "-cl-std=CL1.2";
+
+                _program.Build(null, options, null, IntPtr.Zero);
             }
             catch (BuildProgramFailureComputeException ex)
             {

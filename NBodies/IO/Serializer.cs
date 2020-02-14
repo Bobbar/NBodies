@@ -1,4 +1,5 @@
-﻿using NBodies.Physics;
+﻿using System;
+using NBodies.Physics;
 using NBodies.Rendering;
 using System.IO;
 using System.Threading;
@@ -7,6 +8,8 @@ using ProtoBuf;
 using NBodies.Helpers;
 using System.Linq;
 using System.Collections.Generic;
+using OpenTK;
+
 namespace NBodies.IO
 {
     public static class Serializer
@@ -97,7 +100,7 @@ namespace NBodies.IO
                 var state = ProtoBuf.Serializer.Deserialize<StateParams>(stateStream);
 
                 var zmax = state.Bodies.Max(b => b.PosZ);
-                if (zmax <= 0)
+                if (zmax < 0)
                 {
                     for (int i = 0; i < state.Bodies.Length; i++)
                     {
@@ -118,7 +121,7 @@ namespace NBodies.IO
                 var bodies = ProtoBuf.Serializer.Deserialize<Body[]>(stateStream);
 
                 var zmax = bodies.Max(b => b.PosZ);
-                if (zmax <= 0)
+                if (zmax < 0)
                 {
                     for (int i = 0; i < bodies.Length; i++)
                     {
@@ -159,6 +162,57 @@ namespace NBodies.IO
             MainLoop.MeshLevels = state.MeshLevels;
             MainLoop.CellSizeExp = state.CellSizeExponent;
             BodyManager.ReplaceBodies(state.Bodies);
+        }
+
+        private static Body[] GetBodiesFromState(string fileName)
+        {
+            using (var stateStream = new FileStream(fileName, FileMode.Open))
+            {
+                var state = ProtoBuf.Serializer.Deserialize<StateParams>(stateStream);
+
+                return state.Bodies;
+            }
+        }
+
+        public static bool CompareStates(string fileA, string fileB)
+        {
+            string log = "";
+            bool match = true;
+
+            var bodiesA = GetBodiesFromState(fileA);
+            var bodiesB = GetBodiesFromState(fileB);
+
+            if (bodiesA.Length != bodiesB.Length)
+                return false;
+
+            bodiesA = bodiesA.OrderBy(b => b.UID).ToArray();
+            bodiesB = bodiesB.OrderBy(b => b.UID).ToArray();
+
+            for (int i = 0; i < bodiesA.Length; i++)
+            {
+                var a = bodiesA[i];
+                var b = bodiesB[i];
+
+                if (a.PositionVec() != b.PositionVec())
+                {
+                    match = false;
+                    log += $@"[{i}]  Pos: {a.PositionVec()} != {b.PositionVec()} {Environment.NewLine}";
+                }
+
+                var forceA = new Vector3(a.ForceX, a.ForceY, a.ForceZ);
+                var forceB = new Vector3(b.ForceX, b.ForceY, b.ForceZ);
+
+                if (forceA != forceB)
+                {
+                    match = false;
+                    log += $@"[{i}]  Force: {forceA} != {forceB} {Environment.NewLine}";
+                }
+
+            }
+
+            System.IO.File.WriteAllText($@".\CompLog.txt", log);
+
+            return match;
         }
     }
 

@@ -62,8 +62,9 @@ namespace NBodies.UI
                 {
                     var device = selectDevice.SelectedDevice;
                     var threads = selectDevice.MaxThreadsPerBlock;
+                    var fastMath = selectDevice.FastMath;
 
-                    PhysicsProvider.InitPhysics(device, threads);
+                    PhysicsProvider.InitPhysics(device, threads, fastMath);
 
                 }
                 else

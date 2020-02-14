@@ -102,6 +102,19 @@ constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
 constant int INROCHE = 8;
 
+#if FASTMATH
+
+#define DISTANCE(a,b) fast_distance(a,b)
+#define SQRT(a) native_sqrt(a)
+
+#else
+
+#define DISTANCE(a,b) distance(a,b)
+#define SQRT(a) sqrt(a)
+
+#endif
+
+
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
 long GridHash(long x, long y, long z, GridInfo grid);
 bool IsFar(MeshCell cell, MeshCell testCell);
@@ -110,6 +123,7 @@ int SetFlag(int flags, int flag, bool enabled);
 Body SetFlagB(Body body, int flag, bool enabled);
 bool HasFlag(int flags, int check);
 bool HasFlagB(Body body, int check);
+
 
 int SetFlag(int flags, int flag, bool enabled)
 {
@@ -517,7 +531,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 {
-	float distSqrt = fast_distance(posA, posB);
+	float distSqrt = DISTANCE(posA, posB);
 	float dist = distSqrt * distSqrt;
 
 	// Clamp to soften length.
@@ -588,9 +602,8 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 					{
 						float jMass = inBodies[(mb)].Mass;
 						float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
-
 						float3 dir = jPos - iPos;
-						float distSqrt = fast_distance(jPos, iPos);
+						float distSqrt = DISTANCE(jPos, iPos);
 						float dist = distSqrt * distSqrt;
 
 						// If this body is within collision/SPH distance.
@@ -754,7 +767,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global M
 					float distZ = outBody.PosZ - inBody.PosZ;
 
 					float dist = distX * distX + distY * distY + distZ * distZ;
-					float distSqrt = (float)native_sqrt(dist);
+					float distSqrt = (float)SQRT(dist);
 
 					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
 					if (distSqrt <= colDist)
@@ -837,9 +850,8 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 						{
 							Body inBody = inBodies[(mb)];
 							float3 inPos = (float3)(inBody.PosX, inBody.PosY, inBody.PosZ);
-
 							float3 dir = outPos - inPos;
-							float distSqrt = fast_distance(outPos, inPos);
+							float distSqrt = DISTANCE(outPos, inPos);
 
 							// Calc the distance and check for collision.
 							if (distSqrt <= sph.kSize)
@@ -907,7 +919,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	// Cull distant bodies.
 	float3 cm = centerMass[0];
-	float dist = fast_distance(cm, (float3)(outBody.PosX, outBody.PosY, outBody.PosZ));
+	float dist = DISTANCE(cm, (float3)(outBody.PosX, outBody.PosY, outBody.PosZ));
 
 	if (dist > sim.CullDistance)
 	{

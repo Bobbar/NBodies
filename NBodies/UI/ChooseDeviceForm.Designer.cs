@@ -34,6 +34,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.OkButton = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.fastMathCheckBox = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -95,6 +96,7 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.fastMathCheckBox);
             this.panel1.Controls.Add(this.OkButton);
             this.panel1.Controls.Add(this.threadsTextBox);
             this.panel1.Controls.Add(this.label1);
@@ -102,6 +104,18 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(146, 276);
             this.panel1.TabIndex = 4;
+            // 
+            // fastMathCheckBox
+            // 
+            this.fastMathCheckBox.AutoSize = true;
+            this.fastMathCheckBox.Checked = true;
+            this.fastMathCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.fastMathCheckBox.Location = new System.Drawing.Point(12, 167);
+            this.fastMathCheckBox.Name = "fastMathCheckBox";
+            this.fastMathCheckBox.Size = new System.Drawing.Size(72, 17);
+            this.fastMathCheckBox.TabIndex = 4;
+            this.fastMathCheckBox.Text = "Fast math";
+            this.fastMathCheckBox.UseVisualStyleBackColor = true;
             // 
             // ChooseDeviceForm
             // 
@@ -129,5 +143,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button OkButton;
         private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.CheckBox fastMathCheckBox;
     }
 }

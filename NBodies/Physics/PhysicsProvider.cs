@@ -12,17 +12,10 @@ namespace NBodies.Physics
     {
         public static IPhysicsCalc PhysicsCalc;
 
-        public static void InitPhysics()
-        {
-            PhysicsCalc = new OpenCLPhysics(Program.DeviceID, MainLoop.MaxThreadsPerBlock);
-
-            PhysicsCalc.Init();
-        }
-
-        public static void InitPhysics(Cloo.ComputeDevice device, int threadsPerBlock)
+        public static void InitPhysics(Cloo.ComputeDevice device, int threadsPerBlock, bool fastMath = true)
         {
             MainLoop.MaxThreadsPerBlock = threadsPerBlock;
-            PhysicsCalc = new OpenCLPhysics(device, MainLoop.MaxThreadsPerBlock);
+            PhysicsCalc = new OpenCLPhysics(device, MainLoop.MaxThreadsPerBlock, fastMath);
 
             PhysicsCalc.Init();
         }
