@@ -420,6 +420,11 @@ namespace NBodies.UI
             RenderBase.ShowMesh = showMeshToolStripMenuItem.Checked;
         }
 
+        private void usePointsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            glControl.UsePoints = usePointsToolStripMenuItem.Checked;
+        }
+
         private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;

@@ -44,6 +44,7 @@
             this.rocheLimitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rewindBufferToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showMeshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.usePointsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.allForceVectorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.displayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.followingBodyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -151,6 +152,7 @@
             this.rocheLimitToolStripMenuItem,
             this.rewindBufferToolStripMenuItem,
             this.showMeshToolStripMenuItem,
+            this.usePointsToolStripMenuItem,
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem,
@@ -252,6 +254,14 @@
             this.showMeshToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.showMeshToolStripMenuItem.Text = "Show Mesh";
             this.showMeshToolStripMenuItem.CheckedChanged += new System.EventHandler(this.showMeshToolStripMenuItem_CheckedChanged);
+            // 
+            // usePointsToolStripMenuItem
+            // 
+            this.usePointsToolStripMenuItem.CheckOnClick = true;
+            this.usePointsToolStripMenuItem.Name = "usePointsToolStripMenuItem";
+            this.usePointsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.usePointsToolStripMenuItem.Text = "Use Point Sprites";
+            this.usePointsToolStripMenuItem.CheckedChanged += new System.EventHandler(this.usePointsToolStripMenuItem_CheckedChanged);
             // 
             // allForceVectorsToolStripMenuItem
             // 
@@ -692,6 +702,8 @@
         private System.Windows.Forms.ToolStripMenuItem drawToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rocheLimitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showMeshToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem usePointsToolStripMenuItem;
+
         private System.Windows.Forms.ToolStripMenuItem allForceVectorsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sortZOrderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem fastPrimitivesToolStripMenuItem;
