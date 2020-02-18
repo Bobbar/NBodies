@@ -121,7 +121,7 @@ namespace NBodies.IO
                 var bodies = ProtoBuf.Serializer.Deserialize<Body[]>(stateStream);
 
                 var zmax = bodies.Max(b => b.PosZ);
-                if (zmax < 0)
+                if (zmax <= 0)
                 {
                     for (int i = 0; i < bodies.Length; i++)
                     {

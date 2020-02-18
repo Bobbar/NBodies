@@ -51,11 +51,13 @@ namespace NBodies.Rendering.Renderables
             var textureMagFilter = (int)filter;
             GL.TextureParameterI(_texture, TextureParameterName.TextureMagFilter, ref textureMagFilter);
         }
+
         private int InitTextures(string filename)
         {
             int width, height;
             var data = LoadTexture(filename, out width, out height);
             int texture;
+            
             GL.CreateTextures(TextureTarget.Texture2D, 1, out texture);
             GL.TextureStorage2D(
                 texture,

@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
+using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using NBodies;
 using NBodies.Extensions;
 using NBodies.Physics;
@@ -16,6 +17,7 @@ using NBodies.UI;
 using NBodies.UI.KeyActions;
 using NBodies.Helpers;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Diagnostics;
 using NBodies.Rendering.Renderables;
 using NBodies.Rendering.GameObjects;
@@ -226,6 +228,8 @@ namespace NBodies.Rendering
 
         private RenderText _text;
 
+        private int _pointTex;
+
         private Stopwatch _timer = new Stopwatch();
 
         public OpenTKControl(GraphicsMode mode) : base(mode)
@@ -236,43 +240,47 @@ namespace NBodies.Rendering
 
             GL.ClearColor(Color.Black);
 
-            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.c");
+            //_shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.c");
+            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/pointSpriteVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/pointSpriteFrag.c");
+
             _textShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/textVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/textFrag.c");
 
             var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
             _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
 
+
             _cubesVAO = GL.GenVertexArray();
             GL.BindVertexArray(_cubesVAO);
 
-            // Cube instance buffers.
-            _cubeVertBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
 
-            _posAttrib = _shader.GetAttribLocation("aPosition");
-            GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.VertexAttribDivisor(_posAttrib, 0);
-            GL.EnableVertexAttribArray(_posAttrib);
+            //// Cube instance buffers.
+            //_cubeVertBufferObject = GL.GenBuffer();
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
+            //GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
 
-            // Normals instance buffers.
-            _normVertBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _normalVerts.Length * sizeof(float), _normalVerts, BufferUsageHint.StaticDraw);
+            //_posAttrib = _shader.GetAttribLocation("aPosition");
+            //GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            //GL.VertexAttribDivisor(_posAttrib, 0);
+            //GL.EnableVertexAttribArray(_posAttrib);
 
-            _normAttrib = _shader.GetAttribLocation("aNormal");
-            GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            GL.VertexAttribDivisor(_normAttrib, 0);
-            GL.EnableVertexAttribArray(_normAttrib);
+            //// Normals instance buffers.
+            //_normVertBufferObject = GL.GenBuffer();
+            //GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
+            //GL.BufferData(BufferTarget.ArrayBuffer, _normalVerts.Length * sizeof(float), _normalVerts, BufferUsageHint.StaticDraw);
+
+            //_normAttrib = _shader.GetAttribLocation("aNormal");
+            //GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            //GL.VertexAttribDivisor(_normAttrib, 0);
+            //GL.EnableVertexAttribArray(_normAttrib);
 
             // Body offset buffers.
             _offsetBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
             GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
 
-            _offsetAttrib = _shader.GetAttribLocation("aOffset");
+            _offsetAttrib = _shader.GetAttribLocation("aPosition");
             GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
-            GL.VertexAttribDivisor(_offsetAttrib, 1);
+            // GL.VertexAttribDivisor(_offsetAttrib, 1);
             GL.EnableVertexAttribArray(_offsetAttrib);
 
             // Body color buffers.
@@ -282,10 +290,24 @@ namespace NBodies.Rendering
 
             _colorAttrib = _shader.GetAttribLocation("aObjColor");
             GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-            GL.VertexAttribDivisor(_colorAttrib, 1);
+            // GL.VertexAttribDivisor(_colorAttrib, 1);
             GL.EnableVertexAttribArray(_colorAttrib);
 
+
+
             GL.BindVertexArray(0);
+
+            //   _pointTex = InitTextures($@"Rendering\Textures\circle.png");
+            _pointTex = InitTextures($@"Rendering\Textures\cloud_dense.png");
+
+            //_pointTex = InitTextures($@"Rendering\Textures\cloud.png");
+            //_pointTex = InitTextures($@"Rendering\Textures\cloud.bmp");
+            // _pointTex = InitTextures($@"Rendering\Textures\red_box.bmp");
+
+            SetFiltering(All.Linear, _pointTex);
+
+
+
         }
 
         public void Render(Body[] bodies, ManualResetEventSlim completeCallback)
@@ -316,22 +338,46 @@ namespace NBodies.Rendering
             {
                 // Render Bodies
                 GL.ClearColor(_clearColor);
+                GL.Enable(EnableCap.VertexProgramPointSize);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-                GL.Enable(EnableCap.DepthTest);
-                GL.Enable(EnableCap.LineSmooth);
+
+                GL.Enable(EnableCap.Texture2D);
+                GL.Disable(EnableCap.DepthTest);
                 GL.Enable(EnableCap.Blend);
-                GL.Disable(EnableCap.CullFace);
                 GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                GL.Enable(EnableCap.PointSprite);
+
+
+                //GL.Enable(EnableCap.DepthTest);
+                //GL.Enable(EnableCap.LineSmooth);
+                //GL.Enable(EnableCap.Blend);
+                //GL.Disable(EnableCap.CullFace);
+                //GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                //GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
                 this.MakeCurrent();
 
+
+                GL.ActiveTexture(TextureUnit.Texture0);
+                GL.BindTexture(TextureTarget.Texture2D, _pointTex);
+
+
                 _shader.Use();
+
+
+
 
                 GL.BindVertexArray(_cubesVAO);
 
+                //GL.ActiveTexture(TextureUnit.Texture0);
+                //GL.BindTexture(TextureTarget.Texture2D, _pointTex);
+
+                //var tex = GL.GetUniformLocation(_shader.Handle, "cloud");
+                //GL.Uniform1(tex, _pointTex);
+                
+
                 var lightPos = _camera.Position;
-                _shader.SetMatrix4("model", Matrix4.Identity);
+                 _shader.SetMatrix4("model", Matrix4.Identity);
                 if (BodyManager.FollowSelected)
                 {
                     var bPos = BodyManager.FollowBody().PositionVec();
@@ -344,11 +390,11 @@ namespace NBodies.Rendering
                 }
 
                 _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-                _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
-                _shader.SetVector3("lightPos", lightPos);
-                _shader.SetVector3("viewPos", lightPos);
+                //  _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
+                //  _shader.SetVector3("lightPos", lightPos);
+               //  _shader.SetVector3("viewPos", lightPos);
                 _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
-                _shader.SetInt("noLight", 0);
+                //  _shader.SetInt("noLight", 0);
 
 
                 // Don't draw bodies if alpha is 0.
@@ -401,7 +447,8 @@ namespace NBodies.Rendering
                         GL.UnmapNamedBuffer(_colorBufferObject);
                     }
 
-                    GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
+                    GL.DrawArrays(PrimitiveType.Points, 0, bodies.Length);
+                    // GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
                 }
 
                 //  Draw mesh
@@ -674,6 +721,144 @@ namespace NBodies.Rendering
                 BodyManager.FollowBodyUID = -1;
                 BodyManager.FollowSelected = false;
             }
+        }
+
+        private int InitTextures(string filename)
+        {
+            int width, height;
+         //   var data = LoadTexture(filename, out width, out height);
+            int texture;
+
+            texture = GL.GenTexture();
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, texture);
+
+            using (var image = new Bitmap(filename))
+            {
+                // First, we get our pixels from the bitmap we loaded.
+                // Arguments:
+                //   The pixel area we want. Typically, you want to leave it as (0,0) to (width,height), but you can
+                //   use other rectangles to get segments of textures, useful for things such as spritesheets.
+                //   The locking mode. Basically, how you want to use the pixels. Since we're passing them to OpenGL,
+                //   we only need ReadOnly.
+                //   Next is the pixel format we want our pixels to be in. In this case, ARGB will suffice.
+                //   We have to fully qualify the name because OpenTK also has an enum named PixelFormat.
+                var data = image.LockBits(
+                    new Rectangle(0, 0, image.Width, image.Height),
+                    ImageLockMode.ReadOnly,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+                // Now that our pixels are prepared, it's time to generate a texture. We do this with GL.TexImage2D
+                // Arguments:
+                //   The type of texture we're generating. There are various different types of textures, but the only one we need right now is Texture2D.
+                //   Level of detail. We can use this to start from a smaller mipmap (if we want), but we don't need to do that, so leave it at 0.
+                //   Target format of the pixels. This is the format OpenGL will store our image with.
+                //   Width of the image
+                //   Height of the image.
+                //   Border of the image. This must always be 0; it's a legacy parameter that Khronos never got rid of.
+                //   The format of the pixels, explained above. Since we loaded the pixels as ARGB earlier, we need to use BGRA.
+                //   Data type of the pixels.
+                //   And finally, the actual pixels.
+                GL.TexImage2D(TextureTarget.Texture2D,
+                    0,
+                    PixelInternalFormat.Rgba,
+                    image.Width,
+                    image.Height,
+                    0,
+                    PixelFormat.Bgra,
+                    PixelType.UnsignedByte,
+                    data.Scan0);
+            }
+
+
+            //// your image will fail to render at all (usually resulting in pure black instead).
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+
+            //// Now, set the wrapping mode. S is for the X axis, and T is for the Y axis.
+            //// We set this to Repeat so that textures will repeat when wrapped. Not demonstrated here since the texture coordinates exactly match
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+
+            //// Next, generate mipmaps.
+            //// Mipmaps are smaller copies of the texture, scaled down. Each mipmap level is half the size of the previous one
+            //// Generated mipmaps go all the way down to just one pixel.
+            //// OpenGL will automatically switch between mipmaps when an object gets sufficiently far away.
+            //// This prevents distant objects from having their colors become muddy, as well as saving on memory.
+            //GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+
+
+           
+
+
+            //  GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height, 0, PixelFormat.Rgba, PixelType.Float, data);
+
+
+            // GL.GenTextures(1, out texture);
+            //// GL.CreateTextures(TextureTarget.Texture2D, 1, out texture);
+            //GL.TextureStorage2D(
+            //    texture,
+            //    1,                           // levels of mipmapping
+            //    SizedInternalFormat.Rgba32f, // format of texture
+            //    width,
+            //    height);
+
+            //GL.BindTexture(TextureTarget.Texture2D, texture);
+            //GL.TextureSubImage2D(texture,
+            //    0,                  // this is level 0
+            //    0,                  // x offset
+            //    0,                  // y offset
+            //    width,
+            //    height,
+            //    PixelFormat.Rgba,
+            //    PixelType.Float,
+            //    data);
+            return texture;
+            // data not needed from here on, OpenGL has the data
+        }
+
+        private float[] LoadTexture(string filename, out int width, out int height)
+        {
+            float[] r;
+            using (var bmp = (Bitmap)Image.FromFile(filename))
+            {
+                width = bmp.Width;
+                height = bmp.Height;
+                r = new float[width * height * 4];
+                int index = 0;
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        //r[index++] = 1.0f;
+                        //r[index++] = 1.0f;
+                        //r[index++] = 1.0f;
+                        //r[index++] = 1.0f;
+
+                        var pixel = bmp.GetPixel(x, y);
+                        r[index++] = pixel.R / 255f;
+                        r[index++] = pixel.G / 255f;
+                        r[index++] = pixel.B / 255f;
+                        r[index++] = pixel.A / 255f;
+                    }
+                }
+            }
+            return r;
+        }
+
+        public void SetFiltering(All filter, int texture)
+        {
+            var textureMinFilter = (int)filter;
+            GL.TextureParameterI(texture, TextureParameterName.TextureMinFilter, ref textureMinFilter);
+            var textureMagFilter = (int)filter;
+            GL.TextureParameterI(texture, TextureParameterName.TextureMagFilter, ref textureMagFilter);
+
+            int clamp = (int)All.ClampToEdge;
+            GL.TextureParameterI(texture, TextureParameterName.TextureWrapS, ref clamp);
+            GL.TextureParameterI(texture, TextureParameterName.TextureWrapT, ref clamp);
+
         }
 
         protected override void OnResize(EventArgs e)
