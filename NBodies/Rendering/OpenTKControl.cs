@@ -203,6 +203,7 @@ namespace NBodies.Rendering
         private int _colorAttrib;
 
         private Camera _camera;
+        private Vector3 _camFollowOffset = new Vector3();
 
         private Color _clearColor = Color.Black;
         private Color _defaultBodyColor = Color.White;
@@ -256,6 +257,8 @@ namespace NBodies.Rendering
             _cubesVAO = GL.GenVertexArray();
             GL.BindVertexArray(_cubesVAO);
 
+            // TODO: Combine these into structs.
+
             // Cube instance buffers.
             _cubeVertBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
@@ -301,12 +304,14 @@ namespace NBodies.Rendering
 
             //_pointTex = InitTextures($@"Rendering\Textures\bubble.png");
             //_pointTex = InitTextures($@"Rendering\Textures\circle.png");
-            _pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
+            //_pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud_dense.png");
+            _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud.png");
             //_pointTex = InitTextures($@"Rendering\Textures\star.png");
 
         }
+
 
         public void Render(Body[] bodies, ManualResetEventSlim completeCallback)
         {
@@ -316,21 +321,40 @@ namespace NBodies.Rendering
 
             if (!InputHandler.KeyIsDown(Keys.ControlKey))
             {
-                if (InputHandler.KeyIsDown(Keys.W))
-                    _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
-                if (InputHandler.KeyIsDown(Keys.S))
-                    _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
-                if (InputHandler.KeyIsDown(Keys.A))
-                    _camera.Position -= _camera.Right * cameraSpeed * time; // Left
-                if (InputHandler.KeyIsDown(Keys.D))
-                    _camera.Position += _camera.Right * cameraSpeed * time; // Right
-                if (InputHandler.KeyIsDown(Keys.Space))
-                    _camera.Position += _camera.Up * cameraSpeed * time; // Up 
-                if (InputHandler.KeyIsDown(Keys.ShiftKey))
-                    _camera.Position -= _camera.Up * cameraSpeed * time; // Down
+
+                if (BodyManager.FollowSelected)
+                {
+                    if (InputHandler.KeyIsDown(Keys.W))
+                        _camFollowOffset += _camera.Front * cameraSpeed * time; // Forward 
+                    if (InputHandler.KeyIsDown(Keys.S))
+                        _camFollowOffset -= _camera.Front * cameraSpeed * time; // Backwards
+                    if (InputHandler.KeyIsDown(Keys.A))
+                        _camFollowOffset -= _camera.Right * cameraSpeed * time; // Left
+                    if (InputHandler.KeyIsDown(Keys.D))
+                        _camFollowOffset += _camera.Right * cameraSpeed * time; // Right
+                    if (InputHandler.KeyIsDown(Keys.Space))
+                        _camFollowOffset += _camera.Up * cameraSpeed * time; // Up 
+                    if (InputHandler.KeyIsDown(Keys.ShiftKey))
+                        _camFollowOffset -= _camera.Up * cameraSpeed * time; // Down
+                }
+                else
+                {
+                    if (InputHandler.KeyIsDown(Keys.W))
+                        _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
+                    if (InputHandler.KeyIsDown(Keys.S))
+                        _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
+                    if (InputHandler.KeyIsDown(Keys.A))
+                        _camera.Position -= _camera.Right * cameraSpeed * time; // Left
+                    if (InputHandler.KeyIsDown(Keys.D))
+                        _camera.Position += _camera.Right * cameraSpeed * time; // Right
+                    if (InputHandler.KeyIsDown(Keys.Space))
+                        _camera.Position += _camera.Up * cameraSpeed * time; // Up 
+                    if (InputHandler.KeyIsDown(Keys.ShiftKey))
+                        _camera.Position -= _camera.Up * cameraSpeed * time; // Down
+                }
             }
 
-            ViewportHelpers.CameraPos = _camera.Position;
+        
 
             if (bodies.Length > 0)
             {
@@ -388,34 +412,34 @@ namespace NBodies.Rendering
                     _shader.SetInt("usePoint", 0);
                 }
 
-                var lightPos = _camera.Position;
-                _shader.SetMatrix4("model", Matrix4.Identity);
+                // Offset camera position for follow mode.
                 if (BodyManager.FollowSelected)
                 {
                     var bPos = BodyManager.FollowBody().PositionVec();
-                    _shader.SetMatrix4("view", _camera.GetViewMatrix(bPos));
-                    lightPos = Vector3.Add(lightPos, bPos);
-                }
-                else
-                {
-                    _shader.SetMatrix4("view", _camera.GetViewMatrix());
+                    _camera.Position = bPos + _camFollowOffset;
                 }
 
+                ViewportHelpers.CameraPos = _camera.Position;
+
+                _shader.SetMatrix4("model", Matrix4.Identity);
+                _shader.SetMatrix4("view", _camera.GetViewMatrix());
                 _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+
                 _shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
-                _shader.SetVector3("lightPos", lightPos);
-                _shader.SetVector3("viewPos", lightPos);
+                _shader.SetVector3("lightPos", _camera.Position);
+                _shader.SetVector3("viewPos", _camera.Position);
+
                 _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
                 _shader.SetInt("noLight", 0);
 
+                // For correct point sprite scaling.
                 float nearPlaneHeight = (float)Math.Abs(this.ClientSize.Width - this.ClientSize.Height) / (2 * (float)Math.Tan(0.5 * _camera.Fov * Math.PI / 180.0));
                 _shader.SetFloat("nearPlaneHeight", nearPlaneHeight);
-
 
                 // Don't draw bodies if alpha is 0.
                 if (RenderBase.BodyAlpha > 0)
                 {
-                    //  Draw Body cubes.
+                    //  Update body positions and colors.
                     var zOrder = ComputeZOrder(bodies);
 
                     if (_offsets.Length != bodies.Length)
@@ -444,7 +468,6 @@ namespace NBodies.Rendering
                             var body = bodies[zOrder[i]];
                             var bPos = body.PositionVec();
                             var bColor = GetStyleColor(body, i);
-                            //var bColor = Color.FromArgb(body.Color);
                             var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
                             var offset = new Vector4(bPos, body.Size / 2);
 
@@ -743,6 +766,7 @@ namespace NBodies.Rendering
                     hitFound = true;
                     // Offset camera position to keep selected body in view.
                     _camera.Position = _camera.Position - body.PositionVec();
+                    _camFollowOffset = _camera.Position;
                     break;
                 }
             }
@@ -750,7 +774,7 @@ namespace NBodies.Rendering
             if (!hitFound)
             {
                 // Restore the original position then unselect.
-                _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
+               // _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
 
                 BodyManager.FollowBodyUID = -1;
                 BodyManager.FollowSelected = false;

@@ -257,6 +257,9 @@
     <Content Include="Rendering\Textures\cloud_dense.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Rendering\Textures\cloud_med.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Rendering\Textures\star.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
