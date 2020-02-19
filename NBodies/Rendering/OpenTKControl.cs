@@ -304,9 +304,9 @@ namespace NBodies.Rendering
 
             //_pointTex = InitTextures($@"Rendering\Textures\bubble.png");
             //_pointTex = InitTextures($@"Rendering\Textures\circle.png");
-            //_pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
+            _pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud_dense.png");
-            _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
+           // _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud.png");
             //_pointTex = InitTextures($@"Rendering\Textures\star.png");
 

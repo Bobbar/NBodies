@@ -59,7 +59,7 @@ namespace NBodies.Physics
         {
             get
             {
-                return (float)Math.Sqrt((Math.Pow(ForceX, 2) + Math.Pow(ForceY, 2)));
+                return (float)Math.Sqrt((Math.Pow(ForceX, 2) + Math.Pow(ForceY, 2) + Math.Pow(ForceZ, 2)));
             }
 
             set { var dummy = value; }
