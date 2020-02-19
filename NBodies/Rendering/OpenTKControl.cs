@@ -80,7 +80,14 @@ namespace NBodies.Rendering
 
         private bool _usePoints = false;
 
+
+        private int _newBodyId = -1;
+
+
+
         private Stopwatch _timer = new Stopwatch();
+
+
 
         public OpenTKControl(GraphicsMode mode) : base(mode)
         {
@@ -689,6 +696,36 @@ namespace NBodies.Rendering
                 if (InputHandler.KeyIsDown(key))
                     cameraSpeed = spd;
             }
+
+            if (InputHandler.KeyIsDown(Keys.N))
+            {
+                if (_newBodyId == -1)
+                {
+                    MainLoop.WaitForPause();
+
+                    var pos = new Vector3(this.Size.Width / 2f, this.Size.Height / 2f, 0.1f).UnProject(_camera.GetProjectionMatrix(), _camera.GetViewMatrix(), this.Size);
+                    var velo = pos - _camera.Position;
+
+                    var nb = BodyManager.NewBody(pos, velo, 5, BodyManager.CalcMass(5), ColorHelper.RandomColor(), 1);
+                    BodyManager.Add(nb, false);
+
+                    _newBodyId = nb.UID;
+
+                    Debug.WriteLine($@"NewID: {_newBodyId}");
+                }
+                else
+                {
+                    var nb = BodyManager.BodyFromUID(_newBodyId);
+
+                    MainLoop.ResumePhysics(true);
+
+                    _newBodyId = -1;
+                }
+
+              
+
+            }
+
         }
 
         protected override void OnMouseUp(MouseEventArgs e)
@@ -756,6 +793,38 @@ namespace NBodies.Rendering
                     _camera.Fov -= 1;
                 else
                     _camera.Fov -= -1;
+            }
+
+            if (_newBodyId != -1)
+            {
+                if (InputHandler.KeyIsDown(Keys.M))
+                {
+                    var nb = BodyManager.BodyFromUID(_newBodyId);
+                    nb.Size += e.Delta > 0 ? 1 : -1;
+                    nb.Mass = BodyManager.CalcMass(nb.Size);
+                    Debug.WriteLine($@"Size: {nb.Size}  Mass: {nb.Mass}");
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_newBodyId)] = nb;
+
+                }
+
+                if (InputHandler.KeyIsDown(Keys.V))
+                {
+                    var nb = BodyManager.BodyFromUID(_newBodyId);
+                    var velo = nb.VelocityVec();
+                    var len = velo.Length;
+                    var newLen = len + (e.Delta * 0.2f);
+                    velo.X *= newLen / len;
+                    velo.Y *= newLen / len;
+                    velo.Z *= newLen / len;
+
+
+                    nb.VeloX = velo.X;
+                    nb.VeloY = velo.Y;
+                    nb.VeloZ = velo.Z;
+                    Debug.WriteLine($@"Velo: {velo.ToString()}");
+
+                    BodyManager.Bodies[BodyManager.UIDToIndex(_newBodyId)] = nb;
+                }
             }
         }
 

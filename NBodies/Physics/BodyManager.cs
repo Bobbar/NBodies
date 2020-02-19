@@ -251,7 +251,7 @@ namespace NBodies.Physics
             float stepSize = MainLoop.KernelSize * 0.98f;
             float radius = (body.Size / 2f);
             float stepRadius = radius;
-            int zSteps = (int)(radius / stepSize) + 1; 
+            int zSteps = (int)(radius / stepSize) + 1;
             int totZSteps = zSteps * 2;
             float zPos = body.PosZ + (stepSize / 2f);
 
@@ -300,7 +300,7 @@ namespace NBodies.Physics
                         done = true;
                 }
 
-              
+
                 if (i < zSteps - 1)
                 {
                     // Move Z one step forwards.
@@ -927,9 +927,11 @@ namespace NBodies.Physics
             }
         }
 
-        public static int Add(Body body)
+        public static int Add(Body body, bool newUid = true)
         {
-            body.UID = NextUID();
+            if (newUid)
+                body.UID = NextUID();
+
             Bodies = Bodies.Add(body);
 
             AddUID(body.UID, Bodies.Length - 1);
