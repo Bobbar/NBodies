@@ -168,6 +168,7 @@
     <Compile Include="Rendering\Renderables\ARenderable.cs" />
     <Compile Include="Rendering\Renderables\ColoredRenderObject.cs" />
     <Compile Include="Rendering\Renderables\ColoredVertex.cs" />
+    <Compile Include="Rendering\Renderables\NormalVertex.cs" />
     <Compile Include="Rendering\Renderables\TexturedRenderObject.cs" />
     <Compile Include="Rendering\Renderables\TexturedVertex.cs" />
     <Compile Include="Rendering\RenderBase.cs" />

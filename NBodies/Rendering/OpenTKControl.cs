@@ -32,174 +32,17 @@ namespace NBodies.Rendering
 
             set { _usePoints = value; }
         }
-        // Quad based cube.
-        private readonly float[] _cubeVerts =
-        {
-            // front
-            -1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
-             1.0f, 1.0f, -1.0f,
-             -1.0f, 1.0f, -1.0f,
-            // back
-             -1.0f, -1.0f, 1.0f,
-             1.0f, -1.0f, 1.0f,
-             1.0f, 1.0f, 1.0f,
-             -1.0f, 1.0f, 1.0f,
-            // right
-             1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, 1.0f,
-             1.0f, 1.0f, 1.0f,
-             1.0f, 1.0f, -1.0f,
-            // left
-             -1.0f, -1.0f, -1.0f,
-             -1.0f, -1.0f, 1.0f,
-             -1.0f, 1.0f, 1.0f,
-             -1.0f, 1.0f, -1.0f,
-            // top
-             -1.0f, 1.0f, -1.0f,
-             1.0f, 1.0f, -1.0f,
-             1.0f, 1.0f, 1.0f,
-             -1.0f, 1.0f, 1.0f,
-            // bottom
-             -1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, 1.0f,
-             -1.0f, -1.0f, 1.0f
-        };
-
-        // Quad based cube normals.
-        private readonly float[] _normalVerts =
-        {
-            // front
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f, 
-            // back
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 
-            // right
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f, 
-            // left
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f, 
-            // top
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            // bottom
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-        };
-
-        #region Triangle based cube verts
-        // Triangle based cube.
-        // private readonly float[] _cubeVerts =
-        //{
-        //          // Position
-        //         -1.0f, -1.0f, -1.0f, // Front face
-        //          1.0f, -1.0f, -1.0f,
-        //          1.0f,  1.0f, -1.0f,
-        //          1.0f,  1.0f, -1.0f,
-        //         -1.0f,  1.0f, -1.0f,
-        //         -1.0f, -1.0f, -1.0f,
-
-        //         -1.0f, -1.0f,  1.0f, // Back face
-        //          1.0f, -1.0f,  1.0f,
-        //          1.0f,  1.0f,  1.0f,
-        //          1.0f,  1.0f,  1.0f,
-        //         -1.0f,  1.0f,  1.0f,
-        //         -1.0f, -1.0f,  1.0f,
-
-        //         -1.0f,  1.0f,  1.0f, // Left face
-        //         -1.0f,  1.0f, -1.0f,
-        //         -1.0f, -1.0f, -1.0f,
-        //         -1.0f, -1.0f, -1.0f,
-        //         -1.0f, -1.0f,  1.0f,
-        //         -1.0f,  1.0f,  1.0f,
-
-        //          1.0f,  1.0f,  1.0f, // Right face
-        //          1.0f,  1.0f, -1.0f,
-        //          1.0f, -1.0f, -1.0f,
-        //          1.0f, -1.0f, -1.0f,
-        //          1.0f, -1.0f,  1.0f,
-        //          1.0f,  1.0f,  1.0f,
-
-        //         -1.0f, -1.0f, -1.0f, // Bottom face
-        //          1.0f, -1.0f, -1.0f,
-        //          1.0f, -1.0f,  1.0f,
-        //          1.0f, -1.0f,  1.0f,
-        //         -1.0f, -1.0f,  1.0f,
-        //         -1.0f, -1.0f, -1.0f,
-
-        //         -1.0f,  1.0f, -1.0f, // Top face
-        //          1.0f,  1.0f, -1.0f,
-        //          1.0f,  1.0f,  1.0f,
-        //          1.0f,  1.0f,  1.0f,
-        //         -1.0f,  1.0f,  1.0f,
-        //         -1.0f,  1.0f, -1.0f
-        //     };
-
-        // Triangle based cube normals.
-        //      private readonly float[] _normalVerts =
-        //{
-        //          // front
-        //          0.0f, 0.0f, -1.0f,
-        //          0.0f, 0.0f, -1.0f,
-        //          0.0f, 0.0f, -1.0f,
-        //          0.0f, 0.0f, -1.0f, 
-        //          // back
-        //          0.0f, 0.0f, 1.0f,
-        //          0.0f, 0.0f, 1.0f,
-        //          0.0f, 0.0f, 1.0f,
-        //          0.0f, 0.0f, 1.0f, 
-        //            // left
-        //          -1.0f, 0.0f, 0.0f,
-        //          -1.0f, 0.0f, 0.0f,
-        //          -1.0f, 0.0f, 0.0f,
-        //          -1.0f, 0.0f, 0.0f, 
-        //          // right
-        //          1.0f, 0.0f, 0.0f,
-        //          1.0f, 0.0f, 0.0f,
-        //          1.0f, 0.0f, 0.0f,
-        //          1.0f, 0.0f, 0.0f, 
-        //        // bottom
-        //          0.0f, -1.0f, 0.0f,
-        //          0.0f, -1.0f, 0.0f,
-        //          0.0f, -1.0f, 0.0f,
-        //          0.0f, -1.0f, 0.0f,
-        //          // top
-        //          0.0f, 1.0f, 0.0f,
-        //          0.0f, 1.0f, 0.0f,
-        //          0.0f, 1.0f, 0.0f,
-        //          0.0f, 1.0f, 0.0f,
-
-        //      };
-        #endregion Triangle based cube verts
 
         private int _cubeVertBufferObject;
-        private int _normVertBufferObject;
-        private int _offsetBufferObject;
-        private int _colorBufferObject;
-
+        private int _cubePosBufferObject;
         private int _cubesVAO;
 
-        private Vector4[] _offsets = new Vector4[0];
-        private Vector3[] _colors = new Vector3[0];
+        private ColoredVertex2[] _cubePositions = new ColoredVertex2[0];
+        private NormalVertex[] _cubeVerts = new NormalVertex[0];
 
         private int _normAttrib;
         private int _posAttrib;
-        private int _offsetAttrib;
+        private int _positionAttrib;
         private int _colorAttrib;
 
         private Camera _camera;
@@ -253,50 +96,37 @@ namespace NBodies.Rendering
             var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
             _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
 
-
+            _cubeVerts = RenderObjectFactory.CreateQuadCubeNormal();
             _cubesVAO = GL.GenVertexArray();
             GL.BindVertexArray(_cubesVAO);
 
-            // TODO: Combine these into structs.
-
-            // Cube instance buffers.
+            // Cube instance buffer.
             _cubeVertBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _cubeVertBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * sizeof(float), _cubeVerts, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, _cubeVerts.Length * NormalVertex.Size, _cubeVerts, BufferUsageHint.StaticDraw);
 
             _posAttrib = _shader.GetAttribLocation("cubeVert");
-            GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.VertexAttribPointer(_posAttrib, 3, VertexAttribPointerType.Float, false, NormalVertex.Size, 0);
             GL.VertexAttribDivisor(_posAttrib, 0);
             GL.EnableVertexAttribArray(_posAttrib);
 
-            // Normals instance buffers.
-            _normVertBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _normVertBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _normalVerts.Length * sizeof(float), _normalVerts, BufferUsageHint.StaticDraw);
-
             _normAttrib = _shader.GetAttribLocation("cubeNormal");
-            GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.VertexAttribPointer(_normAttrib, 3, VertexAttribPointerType.Float, false, NormalVertex.Size, Vector3.SizeInBytes);
             GL.VertexAttribDivisor(_normAttrib, 0);
             GL.EnableVertexAttribArray(_normAttrib);
 
-            // Body offset buffers.
-            _offsetBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
 
-            _offsetAttrib = _shader.GetAttribLocation("aPosition");
-            GL.VertexAttribPointer(_offsetAttrib, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, 0);
-            // GL.VertexAttribDivisor(_offsetAttrib, 1);
-            GL.EnableVertexAttribArray(_offsetAttrib);
+            // Body position buffer.
+            _cubePosBufferObject = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+            GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
 
-            // Body color buffers.
-            _colorBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+            _positionAttrib = _shader.GetAttribLocation("aPosition");
+            GL.VertexAttribPointer(_positionAttrib, 4, VertexAttribPointerType.Float, false, ColoredVertex2.Size, 0);
+            GL.EnableVertexAttribArray(_positionAttrib);
 
             _colorAttrib = _shader.GetAttribLocation("aObjColor");
-            GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, Vector3.SizeInBytes, 0);
-            // GL.VertexAttribDivisor(_colorAttrib, 1);
+            GL.VertexAttribPointer(_colorAttrib, 3, VertexAttribPointerType.Float, false, ColoredVertex2.Size, Vector4.SizeInBytes);
             GL.EnableVertexAttribArray(_colorAttrib);
 
             GL.BindVertexArray(0);
@@ -306,12 +136,10 @@ namespace NBodies.Rendering
             //_pointTex = InitTextures($@"Rendering\Textures\circle.png");
             _pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud_dense.png");
-           // _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
+            // _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud.png");
             //_pointTex = InitTextures($@"Rendering\Textures\star.png");
-
         }
-
 
         public void Render(Body[] bodies, ManualResetEventSlim completeCallback)
         {
@@ -354,7 +182,7 @@ namespace NBodies.Rendering
                 }
             }
 
-        
+
 
             if (bodies.Length > 0)
             {
@@ -397,17 +225,17 @@ namespace NBodies.Rendering
 
                 if (_usePoints)
                 {
-                    GL.VertexAttribDivisor(_offsetAttrib, 0);
+                    GL.VertexAttribDivisor(_positionAttrib, 0);
                     GL.VertexAttribDivisor(_colorAttrib, 0);
-                    GL.EnableVertexAttribArray(_offsetAttrib);
+                    GL.EnableVertexAttribArray(_positionAttrib);
                     GL.EnableVertexAttribArray(_colorAttrib);
                     _shader.SetInt("usePoint", 1);
                 }
                 else
                 {
-                    GL.VertexAttribDivisor(_offsetAttrib, 1);
+                    GL.VertexAttribDivisor(_positionAttrib, 1);
                     GL.VertexAttribDivisor(_colorAttrib, 1);
-                    GL.EnableVertexAttribArray(_offsetAttrib);
+                    GL.EnableVertexAttribArray(_positionAttrib);
                     GL.EnableVertexAttribArray(_colorAttrib);
                     _shader.SetInt("usePoint", 0);
                 }
@@ -442,47 +270,39 @@ namespace NBodies.Rendering
                     //  Update body positions and colors.
                     var zOrder = ComputeZOrder(bodies);
 
-                    if (_offsets.Length != bodies.Length)
+                    if (_cubePositions.Length != bodies.Length)
                     {
-                        _offsets = new Vector4[bodies.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
-
-                        _colors = new Vector3[bodies.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+                        _cubePositions = new ColoredVertex2[bodies.Length];
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+                        GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
                     }
 
                     // Update body position offsets and colors via mem map.
                     unsafe
                     {
-                        var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
-                        var offNativePtr = (Vector4*)offsetPtr.ToPointer();
-
-                        var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
-                        var colorNativePtr = (Vector3*)colorPtr.ToPointer();
+                        var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
+                        var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
 
                         for (int i = 0; i < bodies.Length; i++)
                         {
                             //  var body = bodies[i];
                             var body = bodies[zOrder[i]];
                             var bPos = body.PositionVec();
-                            var bColor = GetStyleColor(body, i);
-                            var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
-                            var offset = new Vector4(bPos, body.Size / 2);
-
-                            offNativePtr[i] = offset;
+                            var cubePos = new Vector4(bPos, body.Size / 2);
 
                             if (body.UID == BodyManager.FollowBodyUID)
-                                colorNativePtr[i] = new Vector3(0f, 1.0f, 0f);
-
+                            {
+                                cubeNativePtr[i] = new ColoredVertex2(cubePos, new Vector3(0f, 1.0f, 0f));
+                            }
                             else
-                                colorNativePtr[i] = normColor;
-
+                            {
+                                var bColor = GetStyleColor(body, i);
+                                var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                                cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
+                            }
                         }
 
-                        GL.UnmapNamedBuffer(_offsetBufferObject);
-                        GL.UnmapNamedBuffer(_colorBufferObject);
+                        GL.UnmapNamedBuffer(_cubePosBufferObject);
                     }
 
                     if (_usePoints)
@@ -494,9 +314,9 @@ namespace NBodies.Rendering
                 //  Draw mesh
                 if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
                 {
-                    GL.VertexAttribDivisor(_offsetAttrib, 1);
+                    GL.VertexAttribDivisor(_positionAttrib, 1);
                     GL.VertexAttribDivisor(_colorAttrib, 1);
-                    GL.EnableVertexAttribArray(_offsetAttrib);
+                    GL.EnableVertexAttribArray(_positionAttrib);
                     GL.EnableVertexAttribArray(_colorAttrib);
 
                     _shader.SetInt("usePoint", 0);
@@ -516,27 +336,17 @@ namespace NBodies.Rendering
 
                     var mesh = BodyManager.Mesh;
 
-                    if (_offsets.Length < mesh.Length)
+                    if (_cubePositions.Length < mesh.Length)
                     {
-                        _offsets = new Vector4[mesh.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _offsets.Length * Vector4.SizeInBytes, _offsets, BufferUsageHint.StaticDraw);
-
-                        _colors = new Vector3[mesh.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _colors.Length * Vector3.SizeInBytes, _colors, BufferUsageHint.StaticDraw);
+                        _cubePositions = new ColoredVertex2[mesh.Length];
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+                        GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
                     }
-
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _offsetBufferObject);
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _colorBufferObject);
 
                     unsafe
                     {
-                        var offsetPtr = GL.MapNamedBuffer(_offsetBufferObject, BufferAccess.ReadWrite);
-                        var offNativePtr = (Vector4*)offsetPtr.ToPointer();
-
-                        var colorPtr = GL.MapNamedBuffer(_colorBufferObject, BufferAccess.ReadWrite);
-                        var colorNativePtr = (Vector3*)colorPtr.ToPointer();
+                        var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
+                        var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
 
                         for (int i = 0; i < mesh.Length; i++)
                         {
@@ -544,14 +354,12 @@ namespace NBodies.Rendering
                             var pos = cell.PositionVec();
                             var color = Color.Red;
                             var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
-                            var offset = new Vector4(pos, cell.Size / 2);
+                            var cubePos = new Vector4(pos, cell.Size / 2);
 
-                            offNativePtr[i] = offset;
-                            colorNativePtr[i] = normColor;
+                            cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
                         }
 
-                        GL.UnmapNamedBuffer(_offsetBufferObject);
-                        GL.UnmapNamedBuffer(_colorBufferObject);
+                        GL.UnmapNamedBuffer(_cubePosBufferObject);
                     }
 
                     GL.Disable(EnableCap.CullFace);
@@ -774,7 +582,7 @@ namespace NBodies.Rendering
             if (!hitFound)
             {
                 // Restore the original position then unselect.
-               // _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
+                // _camera.Position = _camera.Position + BodyManager.FollowBody().PositionVec();
 
                 BodyManager.FollowBodyUID = -1;
                 BodyManager.FollowSelected = false;

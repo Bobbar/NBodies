@@ -2,6 +2,7 @@
 using OpenTK.Graphics;
 using NBodies.Rendering.GameObjects;
 using NBodies.Rendering.Renderables;
+using System.Collections.Generic;
 
 namespace NBodies.Rendering
 {
@@ -24,9 +25,180 @@ namespace NBodies.Rendering
             };
             return vertices;
         }
+
+        public static NormalVertex[] CreateQuadCubeNormal()
+        {
+            float[] _cubeVerts =
+            {
+            // front
+            -1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, 1.0f, -1.0f,
+             -1.0f, 1.0f, -1.0f,
+            // back
+             -1.0f, -1.0f, 1.0f,
+             1.0f, -1.0f, 1.0f,
+             1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+            // right
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, 1.0f,
+             1.0f, 1.0f, 1.0f,
+             1.0f, 1.0f, -1.0f,
+            // left
+             -1.0f, -1.0f, -1.0f,
+             -1.0f, -1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, -1.0f,
+            // top
+             -1.0f, 1.0f, -1.0f,
+             1.0f, 1.0f, -1.0f,
+             1.0f, 1.0f, 1.0f,
+             -1.0f, 1.0f, 1.0f,
+            // bottom
+             -1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, 1.0f,
+             -1.0f, -1.0f, 1.0f
+            };
+
+            // Quad based cube normals.
+            float[] _normalVerts =
+            {
+            // front
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f,
+            0.0f, 0.0f, -1.0f, 
+            // back
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 
+            // right
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f, 
+            // left
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f,
+            -1.0f, 0.0f, 0.0f, 
+            // top
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            // bottom
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f,
+            };
+
+            #region Triangle based cube verts
+            // Triangle based cube.
+            // private readonly float[] _cubeVerts =
+            //{
+            //          // Position
+            //         -1.0f, -1.0f, -1.0f, // Front face
+            //          1.0f, -1.0f, -1.0f,
+            //          1.0f,  1.0f, -1.0f,
+            //          1.0f,  1.0f, -1.0f,
+            //         -1.0f,  1.0f, -1.0f,
+            //         -1.0f, -1.0f, -1.0f,
+
+            //         -1.0f, -1.0f,  1.0f, // Back face
+            //          1.0f, -1.0f,  1.0f,
+            //          1.0f,  1.0f,  1.0f,
+            //          1.0f,  1.0f,  1.0f,
+            //         -1.0f,  1.0f,  1.0f,
+            //         -1.0f, -1.0f,  1.0f,
+
+            //         -1.0f,  1.0f,  1.0f, // Left face
+            //         -1.0f,  1.0f, -1.0f,
+            //         -1.0f, -1.0f, -1.0f,
+            //         -1.0f, -1.0f, -1.0f,
+            //         -1.0f, -1.0f,  1.0f,
+            //         -1.0f,  1.0f,  1.0f,
+
+            //          1.0f,  1.0f,  1.0f, // Right face
+            //          1.0f,  1.0f, -1.0f,
+            //          1.0f, -1.0f, -1.0f,
+            //          1.0f, -1.0f, -1.0f,
+            //          1.0f, -1.0f,  1.0f,
+            //          1.0f,  1.0f,  1.0f,
+
+            //         -1.0f, -1.0f, -1.0f, // Bottom face
+            //          1.0f, -1.0f, -1.0f,
+            //          1.0f, -1.0f,  1.0f,
+            //          1.0f, -1.0f,  1.0f,
+            //         -1.0f, -1.0f,  1.0f,
+            //         -1.0f, -1.0f, -1.0f,
+
+            //         -1.0f,  1.0f, -1.0f, // Top face
+            //          1.0f,  1.0f, -1.0f,
+            //          1.0f,  1.0f,  1.0f,
+            //          1.0f,  1.0f,  1.0f,
+            //         -1.0f,  1.0f,  1.0f,
+            //         -1.0f,  1.0f, -1.0f
+            //     };
+
+            // Triangle based cube normals.
+            //      private readonly float[] _normalVerts =
+            //{
+            //          // front
+            //          0.0f, 0.0f, -1.0f,
+            //          0.0f, 0.0f, -1.0f,
+            //          0.0f, 0.0f, -1.0f,
+            //          0.0f, 0.0f, -1.0f, 
+            //          // back
+            //          0.0f, 0.0f, 1.0f,
+            //          0.0f, 0.0f, 1.0f,
+            //          0.0f, 0.0f, 1.0f,
+            //          0.0f, 0.0f, 1.0f, 
+            //            // left
+            //          -1.0f, 0.0f, 0.0f,
+            //          -1.0f, 0.0f, 0.0f,
+            //          -1.0f, 0.0f, 0.0f,
+            //          -1.0f, 0.0f, 0.0f, 
+            //          // right
+            //          1.0f, 0.0f, 0.0f,
+            //          1.0f, 0.0f, 0.0f,
+            //          1.0f, 0.0f, 0.0f,
+            //          1.0f, 0.0f, 0.0f, 
+            //        // bottom
+            //          0.0f, -1.0f, 0.0f,
+            //          0.0f, -1.0f, 0.0f,
+            //          0.0f, -1.0f, 0.0f,
+            //          0.0f, -1.0f, 0.0f,
+            //          // top
+            //          0.0f, 1.0f, 0.0f,
+            //          0.0f, 1.0f, 0.0f,
+            //          0.0f, 1.0f, 0.0f,
+            //          0.0f, 1.0f, 0.0f,
+
+            //      };
+            #endregion Triangle based cube verts
+
+            var verts = new List<NormalVertex>();
+
+            for (int i = 0; i < _cubeVerts.Length; i += 3)
+            {
+                Vector3 p = new Vector3(_cubeVerts[i], _cubeVerts[i + 1], _cubeVerts[i + 2]);
+                Vector3 n = new Vector3(_normalVerts[i], _normalVerts[i + 1], _normalVerts[i + 2]);
+
+                verts.Add(new NormalVertex(p, n));
+            }
+
+            return verts.ToArray();
+        }
+
+
         public static ColoredVertex[] CreateSolidCube(float side, Color4 color)
         {
-            side = side/2f; // half side - and other half
+            side = side / 2f; // half side - and other half
             ColoredVertex[] vertices =
             {
                 new ColoredVertex(new Vector4(-side, -side, -side, 1.0f),   color),
