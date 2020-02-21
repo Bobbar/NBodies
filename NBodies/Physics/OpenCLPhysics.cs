@@ -465,7 +465,7 @@ namespace NBodies.Physics
 
             for (int level = 1; level <= levels; level++)
             {
-                // Reduce dimensions of the previous level to determine the dims of the next level.
+                // Expand the dimensions of the previous level to determine the dims of the parent level.
                 var prev = _gridInfo[level - 1];
                 AddGridDims(new MinMax(prev.MinX >> 1, prev.MinY >> 1, prev.MinZ >> 1, prev.MaxX >> 1, prev.MaxY >> 1, prev.MaxZ >> 1), level);
             }
@@ -615,6 +615,7 @@ namespace NBodies.Physics
             if (cellIdx == null || cellIdx.Length < _bodies.Length)
                 cellIdx = new int[_bodies.Length + 100];
 
+            // This loop is a bit faster if we pin the arrays.
             fixed (long* mortPtr = _mortKeys)
             fixed (int* cellIdxPtr = cellIdx)
             fixed (SpatialInfo* spaPtr = _bSpatials)
@@ -624,7 +625,7 @@ namespace NBodies.Physics
                     var mort = mortPtr[i];
                     sortMapNativePtr[i] = spaPtr[i].Index;
 
-                    // Find the start of each new morton number and record location to build cell index.
+                    // Find the start of each new morton number and record location to build the cell index map.
                     if (val != mort)
                     {
                         cellIdxPtr[count] = i;
@@ -660,31 +661,41 @@ namespace NBodies.Physics
         /// </summary>
         private unsafe void ComputeUpperSpatials()
         {
+            // Iterate and compute spatial info and cell index map for upper (parent) mesh levels.
             for (int level = 1; level <= _levels; level++)
             {
+                // Get child level spatials.
                 LevelInfo childLevel = _levelInfo[level - 1];
                 int childCount = childLevel.CellCount;
 
+                // Allocate spatials buffer for the parent level about to be computed.
                 if (_levelInfo[level].Spatials == null || _levelInfo[level].Spatials.Length < childCount)
                     _levelInfo[level].Spatials = new SpatialInfo[childCount];
 
+                // Grab a pointer for the spatials.
                 SpatialInfo[] parentSpatials = _levelInfo[level].Spatials;
 
+                // Compute parent spatials in parallel.
+                // We don't need to read every element of the child spatials.
+                // Use the cell index map and count computed for the previous (child) level. 
                 ParallelForSlim(childCount, _parallelPartitions, (start, len) =>
                 {
-                    for (int b = start; b < len; b++)
+                    for (int p = start; p < len; p++)
                     {
-                        var spatial = childLevel.Spatials[childLevel.CellIndex[b]];
+                        // Read child level spatials at each cell location
+                        // and compute parent spatials.
+                        var spatial = childLevel.Spatials[childLevel.CellIndex[p]];
                         int idxX = spatial.IdxX >> 1;
                         int idxY = spatial.IdxY >> 1;
                         int idxZ = spatial.IdxZ >> 1;
 
                         long morton = MortonNumber(idxX, idxY, idxZ);
 
-                        parentSpatials[b].Set(morton, idxX, idxY, idxZ, spatial.Index + b);
+                        parentSpatials[p].Set(morton, idxX, idxY, idxZ, spatial.Index + p);
                     }
                 });
 
+                // Allocate cell index map buffer for the parent level.
                 if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
                     _levelInfo[level].CellIndex = new int[childCount + 1000];
 
@@ -692,6 +703,8 @@ namespace NBodies.Physics
                 int count = 0;
                 long val = long.MaxValue;
 
+                // Compute cell index map and count for the parent.
+                // Pin for speed.
                 fixed (int* cellIdxPtr = cellIdx)
                 fixed (SpatialInfo* spaPtr = parentSpatials)
                 {
@@ -708,8 +721,10 @@ namespace NBodies.Physics
                     }
                 }
 
+                // Add the last cell index value;
                 cellIdx[count] = childCount;
-
+                
+                // Write info for this level.
                 _levelInfo[level].CellIndex = cellIdx;
                 _levelInfo[level].Spatials = parentSpatials;
                 _levelInfo[level].CellCount = count;
@@ -821,6 +836,7 @@ namespace NBodies.Physics
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
 
+            // Write the level index to the GPU.
             Allocate(ref _gpuLevelIndex, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIndex, false, null);
 
@@ -844,8 +860,7 @@ namespace NBodies.Physics
         /// <param name="meshSize"></param>
         private void PopGridAndNeighborsGPU(GridInfo[] gridInfo, int meshSize, long gridSize)
         {
-            // Calulate total size of 1D mesh neighbor list.
-            // Each cell can have a max of 27 neighbors, including itself.
+            // Get offsets for the upper (top) mesh levels.
             int topStart = _levelIdx[1];
             int topSize = meshSize - _levelIdx[1];
             int neighborLen = topSize * 27;
@@ -865,7 +880,7 @@ namespace NBodies.Physics
             // we do multiple passes with the same buffer, offsetting the bucket
             // indexes on each pass to fit within the buffer.
 
-            // Calculate number of passes required to compute all neighbor cells.
+            // Calculate memory requirements and number of passes and strides required to compute all neighbor cells.
             long passOffset = 0;
             long passes = 1;
             long stride = gridSize;
