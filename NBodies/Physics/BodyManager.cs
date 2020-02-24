@@ -241,90 +241,43 @@ namespace NBodies.Physics
 
         private static Body[] FractureBody3D(Body body)
         {
-            float newMass;
-            float prevMass;
-
-            float density = body.Mass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
-            newMass = CalcMass(_minBodySize, density);
-            prevMass = body.Mass;
+            Vector3 ogPos = body.PositionVec();
+            float ogMass = body.Mass;
+            float density = ogMass / (float)(Math.PI * Math.Pow(body.Size / 2, 2));
+            float newMass = CalcMass(_minBodySize, density);
 
             float stepSize = MainLoop.KernelSize * 0.98f;
             float radius = (body.Size / 2f);
-            float stepRadius = radius;
-            int zSteps = (int)(radius / stepSize) + 1;
-            int totZSteps = zSteps * 2;
-            float zPos = body.PosZ + (stepSize / 2f);
 
             var newBodies = new List<Body>();
 
-            // Build a sphere out of circular "layers"
-            // The layers are built with squarse of reducing sizes which are then "masked" into circles with the PointInsideCircle condition.
-            for (int i = 0; i < totZSteps; i++)
+            // Iterate points through a 3D "cube" in the size of the original body.
+            // Only keep points that are within 1 radii of the original body size to produce a sphere of points.
+            for (float x = -radius; x <= radius; x += stepSize)
             {
-                // Start a new layer.
-                var ellipse = new Ellipse(new PointF((float)body.PosX, (float)body.PosY), stepRadius + stepSize);
-
-                float startXpos = ellipse.Location.X - ellipse.Size - stepSize;
-                float startYpos = ellipse.Location.Y - ellipse.Size - stepSize;
-
-                float Xpos = startXpos;
-                float Ypos = startYpos;
-
-                bool done = false;
-                while (!done)
+                for (float y = -radius; y <= radius; y += stepSize)
                 {
-                    // Only keep points that are within the layer ellipse. 
-                    var testPoint = new PointF(Xpos, Ypos);
-                    if (PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, testPoint))
+                    for (float z = -radius; z <= radius; z += stepSize)
                     {
-                        var newPos = new Vector3(testPoint.X, testPoint.Y, zPos);
-                        var newbody = NewBody(newPos, body.VelocityVec(), _minBodySize, newMass, Color.FromArgb(body.Color), 1);
-                        newbody.ForceTot = body.ForceTot;
-                        newBodies.Add(newbody);
+                        // Offset the new point with the original body location.
+                        var newPos = new Vector3(x, y, z);
+                        newPos += body.PositionVec();
+
+                        // Check and add this point only if it is within the radius original body size.
+                        var dist = Vector3.Distance(newPos, ogPos);
+                        if (dist <= radius + stepSize)
+                        {
+                            var newbody = NewBody(newPos, body.VelocityVec(), _minBodySize, newMass, Color.FromArgb(body.Color), 1);
+                            newbody.ForceTot = body.ForceTot;
+                            newBodies.Add(newbody);
+                        }
                     }
-
-                    if (Xpos > ellipse.Location.X + ellipse.Size + stepSize)
-                    {
-                        // Move X back to start, move Y one step verically.
-                        Xpos = startXpos;
-                        Ypos += stepSize;// - 0.20f;
-                    }
-                    else
-                    {
-                        // Move X one step sideways.
-                        Xpos += stepSize;
-                    }
-
-                    // If we are at the bottom we are finished with this layer.
-                    if (Ypos > ellipse.Location.Y + ellipse.Size + stepSize)
-                        done = true;
-                }
-
-
-                if (i < zSteps - 1)
-                {
-                    // Move Z one step forwards.
-                    zPos += stepSize;
-                    stepRadius -= stepSize;
-                }
-                else if (i == zSteps - 1)
-                {
-                    // One hemisphere complete. Move Z back to start minus 1/2 step.
-                    // Future Z steps will move the opposite direction to finish the other hemisphere. 
-                    zPos = body.PosZ - (stepSize / 2f);
-                    stepRadius = radius;
-                }
-                else if (i > zSteps - 1)
-                {
-                    // Move Z one step backwards.
-                    zPos -= stepSize;
-                    stepRadius -= stepSize;
                 }
             }
 
             // Adjust new bodies mass if we missed by a lot.
             // We prefer to maintain density over total mass.
-            if ((newBodies.Count * newMass) / prevMass < 0.75f)
+            if ((newBodies.Count * newMass) / ogMass < 0.75f)
             {
                 float adjustMass = body.Mass / newBodies.Count;
                 for (int i = 0; i < newBodies.Count; i++)
