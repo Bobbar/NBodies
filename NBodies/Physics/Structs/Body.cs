@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ProtoBuf;
 using MessagePack;
+using OpenTK;
 
 namespace NBodies.Physics
 {
@@ -59,7 +60,8 @@ namespace NBodies.Physics
         {
             get
             {
-                return (float)Math.Sqrt((Math.Pow(ForceX, 2) + Math.Pow(ForceY, 2) + Math.Pow(ForceZ, 2)));
+                var force = new Vector3(ForceX, ForceY, ForceZ);
+                return force.LengthFast;
             }
 
             set { var dummy = value; }

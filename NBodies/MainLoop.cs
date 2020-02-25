@@ -268,7 +268,7 @@ namespace NBodies
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
-        private const float _cullDistance = 4000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
+        private const float _cullDistance = 6000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
         private static int _cellSizeExp = 3;
         private static int _meshLevels = 4;
         private static int _threadsPBExp = 8;
@@ -473,7 +473,8 @@ namespace NBodies
                                     BodyManager.Bodies = new Body[_bodiesBuffer.Length];
                                 Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
 
-                                BodyManager.RebuildUIDIndex();
+                                if (BodyManager.FollowSelected)
+                                    BodyManager.RebuildUIDIndex();
                             }
 
                             // Draw the field asynchronously.

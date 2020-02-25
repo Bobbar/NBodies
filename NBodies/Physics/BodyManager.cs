@@ -1215,7 +1215,7 @@ namespace NBodies.Physics
 
         public static float AggregateSpeed(this Body body)
         {
-            return (float)Math.Sqrt(Math.Pow(body.VeloX, 2) + Math.Pow(body.VeloY, 2));
+            return body.VelocityVec().LengthFast;
         }
 
         public static PointF Velocity(this Body body)
@@ -1233,7 +1233,7 @@ namespace NBodies.Physics
             return new PointF((float)body.PosX, (float)body.PosY);
         }
 
-        public static OpenTK.Vector3 PositionVec(this Body body)
+        public static Vector3 PositionVec(this Body body)
         {
             return new Vector3(body.PosX, body.PosY, body.PosZ);
         }
