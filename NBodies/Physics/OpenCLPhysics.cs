@@ -43,7 +43,8 @@ namespace NBodies.Physics
         private ComputeDevice _device = null;
         private ComputeProgram _program;
 
-        private ComputeKernel _forceKernel;
+        private ComputeKernel _forceKernelLocal;
+        private ComputeKernel _forceKernelFar;
         private ComputeKernel _collisionSPHKernel;
         private ComputeKernel _collisionElasticKernel;
         private ComputeKernel _popGridKernel;
@@ -165,7 +166,8 @@ namespace NBodies.Physics
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
-            _forceKernel = _program.CreateKernel("CalcForce");
+            _forceKernelLocal = _program.CreateKernel("CalcForceLocal");
+            _forceKernelFar = _program.CreateKernel("CalcForceFar");
             _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _popGridKernel = _program.CreateKernel("PopGrid");
@@ -316,18 +318,30 @@ namespace NBodies.Physics
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
 
+            // Compute gravity and SPH forces for the near/local field.
             int argi = 0;
-            _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _forceKernel.SetValueArgument(argi++, _bodies.Length);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
-            _forceKernel.SetValueArgument(argi++, _levelIdx[_levels]);
-            _forceKernel.SetValueArgument(argi++, _meshLength);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _forceKernel.SetValueArgument(argi++, sim);
-            _forceKernel.SetValueArgument(argi++, _preCalcs);
-            _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _forceKernelLocal.SetMemoryArgument(argi++, _gpuInBodies);
+            _forceKernelLocal.SetValueArgument(argi++, _bodies.Length);
+            _forceKernelLocal.SetMemoryArgument(argi++, _gpuMesh);
+            _forceKernelLocal.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _forceKernelLocal.SetValueArgument(argi++, sim);
+            _forceKernelLocal.SetValueArgument(argi++, _preCalcs);
+            _queue.Execute(_forceKernelLocal, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
+            // Compute gravity forces for the far/distant field.
+            argi = 0;
+            int meshTopStart = _levelIdx[_levels];
+            int meshTopEnd = _meshLength;
+            _forceKernelFar.SetMemoryArgument(argi++, _gpuInBodies);
+            _forceKernelFar.SetValueArgument(argi++, _bodies.Length);
+            _forceKernelFar.SetMemoryArgument(argi++, _gpuMesh);
+            _forceKernelFar.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _forceKernelFar.SetValueArgument(argi++, meshTopStart);
+            _forceKernelFar.SetValueArgument(argi++, meshTopEnd);
+            _forceKernelFar.SetMemoryArgument(argi++, _gpuPostNeeded);
+            _queue.Execute(_forceKernelFar, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+            // Compute elastic collisions.
             argi = 0;
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
@@ -337,6 +351,7 @@ namespace NBodies.Physics
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
+            // Compute SPH forces/collisions.
             argi = 0;
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _collisionSPHKernel.SetValueArgument(argi++, _bodies.Length);
@@ -1084,7 +1099,8 @@ namespace NBodies.Physics
             _gpuPostNeeded.Dispose();
             _gpuLevelIndex.Dispose();
 
-            _forceKernel.Dispose();
+            _forceKernelLocal.Dispose();
+            _forceKernelFar.Dispose();
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _popGridKernel.Dispose();
