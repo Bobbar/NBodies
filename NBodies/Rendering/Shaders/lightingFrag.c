@@ -27,7 +27,14 @@ void main()
 	{
 		if (noLight == 1)
 		{
-			FragColor = vec4(objectColor, alpha);
+			float dist = distance(viewPos, FragPos);
+			dist += 0.001f;
+			float cutoff = 50.0f;//100.0f;
+			float red = clamp(cutoff / dist, 0.1f, 1);
+			float black = clamp(dist / cutoff, 0, 0.1f);
+			FragColor = vec4(red, black, black, 0.8f);
+
+			//FragColor = vec4(objectColor, alpha);
 		}
 		else
 		{

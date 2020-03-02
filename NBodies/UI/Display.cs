@@ -94,6 +94,8 @@ namespace NBodies.UI
             InputHandler.AddKeyAction(new KernelSizeKey());
             InputHandler.AddKeyAction(new ZeroVeloKey());
             InputHandler.AddKeyAction(new GasKKey());
+            InputHandler.AddKeyAction(new PointSpriteTexKey());
+
 
             PopulateDisplayStyleMenu();
 

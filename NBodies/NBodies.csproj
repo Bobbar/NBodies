@@ -173,6 +173,7 @@
     <Compile Include="Rendering\Renderables\TexturedVertex.cs" />
     <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Rendering\RenderObjectFactory.cs" />
+    <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\Shader.cs" />
     <Compile Include="Shapes\ColoredLine.cs" />
     <Compile Include="UI\AddBodiesForm.cs">
@@ -213,6 +214,7 @@
     <Compile Include="UI\KeyActions\GasKKey.cs" />
     <Compile Include="UI\KeyActions\KernelSizeKey.cs" />
     <Compile Include="UI\KeyActions\LevelKey.cs" />
+    <Compile Include="UI\KeyActions\PointSpriteTexKey.cs" />
     <Compile Include="UI\KeyActions\RewindKey.cs" />
     <Compile Include="UI\KeyActions\SimpleKey.cs" />
     <Compile Include="UI\KeyActions\ThreadsKey.cs" />

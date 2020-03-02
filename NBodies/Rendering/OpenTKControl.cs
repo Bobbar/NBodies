@@ -77,7 +77,8 @@ namespace NBodies.Rendering
         private RenderText _text;
 
         private int _pointTex;
-
+        private string[] _pointSpriteTextures;
+        private int _currentPointTextIdx = 0;
         private bool _usePoints = false;
 
 
@@ -139,6 +140,18 @@ namespace NBodies.Rendering
             GL.BindVertexArray(0);
 
 
+            _pointSpriteTextures = new string[]
+            {
+                @"Rendering\Textures\circle_fuzzy.png",
+                @"Rendering\Textures\circle.png",
+                @"Rendering\Textures\cloud.png",
+                @"Rendering\Textures\cloud_med.png",
+                @"Rendering\Textures\cloud_dense.png",
+                @"Rendering\Textures\bubble.png",
+                @"Rendering\Textures\star.png"
+            };
+
+
             //_pointTex = InitTextures($@"Rendering\Textures\bubble.png");
             //_pointTex = InitTextures($@"Rendering\Textures\circle.png");
             _pointTex = InitTextures($@"Rendering\Textures\circle_fuzzy.png");
@@ -189,7 +202,7 @@ namespace NBodies.Rendering
                 }
             }
 
-
+            CheckPointTex();
 
             if (bodies.Length > 0)
             {
@@ -596,6 +609,24 @@ namespace NBodies.Rendering
             }
         }
 
+        private void CheckPointTex()
+        {
+            var idx = RenderVars.PointSpriteTexIdx;
+            if (idx >= 0 && idx < _pointSpriteTextures.Length)
+            {
+                if (_currentPointTextIdx != idx)
+                {
+                    GL.DeleteTexture(_pointTex);
+                    _pointTex = InitTextures(_pointSpriteTextures[idx]);
+                    _currentPointTextIdx = idx;
+                }
+            }
+            else
+            {
+                RenderVars.PointSpriteTexIdx = _currentPointTextIdx;
+            }
+        }
+
         private int InitTextures(string filename)
         {
             int texture;
@@ -722,7 +753,7 @@ namespace NBodies.Rendering
                     _newBodyId = -1;
                 }
 
-              
+
 
             }
 
