@@ -80,6 +80,7 @@ namespace NBodies.Rendering
         private string[] _pointSpriteTextures;
         private int _currentPointTextIdx = 0;
         private bool _usePoints = false;
+        private bool _useShaderSpheres = true;
 
 
         private int _newBodyId = -1;
@@ -142,6 +143,7 @@ namespace NBodies.Rendering
 
             _pointSpriteTextures = new string[]
             {
+                "", // Use shader spheres.
                 @"Rendering\Textures\circle_fuzzy.png",
                 @"Rendering\Textures\circle.png",
                 @"Rendering\Textures\cloud.png",
@@ -222,8 +224,19 @@ namespace NBodies.Rendering
 
                     GL.Disable(EnableCap.DepthTest);
 
-                    GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, _pointTex);
+                    if (_useShaderSpheres)
+                    {
+                        GL.Enable(EnableCap.DepthTest);
+                        GL.DepthMask(true);
+
+                        if (RenderVars.BodyAlpha == 255)
+                            GL.Disable(EnableCap.Blend);
+                    }
+                    else
+                    {
+                        GL.ActiveTexture(TextureUnit.Texture0);
+                        GL.BindTexture(TextureTarget.Texture2D, _pointTex);
+                    }
                 }
                 else
                 {
@@ -249,7 +262,11 @@ namespace NBodies.Rendering
                     GL.VertexAttribDivisor(_colorAttrib, 0);
                     GL.EnableVertexAttribArray(_positionAttrib);
                     GL.EnableVertexAttribArray(_colorAttrib);
-                    _shader.SetInt("usePoint", 1);
+
+                    if (_useShaderSpheres)
+                        _shader.SetInt("usePoint", 2);
+                    else
+                        _shader.SetInt("usePoint", 1);
                 }
                 else
                 {
@@ -684,8 +701,17 @@ namespace NBodies.Rendering
             {
                 if (_currentPointTextIdx != idx)
                 {
-                    GL.DeleteTexture(_pointTex);
-                    _pointTex = InitTextures(_pointSpriteTextures[idx]);
+                    if (idx == 0)
+                    {
+                        _useShaderSpheres = true;
+                    }
+                    else
+                    {
+                        _useShaderSpheres = false;
+                        GL.DeleteTexture(_pointTex);
+                        _pointTex = InitTextures(_pointSpriteTextures[idx]);
+                    }
+
                     _currentPointTextIdx = idx;
                 }
             }

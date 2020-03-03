@@ -24,7 +24,7 @@ float gl_ClipDistance[];
 
 void main(void)
 {
-	if (usePoint == 1) 
+	if (usePoint == 1 || usePoint == 2) 
 	{
 		objectColor = aObjColor;
 		vec4 position = vec4(aPosition.xyz, 1.0) * model * view;

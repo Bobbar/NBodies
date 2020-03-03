@@ -17,14 +17,22 @@ namespace NBodies.UI.KeyActions
         public PointSpriteTexKey()
         {
             AddKey(Keys.H);
+
+            Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
+
         }
 
         public override void DoKeyDown()
         {
+            if (KeyDownStates[Keys.H])
+            {
+                SetText();
+            }
         }
 
         public override void DoKeyUp()
         {
+            Overlay.Hide();
         }
 
         public override void DoMouseDown(MouseButtons button, Vector3 loc)
@@ -52,7 +60,23 @@ namespace NBodies.UI.KeyActions
             if (KeyDownStates[Keys.H])
             {
                 RenderVars.PointSpriteTexIdx += wheelValue;
+
+                SetText();
             }
+        }
+
+        private void SetText()
+        {
+            string text;
+
+            if (RenderVars.PointSpriteTexIdx <= 0)
+                text = "Sprite: Shader Spheres";
+            else
+                text = $"Sprite: {RenderVars.PointSpriteTexIdx}";
+
+            Overlay.Value = text;
+            Overlay.Show();
+
         }
     }
 }

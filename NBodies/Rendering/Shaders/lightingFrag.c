@@ -19,9 +19,23 @@ void main()
 {
 	if (usePoint == 1)
 	{
-		vec4 starColor = vec4(objectColor, alpha);
+		vec4 bodyColor = vec4(objectColor, alpha);
 		vec4 tex = texture2D(texture0, vec2(gl_PointCoord.x, gl_PointCoord.y));
-		FragColor = starColor * tex;
+		FragColor = bodyColor * tex;
+	}
+	else if (usePoint == 2)
+	{
+		vec4 bodyColor = vec4(objectColor, alpha);
+		vec3 lightDir = vec3(0.577, 0.577, 0.577);
+		vec3 N;
+		N.xy = gl_PointCoord.xy*vec2(2.0, -2.0) + vec2(-1.0, 1.0);
+
+		float mag = dot(N.xy, N.xy);
+		if (mag > 1) discard;   // kill pixels outside circle
+		N.z = sqrt(1 - mag);
+		// calculate lighting
+		float diffuse = max(0.0, dot(lightDir, N));
+		FragColor = bodyColor * diffuse;
 	}
 	else
 	{
