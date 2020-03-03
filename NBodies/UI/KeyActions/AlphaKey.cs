@@ -21,9 +21,11 @@ namespace NBodies.UI.KeyActions
 
         public override void DoKeyDown()
         {
-          
-            //    Overlay.Value = "Alpha: " + RenderBase.BodyAlpha;
-            //Overlay.Show();
+            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.A])
+            {
+                Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
+                Overlay.Show();
+            }
         }
 
         public override void DoKeyUp()
@@ -48,15 +50,15 @@ namespace NBodies.UI.KeyActions
 
         public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
         {
-           // throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
 
         public override void DoWheelAction(int wheelValue)
         {
             if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.A])
             {
-                RenderBase.BodyAlpha += wheelValue;
-                Overlay.Value = "Alpha: " + RenderBase.BodyAlpha;
+                RenderVars.BodyAlpha += wheelValue;
+                Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
             }
         }
     }

@@ -156,22 +156,18 @@
     <Compile Include="Physics\Structs\SpatialInfo.cs" />
     <Compile Include="Physics\Structs\SPHPreCalc.cs" />
     <Compile Include="Rendering\Camera.cs" />
-    <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GameObjects\AGameObject.cs" />
     <Compile Include="Rendering\GameObjects\Text\RenderCharacter.cs" />
     <Compile Include="Rendering\GameObjects\Text\RenderText.cs" />
-    <Compile Include="Rendering\GDIRenderer.cs" />
     <Compile Include="Rendering\OpenTKControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Rendering\OpenTKRenderer.cs" />
     <Compile Include="Rendering\Renderables\ARenderable.cs" />
     <Compile Include="Rendering\Renderables\ColoredRenderObject.cs" />
     <Compile Include="Rendering\Renderables\ColoredVertex.cs" />
     <Compile Include="Rendering\Renderables\NormalVertex.cs" />
     <Compile Include="Rendering\Renderables\TexturedRenderObject.cs" />
     <Compile Include="Rendering\Renderables\TexturedVertex.cs" />
-    <Compile Include="Rendering\RenderBase.cs" />
     <Compile Include="Rendering\RenderObjectFactory.cs" />
     <Compile Include="Rendering\RenderVars.cs" />
     <Compile Include="Rendering\Shader.cs" />

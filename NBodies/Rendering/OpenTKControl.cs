@@ -277,7 +277,7 @@ namespace NBodies.Rendering
                 _shader.SetVector3("lightPos", _camera.Position);
                 _shader.SetVector3("viewPos", _camera.Position);
 
-                _shader.SetFloat("alpha", RenderBase.BodyAlpha / 255f);
+                _shader.SetFloat("alpha", RenderVars.BodyAlpha / 255f);
                 _shader.SetInt("noLight", 0);
 
                 // For correct point sprite scaling.
@@ -285,7 +285,7 @@ namespace NBodies.Rendering
                 _shader.SetFloat("nearPlaneHeight", nearPlaneHeight);
 
                 // Don't draw bodies if alpha is 0.
-                if (RenderBase.BodyAlpha > 0)
+                if (RenderVars.BodyAlpha > 0)
                 {
                     //  Update body positions and colors.
                     var zOrder = ComputeZOrder(bodies);
@@ -332,7 +332,7 @@ namespace NBodies.Rendering
                 }
 
                 //  Draw mesh
-                if (RenderBase.ShowMesh && BodyManager.Mesh.Length > 1)
+                if (RenderVars.ShowMesh && BodyManager.Mesh.Length > 1)
                 {
                     GL.VertexAttribDivisor(_positionAttrib, 1);
                     GL.VertexAttribDivisor(_colorAttrib, 1);
@@ -390,8 +390,8 @@ namespace NBodies.Rendering
 
                 GL.BindVertexArray(0);
 
-                // Draw stats text.
-                DrawStats();
+                // Draw stats and overlay text.
+                DrawStatsAndOverlays();
 
                 this.SwapBuffers();
             }
@@ -399,7 +399,7 @@ namespace NBodies.Rendering
             completeCallback.Set();
         }
 
-        private void DrawStats()
+        private void DrawStatsAndOverlays()
         {
             var elapTime = TimeSpan.FromSeconds(MainLoop.TotalTime * 10000);
 
@@ -458,6 +458,19 @@ namespace NBodies.Rendering
                 yPos -= lineHeight;
                 _text.Render(_camera);
             }
+
+            // Draw overlays.
+            Vector2 center = new Vector2((ClientSize.Width / 2) - 100f, ClientSize.Height - 20f);
+
+            foreach (var overlay in RenderVars.OverLays)
+            {
+                if (overlay.Visible)
+                {
+                    _text.SetPosition(new Vector4(center.X, center.Y, 0, 1));
+                    _text.SetText(overlay.Value);
+                    _text.Render(_camera);
+                }
+            }
         }
 
         public void MoveCameraToCenterMass()
@@ -473,13 +486,6 @@ namespace NBodies.Rendering
                 _orderDist = new float[bodies.Length];
                 _orderIdx = new int[bodies.Length];
             }
-
-            //for (int i = 0; i < bodies.Length; i++)
-            //{
-            //    var body = bodies[i];
-            //    _orderDist[i] = body.UID;
-            //    _orderIdx[i] = i;
-            //}
 
             for (int i = 0; i < bodies.Length; i++)
             {
@@ -501,34 +507,34 @@ namespace NBodies.Rendering
         {
             Color bodyColor = _defaultBodyColor;
 
-            switch (RenderBase.DisplayStyle)
+            switch (RenderVars.DisplayStyle)
             {
                 case DisplayStyle.Normal:
-                    bodyColor = Color.FromArgb(RenderBase.BodyAlpha, Color.FromArgb(body.Color));
+                    bodyColor = Color.FromArgb(RenderVars.BodyAlpha, Color.FromArgb(body.Color));
                     _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Pressure:
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Pressure, true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Pressure, true);
                     _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Density:
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.Density / body.Mass, true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Density / body.Mass, true);
                     _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Velocity:
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, body.AggregateSpeed(), true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.AggregateSpeed(), true);
                     _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Index:
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, true);
                     _clearColor = Color.Black;
 
                     break;
@@ -536,13 +542,13 @@ namespace NBodies.Rendering
                 case DisplayStyle.SpatialOrder:
                     //bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, index, true);
 
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
                     _clearColor = Color.Black;
 
                     break;
 
                 case DisplayStyle.Force:
-                    bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderBase.StyleScaleMax, (body.ForceTot / body.Mass), true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, (body.ForceTot / body.Mass), true);
                     _clearColor = Color.Black;
 
                     break;
@@ -555,6 +561,68 @@ namespace NBodies.Rendering
             }
 
             return bodyColor;
+        }
+
+        public static Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        {
+            const int maxIntensity = 255;
+            float intensity = 0;
+            long r1 = 0;
+            long g1 = 0;
+            long b1 = 0;
+            long r2 = 0;
+            long g2 = 0;
+            long b2 = 0;
+
+            if (currentValue <= (maxValue / 2f))
+            {
+                r1 = startColor.R;
+                g1 = startColor.G;
+                b1 = startColor.B;
+
+                r2 = midColor.R;
+                g2 = midColor.G;
+                b2 = midColor.B;
+
+                maxValue = maxValue / 2f;
+            }
+            else
+            {
+                r1 = midColor.R;
+                g1 = midColor.G;
+                b1 = midColor.B;
+
+                r2 = endColor.R;
+                g2 = endColor.G;
+                b2 = endColor.B;
+
+                maxValue = maxValue / 2f;
+                currentValue = currentValue - maxValue;
+            }
+
+            if (currentValue > 0)
+            {
+                // Compute the intensity of the end color.
+                intensity = (maxIntensity / (maxValue / currentValue));
+            }
+
+            // Clamp the intensity within the max.
+            if (intensity > maxIntensity) intensity = maxIntensity;
+
+            // Calculate the new RGB values from the intensity.
+            int newR, newG, newB;
+            newR = (int)(r1 + (r2 - r1) / (float)maxIntensity * intensity);
+            newG = (int)(g1 + (g2 - g1) / (float)maxIntensity * intensity);
+            newB = (int)(b1 + (b2 - b1) / (float)maxIntensity * intensity);
+
+            if (translucent)
+            {
+                return Color.FromArgb(RenderVars.BodyAlpha, newR, newG, newB);
+            }
+            else
+            {
+                return Color.FromArgb(newR, newG, newB);
+            }
         }
 
         private Tuple<Vector3, Vector3> MouseRay(int x, int y)

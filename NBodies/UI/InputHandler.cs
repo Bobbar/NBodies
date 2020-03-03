@@ -22,7 +22,7 @@ namespace NBodies.UI
 
             if (keyaction.Overlay != null)
             {
-                RenderBase.AddOverlay(keyaction.Overlay);
+                RenderVars.AddOverlay(keyaction.Overlay);
             }
         }
 

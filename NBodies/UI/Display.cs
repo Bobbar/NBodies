@@ -43,13 +43,13 @@ namespace NBodies.UI
             _UIUpdateTimer.Tick += _UIUpdateTimer_Tick;
 
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
-            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
-            AlphaUpDown.Value = RenderBase.BodyAlpha;
+            StyleScaleUpDown.Value = (decimal)RenderVars.StyleScaleMax;
+            AlphaUpDown.Value = RenderVars.BodyAlpha;
         }
 
         private void DisplayForm_Load(object sender, EventArgs e)
         {
-            RenderBase.SetStyleScales();
+            RenderVars.SetStyleScales();
             ViewportOffsets.ScreenCenter = new PointF(this.glControl.Width / 2f, this.glControl.Height / 2f);
             ViewportOffsets.ScaleOffset = ViewportHelpers.FieldPointToScreenNoOffset(ViewportOffsets.ScreenCenter);
             MainLoop.MaxThreadsPerBlock = Program.ThreadsPerBlockArgument;
@@ -77,8 +77,8 @@ namespace NBodies.UI
             glControl.KeyDown += GlControl_KeyDown;
             MainLoop.GLRenderer = glControl;
 
-            RenderBase.OverLays.Add(_distLine);
-            RenderBase.OverLays.Add(_distOver);
+            RenderVars.OverLays.Add(_distLine);
+            RenderVars.OverLays.Add(_distOver);
 
             InputHandler.AddKeyAction(new FPSKey());
             InputHandler.AddKeyAction(new ExplosionKey());
@@ -152,10 +152,10 @@ namespace NBodies.UI
                 PauseButton.BackColor = Color.DarkGreen;
             }
 
-            AlphaUpDown.Value = RenderBase.BodyAlpha;
+            AlphaUpDown.Value = RenderVars.BodyAlpha;
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
-            StyleScaleUpDown.Value = (decimal)RenderBase.StyleScaleMax;
-            SetDisplayStyle(RenderBase.DisplayStyle);
+            StyleScaleUpDown.Value = (decimal)RenderVars.StyleScaleMax;
+            SetDisplayStyle(RenderVars.DisplayStyle);
 
             if (BodyManager.FollowBodyUID != -1 && !MainLoop.PausePhysics)
             {
@@ -261,7 +261,7 @@ namespace NBodies.UI
 
         private void SetDisplayStyle(DisplayStyle style)
         {
-            RenderBase.DisplayStyle = style;
+            RenderVars.DisplayStyle = style;
 
             foreach (ToolStripMenuItem item in displayToolStripMenuItem.DropDownItems)
             {
@@ -290,7 +290,7 @@ namespace NBodies.UI
 
         private void TrailsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.Trails = TrailsCheckBox.Checked;
+            RenderVars.Trails = TrailsCheckBox.Checked;
         }
 
         private void PauseButton_Click(object sender, EventArgs e)
@@ -320,12 +320,12 @@ namespace NBodies.UI
 
         private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.AAEnabled = antiAliasingToolStripMenuItem.Checked;
+            RenderVars.AAEnabled = antiAliasingToolStripMenuItem.Checked;
         }
 
         private void clipToViewportToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.ClipView = clipToViewportToolStripMenuItem.Checked;
+            RenderVars.ClipView = clipToViewportToolStripMenuItem.Checked;
         }
 
         private void TimeStepUpDown_ValueChanged(object sender, EventArgs e)
@@ -357,7 +357,7 @@ namespace NBodies.UI
 
         private void StyleScaleUpDown_ValueChanged(object sender, EventArgs e)
         {
-            RenderBase.StyleScaleMax = (float)StyleScaleUpDown.Value;
+            RenderVars.StyleScaleMax = (float)StyleScaleUpDown.Value;
         }
 
         private void CenterOnMassButton_Click(object sender, EventArgs e)
@@ -372,17 +372,17 @@ namespace NBodies.UI
 
         private void AlphaUpDown_ValueChanged(object sender, EventArgs e)
         {
-            RenderBase.BodyAlpha = (int)AlphaUpDown.Value;
+            RenderVars.BodyAlpha = (int)AlphaUpDown.Value;
         }
 
         private void showFollowBodyForce_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.ShowForce = showFollowBodyForce.Checked;
+            RenderVars.ShowForce = showFollowBodyForce.Checked;
         }
 
         private void showPredictOrbit_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.ShowPath = showPredictOrbit.Checked;
+            RenderVars.ShowPath = showPredictOrbit.Checked;
         }
 
         private void DisplayForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -419,7 +419,7 @@ namespace NBodies.UI
 
         private void showMeshToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.ShowMesh = showMeshToolStripMenuItem.Checked;
+            RenderVars.ShowMesh = showMeshToolStripMenuItem.Checked;
         }
 
         private void usePointsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
@@ -429,17 +429,17 @@ namespace NBodies.UI
 
         private void allForceVectorsToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
+            RenderVars.ShowAllForce = allForceVectorsToolStripMenuItem.Checked;
         }
 
         private void sortZOrderToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.SortZOrder = sortZOrderToolStripMenuItem.Checked;
+            RenderVars.SortZOrder = sortZOrderToolStripMenuItem.Checked;
         }
 
         private void fastPrimitivesToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderBase.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
+            RenderVars.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
         }
 
         private void rewindBufferToolStripMenuItem_CheckedChanged(object sender, EventArgs e)

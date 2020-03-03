@@ -24,12 +24,12 @@ namespace NBodies.UI.KeyActions
         {
             if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
             {
-                Overlay.Value = "Display: " + RenderBase.DisplayStyle.ToString();
+                Overlay.Value = "Display: " + RenderVars.DisplayStyle.ToString();
                 Overlay.Show();
             }
-            else if (!KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
+            else if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
             {
-                Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
+                Overlay.Value = "Style Scale: " + RenderVars.StyleScaleMax;
                 Overlay.Show();
             }
         }
@@ -68,17 +68,17 @@ namespace NBodies.UI.KeyActions
                     int max = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max();
                     int min = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Min();
 
-                    if ((int)RenderBase.DisplayStyle + wheelValue <= max && (int)RenderBase.DisplayStyle + wheelValue >= min)
+                    if ((int)RenderVars.DisplayStyle + wheelValue <= max && (int)RenderVars.DisplayStyle + wheelValue >= min)
                     {
-                        RenderBase.DisplayStyle += wheelValue;
-                        Overlay.Value = "Display: " + RenderBase.DisplayStyle.ToString();
+                        RenderVars.DisplayStyle += wheelValue;
+                        Overlay.Value = "Display: " + RenderVars.DisplayStyle.ToString();
 
                     }
                 }
                 else
                 {
-                    RenderBase.StyleScaleMax += wheelValue * 2;
-                    Overlay.Value = "Style Scale: " + RenderBase.StyleScaleMax;
+                    RenderVars.StyleScaleMax += wheelValue * 2;
+                    Overlay.Value = "Style Scale: " + RenderVars.StyleScaleMax;
                 }
             }
         }

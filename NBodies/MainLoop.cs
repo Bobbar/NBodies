@@ -21,8 +21,6 @@ namespace NBodies
         public static bool Collisions = true;
         public static bool SyncRenderer = false;
         public const int DefaultThreadsPerBlock = 256;
-        public static RenderBase Renderer;
-
         public static OpenTKControl GLRenderer;
 
         #region Public Properties
@@ -96,8 +94,6 @@ namespace NBodies
                 if (value >= 1 && value <= 8)
                 {
                     _cellSizeExp = value;
-
-                    Debug.WriteLine($@"Cell Size: { Math.Pow(2, _cellSizeExp) }");
                 }
             }
         }
@@ -114,8 +110,6 @@ namespace NBodies
                 if (value >= 1 & value <= 10)
                 {
                     _meshLevels = value;
-                    Debug.WriteLine($@"Levels: { _meshLevels }");
-
                 }
             }
         }
@@ -132,8 +126,6 @@ namespace NBodies
                 if (value >= 1 && value <= 2000)
                 {
                     _targetFPS = value;
-                    Debug.WriteLine($@"FPS: { _targetFPS }");
-
                 }
             }
         }
@@ -150,8 +142,6 @@ namespace NBodies
                 if (value >= 0.0f && value <= 1f)
                 {
                     _timeStep = value;
-                    Debug.WriteLine($@"Timestep: { _timeStep }");
-
                 }
             }
         }
