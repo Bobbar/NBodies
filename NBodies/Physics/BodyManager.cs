@@ -80,6 +80,8 @@ namespace NBodies.Physics
 
         public static void RewindState()
         {
+            MainLoop.WaitForPause();
+
             if (_rewinder.TryGetPreviousState(ref Bodies))
             {
                 RebuildUIDIndex();

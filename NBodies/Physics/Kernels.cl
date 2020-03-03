@@ -566,7 +566,6 @@ __kernel void CalcForceLocal(global Body* inBodies, int inBodiesLen, global Mesh
 
 	float3 iPos = (float3)(inBodies[(a)].PosX, inBodies[(a)].PosY, inBodies[(a)].PosZ);
 	float iMass = inBodies[(a)].Mass;
-	int iFlags = inBodies[(a)].Flag;
 	float3 iForce = (float3)(0.0f, 0.0f, 0.0f);
 	float iDensity = 0.0f;
 	float iPressure = 0.0f;

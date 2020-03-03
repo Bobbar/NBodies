@@ -220,29 +220,23 @@ namespace NBodies
             float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
 
             Matter.Density = float.Parse(DensityTextBox.Text);
-            var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
-            var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
-
-            var ellipVec = new Vector3(ellipse.Location.X, ellipse.Location.Y, 1.0f);
-            var inEllipVec = new Vector3(inEllipse.Location.X, inEllipse.Location.Y, 1.0f);
-
+            var ellipse = new Ellipse3D(ViewportHelpers.CameraPos, radius);
+            var inEllipse = new Ellipse3D(ViewportHelpers.CameraPos, innerRadius);
 
             for (int i = 0; i < count; i++)
             {
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                 px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                 py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-                pz = Numbers.GetRandomFloat(1.0f - ellipse.Size, 1.0f + ellipse.Size);
+                pz = Numbers.GetRandomFloat(ellipse.Location.Z - ellipse.Size, ellipse.Location.Z + ellipse.Size);
 
                 int its = 0;
                 int maxIts = 100;
                 bool outOfSpace = false;
 
-                //  PointF newLoc = new PointF(px, py);
                 Vector3 newLoc = new Vector3(px, py, pz);
 
-
-                while (!PointExtensions.PointInsideCircle(ellipVec, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipVec, inEllipse.Size, newLoc))
+                while (!PointExtensions.PointInsideCircle(ellipse.Location, ellipse.Size, newLoc) || PointExtensions.PointInsideCircle(inEllipse.Location, inEllipse.Size, newLoc))
                 {
                     if (its >= maxIts)
                     {
@@ -254,8 +248,8 @@ namespace NBodies
                     bodySize = Numbers.GetRandomFloat(minSize, maxSize);
                     px = Numbers.GetRandomFloat(ellipse.Location.X - ellipse.Size, ellipse.Location.X + ellipse.Size);
                     py = Numbers.GetRandomFloat(ellipse.Location.Y - ellipse.Size, ellipse.Location.Y + ellipse.Size);
-                    pz = Numbers.GetRandomFloat(1.0f - ellipse.Size, 1.0f + ellipse.Size);
-                    //newLoc = new PointF(px, py);
+                    pz = Numbers.GetRandomFloat(ellipse.Location.Z - ellipse.Size, ellipse.Location.Z + ellipse.Size);
+
                     newLoc = new Vector3(px, py, pz);
 
                     its++;
@@ -270,8 +264,7 @@ namespace NBodies
 
                 if (byDist)
                 {
-                    //var dist = newLoc.DistanceSqrt(ellipse.Location);
-                    var dist = Vector3.Distance(newLoc, ellipVec);
+                    var dist = Vector3.Distance(newLoc, ellipse.Location);
                     matter = Matter.GetForDistance(dist, radius);
                 }
                 else
