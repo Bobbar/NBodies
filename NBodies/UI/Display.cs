@@ -3,6 +3,7 @@ using NBodies.Physics;
 using NBodies.Rendering;
 using NBodies.UI.KeyActions;
 using NBodies.Helpers;
+using NBodies.IO;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -35,6 +36,8 @@ namespace NBodies.UI
         private OverlayGraphic _distLine = new OverlayGraphic(OverlayGraphicType.Line, new PointF(), "");
         private OverlayGraphic _distOver = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
 
+        private string _title;
+
         public DisplayForm()
         {
             InitializeComponent();
@@ -45,6 +48,8 @@ namespace NBodies.UI
             TimeStepUpDown.Value = (decimal)MainLoop.TimeStep;
             StyleScaleUpDown.Value = (decimal)RenderVars.StyleScaleMax;
             AlphaUpDown.Value = RenderVars.BodyAlpha;
+
+            _title = this.Text;
         }
 
         private void DisplayForm_Load(object sender, EventArgs e)
@@ -170,6 +175,9 @@ namespace NBodies.UI
             {
                 RecordButton.BackColor = DefaultBackColor;
             }
+
+            if (!string.IsNullOrEmpty(Serializer.CurrentFile))
+                this.Text = $"{_title} - {Serializer.CurrentFile}";
         }
 
         private void SetSelectedInfo()
@@ -339,6 +347,8 @@ namespace NBodies.UI
             _selectedUid = -1;
             _mouseId = -1;
             BodyManager.ClearBodies();
+            Serializer.CurrentFile = string.Empty;
+            this.Text = _title;
             PhysicsProvider.PhysicsCalc.Flush();
             MainLoop.ResumePhysics();
         }

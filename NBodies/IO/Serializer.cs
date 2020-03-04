@@ -14,6 +14,13 @@ namespace NBodies.IO
 {
     public static class Serializer
     {
+        public static string CurrentFile
+        {
+            get { return _previousFile; }
+
+            set { _previousFile = value; }
+        }
+
         private static string _previousFile = string.Empty;
 
         public static void SaveState()
@@ -24,6 +31,11 @@ namespace NBodies.IO
             {
                 saveDialog.Filter = "NBody State|*.nsta";
                 saveDialog.Title = "Save State File";
+                if (!string.IsNullOrEmpty(_previousFile))
+                {
+                    var f = new FileInfo(_previousFile);
+                    saveDialog.FileName = f.Name;
+                }
                 saveDialog.ShowDialog();
 
                 if (!string.IsNullOrEmpty(saveDialog.FileName))
