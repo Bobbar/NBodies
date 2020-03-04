@@ -31,6 +31,7 @@ void main(void)
 		float dist = -position.z;
 		//float dist = distance(aPosition.xyz, position.xyz);
 		gl_Position = position *  projection;
+		FragPos = gl_Position.xyz;
 		gl_PointSize = (nearPlaneHeight * (aPosition.w * 2.0f)) / gl_Position.w;
 
 		//gl_PointSize = 1000.0f * aPosition.w / dist;

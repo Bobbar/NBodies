@@ -17,12 +17,16 @@ namespace NBodies.UI.KeyActions
         public ViscosityKey()
         {
             AddKey(_myKey);
+            AddKey(Keys.ControlKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
         public override void DoKeyDown()
         {
-            Overlay.Value = "Viscosity: " +  MainLoop.Viscosity;
-            Overlay.Show();
+            if (KeyDownStates[_myKey] && KeyDownStates[Keys.ControlKey])
+            {
+                Overlay.Value = "Viscosity: " + MainLoop.Viscosity;
+                Overlay.Show();
+            }
         }
 
         public override void DoKeyUp()
@@ -52,7 +56,7 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[_myKey])
+            if (KeyDownStates[_myKey] && KeyDownStates[Keys.ControlKey])
             {
                 MainLoop.Viscosity += (wheelValue * 0.1f);
                 Overlay.Value = "Viscosity: " + MainLoop.Viscosity;
