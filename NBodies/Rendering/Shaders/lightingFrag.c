@@ -1,5 +1,9 @@
 ﻿#version 330 core
-out vec4 FragColor;
+//out vec4 FragColor;
+//out vec4 BrightColor;
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
 
 //In order to calculate some basic lighting we need a few things per model basis, and a few things per fragment basis:
 //uniform vec3 objectColor; //The color of the object.
@@ -24,11 +28,14 @@ in vec3 objectColor;
 
 void main()
 {
+	vec4 result;
+
 	if (usePoint == 1)
 	{
 		vec4 bodyColor = vec4(objectColor, alpha);
 		vec4 tex = texture2D(texture0, vec2(gl_PointCoord.x, gl_PointCoord.y));
-		FragColor = bodyColor * tex;
+		//FragColor = bodyColor * tex;
+		result = bodyColor * tex;
 	}
 	else if (usePoint == 2)
 	{
@@ -53,8 +60,8 @@ void main()
 		vec3 halfVector = normalize(eye + lightDir);
 		float spec = max(pow(dot(N, halfVector), Ns), 0.);
 		vec4 S = light_specular*mat_specular* spec;
-		FragColor = bodyColor * diffuse + S;
-
+		//FragColor = bodyColor * diffuse + S;
+		result = bodyColor * diffuse + S;
 	}
 	else
 	{
@@ -65,9 +72,8 @@ void main()
 			float cutoff = 50.0f;//100.0f;
 			float red = clamp(cutoff / dist, 0.1f, 1);
 			float black = clamp(dist / cutoff, 0, 0.1f);
-			FragColor = vec4(red, black, black, 0.8f);
-
-			//FragColor = vec4(objectColor, alpha);
+			//result = vec4(red, black, black, 0.8f);
+			result = vec4(red, black, black, alpha);
 		}
 		else
 		{
@@ -96,13 +102,24 @@ void main()
 
 			//At last we add all the light components together and multiply with the color of the object. Then we set the color
 			//and makes sure the alpha value is 1
-			vec3 result = (ambient + diffuse + specular) * objectColor;
-			FragColor = vec4(result, alpha);
-
+			vec3 res = (ambient + diffuse + specular) * objectColor;
+			//FragColor = vec4(result, alpha);
+			result = vec4(res, alpha);
 			//Note we still use the light color * object color from the last tutorial.
 			//This time the light values are in the phong model (ambient, diffuse and specular)
 		}
 
+	}
+
+	// Compute brightness and send color data to bloom texture.
+	FragColor = result;
+
+	if (noLight == 0) {
+		float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+		BrightColor = vec4(FragColor.rgb * brightness, alpha);
+	}
+	else { // Pass through for no lighting.
+		BrightColor = vec4(0);
 	}
 
 }

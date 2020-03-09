@@ -78,7 +78,8 @@ namespace NBodies.UI
                 }
             }
 
-         
+            glControl.Init();
+
             glControl.KeyDown += GlControl_KeyDown;
             MainLoop.GLRenderer = glControl;
 
@@ -326,9 +327,9 @@ namespace NBodies.UI
             ViewportHelpers.CenterCurrentField();
         }
 
-        private void antiAliasingToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        private void bloomEnabledToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
-            RenderVars.AAEnabled = antiAliasingToolStripMenuItem.Checked;
+            RenderVars.BloomEnabled = bloomEnabledToolStripMenuItem.Checked;
         }
 
         private void clipToViewportToolStripMenuItem_CheckedChanged(object sender, EventArgs e)

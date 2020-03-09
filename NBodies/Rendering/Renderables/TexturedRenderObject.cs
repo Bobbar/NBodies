@@ -107,7 +107,9 @@ namespace NBodies.Rendering.Renderables
         public override void Bind()
         {
             base.Bind();
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, _texture);
+            GL.Uniform1(0, 0);
         }
 
         protected override void Dispose(bool disposing)

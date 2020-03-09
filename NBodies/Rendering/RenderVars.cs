@@ -8,10 +8,15 @@ namespace NBodies.Rendering
 {
     public static class RenderVars
     {
+        public static float Blur = 2.4f;//2.7f;//1.2f;
+        public static float Gamma = 0.8f;//2.2f;
+        public static float Exposure = 7.3f;//2.2f;
         public static int PointSpriteTexIdx = 0;
 
         public static List<OverlayGraphic> OverLays = new List<OverlayGraphic>();
         public static bool AAEnabled = true;
+        public static bool BloomEnabled = false;
+
         public static bool Trails = false;
         public static bool ClipView = true;
         public static bool ShowForce = false;
@@ -55,7 +60,7 @@ namespace NBodies.Rendering
         }
 
         private static float _styleScaleMax = 210;
-        private static int _bodyAlpha = 210;
+        private static int _bodyAlpha = 255;
         private static float[] _styleScales = new float[1] { _styleScaleMax };
 
         public static void SetStyleScales()

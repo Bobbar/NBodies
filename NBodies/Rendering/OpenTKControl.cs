@@ -45,6 +45,7 @@ namespace NBodies.Rendering
         private int _positionAttrib;
         private int _colorAttrib;
 
+        private Size _prevSize;
         private Camera _camera;
         private Vector3 _camFollowOffset = new Vector3();
 
@@ -82,17 +83,32 @@ namespace NBodies.Rendering
         private bool _usePoints = false;
         private bool _useShaderSpheres = true;
 
-
         private int _newBodyId = -1;
-
 
 
         private Stopwatch _timer = new Stopwatch();
 
+        private bool _ready = false;
 
+        // Bloom buffers and shaders.
+        private int _hdrFBO;
+        private int[] _colorBuffers = new int[2];
+        private int _rboDepth;
+        private DrawBuffersEnum[] _attachments;
+        private int[] _pingpongFBO = new int[2];
+        private int[] _pingpongColorbuffers = new int[2];
+        private Shader _blurShader;
+        private Shader _bloomFinalShader;
+        private int _quadVAO = 0;
+        private int _quadVBO = -1;
 
         public OpenTKControl(GraphicsMode mode) : base(mode)
         {
+        }
+
+        public void Init()
+        {
+            _prevSize = this.ClientSize;
             _camera = new Camera(Vector3.UnitZ, this.ClientSize.Width / (float)this.ClientSize.Height);
 
             this.MakeCurrent();
@@ -101,6 +117,9 @@ namespace NBodies.Rendering
 
             _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.c");
             _textShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/textVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/textFrag.c");
+            _blurShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/blurVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/blurFrag.c");
+            _bloomFinalShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalFrag.c");
+
 
             var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
             _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
@@ -161,6 +180,103 @@ namespace NBodies.Rendering
             // _pointTex = InitTextures($@"Rendering\Textures\cloud_med.png");
             //_pointTex = InitTextures($@"Rendering\Textures\cloud.png");
             //_pointTex = InitTextures($@"Rendering\Textures\star.png");
+
+
+            InitBloomBuffers();
+
+            _blurShader.Use();
+            _blurShader.SetInt("texture0", 0);
+
+            _bloomFinalShader.Use();
+            _bloomFinalShader.SetInt("scene", 0);
+            _bloomFinalShader.SetInt("bloomBlur", 1);
+
+            GL.Enable(EnableCap.DepthTest);
+
+            _ready = true;
+        }
+
+        private void InitBloomBuffers()
+        {
+            //GL.GenBuffers(1, out _hdrFBO);
+            _hdrFBO = GL.GenFramebuffer();
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _hdrFBO);
+
+            GL.GenTextures(2, _colorBuffers);
+            for (int i = 0; i < 2; i++)
+            {
+                GL.BindTexture(TextureTarget.Texture2D, _colorBuffers[i]);
+                // GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgb16f, ClientSize.Width, ClientSize.Height, 0, PixelFormat.Rgb, PixelType.Float, IntPtr.Zero);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, ClientSize.Width, ClientSize.Height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, IntPtr.Zero);
+
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMinFilter.Linear);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+
+                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0 + i, TextureTarget.Texture2D, _colorBuffers[i], 0);
+            }
+
+            GL.GenRenderbuffers(1, out _rboDepth);
+            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _rboDepth);
+            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.DepthComponent, ClientSize.Width, ClientSize.Height);
+            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _rboDepth);
+
+            _attachments = new DrawBuffersEnum[]
+            {
+                DrawBuffersEnum.ColorAttachment0,
+                DrawBuffersEnum.ColorAttachment1
+            };
+            GL.DrawBuffers(2, _attachments);
+
+            var check = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (check != FramebufferErrorCode.FramebufferComplete)
+                Debugger.Break();
+
+
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+            GL.GenFramebuffers(2, _pingpongFBO);
+            GL.GenTextures(2, _pingpongColorbuffers);
+
+            for (int i = 0; i < 2; i++)
+            {
+                GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[i]);
+                GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[i]);
+                // GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgb16f, ClientSize.Width, ClientSize.Height, 0, PixelFormat.Rgb, PixelType.Float, IntPtr.Zero);
+                //GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, ClientSize.Width, ClientSize.Height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, IntPtr.Zero);
+                //GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, ClientSize.Width / 2, ClientSize.Height / 2, 0, PixelFormat.Bgra, PixelType.UnsignedByte, IntPtr.Zero);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, ClientSize.Width / 2, ClientSize.Height / 2, 0, PixelFormat.Bgra, PixelType.UnsignedByte, IntPtr.Zero);
+
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMinFilter.Linear);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+                GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _pingpongColorbuffers[i], 0);
+
+                if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
+                    Debugger.Break();
+            }
+        }
+
+        private void DeleteBloomBuffers()
+        {
+            GL.DeleteFramebuffer(_hdrFBO);
+            GL.DeleteTextures(2, _colorBuffers);
+            GL.DeleteRenderbuffer(_rboDepth);
+            GL.DeleteFramebuffers(2, _pingpongFBO);
+            GL.DeleteTextures(2, _pingpongColorbuffers);
+        }
+
+        private void ResizeBuffers()
+        {
+            if (_prevSize != this.ClientSize)
+            {
+                DeleteBloomBuffers();
+                InitBloomBuffers();
+                _prevSize = this.ClientSize;
+            }
         }
 
         public void Render(Body[] bodies, ManualResetEventSlim completeCallback)
@@ -205,11 +321,10 @@ namespace NBodies.Rendering
             }
 
             CheckPointTex();
+            ResizeBuffers();
 
             if (bodies.Length > 0)
             {
-                this.MakeCurrent();
-
                 // Render Bodies
                 GL.ClearColor(_clearColor);
                 GL.Enable(EnableCap.Blend);
@@ -251,6 +366,18 @@ namespace NBodies.Rendering
 
                     GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
                 }
+
+                if (RenderVars.BloomEnabled)
+                {
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _hdrFBO);
+                    GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                }
+                else
+                {
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+                    GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                }
+
 
                 _shader.Use();
 
@@ -348,64 +475,82 @@ namespace NBodies.Rendering
                         GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, bodies.Length);
                 }
 
-                //  Draw mesh
-                if (RenderVars.ShowMesh && BodyManager.Mesh.Length > 1)
-                {
-                    GL.VertexAttribDivisor(_positionAttrib, 1);
-                    GL.VertexAttribDivisor(_colorAttrib, 1);
-                    GL.EnableVertexAttribArray(_positionAttrib);
-                    GL.EnableVertexAttribArray(_colorAttrib);
-
-                    _shader.SetInt("usePoint", 0);
-                    _shader.SetFloat("alpha", 1.0f);
-                    _shader.SetInt("noLight", 1);
-
-                    GL.Enable(EnableCap.DepthTest);
-                    GL.Enable(EnableCap.LineSmooth);
-                    GL.Enable(EnableCap.Blend);
-
-                    GL.Disable(EnableCap.CullFace);
-                    GL.Disable(EnableCap.PointSprite);
-                    GL.Disable(EnableCap.VertexProgramPointSize);
-                    GL.Disable(EnableCap.Texture2D);
-
-                    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-
-                    var mesh = BodyManager.Mesh;
-
-                    if (_cubePositions.Length < mesh.Length)
-                    {
-                        _cubePositions = new ColoredVertex2[mesh.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
-                    }
-
-                    unsafe
-                    {
-                        var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
-                        var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
-
-                        for (int i = 0; i < mesh.Length; i++)
-                        {
-                            var cell = mesh[i];
-                            var pos = cell.PositionVec();
-                            var color = Color.Red;
-                            var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
-                            var cubePos = new Vector4(pos, cell.Size / 2);
-
-                            cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
-                        }
-
-                        GL.UnmapNamedBuffer(_cubePosBufferObject);
-                    }
-
-                    GL.Disable(EnableCap.CullFace);
-                    GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-
-                    GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
-                }
+                // Draw mesh if needed.
+                DrawMesh();
 
                 GL.BindVertexArray(0);
+
+                if (RenderVars.BloomEnabled)
+                {
+                    // Do 4 pass gaussian blur to bloom buffer.
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+                    _blurShader.Use();
+                    _blurShader.SetInt("copy", 1);
+                    GL.Viewport(0, 0, ClientSize.Width / 2, ClientSize.Height / 2);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _colorBuffers[1]);
+                    _blurShader.SetInt("texture0", 0);
+                    RenderFullScreenQuad();
+
+                    float off = RenderVars.Blur;
+                    _blurShader.SetInt("copy", 0);
+                    _blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
+                    _blurShader.SetInt("texture0", 0);
+                    RenderFullScreenQuad();
+
+                    _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
+                    _blurShader.SetInt("texture0", 0);
+                    RenderFullScreenQuad();
+
+                    off += 0.5f;
+                    _blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
+                    _blurShader.SetInt("texture0", 0);
+                    RenderFullScreenQuad();
+
+                    _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
+                    _blurShader.SetInt("texture0", 0);
+                    RenderFullScreenQuad();
+
+
+                    // Blend bloom and original buffers to produce final image.
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+                    GL.Viewport(0, 0, ClientSize.Width, ClientSize.Height);
+                    GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+                    _bloomFinalShader.Use();
+
+                    // OG image sample.
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, _colorBuffers[0]);
+                    _bloomFinalShader.SetInt("scene", 0);
+
+                    // Blurred bloom sample.
+                    GL.ActiveTexture(TextureUnit.Texture1);
+                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
+                    _bloomFinalShader.SetInt("bloomBlur", 1);
+
+                    //
+                    _bloomFinalShader.SetInt("bloom", Convert.ToInt32(RenderVars.BloomEnabled));
+                    _bloomFinalShader.SetFloat("gamma", RenderVars.Gamma);
+                    _bloomFinalShader.SetFloat("exposure", RenderVars.Exposure);
+                    RenderFullScreenQuad();
+                }
+
 
                 // Draw stats and overlay text.
                 DrawStatsAndOverlays();
@@ -414,6 +559,41 @@ namespace NBodies.Rendering
             }
 
             completeCallback.Set();
+        }
+
+        private void RenderFullScreenQuad()
+        {
+            if (_quadVAO == 0)
+            {
+                float[] quadVerts = new float[]
+                {
+                     // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f
+                };
+
+                //_quadVAO = GL.GenVertexArray();
+                //_quadVBO = GL.GenBuffer();
+                GL.GenVertexArrays(1, out _quadVAO);
+                GL.GenBuffers(1, out _quadVBO);
+                GL.BindVertexArray(_quadVAO);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _quadVBO);
+                GL.BufferData(BufferTarget.ArrayBuffer, quadVerts.Length * 4, quadVerts, BufferUsageHint.StaticDraw);
+                GL.EnableVertexAttribArray(0);
+                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * 4, 0);
+                GL.VertexAttribDivisor(0, 0);
+
+                GL.EnableVertexAttribArray(1);
+                GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * 4, 3 * 4);
+                GL.VertexAttribDivisor(1, 0);
+
+            }
+
+            GL.BindVertexArray(_quadVAO);
+            GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+            GL.BindVertexArray(0);
         }
 
         private void DrawStatsAndOverlays()
@@ -457,11 +637,13 @@ namespace NBodies.Rendering
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.LineSmooth);
             GL.Enable(EnableCap.Blend);
+            GL.Enable(EnableCap.Texture2D);
             GL.Disable(EnableCap.CullFace);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
             _textShader.Use();
+
             var proj = Matrix4.CreateOrthographicOffCenter(0, ClientSize.Width, 0, ClientSize.Height, -100f, 400f);
             GL.UniformMatrix4(20, false, ref proj);
 
@@ -487,6 +669,64 @@ namespace NBodies.Rendering
                     _text.SetText(overlay.Value);
                     _text.Render(_camera);
                 }
+            }
+        }
+
+        public void DrawMesh()
+        {
+            //  Draw mesh
+            if (RenderVars.ShowMesh && BodyManager.Mesh.Length > 1)
+            {
+                GL.VertexAttribDivisor(_positionAttrib, 1);
+                GL.VertexAttribDivisor(_colorAttrib, 1);
+                GL.EnableVertexAttribArray(_positionAttrib);
+                GL.EnableVertexAttribArray(_colorAttrib);
+
+                _shader.SetInt("usePoint", 0);
+                _shader.SetFloat("alpha", 1.0f);
+                _shader.SetInt("noLight", 1);
+
+                GL.Enable(EnableCap.DepthTest);
+                GL.Enable(EnableCap.LineSmooth);
+                GL.Enable(EnableCap.Blend);
+
+                GL.Disable(EnableCap.CullFace);
+                GL.Disable(EnableCap.PointSprite);
+                GL.Disable(EnableCap.VertexProgramPointSize);
+
+                var mesh = BodyManager.Mesh;
+
+                if (_cubePositions.Length < mesh.Length)
+                {
+                    _cubePositions = new ColoredVertex2[mesh.Length];
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+                    GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
+                }
+
+                unsafe
+                {
+                    var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
+                    var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
+
+                    for (int i = 0; i < mesh.Length; i++)
+                    {
+                        var cell = mesh[i];
+                        var pos = cell.PositionVec();
+                        var color = Color.Red;
+                        var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
+                        var cubePos = new Vector4(pos, cell.Size / 2);
+
+                        cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
+                    }
+
+                    GL.UnmapNamedBuffer(_cubePosBufferObject);
+                }
+
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+
+                GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
+
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
             }
         }
 
@@ -785,6 +1025,9 @@ namespace NBodies.Rendering
             // This prevents distant objects from having their colors become muddy, as well as saving on memory.
             GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+
+
             return texture;
         }
 
@@ -792,8 +1035,11 @@ namespace NBodies.Rendering
         {
             base.OnResize(e);
 
-            _camera.AspectRatio = this.ClientSize.Width / (float)this.ClientSize.Height;
-            GL.Viewport(this.ClientSize);
+            if (_ready)
+            {
+                _camera.AspectRatio = this.ClientSize.Width / (float)this.ClientSize.Height;
+                GL.Viewport(this.ClientSize);
+            }
         }
 
         protected override void OnKeyUp(KeyEventArgs e)

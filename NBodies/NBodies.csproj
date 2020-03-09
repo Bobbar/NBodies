@@ -241,6 +241,18 @@
     <Compile Include="UI\RecordSettings.Designer.cs">
       <DependentUpon>RecordSettings.cs</DependentUpon>
     </Compile>
+    <Content Include="Rendering\Shaders\bloomFinalFrag.c">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Rendering\Shaders\bloomFinalVert.c">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Rendering\Shaders\blurFrag.c">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Rendering\Shaders\blurVert.c">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Rendering\Shaders\textVert.c">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

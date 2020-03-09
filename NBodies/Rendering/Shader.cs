@@ -184,6 +184,7 @@ namespace NBodies.Rendering
         {
             GL.UseProgram(Handle);
             GL.Uniform1(_uniformLocations[name], data);
+
         }
         
         /// <summary>
@@ -211,6 +212,12 @@ namespace NBodies.Rendering
         {
             GL.UseProgram(Handle);
             GL.UniformMatrix4(_uniformLocations[name], true, ref data);
+        }
+
+        public void SetVector2(string name, Vector2 data)
+        {
+            GL.UseProgram(Handle);
+            GL.Uniform2(_uniformLocations[name], data);
         }
 
         /// <summary>

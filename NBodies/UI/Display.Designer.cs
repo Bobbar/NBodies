@@ -30,12 +30,13 @@
         {
             this.components = new System.ComponentModel.Container();
             this.glControl = new Rendering.OpenTKControl(new OpenTK.Graphics.GraphicsMode(new OpenTK.Graphics.ColorFormat(8), 24, 8, 2));
+
             this.RootLayoutTable = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.drawToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.antiAliasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.bloomEnabledToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clipToViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fastPrimitivesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.sortZOrderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -143,7 +144,7 @@
             this.optionsToolStripMenuItem.CheckOnClick = true;
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.drawToolStripMenuItem,
-            this.antiAliasingToolStripMenuItem,
+            this.bloomEnabledToolStripMenuItem,
             this.clipToViewportToolStripMenuItem,
             this.fastPrimitivesToolStripMenuItem,
             this.sortZOrderToolStripMenuItem,
@@ -171,15 +172,15 @@
             this.drawToolStripMenuItem.Text = "Draw";
             this.drawToolStripMenuItem.CheckedChanged += new System.EventHandler(this.drawToolStripMenuItem_CheckedChanged);
             // 
-            // antiAliasingToolStripMenuItem
+            // bloomEnabledToolStripMenuItem
             // 
-            this.antiAliasingToolStripMenuItem.Checked = true;
-            this.antiAliasingToolStripMenuItem.CheckOnClick = true;
-            this.antiAliasingToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.antiAliasingToolStripMenuItem.Name = "antiAliasingToolStripMenuItem";
-            this.antiAliasingToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.antiAliasingToolStripMenuItem.Text = "Anti-Aliasing";
-            this.antiAliasingToolStripMenuItem.CheckedChanged += new System.EventHandler(this.antiAliasingToolStripMenuItem_CheckedChanged);
+            this.bloomEnabledToolStripMenuItem.Checked = false;
+            this.bloomEnabledToolStripMenuItem.CheckOnClick = true;
+            this.bloomEnabledToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Unchecked;
+            this.bloomEnabledToolStripMenuItem.Name = "bloomEnabledToolStripMenuItem";
+            this.bloomEnabledToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.bloomEnabledToolStripMenuItem.Text = "Enable Bloom";
+            this.bloomEnabledToolStripMenuItem.CheckedChanged += new System.EventHandler(this.bloomEnabledToolStripMenuItem_CheckedChanged);
             // 
             // clipToViewportToolStripMenuItem
             // 
@@ -690,7 +691,7 @@
         private System.Windows.Forms.CheckBox PauseButton;
         private System.Windows.Forms.ToolStripMenuItem saveStateToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadStateToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem antiAliasingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem bloomEnabledToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem displayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clipToViewportToolStripMenuItem;
         private System.Windows.Forms.NumericUpDown StyleScaleUpDown;
