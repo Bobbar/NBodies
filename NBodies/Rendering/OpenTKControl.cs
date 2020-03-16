@@ -434,7 +434,7 @@ namespace NBodies.Rendering
                     //  Update body positions and colors.
                     var zOrder = ComputeZOrder(bodies);
 
-                    if (_cubePositions.Length != bodies.Length)
+                    if (_cubePositions.Length < bodies.Length)
                     {
                         _cubePositions = new ColoredVertex2[bodies.Length];
                         GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);

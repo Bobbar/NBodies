@@ -47,7 +47,7 @@ namespace NBodies.Rendering.Renderables
         public void SetFiltering(All filter)
         {
             var textureMinFilter = (int)filter;
-            GL.TextureParameterI(_texture, TextureParameterName.TextureMagFilter, ref textureMinFilter);
+            GL.TextureParameterI(_texture, TextureParameterName.TextureMinFilter, ref textureMinFilter);
             var textureMagFilter = (int)filter;
             GL.TextureParameterI(_texture, TextureParameterName.TextureMagFilter, ref textureMagFilter);
         }
