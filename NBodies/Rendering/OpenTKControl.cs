@@ -488,6 +488,7 @@ namespace NBodies.Rendering
                     _blurShader.SetInt("copy", 1);
                     GL.Viewport(0, 0, ClientSize.Width / 2, ClientSize.Height / 2);
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _colorBuffers[1]);
                     _blurShader.SetInt("texture0", 0);
@@ -509,7 +510,7 @@ namespace NBodies.Rendering
                     _blurShader.SetInt("texture0", 0);
                     RenderFullScreenQuad();
 
-                    off += 0.5f;
+                    off += 2.4f;
                     _blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
                     GL.ActiveTexture(TextureUnit.Texture0);

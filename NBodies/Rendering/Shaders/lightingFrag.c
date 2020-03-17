@@ -116,7 +116,7 @@ void main()
 
 	if (noLight == 0) {
 		float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-		BrightColor = vec4(FragColor.rgb * brightness, alpha);
+		BrightColor = vec4(FragColor.rgb * brightness, result.a);
 	}
 	else { // Pass through for no lighting.
 		BrightColor = vec4(0);
