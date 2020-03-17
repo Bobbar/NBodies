@@ -264,7 +264,7 @@ namespace NBodies
         private static int _threadsPBExp = 8;
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
         private static int _targetFPS = 60;
-        private static int _pauseFPS = 60;
+        private const int _pauseFPS = 60;
         private static float _currentFPS = 0;
         private static float _peakFPS = 0;
         private static int _minFrameTime = 0;
@@ -480,8 +480,12 @@ namespace NBodies
                     if (!_skipPhysics && _bodiesBuffer.Length > 1)
                         FPSLimiter(_targetFPS);
                     else
-                        FPSLimiter(_pauseFPS);
-
+                    {
+                        if (_targetFPS < _pauseFPS)
+                            FPSLimiter(_targetFPS);
+                        else
+                            FPSLimiter(_pauseFPS);
+                    }
                 }
             }
             catch (OperationCanceledException)
