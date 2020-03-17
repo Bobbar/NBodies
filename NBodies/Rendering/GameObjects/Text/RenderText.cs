@@ -46,7 +46,7 @@ namespace NBodies.Rendering.GameObjects
                 if (Lookup.TryGetValue(value[i], out offset))
                 {
                     var c = new RenderCharacter(Model,
-                       new Vector4(_position.X + (i * 13f),
+                        new Vector4(_position.X + (i * 11f),
                            _position.Y,
                            _position.Z,
                            _position.W),

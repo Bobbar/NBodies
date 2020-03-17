@@ -7,6 +7,10 @@ out vec4 color;
 void main(void)
 {
 	vec4 alpha = texture(textureObject, vs_textureOffset);
+
+	if (alpha.r < 0.1f)
+		discard;
+	
 	color = vs_color;
 	color.a = alpha.r;
 }

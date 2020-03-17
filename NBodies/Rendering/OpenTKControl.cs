@@ -120,7 +120,6 @@ namespace NBodies.Rendering
             _blurShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/blurVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/blurFrag.c");
             _bloomFinalShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalFrag.c");
 
-
             var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
             _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
 
@@ -555,6 +554,7 @@ namespace NBodies.Rendering
                 // Draw stats and overlay text.
                 DrawStatsAndOverlays();
 
+                GL.Finish();
                 this.SwapBuffers();
             }
 
