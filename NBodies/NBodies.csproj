@@ -241,21 +241,6 @@
     <Compile Include="UI\RecordSettings.Designer.cs">
       <DependentUpon>RecordSettings.cs</DependentUpon>
     </Compile>
-    <Content Include="Rendering\Shaders\bloomFinalFrag.c">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\bloomFinalVert.c">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\blurFrag.c">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\blurVert.c">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\textVert.c">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Rendering\Textures\circle.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -321,18 +306,33 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Content Include="Rendering\Shaders\lightingFrag.c">
+    <None Include="Rendering\Shaders\bloomFinalFrag.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\shaderFrag.c">
+    </None>
+    <None Include="Rendering\Shaders\bloomFinalVert.vert">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\shaderVert.c">
+    </None>
+    <None Include="Rendering\Shaders\blurFrag.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Rendering\Shaders\textFrag.c">
+    </None>
+    <None Include="Rendering\Shaders\blurVert.vert">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    </None>
+    <None Include="Rendering\Shaders\lightingFrag.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Rendering\Shaders\shaderFrag.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Rendering\Shaders\shaderVert.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Rendering\Shaders\textFrag.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Rendering\Shaders\textVert.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -115,10 +115,10 @@ namespace NBodies.Rendering
 
             GL.ClearColor(Color.Black);
 
-            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.c");
-            _textShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/textVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/textFrag.c");
-            _blurShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/blurVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/blurFrag.c");
-            _bloomFinalShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalVert.c", Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalFrag.c");
+            _shader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/shaderVert.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/lightingFrag.frag");
+            _textShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/textVert.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/textFrag.frag");
+            _blurShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/blurVert.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/blurFrag.frag");
+            _bloomFinalShader = new Shader(Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalVert.vert", Environment.CurrentDirectory + $@"/Rendering/Shaders/bloomFinalFrag.frag");
 
             var textModel = new TexturedRenderObject(RenderObjectFactory.CreateTexturedCharacter(), _textShader.Handle, @"Rendering\Textures\font singleline.bmp");
             _text = new RenderText(textModel, new Vector4(0), Color.LimeGreen, "");
@@ -184,7 +184,7 @@ namespace NBodies.Rendering
             InitBloomBuffers();
 
             _blurShader.Use();
-            _blurShader.SetInt("texture0", 0);
+            _blurShader.SetInt("blurTex", 0);
 
             _bloomFinalShader.Use();
             _bloomFinalShader.SetInt("scene", 0);
@@ -350,6 +350,7 @@ namespace NBodies.Rendering
                     {
                         GL.ActiveTexture(TextureUnit.Texture0);
                         GL.BindTexture(TextureTarget.Texture2D, _pointTex);
+                        _shader.SetInt("spriteTex", 0);
                     }
                 }
                 else
@@ -491,7 +492,7 @@ namespace NBodies.Rendering
                     GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _colorBuffers[1]);
-                    _blurShader.SetInt("texture0", 0);
+                    _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
                     float off = RenderVars.Blur;
@@ -500,14 +501,14 @@ namespace NBodies.Rendering
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
-                    _blurShader.SetInt("texture0", 0);
+                    _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
                     _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
-                    _blurShader.SetInt("texture0", 0);
+                    _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
                     off += 2.4f;
@@ -515,14 +516,14 @@ namespace NBodies.Rendering
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
-                    _blurShader.SetInt("texture0", 0);
+                    _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
                     _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
-                    _blurShader.SetInt("texture0", 0);
+                    _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
 

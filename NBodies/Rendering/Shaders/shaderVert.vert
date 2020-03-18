@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 
 layout (location = 0) in vec3 cubeVert;
 layout (location = 1) in vec3 aObjColor;
@@ -15,13 +15,6 @@ uniform mat4 projection;
 uniform float nearPlaneHeight;
 uniform int usePoint;
 
-out gl_PerVertex
-{
-	vec4 gl_Position;
-float gl_PointSize;
-float gl_ClipDistance[];
-};
-
 void main(void)
 {
 	if (usePoint == 1 || usePoint == 2) 
@@ -33,9 +26,6 @@ void main(void)
 		gl_Position = position *  projection;
 		FragPos = gl_Position.xyz;
 		gl_PointSize = (nearPlaneHeight * (aPosition.w * 2.0f)) / gl_Position.w;
-
-		//gl_PointSize = 1000.0f * aPosition.w / dist;
-
 	}
 	else
 	{
@@ -44,5 +34,4 @@ void main(void)
 		Normal = cubeNormal * mat3(transpose(inverse(model)));
 		objectColor = aObjColor;
 	}
-	
 }

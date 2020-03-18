@@ -1,22 +1,17 @@
-﻿#version 330 core
-//out vec4 FragColor;
-//out vec4 BrightColor;
+﻿#version 450 core
+
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
-
-//In order to calculate some basic lighting we need a few things per model basis, and a few things per fragment basis:
-//uniform vec3 objectColor; //The color of the object.
 uniform vec3 lightColor; //The color of the light.
 uniform vec3 lightPos; //The position of the light.
 uniform vec3 viewPos; //The position of the view and/or of the player.
 uniform float alpha;
 uniform int noLight;
-uniform sampler2D texture0;
+uniform sampler2D spriteTex;
 uniform int usePoint;
 
 float Ns = 25;//250;
-//vec4 mat_specular = vec4(1);
 vec4 mat_specular = vec4(0.4);
 
 //vec4 light_specular = vec4(1);
@@ -28,39 +23,30 @@ in vec3 objectColor;
 
 void main()
 {
-	vec4 result;
+	vec4 result = vec4(0);
 
 	if (usePoint == 1)
 	{
 		vec4 bodyColor = vec4(objectColor, alpha);
-		vec4 tex = texture2D(texture0, vec2(gl_PointCoord.x, gl_PointCoord.y));
-		//FragColor = bodyColor * tex;
+		vec4 tex = texture2D(spriteTex, vec2(gl_PointCoord.x, gl_PointCoord.y));
 		result = bodyColor * tex;
 	}
 	else if (usePoint == 2)
 	{
 		vec4 bodyColor = vec4(objectColor, alpha);
-		//vec3 lightDir = vec3(0.577, 0.577, 0.577);
 		vec3 lightDir = normalize(FragPos - normalize(lightPos));
-
 		vec3 N;
-		//N.xy = gl_PointCoord.xy*vec2(2.0, -2.0) + vec2(-1.0, 1.0);
 		N.xy = gl_PointCoord.xy*vec2(-2.0, 2.0) + vec2(1.0, -1.0);
-
 		float mag = dot(N.xy, N.xy);
 		if (mag > 1) discard;   // kill pixels outside circle
 		N.z = sqrt(1 - mag);
 
 		// calculate lighting
 		float diffuse = max(0.0, dot(lightDir, N));
-		//FragColor = bodyColor * diffuse;
-
-		//vec3 eye = vec3(0.0, 0.0, 1.0);
 		vec3 eye = vec3(0.0, 0.0, 0.0);
 		vec3 halfVector = normalize(eye + lightDir);
 		float spec = max(pow(dot(N, halfVector), Ns), 0.);
 		vec4 S = light_specular*mat_specular* spec;
-		//FragColor = bodyColor * diffuse + S;
 		result = bodyColor * diffuse + S;
 	}
 	else
@@ -72,7 +58,6 @@ void main()
 			float cutoff = 50.0f;//100.0f;
 			float red = clamp(cutoff / dist, 0.1f, 1);
 			float black = clamp(dist / cutoff, 0, 0.1f);
-			//result = vec4(red, black, black, 0.8f);
 			result = vec4(red, black, black, alpha);
 		}
 		else
@@ -103,12 +88,8 @@ void main()
 			//At last we add all the light components together and multiply with the color of the object. Then we set the color
 			//and makes sure the alpha value is 1
 			vec3 res = (ambient + diffuse + specular) * objectColor;
-			//FragColor = vec4(result, alpha);
 			result = vec4(res, alpha);
-			//Note we still use the light color * object color from the last tutorial.
-			//This time the light values are in the phong model (ambient, diffuse and specular)
 		}
-
 	}
 
 	// Compute brightness and send color data to bloom texture.
