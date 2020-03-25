@@ -422,44 +422,42 @@ namespace NBodies.Rendering
                 // Don't draw bodies if alpha is 0.
                 if (RenderVars.BodyAlpha > 0)
                 {
-                    //  Update body positions and colors.
+                    // Update body positions and colors.
+                    // Compute Z-order for correct blending.
                     var zOrder = ComputeZOrder(bodies);
 
+                    // Realloc if needed.
                     if (_cubePositions.Length < bodies.Length)
-                    {
                         _cubePositions = new ColoredVertex2[bodies.Length];
-                        GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
-                        GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
-                    }
-
-                    // Update body position offsets and colors via mem map.
-                    unsafe
+            
+                    // Set positions, colors and sizes.
+                    for (int i = 0; i < bodies.Length; i++)
                     {
-                        var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
-                        var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
+                        //  var body = bodies[i];
+                        var body = bodies[zOrder[i]];
+                        var bPos = body.PositionVec();
+                      
+                        // Position and size.
+                        var cubePos = new Vector4(bPos, body.Size / 2);
 
-                        for (int i = 0; i < bodies.Length; i++)
+                        // Green for following body. Otherwise use style color.
+                        if (body.UID == BodyManager.FollowBodyUID)
                         {
-                            //  var body = bodies[i];
-                            var body = bodies[zOrder[i]];
-                            var bPos = body.PositionVec();
-                            var cubePos = new Vector4(bPos, body.Size / 2);
-
-                            if (body.UID == BodyManager.FollowBodyUID)
-                            {
-                                cubeNativePtr[i] = new ColoredVertex2(cubePos, new Vector3(0f, 1.0f, 0f));
-                            }
-                            else
-                            {
-                                var bColor = GetStyleColor(body, i);
-                                var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
-                                cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
-                            }
+                            _cubePositions[i] = new ColoredVertex2(cubePos, new Vector3(0f, 1.0f, 0f));
                         }
-
-                        GL.UnmapNamedBuffer(_cubePosBufferObject);
+                        else
+                        {
+                            var bColor = GetStyleColor(body, i);
+                            var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                            _cubePositions[i] = new ColoredVertex2(cubePos, normColor);
+                        }
                     }
 
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+                    GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, IntPtr.Zero, BufferUsageHint.StaticDraw);
+                    GL.BufferSubData<ColoredVertex2>(BufferTarget.ArrayBuffer, IntPtr.Zero, _cubePositions.Length * ColoredVertex2.Size, _cubePositions);
+
+                    // Draw.
                     if (_usePoints)
                         GL.DrawArrays(PrimitiveType.Points, 0, bodies.Length);
                     else
