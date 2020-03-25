@@ -286,37 +286,28 @@ namespace NBodies.Rendering
 
             if (!InputHandler.KeyIsDown(Keys.ControlKey))
             {
+                Vector3 camPos = _camera.Position;
 
                 if (BodyManager.FollowSelected)
-                {
-                    if (InputHandler.KeyIsDown(Keys.W))
-                        _camFollowOffset += _camera.Front * cameraSpeed * time; // Forward 
-                    if (InputHandler.KeyIsDown(Keys.S))
-                        _camFollowOffset -= _camera.Front * cameraSpeed * time; // Backwards
-                    if (InputHandler.KeyIsDown(Keys.A))
-                        _camFollowOffset -= _camera.Right * cameraSpeed * time; // Left
-                    if (InputHandler.KeyIsDown(Keys.D))
-                        _camFollowOffset += _camera.Right * cameraSpeed * time; // Right
-                    if (InputHandler.KeyIsDown(Keys.Space))
-                        _camFollowOffset += _camera.Up * cameraSpeed * time; // Up 
-                    if (InputHandler.KeyIsDown(Keys.ShiftKey))
-                        _camFollowOffset -= _camera.Up * cameraSpeed * time; // Down
-                }
+                    camPos = _camFollowOffset;
+
+                if (InputHandler.KeyIsDown(Keys.W))
+                    camPos += _camera.Front * cameraSpeed * time; // Forward 
+                if (InputHandler.KeyIsDown(Keys.S))
+                    camPos -= _camera.Front * cameraSpeed * time; // Backwards
+                if (InputHandler.KeyIsDown(Keys.A))
+                    camPos -= _camera.Right * cameraSpeed * time; // Left
+                if (InputHandler.KeyIsDown(Keys.D))
+                    camPos += _camera.Right * cameraSpeed * time; // Right
+                if (InputHandler.KeyIsDown(Keys.Space))
+                    camPos += _camera.Up * cameraSpeed * time; // Up 
+                if (InputHandler.KeyIsDown(Keys.ShiftKey))
+                    camPos -= _camera.Up * cameraSpeed * time; // Down
+
+                if (BodyManager.FollowSelected)
+                    _camFollowOffset = camPos;
                 else
-                {
-                    if (InputHandler.KeyIsDown(Keys.W))
-                        _camera.Position += _camera.Front * cameraSpeed * time; // Forward 
-                    if (InputHandler.KeyIsDown(Keys.S))
-                        _camera.Position -= _camera.Front * cameraSpeed * time; // Backwards
-                    if (InputHandler.KeyIsDown(Keys.A))
-                        _camera.Position -= _camera.Right * cameraSpeed * time; // Left
-                    if (InputHandler.KeyIsDown(Keys.D))
-                        _camera.Position += _camera.Right * cameraSpeed * time; // Right
-                    if (InputHandler.KeyIsDown(Keys.Space))
-                        _camera.Position += _camera.Up * cameraSpeed * time; // Up 
-                    if (InputHandler.KeyIsDown(Keys.ShiftKey))
-                        _camera.Position -= _camera.Up * cameraSpeed * time; // Down
-                }
+                    _camera.Position = camPos;
             }
 
             CheckPointTex();
