@@ -1001,6 +1001,29 @@ namespace NBodies.Physics
             return b;
         }
 
+        public static Body NewBody(Vector3 loc, Vector3 velo, float size, float mass, Color color, int inRoche, float lifetime, bool isExplosion = false)
+        {
+            var b = new Body();
+
+            b.PosX = loc.X;
+            b.PosY = loc.Y;
+            b.PosZ = loc.Z;
+
+            b.Mass = mass;
+            b.Size = size;
+            b.Color = color.ToArgb();
+            b.VeloX = velo.X;
+            b.VeloY = velo.Y;
+            b.VeloZ = velo.Z;
+            b.InRoche = inRoche;
+            b.Lifetime = lifetime;
+            b.IsExplosion = isExplosion;
+
+            b.UID = NextUID();
+
+            return b;
+        }
+
         public static Body NewBody(float locX, float locY, float size, float mass, Color color, float lifetime, int isExplosion = 0)
         {
             var b = new Body();

@@ -16,6 +16,7 @@ namespace NBodies
 {
     public static class MainLoop
     {
+        public static bool Shooting = false;
         public static bool DrawBodies = true;
         public static bool RocheLimit = true;
         public static bool Collisions = true;
@@ -385,6 +386,25 @@ namespace NBodies
                     {
                         if (_bodiesBuffer.Length > 1)
                         {
+                           
+                            if (Shooting)
+                            {
+                                // Insert bullet
+                                const float bVelo = 1000f;
+                                const float bMass = 5.0f;
+                                const float bLife = 1.0f;
+                                var pos = ViewportHelpers.CameraPos;
+                                var dir = ViewportHelpers.CameraDirection;
+                                var len = dir.Length;
+                                var velo = dir;
+                                velo *= bVelo / len;
+
+                                var bullet = BodyManager.NewBody(pos, velo, 1.0f, bMass, Color.White, 1, bLife, true);
+                                BodyManager.Add(bullet, false);
+
+                                SyncPhysicsBuffer();
+                            }
+
                             // Push the current field to rewind collection.
                             if (RewindBuffer)
                                 BodyManager.PushState(_bodiesBuffer);

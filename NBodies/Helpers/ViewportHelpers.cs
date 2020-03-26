@@ -8,6 +8,7 @@ namespace NBodies.Helpers
     public static class ViewportHelpers
     {
         public static Vector3 CameraPos = new Vector3();
+        public static Vector3 CameraDirection = new Vector3();
 
         public static PointF ScreenPointToField(PointF point)
         {

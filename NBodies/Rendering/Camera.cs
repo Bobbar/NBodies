@@ -14,7 +14,11 @@ namespace NBodies.Rendering
     {
         // Those vectors are directions pointing outwards from the camera to define how it rotated
         private Vector3 _front = -Vector3.UnitZ;
+        private Vector3 _prevFront = -Vector3.UnitZ;
+
         private Vector3 _up = Vector3.UnitY;
+        private Vector3 _prevUp = Vector3.UnitY;
+
         private Vector3 _right = Vector3.UnitX;
 
         // Rotation around the X axis (radians)
@@ -38,6 +42,8 @@ namespace NBodies.Rendering
         public Vector3 Front => _front;
         public Vector3 Up => _up;
         public Vector3 Right => _right;
+
+        public bool HasMoved = false;
 
         // Setting Z-Near to small will cause z-depth artifacts.
         public const float ZNear = 2.0f; //0.01f;
@@ -119,6 +125,17 @@ namespace NBodies.Rendering
             // not be what you need for all cameras so keep this in mind if you do not want a FPS camera
             _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
             _up = Vector3.Normalize(Vector3.Cross(_right, _front));
+
+            if (_prevFront != _front || _prevUp != _up)
+            {
+                _prevFront = _front;
+                _prevUp = _up;
+                HasMoved = true;
+            }
+            else
+            {
+                HasMoved = false;
+            }
         }
     }
 }

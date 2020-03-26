@@ -313,6 +313,13 @@ namespace NBodies.Rendering
             CheckPointTex();
             ResizeBuffers();
 
+            if (_camera.HasMoved)
+            {
+                var pos = new Vector3(this.Size.Width / 2f, this.Size.Height / 2f, 0.1f).UnProject(_camera.GetProjectionMatrix(), _camera.GetViewMatrix(), this.Size);
+                var dir = pos - _camera.Position;
+                ViewportHelpers.CameraDirection = dir;
+            }
+
             if (bodies.Length > 0)
             {
                 // Render Bodies
