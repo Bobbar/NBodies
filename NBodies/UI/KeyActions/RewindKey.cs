@@ -32,26 +32,6 @@ namespace NBodies.UI.KeyActions
             MainLoop.ResumePhysics();
         }
 
-        public override void DoMouseDown(MouseButtons button, Vector3 loc)
-        {
-            //throw new NotImplementedException();
-        }
-
-        public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
-        {
-            // throw new NotImplementedException();
-        }
-
-        public override void DoMouseMove(PointF mouseLoc)
-        {
-            //  throw new NotImplementedException();
-        }
-
-        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
-        {
-            // throw new NotImplementedException();
-        }
-
         public override void DoWheelAction(int wheelValue)
         {
             if (KeyDownStates[myKey])

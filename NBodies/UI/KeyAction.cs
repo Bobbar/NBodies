@@ -27,13 +27,13 @@ namespace NBodies.UI
             AddKey(key);
         }
 
-        public abstract void DoWheelAction(int wheelValue);
-        public abstract void DoKeyDown();
-        public abstract void DoKeyUp();
-        public abstract void DoMouseMove(PointF mouseLoc);
-        public abstract void DoMouseDown(MouseButtons button, PointF mouseLoc);
-        public abstract void DoMouseDown(MouseButtons button, Vector3 loc);
-        public abstract void DoMouseUp(MouseButtons button, PointF mouseLoc);
+        public virtual void DoWheelAction(int wheelValue) { }
+        public virtual void DoKeyDown() { }
+        public virtual void DoKeyUp() { }
+        public virtual void DoMouseMove(PointF mouseLoc) { }
+        public virtual void DoMouseDown(MouseButtons button, PointF mouseLoc) { }
+        public virtual void DoMouseDown(MouseButtons button, Vector3 loc) { }
+        public virtual void DoMouseUp(MouseButtons button, PointF mouseLoc) { }
 
         public void MouseDown(MouseButtons button, PointF mouseLoc)
         {

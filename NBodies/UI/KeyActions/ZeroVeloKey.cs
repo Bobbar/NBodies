@@ -20,42 +20,13 @@ namespace NBodies.UI.KeyActions
 
            // Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
+
         public override void DoKeyDown()
         {
             if (KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.X])
             {
                 BodyManager.ZeroVelocities();
             }
-        }
-
-        public override void DoKeyUp()
-        {
-           // throw new NotImplementedException();
-        }
-
-        public override void DoMouseDown(MouseButtons button, Vector3 loc)
-        {
-            //throw new NotImplementedException();
-        }
-
-        public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
-        {
-           // throw new NotImplementedException();
-        }
-
-        public override void DoMouseMove(PointF mouseLoc)
-        {
-           // throw new NotImplementedException();
-        }
-
-        public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
-        {
-           // throw new NotImplementedException();
-        }
-
-        public override void DoWheelAction(int wheelValue)
-        {
-            //throw new NotImplementedException();
         }
     }
 }

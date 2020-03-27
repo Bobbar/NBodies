@@ -34,11 +34,11 @@ namespace NBodies.UI.KeyActions
             MainLoop.Shooting = false;
         }
 
-        public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
-        {
-            //if (KeyDownStates[Keys.E])
-            //    BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
-        }
+        //public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
+        //{
+        //    //if (KeyDownStates[Keys.E])
+        //    //    BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
+        //}
 
         public override void DoMouseDown(MouseButtons button, Vector3 loc)
         {
@@ -53,11 +53,6 @@ namespace NBodies.UI.KeyActions
                     MainLoop.Shooting = true;
                 }
             }
-        }
-
-        public override void DoMouseMove(PointF mouseLoc)
-        {
-            //throw new NotImplementedException();
         }
 
         public override void DoMouseUp(MouseButtons button, PointF mouseLoc)
