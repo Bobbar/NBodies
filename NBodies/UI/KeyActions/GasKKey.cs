@@ -12,11 +12,8 @@ namespace NBodies.UI.KeyActions
 {
     public class GasKKey : KeyAction
     {
-        private Keys _myKey = Keys.G;
-
-        public GasKKey()
+        public GasKKey(Keys key) : base(key)
         {
-            AddKey(_myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -33,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[_myKey])
-            {
-                MainLoop.GasK += (wheelValue * 0.01f);
-                Overlay.Value = $@"GasK: {MainLoop.GasK}";
-            }
+            MainLoop.GasK += (wheelValue * 0.01f);
+            Overlay.Value = $@"GasK: {MainLoop.GasK}";
         }
     }
 }

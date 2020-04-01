@@ -12,11 +12,8 @@ namespace NBodies.UI.KeyActions
 {
     public class LevelKey : KeyAction
     {
-        private Keys myKey = Keys.L;
-
-        public LevelKey()
+        public LevelKey(Keys key) : base(key)
         {
-            AddKey(myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -33,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[myKey])
-            {
-                MainLoop.MeshLevels += wheelValue;
-                Overlay.Value = "Mesh Levels: " + MainLoop.MeshLevels;
-            }
+            MainLoop.MeshLevels += wheelValue;
+            Overlay.Value = "Mesh Levels: " + MainLoop.MeshLevels;
         }
     }
 }

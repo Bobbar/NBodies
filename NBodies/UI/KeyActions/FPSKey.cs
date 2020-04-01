@@ -13,20 +13,15 @@ namespace NBodies.UI.KeyActions
 {
     public class FPSKey : KeyAction
     {
-        public FPSKey()
+        public FPSKey(Keys key) : base(key)
         {
-            AddKey(Keys.F);
-
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.F])
-            {
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-                Overlay.Show();
-            }
+            Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
+            Overlay.Show();
         }
 
         public override void DoKeyUp()
@@ -36,11 +31,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.F])
-            {
-                MainLoop.TargetFPS += wheelValue;
-                Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
-            }
+            MainLoop.TargetFPS += wheelValue;
+            Overlay.Value = $@"FPS Max: {MainLoop.TargetFPS}";
         }
     }
 }

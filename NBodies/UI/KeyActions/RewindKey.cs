@@ -9,11 +9,8 @@ namespace NBodies.UI.KeyActions
 {
     public class RewindKey : KeyAction
     {
-        private Keys myKey = Keys.R;
-
-        public RewindKey()
+        public RewindKey(Keys key) : base(key)
         {
-            AddKey(myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -34,20 +31,17 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[myKey])
+            if (wheelValue > 0)
             {
-                if (wheelValue > 0)
-                {
-                    BodyManager.FastForwardState();
-                }
-                else
-                {
-                    BodyManager.RewindState();
-                }
-
-                RefreshOverlay();
-                Overlay.Show();
+                BodyManager.FastForwardState();
             }
+            else
+            {
+                BodyManager.RewindState();
+            }
+
+            RefreshOverlay();
+            Overlay.Show();
         }
 
         internal void RefreshOverlay()

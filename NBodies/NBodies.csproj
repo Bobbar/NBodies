@@ -209,6 +209,7 @@
     <Compile Include="UI\KeyActions\FPSKey.cs" />
     <Compile Include="UI\KeyActions\GasKKey.cs" />
     <Compile Include="UI\KeyActions\KernelSizeKey.cs" />
+    <Compile Include="UI\KeyCombo.cs" />
     <Compile Include="UI\KeyActions\LevelKey.cs" />
     <Compile Include="UI\KeyActions\PointSpriteTexKey.cs" />
     <Compile Include="UI\KeyActions\RewindKey.cs" />

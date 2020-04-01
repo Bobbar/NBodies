@@ -12,20 +12,15 @@ namespace NBodies.UI.KeyActions
 {
     public class AlphaKey : KeyAction
     {
-        public AlphaKey()
+        public AlphaKey(params Keys[] keys) : base(keys)
         {
-            AddKey(Keys.A);
-            AddKey(Keys.ControlKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.A])
-            {
-                Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
-                Overlay.Show();
-            }
+            Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
+            Overlay.Show();
         }
 
         public override void DoKeyUp()
@@ -35,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.A])
-            {
-                RenderVars.BodyAlpha += wheelValue;
-                Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
-            }
+            RenderVars.BodyAlpha += wheelValue;
+            Overlay.Value = "Alpha: " + RenderVars.BodyAlpha;
         }
     }
 }

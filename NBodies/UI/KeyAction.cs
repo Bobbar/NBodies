@@ -14,8 +14,8 @@ namespace NBodies.UI
     public abstract class KeyAction
     {
         public OverlayGraphic Overlay;
-        public Dictionary<Keys, bool> KeyDownStates = new Dictionary<Keys, bool>();
 
+        public readonly Dictionary<int, KeyCombo> KeyCombos = new Dictionary<int, KeyCombo>();
         protected PointF _overlayOffset = new PointF(10, 20);
 
         public KeyAction()
@@ -24,11 +24,19 @@ namespace NBodies.UI
 
         public KeyAction(Keys key)
         {
-            AddKey(key);
+            AddKeyCombo(new KeyCombo(key));
+        }
+
+        public KeyAction(params Keys[] keys)
+        {
+            AddKeyCombo(new KeyCombo(keys));
         }
 
         public virtual void DoWheelAction(int wheelValue) { }
+        public virtual void DoWheelAction(int wheelValue, int comboId) { }
+
         public virtual void DoKeyDown() { }
+        public virtual void DoKeyDown(int comboId) { }
         public virtual void DoKeyUp() { }
         public virtual void DoMouseMove(PointF mouseLoc) { }
         public virtual void DoMouseDown(MouseButtons button, PointF mouseLoc) { }
@@ -55,6 +63,11 @@ namespace NBodies.UI
             DoKeyDown();
         }
 
+        public void KeyDown(int comboId)
+        {
+            DoKeyDown(comboId);
+        }
+
         public void KeyUp()
         {
             DoKeyUp();
@@ -72,9 +85,9 @@ namespace NBodies.UI
             DoWheelAction(wheelValue);
         }
 
-        protected void AddKey(Keys key)
+        public void MouseWheel(int wheelValue, int comboId)
         {
-            KeyDownStates.Add(key, false);
+            DoWheelAction(wheelValue, comboId);
         }
 
         internal void SetOverlayLoc(PointF loc)
@@ -85,6 +98,30 @@ namespace NBodies.UI
             }
         }
 
+        protected int AddKeyCombo(KeyCombo combo, int id = -1)
+        {
+            if (id != -1)
+            {
+                if (!KeyCombos.ContainsKey(id))
+                {
+                    KeyCombos.Add(id, combo);
+                    return id;
+                }
+                else
+                    throw new Exception($"A key with ID '{id}' already exists.");
+            }
+            else
+            {
+                return AddKeyCombo(combo);
+            }
+        }
+
+        protected int AddKeyCombo(KeyCombo combo)
+        {
+            int newid = KeyCombos.Count;
+            KeyCombos.Add(newid, combo);
+            return newid;
+        }
 
     }
 }

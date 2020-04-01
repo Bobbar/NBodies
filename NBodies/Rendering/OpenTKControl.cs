@@ -1094,7 +1094,6 @@ namespace NBodies.Rendering
 
 
             }
-
         }
 
         protected override void OnMouseUp(MouseEventArgs e)

@@ -13,20 +13,11 @@ namespace NBodies.UI.KeyActions
 {
     class ZeroVeloKey : KeyAction
     {
-        public ZeroVeloKey()
-        {
-            AddKey(Keys.X);
-            AddKey(Keys.ShiftKey);
-
-           // Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-        }
+        public ZeroVeloKey(params Keys[] keys) : base(keys) { }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.X])
-            {
-                BodyManager.ZeroVelocities();
-            }
+            BodyManager.ZeroVelocities();
         }
     }
 }

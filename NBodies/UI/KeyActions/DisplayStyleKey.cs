@@ -12,22 +12,25 @@ namespace NBodies.UI.KeyActions
 {
     public class DisplayStyleKey : KeyAction
     {
+        private int _displayCombo = -1;
+        private int _scaleCombo = -1;
+
         public DisplayStyleKey()
         {
-            AddKey(Keys.S);
-            AddKey(Keys.ShiftKey);
-            AddKey(Keys.ControlKey);
+            _displayCombo = AddKeyCombo(new KeyCombo(Keys.ControlKey, Keys.ShiftKey, Keys.S));
+            _scaleCombo = AddKeyCombo(new KeyCombo(Keys.ControlKey, Keys.S));
 
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
-        public override void DoKeyDown()
+
+        public override void DoKeyDown(int comboId)
         {
-            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.ShiftKey] && KeyDownStates[Keys.S])
+            if (comboId == _displayCombo)
             {
                 Overlay.Value = "Display: " + RenderVars.DisplayStyle.ToString();
                 Overlay.Show();
             }
-            else if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
+            else if (comboId == _scaleCombo)
             {
                 Overlay.Value = "Style Scale: " + RenderVars.StyleScaleMax;
                 Overlay.Show();
@@ -39,28 +42,26 @@ namespace NBodies.UI.KeyActions
             Overlay.Hide();
         }
 
-        public override void DoWheelAction(int wheelValue)
+        public override void DoWheelAction(int wheelValue, int comboId)
         {
-            if (KeyDownStates[Keys.ControlKey] && KeyDownStates[Keys.S])
+            if (comboId == _displayCombo)
             {
-                if (KeyDownStates[Keys.ShiftKey])
-                {
-                    int max = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max();
-                    int min = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Min();
+                int max = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Max();
+                int min = Enum.GetValues(typeof(DisplayStyle)).Cast<int>().Min();
 
-                    if ((int)RenderVars.DisplayStyle + wheelValue <= max && (int)RenderVars.DisplayStyle + wheelValue >= min)
-                    {
-                        RenderVars.DisplayStyle += wheelValue;
-                        Overlay.Value = "Display: " + RenderVars.DisplayStyle.ToString();
-
-                    }
-                }
-                else
+                if ((int)RenderVars.DisplayStyle + wheelValue <= max && (int)RenderVars.DisplayStyle + wheelValue >= min)
                 {
-                    RenderVars.StyleScaleMax += wheelValue * 2;
-                    Overlay.Value = "Style Scale: " + RenderVars.StyleScaleMax;
+                    RenderVars.DisplayStyle += wheelValue;
+                    Overlay.Value = "Display: " + RenderVars.DisplayStyle.ToString();
+
                 }
+            }
+            else if (comboId == _scaleCombo)
+            {
+                RenderVars.StyleScaleMax += wheelValue * 2;
+                Overlay.Value = "Style Scale: " + RenderVars.StyleScaleMax;
             }
         }
     }
 }
+

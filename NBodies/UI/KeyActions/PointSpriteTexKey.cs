@@ -14,35 +14,26 @@ namespace NBodies.UI.KeyActions
 
     public class PointSpriteTexKey : KeyAction
     {
-        public PointSpriteTexKey()
+        public PointSpriteTexKey(Keys key) : base(key)
         {
-            AddKey(Keys.H);
-
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
-
         }
 
         public override void DoKeyDown()
         {
-            if (KeyDownStates[Keys.H])
-            {
-                SetText();
-            }
+            SetText();
         }
 
         public override void DoKeyUp()
         {
             Overlay.Hide();
         }
-      
+
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.H])
-            {
-                RenderVars.PointSpriteTexIdx += wheelValue;
+            RenderVars.PointSpriteTexIdx += wheelValue;
 
-                SetText();
-            }
+            SetText();
         }
 
         private void SetText()
@@ -56,7 +47,6 @@ namespace NBodies.UI.KeyActions
 
             Overlay.Value = text;
             Overlay.Show();
-
         }
     }
 }

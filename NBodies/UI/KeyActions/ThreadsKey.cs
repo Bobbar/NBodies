@@ -12,11 +12,8 @@ namespace NBodies.UI.KeyActions
 {
     public class ThreadsKey : KeyAction
     {
-        private Keys myKey = Keys.B;
-
-        public ThreadsKey()
+        public ThreadsKey(Keys key) : base(key)
         {
-            AddKey(myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -33,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[myKey])
-            {
-                MainLoop.ThreadsPerBlock += wheelValue;
-                Overlay.Value = "Threads Per Block: " + (int)Math.Pow(2,MainLoop.ThreadsPerBlock);
-            }
+            MainLoop.ThreadsPerBlock += wheelValue;
+            Overlay.Value = "Threads Per Block: " + (int)Math.Pow(2, MainLoop.ThreadsPerBlock);
         }
     }
 }

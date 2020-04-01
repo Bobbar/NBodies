@@ -12,11 +12,8 @@ namespace NBodies.UI.KeyActions
 {
     public class KernelSizeKey : KeyAction
     {
-        Keys _myKey = Keys.K;
-
-        public KernelSizeKey()
+        public KernelSizeKey(Keys key) : base(key)
         {
-            AddKey(_myKey);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -33,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[_myKey])
-            {
-                MainLoop.KernelSize += wheelValue * 0.001f;
-                Overlay.Value = "Kernel Size: " + Math.Round(MainLoop.KernelSize,2);
-            }
+            MainLoop.KernelSize += wheelValue * 0.001f;
+            Overlay.Value = "Kernel Size: " + Math.Round(MainLoop.KernelSize, 2);
         }
     }
 }

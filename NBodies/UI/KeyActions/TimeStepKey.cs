@@ -12,9 +12,8 @@ namespace NBodies.UI.KeyActions
 {
     public class TimeStepKey : KeyAction
     {
-        public TimeStepKey()
+        public TimeStepKey(Keys key) : base(key)
         {
-            AddKey(Keys.T);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -31,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.T])
-            {
-                MainLoop.TimeStep += 0.0001f * wheelValue;
-                Overlay.Value = "Timestep: " + Math.Round(MainLoop.TimeStep, 5);
-            }
+            MainLoop.TimeStep += 0.0001f * wheelValue;
+            Overlay.Value = "Timestep: " + Math.Round(MainLoop.TimeStep, 5);
         }
     }
 }

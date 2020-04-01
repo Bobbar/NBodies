@@ -37,13 +37,15 @@ namespace NBodies.UI
                 KeyDownStates[key] = true;
 
 
+            var currentCombo = GetCurrentCombo();
+
             foreach (var action in _actions)
             {
-                if (action.KeyDownStates.ContainsKey(key))
+                foreach (var combo in action.KeyCombos)
                 {
-                    if (!action.KeyDownStates[key])
+                    if (combo.Value.Equals(currentCombo))
                     {
-                        action.KeyDownStates[key] = true;
+                        action.KeyDown(combo.Key);
                         action.KeyDown();
                     }
                 }
@@ -69,20 +71,9 @@ namespace NBodies.UI
 
             foreach (var action in _actions)
             {
-                if (action.KeyDownStates.ContainsKey(key))
-                {
-                    action.KeyDownStates[key] = false;
-                    action.KeyUp();
-                }
-
-                // Check if any keys are down.
-                foreach (var state in action.KeyDownStates.Values)
-                {
-                    if (state == true)
-                    {
-                        keysDown = true;
-                    }
-                }
+                foreach (var combo in action.KeyCombos)
+                    if (combo.Value.Contains(key))
+                        action.KeyUp();
             }
 
             KeysDown = keysDown;
@@ -102,12 +93,17 @@ namespace NBodies.UI
         {
             MouseIsDown = true;
 
+            var currentCombo = GetCurrentCombo();
+
             foreach (var action in _actions)
             {
-                action.MouseDown(buttons, loc);
+                foreach (var combo in action.KeyCombos)
+                {
+                    if (combo.Value.Equals(currentCombo))
+                        action.MouseDown(buttons, loc);
+                }
             }
         }
-
 
         public static void MouseUp(MouseButtons buttons, PointF mouseLoc)
         {
@@ -121,15 +117,25 @@ namespace NBodies.UI
 
         public static void MouseWheel(int delta)
         {
+            var currentCombo = GetCurrentCombo();
+
             foreach (var action in _actions)
             {
-                if (delta > 0)
+                foreach (var combo in action.KeyCombos)
                 {
-                    action.MouseWheel(1);
-                }
-                else
-                {
-                    action.MouseWheel(-1);
+                    if (combo.Value.Equals(currentCombo))
+                    {
+                        if (delta > 0)
+                        {
+                            action.MouseWheel(1);
+                            action.MouseWheel(1, combo.Key);
+                        }
+                        else
+                        {
+                            action.MouseWheel(-1);
+                            action.MouseWheel(-1, combo.Key);
+                        }
+                    }
                 }
             }
         }
@@ -150,16 +156,18 @@ namespace NBodies.UI
             }
 
             return false;
+        }
 
-            //foreach (var action in _actions)
-            //{
-            //    if (action.KeyDownStates.ContainsKey(key))
-            //    {
-            //        return action.KeyDownStates[key];
-            //    }
-            //}
+        private static KeyCombo GetCurrentCombo()
+        {
+            var currentCombo = new KeyCombo();
+            foreach (var k in KeyDownStates)
+            {
+                if (k.Value == true)
+                    currentCombo.AddKey(k.Key);
+            }
 
-           // return false;
+            return currentCombo;
         }
     }
 }

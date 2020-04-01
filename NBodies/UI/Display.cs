@@ -86,21 +86,20 @@ namespace NBodies.UI
             RenderVars.OverLays.Add(_distLine);
             RenderVars.OverLays.Add(_distOver);
 
-            InputHandler.AddKeyAction(new FPSKey());
-            InputHandler.AddKeyAction(new ExplosionKey());
-            InputHandler.AddKeyAction(new CellSizeKey());
+            InputHandler.AddKeyAction(new FPSKey(Keys.F));
+            InputHandler.AddKeyAction(new ExplosionKey(Keys.E));
+            InputHandler.AddKeyAction(new CellSizeKey(Keys.C));
             InputHandler.AddKeyAction(new DisplayStyleKey());
-            InputHandler.AddKeyAction(new AlphaKey());
-            InputHandler.AddKeyAction(new SimpleKey(Keys.D));
-            InputHandler.AddKeyAction(new TimeStepKey());
-            InputHandler.AddKeyAction(new RewindKey());
-            InputHandler.AddKeyAction(new LevelKey());
-            InputHandler.AddKeyAction(new ThreadsKey());
-            InputHandler.AddKeyAction(new ViscosityKey());
-            InputHandler.AddKeyAction(new KernelSizeKey());
-            InputHandler.AddKeyAction(new ZeroVeloKey());
-            InputHandler.AddKeyAction(new GasKKey());
-            InputHandler.AddKeyAction(new PointSpriteTexKey());
+            InputHandler.AddKeyAction(new AlphaKey(Keys.A, Keys.ControlKey));
+            InputHandler.AddKeyAction(new TimeStepKey(Keys.T));
+            InputHandler.AddKeyAction(new RewindKey(Keys.R));
+            InputHandler.AddKeyAction(new LevelKey(Keys.L));
+            InputHandler.AddKeyAction(new ThreadsKey(Keys.B));
+            InputHandler.AddKeyAction(new ViscosityKey(Keys.V, Keys.ControlKey));
+            InputHandler.AddKeyAction(new KernelSizeKey(Keys.K));
+            InputHandler.AddKeyAction(new ZeroVeloKey(Keys.X, Keys.ShiftKey));
+            InputHandler.AddKeyAction(new GasKKey(Keys.G));
+            InputHandler.AddKeyAction(new PointSpriteTexKey(Keys.H));
 
 
             PopulateDisplayStyleMenu();

@@ -12,11 +12,11 @@ namespace NBodies.UI.KeyActions
 {
     public class CellSizeKey : KeyAction
     {
-        public CellSizeKey()
+        public CellSizeKey(Keys key) : base(key)
         {
-            AddKey(Keys.C);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
+
         public override void DoKeyDown()
         {
             Overlay.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
@@ -30,11 +30,8 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.C])
-            {
-                MainLoop.CellSizeExp += wheelValue;
-                Overlay.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
-            }
+            MainLoop.CellSizeExp += wheelValue;
+            Overlay.Value = "Cell Size: " + Math.Pow(2, MainLoop.CellSizeExp).ToString();
         }
     }
 }

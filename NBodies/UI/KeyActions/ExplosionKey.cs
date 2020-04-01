@@ -12,9 +12,8 @@ namespace NBodies.UI.KeyActions
     {
         private bool _explode = true;
 
-        public ExplosionKey()
+        public ExplosionKey(Keys key) : base(key)
         {
-            AddKey(Keys.E);
             Overlay = new OverlayGraphic(OverlayGraphicType.Text, new PointF(), "");
         }
 
@@ -34,24 +33,15 @@ namespace NBodies.UI.KeyActions
             MainLoop.Shooting = false;
         }
 
-        //public override void DoMouseDown(MouseButtons button, PointF mouseLoc)
-        //{
-        //    //if (KeyDownStates[Keys.E])
-        //    //    BodyManager.InsertExplosion(ViewportHelpers.ScreenPointToField(mouseLoc), 2500);
-        //}
-
         public override void DoMouseDown(MouseButtons button, Vector3 loc)
         {
-            if (KeyDownStates[Keys.E])
+            if (_explode)
             {
-                if (_explode)
-                {
-                    BodyManager.InsertExplosion(loc, 2500);
-                }
-                else
-                {
-                    MainLoop.Shooting = true;
-                }
+                BodyManager.InsertExplosion(loc, 2500);
+            }
+            else
+            {
+                MainLoop.Shooting = true;
             }
         }
 
@@ -62,18 +52,14 @@ namespace NBodies.UI.KeyActions
 
         public override void DoWheelAction(int wheelValue)
         {
-            if (KeyDownStates[Keys.E])
-            {
-                _explode = !_explode;
+            _explode = !_explode;
 
-                if (_explode)
-                    Overlay.Value = "Boom!";
-                else
-                    Overlay.Value = "Shoot!";
+            if (_explode)
+                Overlay.Value = "Boom!";
+            else
+                Overlay.Value = "Shoot!";
 
-                Overlay.Show();
-            }
+            Overlay.Show();
         }
-
     }
 }
