@@ -223,6 +223,8 @@ namespace NBodies
             var ellipse = new Ellipse3D(ViewportHelpers.CameraPos, radius);
             var inEllipse = new Ellipse3D(ViewportHelpers.CameraPos, innerRadius);
 
+            var sysVelo = new Vector3(Convert.ToSingle(VeloXText.Text.Trim()), Convert.ToSingle(VeloYText.Text.Trim()), Convert.ToSingle(VeloZText.Text.Trim()));
+
             for (int i = 0; i < count; i++)
             {
                 var bodySize = Numbers.GetRandomFloat(minSize, maxSize);
@@ -303,9 +305,8 @@ namespace NBodies
                 }
 
                 //  float rndZ = Numbers.GetRandomFloat(-100, 100);
-                newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, newLoc.Z, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
+                newBodies.Add(BodyManager.NewBody(newLoc, sysVelo, bodySize, newMass, color));
 
-                //newBodies.Add(BodyManager.NewBody(newLoc.X, newLoc.Y, bodySize, newMass, color, int.Parse(LifeTimeTextBox.Text.Trim())));
             }
 
             var bodyArr = newBodies.ToArray();
