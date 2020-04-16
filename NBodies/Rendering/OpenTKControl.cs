@@ -478,7 +478,14 @@ namespace NBodies.Rendering
 
                 if (RenderVars.BloomEnabled)
                 {
-                    // Do 4 pass gaussian blur to bloom buffer.
+                    int width = ClientSize.Width;
+                    int height = ClientSize.Height;
+                    int fac = 2;
+                    int dsWidth = (width + fac - 1) / fac;
+                    int dsHeight = (height + fac - 1) / fac;
+
+
+                    // Do 2 pass gaussian blur to bloom buffer.
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
                     _blurShader.Use();
@@ -491,36 +498,56 @@ namespace NBodies.Rendering
                     _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
-                    float off = RenderVars.Blur;
                     _blurShader.SetInt("copy", 0);
-                    _blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
+                    _blurShader.SetInt("horizontal", 1);
+                    _blurShader.SetVector4("offset", new Vector4(1.0f / dsWidth, 1.0f / dsHeight, 0.5f / dsWidth, 0.5f / dsHeight));
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
                     _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
-                    _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
+                    _blurShader.SetInt("copy", 0);
+                    _blurShader.SetInt("horizontal", 0);
+                    _blurShader.SetVector4("offset", new Vector4(1.0f / dsWidth, 1.0f / dsHeight, 0.5f / dsWidth, 0.5f / dsHeight));
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
                     _blurShader.SetInt("blurTex", 0);
                     RenderFullScreenQuad();
 
-                    off += 2.4f;
-                    _blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
-                    GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
-                    _blurShader.SetInt("blurTex", 0);
-                    RenderFullScreenQuad();
 
-                    _blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
-                    GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
-                    _blurShader.SetInt("blurTex", 0);
-                    RenderFullScreenQuad();
+
+                    //float off = RenderVars.Blur;
+                    //_blurShader.SetInt("copy", 0);
+                    //_blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
+                    //GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
+                    //GL.ActiveTexture(TextureUnit.Texture0);
+                    //GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
+                    //_blurShader.SetInt("blurTex", 0);
+                    //RenderFullScreenQuad();
+
+                    //_blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
+                    //GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    //GL.ActiveTexture(TextureUnit.Texture0);
+                    //GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
+                    //_blurShader.SetInt("blurTex", 0);
+                    //RenderFullScreenQuad();
+
+                    //off += 2.4f;
+                    //_blurShader.SetVector2("offset", new Vector2(off / ClientSize.Width, 0));
+                    //GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[1]);
+                    //GL.ActiveTexture(TextureUnit.Texture0);
+                    //GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[0]);
+                    //_blurShader.SetInt("blurTex", 0);
+                    //RenderFullScreenQuad();
+
+                    //_blurShader.SetVector2("offset", new Vector2(0, off / ClientSize.Height));
+                    //GL.BindFramebuffer(FramebufferTarget.Framebuffer, _pingpongFBO[0]);
+                    //GL.ActiveTexture(TextureUnit.Texture0);
+                    //GL.BindTexture(TextureTarget.Texture2D, _pingpongColorbuffers[1]);
+                    //_blurShader.SetInt("blurTex", 0);
+                    //RenderFullScreenQuad();
 
 
                     // Blend bloom and original buffers to produce final image.
