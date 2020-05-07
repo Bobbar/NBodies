@@ -35,6 +35,8 @@
             this.OkButton = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
             this.fastMathCheckBox = new System.Windows.Forms.CheckBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.maxMemTextBox = new System.Windows.Forms.TextBox();
             this.groupBox1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -96,6 +98,8 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.maxMemTextBox);
+            this.panel1.Controls.Add(this.label2);
             this.panel1.Controls.Add(this.fastMathCheckBox);
             this.panel1.Controls.Add(this.OkButton);
             this.panel1.Controls.Add(this.threadsTextBox);
@@ -116,6 +120,23 @@
             this.fastMathCheckBox.TabIndex = 4;
             this.fastMathCheckBox.Text = "Fast math";
             this.fastMathCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(4, 19);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(137, 13);
+            this.label2.TabIndex = 5;
+            this.label2.Text = "Max Mem Allocation (Bytes)";
+            // 
+            // maxMemTextBox
+            // 
+            this.maxMemTextBox.Location = new System.Drawing.Point(12, 35);
+            this.maxMemTextBox.Name = "maxMemTextBox";
+            this.maxMemTextBox.ReadOnly = true;
+            this.maxMemTextBox.Size = new System.Drawing.Size(92, 20);
+            this.maxMemTextBox.TabIndex = 6;
             // 
             // ChooseDeviceForm
             // 
@@ -144,5 +165,7 @@
         private System.Windows.Forms.Button OkButton;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.CheckBox fastMathCheckBox;
+        private System.Windows.Forms.TextBox maxMemTextBox;
+        private System.Windows.Forms.Label label2;
     }
 }

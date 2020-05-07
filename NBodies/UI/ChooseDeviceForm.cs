@@ -42,6 +42,7 @@ namespace NBodies.UI
             {
                 SelectedDevice = _devices[deviceListBox.SelectedIndex];
                 threadsTextBox.Text = SelectedDevice.MaxWorkGroupSize.ToString();
+                maxMemTextBox.Text = SelectedDevice.MaxMemoryAllocationSize.ToString();
             }
 
         }
