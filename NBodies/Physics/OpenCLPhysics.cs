@@ -51,6 +51,7 @@ namespace NBodies.Physics
         private ComputeKernel _clearGridKernel;
         private ComputeKernel _buildNeighborsKernel;
         private ComputeKernel _buildNeighborsBruteKernel;
+        private ComputeKernel _buildNeighborsBruteTDKernel;
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
@@ -173,6 +174,7 @@ namespace NBodies.Physics
             _popGridKernel = _program.CreateKernel("PopGrid");
             _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
             _buildNeighborsBruteKernel = _program.CreateKernel("BuildNeighborsBrute");
+            _buildNeighborsBruteTDKernel = _program.CreateKernel("BuildNeighborsBruteTD");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
@@ -552,6 +554,8 @@ namespace NBodies.Physics
             else
                 _useBrute = false;
 
+            _useBrute = true;
+
             NNUsingBrute = _useBrute;
 
             // Populate the grid index and mesh neighbor index list.
@@ -561,7 +565,8 @@ namespace NBodies.Physics
             }
             else
             {
-                PopNeighborsBrute(_meshLength);
+                // PopNeighborsBrute(_meshLength);
+                PopNeighborsBruteTD(_meshLength);
             }
         }
 
@@ -738,7 +743,7 @@ namespace NBodies.Physics
 
                 // Add the last cell index value;
                 cellIdx[count] = childCount;
-                
+
                 // Write info for this level.
                 _levelInfo[level].CellIndex = cellIdx;
                 _levelInfo[level].Spatials = parentSpatials;
@@ -866,6 +871,44 @@ namespace NBodies.Physics
             _buildNeighborsBruteKernel.SetValueArgument(argi++, _levels);
             _buildNeighborsBruteKernel.SetValueArgument(argi++, topStart);
             _queue.Execute(_buildNeighborsBruteKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+        }
+
+        private void PopNeighborsBruteTD(int meshSize)
+        {
+            // Calulate total size of 1D mesh neighbor list.
+            // Each cell can have a max of 27 neighbors, including itself.
+            int topSize = meshSize - _levelIdx[1];
+            int neighborLen = topSize * 27;
+
+            // Reallocate and resize GPU buffer as needed.
+            Allocate(ref _gpuMeshNeighbors, neighborLen);
+
+            // Write the level index to the GPU.
+            Allocate(ref _gpuLevelIndex, _levelIdx.Length, true);
+            _queue.WriteToBuffer(_levelIdx, _gpuLevelIndex, false, null);
+
+            for (int level = _levels; level >= 1; level--)
+            {
+                int start = _levelIdx[level];
+                int end = meshSize;
+
+                if (level < _levels)
+                    end = _levelIdx[level + 1];
+
+                int cellCount = end - start;
+                int workSize = BlockCount(cellCount) * _threadsPerBlock;
+
+                // Build neighbor list.
+                int argi = 0;
+                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
+                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, _levels);
+                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, level);
+                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, start);
+                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, end);
+                _queue.Execute(_buildNeighborsBruteTDKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+            }
         }
 
         /// <summary>

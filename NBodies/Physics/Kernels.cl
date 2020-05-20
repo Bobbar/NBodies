@@ -381,6 +381,67 @@ __kernel void BuildNeighborsBrute(global MeshCell* mesh, int meshLen, global int
 	mesh[readM].NeighborCount = count;
 }
 
+// Top-down nearest neighbor search.
+__kernel void BuildNeighborsBruteTD(global MeshCell* mesh, global int* levelIdx, global int* neighborIndex, int levels, int level, int start, int end)
+{
+	int m = get_global_id(0);
+	int readM = m + start;
+
+	if (readM >= end)
+		return;
+
+	long offset = (readM - levelIdx[1]) * 27;
+	long count = 0;
+
+	MeshCell cell = mesh[readM];
+
+	if (level < levels)
+	{
+		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
+		MeshCell cellParent = mesh[cell.ParentID];
+
+		// Iterate parent cell neighbors.
+		int start = cellParent.NeighborStartIdx;
+		int len = start + cellParent.NeighborCount;
+		for (int nc = start; nc < len; nc++)
+		{
+			// Iterate neighbor child cells.
+			int nId = neighborIndex[(nc)];
+			int childStartIdx = mesh[(nId)].ChildStartIdx;
+			int childLen = childStartIdx + mesh[(nId)].ChildCount;
+			for (int c = childStartIdx; c < childLen; c++)
+			{
+				MeshCell child = mesh[(c)];
+
+				// Check for neighbors and add them to the list.
+				if (!IsFar(cell, child))
+				{
+					neighborIndex[(offset + count++)] = c;
+				}
+			}
+		}
+	}
+	else
+	{
+		// For the top-most level, iterate all cells. (There won't be many, so this is fast.)
+		for (int i = start; i < end; i++)
+		{
+			MeshCell check;
+			check.IdxX = mesh[i].IdxX;
+			check.IdxY = mesh[i].IdxY;
+			check.IdxZ = mesh[i].IdxZ;
+
+			if (!IsFar(cell, check))
+			{
+				neighborIndex[(offset + count++)] = i;
+			}
+		}
+	}
+
+	mesh[readM].NeighborStartIdx = offset;
+	mesh[readM].NeighborCount = count;
+}
+
 
 __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp, int cellSize)
 {
@@ -668,7 +729,7 @@ __kernel void CalcForceFar(global Body* inBodies, int inBodiesLen, global MeshCe
 
 	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
 	MeshCell bodyCellParent = inMesh[bodyCell.ParentID];
-	
+
 	// Set body cell to parent to move out of (or above?) the local field.
 	bodyCell = bodyCellParent;
 
