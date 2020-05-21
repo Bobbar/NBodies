@@ -17,10 +17,11 @@ namespace NBodies.Physics
         private bool _useFastMath = true;
         private int _gpuIndex = 4;
         private int _levels = 4;
-        private bool _useBrute = false;
+        private bool _useGrid = false;
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 8;//12;
         private long _maxBufferSize = 0;
+        private int _maxGridPasses = 12;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
 
@@ -49,9 +50,8 @@ namespace NBodies.Physics
         private ComputeKernel _collisionElasticKernel;
         private ComputeKernel _popGridKernel;
         private ComputeKernel _clearGridKernel;
-        private ComputeKernel _buildNeighborsKernel;
-        private ComputeKernel _buildNeighborsBruteKernel;
-        private ComputeKernel _buildNeighborsBruteTDKernel;
+        private ComputeKernel _buildNeighborsGridKernel;
+        private ComputeKernel _buildNeighborsMeshKernel;
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
@@ -106,7 +106,7 @@ namespace NBodies.Physics
 
         public static int GridPasses { get; private set; } = 1;
 
-        public static bool NNUsingBrute { get; private set; } = true;
+        public static bool NNUsingGrid { get; private set; } = true;
 
 
         public int[] LevelIndex
@@ -172,9 +172,8 @@ namespace NBodies.Physics
             _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _popGridKernel = _program.CreateKernel("PopGrid");
-            _buildNeighborsKernel = _program.CreateKernel("BuildNeighbors");
-            _buildNeighborsBruteKernel = _program.CreateKernel("BuildNeighborsBrute");
-            _buildNeighborsBruteTDKernel = _program.CreateKernel("BuildNeighborsBruteTD");
+            _buildNeighborsGridKernel = _program.CreateKernel("BuildNeighborsGrid");
+            _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
             _clearGridKernel = _program.CreateKernel("ClearGrid");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
@@ -536,6 +535,8 @@ namespace NBodies.Physics
             // Build the remaining (upper) levels of the mesh.
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
+            // ** Nearest Neighbor List **
+
             // Compute spatial grid size for top levels.
             long gridSize = 0;
             for (int l = 1; l <= _levels; l++)
@@ -543,31 +544,32 @@ namespace NBodies.Physics
                 gridSize += _gridInfo[l].Size;
             }
 
-            // Determine if we should use a grid based or brute force nearest neighbor search.
-            // Compute a "sparseness" ratio.  Very sparse and large fields will require a large number 
-            // of grid passes to complete the neighbor list. In these cases a brute force search may potentially
-            // be faster and will require far less memory. 
-            long ratio = gridSize / _meshLength;
-            long bruteCutoff = 400000;
-            if (ratio >= bruteCutoff)
-                _useBrute = true;
+            // Since the uniform grid index can quickly exceed the maximum allocation size,
+            // we do multiple passes with the same buffer, offsetting the bucket
+            // indexes on each pass to fit within the buffer.
+
+            // Compute memory and # of passed required.
+            int sizeOfInteger = 4;
+            long gridMem = gridSize * sizeOfInteger; // Size of grid index in memory. (n * bytes) (int = 4 bytes)
+            int passes = 1;
+            passes += (int)(gridMem / _maxBufferSize);
+
+            // If the number of passes requried is less than the max allowed, use the grid-based NN search.
+            // Otherwise, use the top-down mesh-based NN search.
+            if (passes <= _maxGridPasses)
+                _useGrid = true;
             else
-                _useBrute = false;
+                _useGrid = false;
 
-            _useBrute = true;
+            NNUsingGrid = _useGrid;
 
-            NNUsingBrute = _useBrute;
-
-            // Populate the grid index and mesh neighbor index list.
-            if (!_useBrute)
-            {
-                PopGridAndNeighborsGPU(_gridInfo, _meshLength, gridSize);
-            }
+            // Grid = Extremely fast for small fields.
+            // Mesh = Much better scaling for large fields.
+            if (_useGrid)
+                PopNeighborsGridGPU(_gridInfo, _meshLength, gridSize, passes);
             else
-            {
-                // PopNeighborsBrute(_meshLength);
-                PopNeighborsBruteTD(_meshLength);
-            }
+                PopNeighborsMeshGPU(_meshLength);
+
         }
 
         /// <summary>
@@ -841,39 +843,8 @@ namespace NBodies.Physics
             }
         }
 
-        /// <summary>
-        /// Populates a compressed sparse grid array (grid index) and computes the neighbor list for all mesh cells on the GPU.  **USES BRUTE FORCE KERNEL**
-        /// </summary>
-        /// <param name="meshSize"></param>
-        private void PopNeighborsBrute(int meshSize)
-        {
-            // Calulate total size of 1D mesh neighbor list.
-            // Each cell can have a max of 27 neighbors, including itself.
-            int topStart = _levelIdx[1];
-            int topSize = meshSize - _levelIdx[1];
-            int neighborLen = topSize * 27;
 
-            // Reallocate and resize GPU buffer as needed.
-            Allocate(ref _gpuMeshNeighbors, neighborLen);
-
-            // Write the level index to the GPU.
-            Allocate(ref _gpuLevelIndex, _levelIdx.Length, true);
-            _queue.WriteToBuffer(_levelIdx, _gpuLevelIndex, false, null);
-
-            int workSize = BlockCount(meshSize) * _threadsPerBlock;
-
-            // Build neighbor list.
-            int argi = 0;
-            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuMesh);
-            _buildNeighborsBruteKernel.SetValueArgument(argi++, meshSize);
-            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
-            _buildNeighborsBruteKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _buildNeighborsBruteKernel.SetValueArgument(argi++, _levels);
-            _buildNeighborsBruteKernel.SetValueArgument(argi++, topStart);
-            _queue.Execute(_buildNeighborsBruteKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-        }
-
-        private void PopNeighborsBruteTD(int meshSize)
+        private void PopNeighborsMeshGPU(int meshSize)
         {
             // Calulate total size of 1D mesh neighbor list.
             // Each cell can have a max of 27 neighbors, including itself.
@@ -887,8 +858,10 @@ namespace NBodies.Physics
             Allocate(ref _gpuLevelIndex, _levelIdx.Length, true);
             _queue.WriteToBuffer(_levelIdx, _gpuLevelIndex, false, null);
 
+            // Start at the top level and move down.
             for (int level = _levels; level >= 1; level--)
             {
+                // Compute the bounds and size of this invocation.
                 int start = _levelIdx[level];
                 int end = meshSize;
 
@@ -898,16 +871,16 @@ namespace NBodies.Physics
                 int cellCount = end - start;
                 int workSize = BlockCount(cellCount) * _threadsPerBlock;
 
-                // Build neighbor list.
+                // Populate the neighbor list for this level.
                 int argi = 0;
-                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
-                _buildNeighborsBruteTDKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, _levels);
-                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, level);
-                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, start);
-                _buildNeighborsBruteTDKernel.SetValueArgument(argi++, end);
-                _queue.Execute(_buildNeighborsBruteTDKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuLevelIndex);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, _levels);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, level);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
+                _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
             }
         }
 
@@ -916,7 +889,7 @@ namespace NBodies.Physics
         /// </summary>
         /// <param name="gridInfo"></param>
         /// <param name="meshSize"></param>
-        private void PopGridAndNeighborsGPU(GridInfo[] gridInfo, int meshSize, long gridSize)
+        private void PopNeighborsGridGPU(GridInfo[] gridInfo, int meshSize, long gridSize, int passes)
         {
             // Get offsets for the upper (top) mesh levels.
             int topStart = _levelIdx[1];
@@ -934,25 +907,16 @@ namespace NBodies.Physics
                 _queue.FillBuffer(_gpuGridIndex, new int[1] { -1 }, 0, newCap, null);
             }
 
-            // Since the grid index can quickly exceed the maximum allocation size,
-            // we do multiple passes with the same buffer, offsetting the bucket
-            // indexes on each pass to fit within the buffer.
-
-            // Calculate memory requirements and number of passes and strides required to compute all neighbor cells.
+            // Setup passes and strides required to compute all neighbor cells.
             long passOffset = 0;
-            long passes = 1;
             long stride = gridSize;
-            int sizeOfInteger = 4;
-            long gridMem = gridSize * sizeOfInteger; // Size of grid index in memory. (n * bytes) (int = 4 bytes)
 
-            // Do we need more than 1 pass?
-            if (gridMem > _maxBufferSize)
+            if (passes > 1)
             {
-                passes += (gridMem / _maxBufferSize);
                 stride = (int)_gpuGridIndex.Count;
             }
 
-            GridPasses = (int)passes;
+            GridPasses = passes;
 
             // Write Grid info to GPU.
             Allocate(ref _gpuGridInfo, gridInfo.Length, true);
@@ -977,15 +941,15 @@ namespace NBodies.Physics
 
                 // Build neighbor list.
                 argi = 0;
-                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMesh);
-                _buildNeighborsKernel.SetValueArgument(argi++, meshSize);
-                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridInfo);
-                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuGridIndex);
-                _buildNeighborsKernel.SetValueArgument(argi++, stride);
-                _buildNeighborsKernel.SetValueArgument(argi++, passOffset);
-                _buildNeighborsKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-                _buildNeighborsKernel.SetValueArgument(argi++, topStart);
-                _queue.Execute(_buildNeighborsKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+                _buildNeighborsGridKernel.SetMemoryArgument(argi++, _gpuMesh);
+                _buildNeighborsGridKernel.SetValueArgument(argi++, meshSize);
+                _buildNeighborsGridKernel.SetMemoryArgument(argi++, _gpuGridInfo);
+                _buildNeighborsGridKernel.SetMemoryArgument(argi++, _gpuGridIndex);
+                _buildNeighborsGridKernel.SetValueArgument(argi++, stride);
+                _buildNeighborsGridKernel.SetValueArgument(argi++, passOffset);
+                _buildNeighborsGridKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _buildNeighborsGridKernel.SetValueArgument(argi++, topStart);
+                _queue.Execute(_buildNeighborsGridKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
 
                 // We're done with the grid index array, so undo what we added to clear it for the next pass.
                 _clearGridKernel.SetMemoryArgument(0, _gpuGridIndex);
@@ -1147,8 +1111,8 @@ namespace NBodies.Physics
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _popGridKernel.Dispose();
-            _buildNeighborsKernel.Dispose();
-            _buildNeighborsBruteKernel.Dispose();
+            _buildNeighborsGridKernel.Dispose();
+            _buildNeighborsMeshKernel.Dispose();
             _clearGridKernel.Dispose();
             _fixOverlapKernel.Dispose();
             _buildBottomKernel.Dispose();

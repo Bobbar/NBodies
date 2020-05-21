@@ -295,8 +295,8 @@ __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, glo
 	mesh[readM].GridIdx = cell.GridIdx;
 }
 
-
-__kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, long passStride, long passOffset, global int* neighborIndex, int topStart)
+// Uniform grid based nearest neighbor search.
+__kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, long passStride, long passOffset, global int* neighborIndex, int topStart)
 {
 	int m = get_global_id(0);
 	int readM = m + topStart;
@@ -312,6 +312,8 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 
 	GridInfo grid = gridInfo[cellLevel];
 
+	// Look up table for shifts.
+	// A single loop is faster, and we can better control the order of the shifts if needed.
 	int3 shiftLut[] = { { -1,-1,-1 },{ -1,-1,0 },{ -1,-1,1 },{ -1,0,-1 },{ -1,0,0 },{ -1,0,1 },{ -1,1,-1 },{ -1,1,0 },{ -1,1,1 },{ 0,-1,-1 },{ 0,-1,0 },{ 0,-1,1 },{ 0,0,-1 },{ 0,0,0 },{ 0,0,1 },{ 0,1,-1 },{ 0,1,0 },{ 0,1,1 },{ 1,-1,-1 },{ 1,-1,0 },{ 1,-1,1 },{ 1,0,-1 },{ 1,0,0 },{ 1,0,1 },{ 1,1,-1 },{ 1,1,0 },{ 1,1,1 } };
 
 	// Shift bucket index around the cell and check for populated grid index buckets.
@@ -338,51 +340,8 @@ __kernel void BuildNeighbors(global MeshCell* mesh, int meshLen, global GridInfo
 	mesh[readM].NeighborCount = count;
 }
 
-__kernel void BuildNeighborsBrute(global MeshCell* mesh, int meshLen, global int* levelIdx, global int* neighborIndex, int levels, int topStart)
-{
-	int m = get_global_id(0);
-	int readM = m + topStart;
-
-	if (readM >= meshLen)
-		return;
-
-	long offset = m * 27;
-
-	MeshCell cell;
-	cell.IdxX = mesh[readM].IdxX;
-	cell.IdxY = mesh[readM].IdxY;
-	cell.IdxZ = mesh[readM].IdxZ;
-	cell.Level = mesh[readM].Level;
-
-	long count = 0;
-	int levelStart = levelIdx[levels];
-	int levelEnd = meshLen;
-
-	if (cell.Level < levels)
-	{
-		levelStart = levelIdx[cell.Level];
-		levelEnd = levelIdx[cell.Level + 1];
-	}
-
-	for (int i = levelStart; i < levelEnd; i++)
-	{
-		MeshCell check;
-		check.IdxX = mesh[i].IdxX;
-		check.IdxY = mesh[i].IdxY;
-		check.IdxZ = mesh[i].IdxZ;
-
-		if (!IsFar(cell, check))
-		{
-			neighborIndex[(offset + count++)] = i;
-		}
-	}
-
-	mesh[readM].NeighborStartIdx = offset;
-	mesh[readM].NeighborCount = count;
-}
-
-// Top-down nearest neighbor search.
-__kernel void BuildNeighborsBruteTD(global MeshCell* mesh, global int* levelIdx, global int* neighborIndex, int levels, int level, int start, int end)
+// Top-down mesh based nearest neighbor search.
+__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* levelIdx, global int* neighborIndex, int levels, int level, int start, int end)
 {
 	int m = get_global_id(0);
 	int readM = m + start;
@@ -391,11 +350,27 @@ __kernel void BuildNeighborsBruteTD(global MeshCell* mesh, global int* levelIdx,
 		return;
 
 	long offset = (readM - levelIdx[1]) * 27;
-	long count = 0;
+	int count = 0;
 
 	MeshCell cell = mesh[readM];
 
-	if (level < levels)
+	if (level == levels)
+	{
+		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
+		for (int i = start; i < end; i++)
+		{
+			MeshCell check;
+			check.IdxX = mesh[i].IdxX;
+			check.IdxY = mesh[i].IdxY;
+			check.IdxZ = mesh[i].IdxZ;
+
+			if (!IsFar(cell, check))
+			{
+				neighborIndex[(offset + count++)] = i;
+			}
+		}
+	}
+	else
 	{
 		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
 		MeshCell cellParent = mesh[cell.ParentID];
@@ -418,22 +393,6 @@ __kernel void BuildNeighborsBruteTD(global MeshCell* mesh, global int* levelIdx,
 				{
 					neighborIndex[(offset + count++)] = c;
 				}
-			}
-		}
-	}
-	else
-	{
-		// For the top-most level, iterate all cells. (There won't be many, so this is fast.)
-		for (int i = start; i < end; i++)
-		{
-			MeshCell check;
-			check.IdxX = mesh[i].IdxX;
-			check.IdxY = mesh[i].IdxY;
-			check.IdxZ = mesh[i].IdxZ;
-
-			if (!IsFar(cell, check))
-			{
-				neighborIndex[(offset + count++)] = i;
 			}
 		}
 	}
