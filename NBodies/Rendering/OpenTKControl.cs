@@ -431,19 +431,21 @@ namespace NBodies.Rendering
                 {
                     // Update body positions and colors.
                     // Compute Z-order for correct blending.
-                    var zOrder = ComputeZOrder(bodies);
+                    int[] zOrder = new int[0];
+                    if (RenderVars.SortZOrder)
+                        zOrder = ComputeZOrder(bodies);
 
                     // Realloc if needed.
                     if (_cubePositions.Length < bodies.Length)
                         _cubePositions = new ColoredVertex2[bodies.Length];
-            
+
                     // Set positions, colors and sizes.
                     for (int i = 0; i < bodies.Length; i++)
                     {
-                        //  var body = bodies[i];
-                        var body = bodies[zOrder[i]];
+                        int idx = RenderVars.SortZOrder ? zOrder[i] : i;
+                        var body = bodies[idx];
                         var bPos = body.PositionVec();
-                      
+
                         // Position and size.
                         var cubePos = new Vector4(bPos, body.Size / 2);
 
