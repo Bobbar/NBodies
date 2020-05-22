@@ -21,7 +21,7 @@ namespace NBodies.Physics
         private static int _threadsPerBlock = 256;
         private int _parallelPartitions = 8;//12;
         private long _maxBufferSize = 0;
-        private int _maxGridPasses = 12;
+        private int _maxGridPasses = 10;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
 
@@ -423,11 +423,11 @@ namespace NBodies.Physics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long MortonNumber(long x, long y, long z)
         {
-            x &= 0x1fffff; // we only look at the first 21 bits
-            x = (x | x << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
-            x = (x | x << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
-            x = (x | x << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
-            x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+            x &= 0x1fffff; 
+            x = (x | x << 32) & 0x1f00000000ffff; 
+            x = (x | x << 16) & 0x1f0000ff0000ff;
+            x = (x | x << 8) & 0x100f00f00f00f00f; 
+            x = (x | x << 4) & 0x10c30c30c30c30c3;
             x = (x | x << 2) & 0x1249249249249249;
 
             y &= 0x1fffff;
@@ -437,6 +437,7 @@ namespace NBodies.Physics
             y = (y | y << 4) & 0x10c30c30c30c30c3;
             y = (y | y << 2) & 0x1249249249249249;
 
+            z &= 0x1fffff;
             z = (z | z << 32) & 0x1f00000000ffff;
             z = (z | z << 16) & 0x1f0000ff0000ff;
             z = (z | z << 8) & 0x100f00f00f00f00f;
@@ -445,7 +446,7 @@ namespace NBodies.Physics
 
             return x | (y << 1) | (z << 2);
         }
-
+    
         private void AddGridDims(MinMax minMax, int level)
         {
             int offsetX = (minMax.MinX - 1) * -1;
