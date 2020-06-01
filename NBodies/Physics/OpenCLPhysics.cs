@@ -19,7 +19,7 @@ namespace NBodies.Physics
         private int _levels = 4;
         private bool _useGrid = false;
         private static int _threadsPerBlock = 256;
-        private int _parallelPartitions = 8;//12;
+        private int _parallelPartitions = 14;//12;
         private long _maxBufferSize = 0;
         private int _maxGridPasses = 10;
         private float _kernelSize = 1.0f;

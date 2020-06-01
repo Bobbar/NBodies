@@ -102,6 +102,7 @@ constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
 constant int INROCHE = 8;
 
+
 #if FASTMATH
 
 #define DISTANCE(a,b) fast_distance(a,b)
@@ -292,6 +293,14 @@ __kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, glo
 		gridIdx[bucket] = readM;
 	}
 
+	//if (bucket >= 0)
+	//{
+	//	if (passStride > 0 && bucket < passStride)
+	//		gridIdx[bucket] = readM;
+	//	else
+	//		gridIdx[bucket] = readM;
+	//}
+
 	mesh[readM].GridIdx = cell.GridIdx;
 }
 
@@ -312,6 +321,8 @@ __kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global Grid
 
 	GridInfo grid = gridInfo[cellLevel];
 
+#if USELUT
+
 	// Look up table for shifts.
 	// A single loop is faster, and we can better control the order of the shifts if needed.
 	int3 shiftLut[] = { { -1,-1,-1 },{ -1,-1,0 },{ -1,-1,1 },{ -1,0,-1 },{ -1,0,0 },{ -1,0,1 },{ -1,1,-1 },{ -1,1,0 },{ -1,1,1 },{ 0,-1,-1 },{ 0,-1,0 },{ 0,-1,1 },{ 0,0,-1 },{ 0,0,0 },{ 0,0,1 },{ 0,1,-1 },{ 0,1,0 },{ 0,1,1 },{ 1,-1,-1 },{ 1,-1,0 },{ 1,-1,1 },{ 1,0,-1 },{ 1,0,0 },{ 1,0,1 },{ 1,1,-1 },{ 1,1,0 },{ 1,1,1 } };
@@ -321,7 +332,7 @@ __kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global Grid
 	{
 		int3 sIdx = Idx + shiftLut[s];
 		long localIdx = GridHash(sIdx.x, sIdx.y, sIdx.z, grid);
-		if (localIdx > 0 && localIdx < grid.Size)
+		if (localIdx >= 0 && localIdx < grid.Size)
 		{
 			long bucket = localIdx + grid.IndexOffset - passOffset;
 			if (bucket >= 0 && bucket < passStride)
@@ -335,6 +346,36 @@ __kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global Grid
 			}
 		}
 	}
+
+#else
+
+	// Shift bucket index around the cell and check for populated grid index buckets.
+	for (int x = -1; x <= 1; x++)
+	{
+		for (int y = -1; y <= 1; y++)
+		{
+			for (int z = -1; z <= 1; z++)
+			{
+				long localIdx = GridHash(Idx.x + x, Idx.y + y, Idx.z + z, grid);
+				if (localIdx >= 0 && localIdx < grid.Size)
+				{
+					long bucket = localIdx + grid.IndexOffset - passOffset;
+					if (bucket >= 0 && bucket < passStride)
+					{
+						long idx = gridIdx[bucket];
+						// Check for populated bucket and poplate neighbor index.
+						if (idx >= 0)
+						{
+							neighborIndex[(offset + count++)] = idx;
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+#endif
 
 	mesh[readM].NeighborStartIdx = offset;
 	mesh[readM].NeighborCount = count;
