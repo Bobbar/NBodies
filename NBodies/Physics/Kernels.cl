@@ -382,7 +382,7 @@ __kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global Grid
 }
 
 // Top-down mesh based nearest neighbor search.
-__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* levelIdx, global int* neighborIndex, int levels, int level, int start, int end)
+__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
 {
 	int m = get_global_id(0);
 	int readM = m + start;
@@ -391,7 +391,7 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* levelIdx, gl
 		return;
 
 	// Write location of the neighbor list.
-	long offset = (readM - levelIdx[1]) * 27;
+	long offset = (readM - botOffset) * 27;
 	int count = 0;
 
 	MeshCell cell = mesh[readM];

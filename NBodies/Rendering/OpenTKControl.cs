@@ -636,16 +636,6 @@ namespace NBodies.Rendering
             stats.Add($@"Cell Size: {Math.Pow(2, MainLoop.CellSizeExp)}");
             stats.Add($@"Mesh Levels: {MainLoop.MeshLevels}");
 
-            if (OpenCLPhysics.NNUsingGrid)
-            {
-                stats.Add($@"NN Search: Grid");
-                stats.Add($@"Grid Passes: {OpenCLPhysics.GridPasses}");
-            }
-            else
-            {
-                stats.Add($@"NN Search: Mesh");
-            }
-
             if (BodyManager.FollowSelected)
             {
                 var body = BodyManager.FollowBody();
