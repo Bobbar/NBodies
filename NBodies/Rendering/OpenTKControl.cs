@@ -80,7 +80,7 @@ namespace NBodies.Rendering
         private int _pointTex;
         private string[] _pointSpriteTextures;
         private int _currentPointTextIdx = 0;
-        private bool _usePoints = false;
+        private bool _usePoints = true;
         private bool _useShaderSpheres = true;
 
         private int _newBodyId = -1;

@@ -259,6 +259,8 @@
             // usePointsToolStripMenuItem
             // 
             this.usePointsToolStripMenuItem.CheckOnClick = true;
+            this.usePointsToolStripMenuItem.Checked = true;
+            this.usePointsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.usePointsToolStripMenuItem.Name = "usePointsToolStripMenuItem";
             this.usePointsToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.usePointsToolStripMenuItem.Text = "Use Point Sprites";
