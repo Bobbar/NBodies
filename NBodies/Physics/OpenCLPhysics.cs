@@ -537,39 +537,41 @@ namespace NBodies.Physics
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
 
             // ** Nearest Neighbor List **
+            PopNeighborsMeshGPU(_meshLength);
 
-            // Compute spatial grid size for top levels.
-            long gridSize = 0;
-            for (int l = 1; l <= _levels; l++)
-            {
-                gridSize += _gridInfo[l].Size;
-            }
 
-            // Since the uniform grid index can quickly exceed the maximum allocation size,
-            // we do multiple passes with the same buffer, offsetting the bucket
-            // indexes on each pass to fit within the buffer.
+            //// Compute spatial grid size for top levels.
+            //long gridSize = 0;
+            //for (int l = 1; l <= _levels; l++)
+            //{
+            //    gridSize += _gridInfo[l].Size;
+            //}
 
-            // Compute memory and # of passed required.
-            int sizeOfInteger = 4;
-            long gridMem = gridSize * sizeOfInteger; // Size of grid index in memory. (n * bytes) (int = 4 bytes)
-            int passes = 1;
-            passes += (int)(gridMem / _maxBufferSize);
+            //// Since the uniform grid index can quickly exceed the maximum allocation size,
+            //// we do multiple passes with the same buffer, offsetting the bucket
+            //// indexes on each pass to fit within the buffer.
 
-            // If the number of passes requried is less than the max allowed, use the grid-based NN search.
-            // Otherwise, use the top-down mesh-based NN search.
-            if (passes <= _maxGridPasses)
-                _useGrid = true;
-            else
-                _useGrid = false;
+            //// Compute memory and # of passed required.
+            //int sizeOfInteger = 4;
+            //long gridMem = gridSize * sizeOfInteger; // Size of grid index in memory. (n * bytes) (int = 4 bytes)
+            //int passes = 1;
+            //passes += (int)(gridMem / _maxBufferSize);
 
-            NNUsingGrid = _useGrid;
+            //// If the number of passes requried is less than the max allowed, use the grid-based NN search.
+            //// Otherwise, use the top-down mesh-based NN search.
+            //if (passes <= _maxGridPasses)
+            //    _useGrid = true;
+            //else
+            //    _useGrid = false;
 
-            // Grid = Extremely fast for small fields.
-            // Mesh = Much better scaling for large fields.
-            if (_useGrid)
-                PopNeighborsGridGPU(_gridInfo, _meshLength, gridSize, passes);
-            else
-                PopNeighborsMeshGPU(_meshLength);
+            //NNUsingGrid = _useGrid;
+
+            //// Grid = Extremely fast for small fields.
+            //// Mesh = Much better scaling for large fields.
+            //if (_useGrid)
+            //    PopNeighborsGridGPU(_gridInfo, _meshLength, gridSize, passes);
+            //else
+            //    PopNeighborsMeshGPU(_meshLength);
 
         }
 

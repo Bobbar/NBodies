@@ -9,7 +9,7 @@ namespace NBodies.Physics
     public static class Sort
     {
         private static int _threshold = 5000; // Length at which to use .NET Array.Sort instead of QuickSort recurse/invoke.
-        private static int _processorCount = Environment.ProcessorCount - 3; // = # cores/threads - 3 threads. (2 loop tasks, 1 UI thread)
+        private static int _processorCount = 8; // # cores/threads to use.
 
         static void Swap(long[] keys, SpatialInfo[] data, int i, int j)
         {

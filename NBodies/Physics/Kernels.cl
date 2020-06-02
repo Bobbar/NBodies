@@ -390,6 +390,7 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* levelIdx, gl
 	if (readM >= end)
 		return;
 
+	// Write location of the neighbor list.
 	long offset = (readM - levelIdx[1]) * 27;
 	int count = 0;
 
