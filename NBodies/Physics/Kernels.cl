@@ -18,6 +18,7 @@ typedef struct __attribute__((packed)) Body
 	int UID;
 	float Density;
 	float Pressure;
+	float Temp;
 	float Lifetime;
 	int MeshID;
 
@@ -915,6 +916,10 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	if (a >= inBodiesLen)
 		return;
 
+
+	float maxTemp = 10000.0f;//4000.0f
+	double tempDelta = 0;
+
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
 	float3 outPos = (float3)(outBody.PosX, outBody.PosY, outBody.PosZ);
@@ -952,7 +957,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							float3 inPos = (float3)(inBody.PosX, inBody.PosY, inBody.PosZ);
 							float3 dir = outPos - inPos;
 							float distSqrt = DISTANCE(outPos, inPos);
-
+							float dist = length(dir);
 							// Calc the distance and check for collision.
 							if (distSqrt <= sph.kSize)
 							{
@@ -983,9 +988,36 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									float viscLaplace = sph.fViscosity * kDiff;
 									float viscScalar = inBody.Mass * viscLaplace * sim.Viscosity / inBody.Density;
 
-									outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
+									float veloDiffX = inBody.VeloX - outBody.VeloX;
+									float veloDiffY = inBody.VeloY - outBody.VeloY;
+									float veloDiffZ = inBody.VeloZ - outBody.VeloZ;
+
+									outBody.ForceX += veloDiffX * viscScalar;
+									outBody.ForceY += veloDiffY * viscScalar;
+									outBody.ForceZ += veloDiffZ * viscScalar;
+								
+									float velo = veloDiffX * veloDiffX + veloDiffY * veloDiffY + veloDiffZ * veloDiffZ;
+									/*outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
 									outBody.ForceY += (inBody.VeloY - outBody.VeloY) * viscScalar;
-									outBody.ForceZ += (inBody.VeloZ - outBody.VeloZ) * viscScalar;
+									outBody.ForceZ += (inBody.VeloZ - outBody.VeloZ) * viscScalar;*/
+
+
+									// Temp delta from p2p conduction.
+									float tempK = 0.9f;//0.5f;//2.0f;//1.0f;
+									float tempDiff = outBody.Temp - inBody.Temp;
+									tempDelta += (-0.5 * tempK) * (tempDiff / dist);
+
+
+
+									// Temp delta from p2p friction.
+									float coeff = 0.0005f;//0.0004f;
+									float adhesion = 0.1f; //viscosity;//0.1f;
+									float heatJ = 4.1550f;
+									float heatFac = 1950;
+									tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * (2));
+									
+
+
 								}
 							}
 						}
@@ -1003,6 +1035,8 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	outBody.PosX += sim.DeltaTime * outBody.VeloX;
 	outBody.PosY += sim.DeltaTime * outBody.VeloY;
 	outBody.PosZ += sim.DeltaTime * outBody.VeloZ;
+
+	outBody.Temp += tempDelta * sim.DeltaTime;
 
 	if (outBody.Lifetime > 0.0f)
 	{
@@ -1026,6 +1060,26 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		outBody.Flag = SetFlag(outBody.Flag, CULLED, true);
 		postNeeded[0] = 1;
 	}
+
+
+	// Black body radiation.
+	//double SBC = 0.000000056703;
+	double SBC = 0.056703;
+
+	//if (outBody.Temp > 0 && cols <= 4)
+	if (outBody.Temp > 0 && bodyCell.NeighborCount < 27)
+	{
+		//double lossD = SBC * pow((double)outBody.Temp, 4.0) * 0.5f;//0.1;//1.0;//0.785;
+		double lossD = SBC * pow((double)outBody.Temp, 2.0) * 0.05f;//0.1;//1.0;//0.785;
+		outBody.Temp -= ((lossD / (double)(outBody.Mass * 0.25)) / 4.186) * sim.DeltaTime;
+	}
+
+	//if (outBody.Temp > 0)
+	//	outBody.Temp -= radiationD * dt;
+
+	outBody.Temp = min(outBody.Temp, maxTemp);
+	outBody.Temp = max(outBody.Temp, 1.0f);
+
 
 	// Cull expired bodies.
 	if (outBody.Lifetime < 0.0f && outBody.Lifetime > -100.0f)

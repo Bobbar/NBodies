@@ -831,6 +831,12 @@ namespace NBodies.Rendering
                     _clearColor = Color.White;
 
                     break;
+
+                case DisplayStyle.Temp:
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Temp, true);
+                    _clearColor = Color.Black;
+
+                    break;
             }
 
             return bodyColor;
