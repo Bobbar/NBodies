@@ -1,6 +1,6 @@
 
 
-typedef struct __attribute__((packed)) Body
+typedef struct __attribute__((aligned(2))) Body
 {
 	float PosX;
 	float PosY;
@@ -66,7 +66,7 @@ typedef struct GridInfo
 
 } GridInfo;
 
-typedef struct __attribute__((packed)) SPHPreCalc
+typedef struct SPHPreCalc
 {
 	float kSize;
 	float kSizeSq;
@@ -79,7 +79,7 @@ typedef struct __attribute__((packed)) SPHPreCalc
 
 } SPHPreCalc;
 
-typedef struct __attribute__((packed)) SimSettings
+typedef struct SimSettings
 {
 	float KernelSize;
 	float DeltaTime;
@@ -519,6 +519,7 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset;
 	float mass = mesh[firstIdx].Mass;
 
+
 	MeshCell newCell;
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
@@ -558,7 +559,6 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	newCell.CmX = newCell.CmX / newCell.Mass;
 	newCell.CmY = newCell.CmY / newCell.Mass;
 	newCell.CmZ = newCell.CmZ / newCell.Mass;
-
 
 	mesh[newIdx] = newCell;
 }
@@ -957,7 +957,13 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							float3 inPos = (float3)(inBody.PosX, inBody.PosY, inBody.PosZ);
 							float3 dir = outPos - inPos;
 							float distSqrt = DISTANCE(outPos, inPos);
-							float dist = length(dir);
+							float dist = dot(dir, dir);
+
+							//// Temp delta from p2p conduction.
+							//float tempK = 0.9f;//0.5f;//2.0f;//1.0f;
+							//float tempDiff = outBody.Temp - inBody.Temp;
+							//tempDelta += (-0.5 * tempK) * (tempDiff / dist);
+
 							// Calc the distance and check for collision.
 							if (distSqrt <= sph.kSize)
 							{
@@ -1003,7 +1009,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 
 									// Temp delta from p2p conduction.
-									float tempK = 0.9f;//0.5f;//2.0f;//1.0f;
+									float tempK = 0.5f;//0.5f;//2.0f;//1.0f;
 									float tempDiff = outBody.Temp - inBody.Temp;
 									tempDelta += (-0.5 * tempK) * (tempDiff / dist);
 
@@ -1076,7 +1082,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	//if (outBody.Temp > 0)
 	//	outBody.Temp -= radiationD * dt;
-
+	
 	outBody.Temp = min(outBody.Temp, maxTemp);
 	outBody.Temp = max(outBody.Temp, 1.0f);
 
