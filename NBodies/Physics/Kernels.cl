@@ -1,6 +1,6 @@
 
 
-typedef struct __attribute__((packed)) Body
+typedef struct __attribute__((aligned(2))) Body
 {
 	float PosX;
 	float PosY;
@@ -65,7 +65,7 @@ typedef struct GridInfo
 
 } GridInfo;
 
-typedef struct __attribute__((packed)) SPHPreCalc
+typedef struct SPHPreCalc
 {
 	float kSize;
 	float kSizeSq;
@@ -78,7 +78,7 @@ typedef struct __attribute__((packed)) SPHPreCalc
 
 } SPHPreCalc;
 
-typedef struct __attribute__((packed)) SimSettings
+typedef struct SimSettings
 {
 	float KernelSize;
 	float DeltaTime;
