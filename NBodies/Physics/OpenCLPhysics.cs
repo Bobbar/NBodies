@@ -151,6 +151,9 @@ namespace NBodies.Physics
                 throw;
             }
 
+            //var bins = Encoding.UTF8.GetString(_program.Binaries[0]);
+            //File.WriteAllText(Environment.CurrentDirectory + "/Physics/Kernels.ptx", bins);
+
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
@@ -281,12 +284,6 @@ namespace NBodies.Physics
 
             _currentFrame++;
 
-            // Calc center of mass on GPU from top-most level.
-            _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
-            _calcCMKernel.SetMemoryArgument(1, _gpuCM);
-            _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
-            _calcCMKernel.SetValueArgument(3, _meshLength);
-            _queue.ExecuteTask(_calcCMKernel, null);
 
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
@@ -462,6 +459,13 @@ namespace NBodies.Physics
 
             // Build the remaining (upper) levels of the mesh.
             BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
+
+            // Calc center of mass on GPU from top-most level.
+            _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
+            _calcCMKernel.SetMemoryArgument(1, _gpuCM);
+            _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
+            _calcCMKernel.SetValueArgument(3, _meshLength);
+            _queue.ExecuteTask(_calcCMKernel, null);
 
             // Build Nearest Neighbor List.
             PopNeighborsMeshGPU(_meshLength);

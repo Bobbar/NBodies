@@ -1220,5 +1220,16 @@ namespace NBodies.Rendering
             }
         }
 
+        private void InitializeComponent()
+        {
+            this.SuspendLayout();
+            // 
+            // OpenTKControl
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.Name = "OpenTKControl";
+            this.ResumeLayout(false);
+
+        }
     }
 }

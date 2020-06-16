@@ -35,7 +35,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\Release-3D-Heat\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -266,6 +266,9 @@
     <Content Include="Rendering\Textures\bubble.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Rendering\OpenTKControl.resx">
+      <DependentUpon>OpenTKControl.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="UI\AddBodiesForm.resx">
       <DependentUpon>AddBodiesForm.cs</DependentUpon>
     </EmbeddedResource>

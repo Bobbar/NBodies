@@ -107,12 +107,14 @@ constant int INROCHE = 8;
 #if FASTMATH
 
 #define DISTANCE(a,b) fast_distance(a,b)
-#define SQRT(a) native_sqrt(a)
+#define SQRT(a) half_sqrt(a)
+#define LENGTH(a) fast_length(a)
 
 #else
 
 #define DISTANCE(a,b) distance(a,b)
 #define SQRT(a) sqrt(a)
+#define LENGTH(a) length(a)
 
 #endif
 
@@ -461,22 +463,24 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	float fMass = inBodies[firstIdx].Mass;
 
 	MeshCell newCell;
+	newCell.ID = m;
 	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
 	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
-	newCell.Size = cellSize;
-	newCell.BodyStartIdx = firstIdx;
-	newCell.BodyCount = 1;
-	newCell.ChildCount = 0;
-	newCell.ID = m;
-	newCell.Level = 0;
-	newCell.ParentID = -1;
 	newCell.CmX = fMass * fPosX;
 	newCell.CmY = fMass * fPosY;
 	newCell.CmZ = fMass * fPosZ;
 	newCell.Mass = fMass;
+	newCell.Size = cellSize;
+	newCell.BodyStartIdx = firstIdx;
+	newCell.BodyCount = 1;
 	newCell.NeighborStartIdx = -1;
 	newCell.NeighborCount = 0;
+	newCell.ChildStartIdx = -1;
+	newCell.ChildCount = 0;
+	newCell.ParentID = -1;
+	newCell.Level = 0;
+	newCell.GridIdx = -1;
 
 	inBodies[firstIdx].MeshID = m;
 
@@ -521,23 +525,24 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 
 
 	MeshCell newCell;
+	newCell.ID = newIdx;
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
 	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
-	newCell.Size = cellSize;
-	newCell.ChildStartIdx = firstIdx;
-	newCell.ChildCount = 1;
-	newCell.ID = newIdx;
-	newCell.Level = level;
-	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
-	newCell.BodyCount = mesh[firstIdx].BodyCount;
-	newCell.ParentID = -1;
 	newCell.CmX = mass * mesh[firstIdx].CmX;
 	newCell.CmY = mass * mesh[firstIdx].CmY;
 	newCell.CmZ = mass * mesh[firstIdx].CmZ;
 	newCell.Mass = mass;
+	newCell.Size = cellSize;
+	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
+	newCell.BodyCount = mesh[firstIdx].BodyCount;
 	newCell.NeighborStartIdx = -1;
 	newCell.NeighborCount = 0;
+	newCell.ChildStartIdx = firstIdx;
+	newCell.ChildCount = 1;
+	newCell.ParentID = -1;
+	newCell.Level = level;
+	newCell.GridIdx = -1;
 
 	mesh[firstIdx].ParentID = newIdx;
 
@@ -595,8 +600,14 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 {
 	float3 dir = posA - posB;
+	
+#if FASTMATH
 	float dist = dot(dir, dir);
 	float distSqrt = SQRT(dist);
+#else
+	float distSqrt = LENGTH(dir);
+	float dist = pow(distSqrt, 2);
+#endif
 
 	// Clamp to soften length.
 	dist = max(dist, SOFTENING);
@@ -672,8 +683,14 @@ __kernel void CalcForceLocal(global Body* inBodies, int inBodiesLen, global Mesh
 						float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
 
 						float3 dir = jPos - iPos;
+
+#if FASTMATH
 						float dist = dot(dir, dir);
 						float distSqrt = SQRT(dist);
+#else
+						float distSqrt = LENGTH(dir);
+						float dist = pow(distSqrt, 2);
+#endif
 
 						// If this body is within collision/SPH distance.
 						if (distSqrt <= sph.kSize)
@@ -956,8 +973,17 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							Body inBody = inBodies[(mb)];
 							float3 inPos = (float3)(inBody.PosX, inBody.PosY, inBody.PosZ);
 							float3 dir = outPos - inPos;
-							float distSqrt = DISTANCE(outPos, inPos);
+
+#if FASTMATH
 							float dist = dot(dir, dir);
+							float distSqrt = SQRT(dist);
+#else
+							float distSqrt = LENGTH(dir);
+							float dist = pow(distSqrt, 2);
+#endif
+
+							/*float distSqrt = DISTANCE(outPos, inPos);
+							float dist = dot(dir, dir);*/
 
 							//// Temp delta from p2p conduction.
 							//float tempK = 0.9f;//0.5f;//2.0f;//1.0f;
@@ -1001,7 +1027,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									outBody.ForceX += veloDiffX * viscScalar;
 									outBody.ForceY += veloDiffY * viscScalar;
 									outBody.ForceZ += veloDiffZ * viscScalar;
-								
+
 									float velo = veloDiffX * veloDiffX + veloDiffY * veloDiffY + veloDiffZ * veloDiffZ;
 									/*outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
 									outBody.ForceY += (inBody.VeloY - outBody.VeloY) * viscScalar;
@@ -1021,7 +1047,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									float heatJ = 4.1550f;
 									float heatFac = 1950;
 									tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * (2));
-									
+
 
 
 								}
@@ -1082,7 +1108,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	//if (outBody.Temp > 0)
 	//	outBody.Temp -= radiationD * dt;
-	
+
 	outBody.Temp = min(outBody.Temp, maxTemp);
 	outBody.Temp = max(outBody.Temp, 1.0f);
 
