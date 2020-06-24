@@ -1,6 +1,6 @@
 
 
-typedef struct __attribute__((aligned(2))) Body
+typedef struct Body
 {
 	float PosX;
 	float PosY;
@@ -462,15 +462,14 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	float fPosZ = inBodies[firstIdx].PosZ;
 	float fMass = inBodies[firstIdx].Mass;
 
+	double3 nCM = (double3)(fMass * fPosX, fMass * fPosY, fMass * fPosZ);
+	double nMass = fMass;
+
 	MeshCell newCell;
 	newCell.ID = m;
 	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
 	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
-	newCell.CmX = fMass * fPosX;
-	newCell.CmY = fMass * fPosY;
-	newCell.CmZ = fMass * fPosZ;
-	newCell.Mass = fMass;
 	newCell.Size = cellSize;
 	newCell.BodyStartIdx = firstIdx;
 	newCell.BodyCount = 1;
@@ -491,19 +490,20 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 		float posZ = inBodies[i].PosZ;
 		float mass = inBodies[i].Mass;
 
-		newCell.Mass += mass;
-		newCell.CmX += mass * posX;
-		newCell.CmY += mass * posY;
-		newCell.CmZ += mass * posZ;
+		nMass += mass;
+		nCM.x += mass * posX;
+		nCM.y += mass * posY;
+		nCM.z += mass * posZ;
 
 		newCell.BodyCount++;
 
 		inBodies[i].MeshID = m;
 	}
 
-	newCell.CmX = newCell.CmX / newCell.Mass;
-	newCell.CmY = newCell.CmY / newCell.Mass;
-	newCell.CmZ = newCell.CmZ / newCell.Mass;
+	newCell.Mass = nMass;
+	newCell.CmX = (nCM.x / nMass);
+	newCell.CmY = (nCM.y / nMass);
+	newCell.CmZ = (nCM.z / nMass);
 
 	mesh[m] = newCell;
 }
@@ -521,18 +521,19 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 
 	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
 	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset;
-	float mass = mesh[firstIdx].Mass;
 
+	double3 nCM;
+	double nMass;
 
 	MeshCell newCell;
 	newCell.ID = newIdx;
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
 	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
-	newCell.CmX = mass * mesh[firstIdx].CmX;
-	newCell.CmY = mass * mesh[firstIdx].CmY;
-	newCell.CmZ = mass * mesh[firstIdx].CmZ;
-	newCell.Mass = mass;
+
+	nMass = mesh[firstIdx].Mass;
+	nCM = (double3)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY, nMass * mesh[firstIdx].CmZ);
+
 	newCell.Size = cellSize;
 	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
 	newCell.BodyCount = mesh[firstIdx].BodyCount;
@@ -550,10 +551,10 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	{
 		float mass = mesh[i].Mass;
 
-		newCell.Mass += mass;
-		newCell.CmX += mass * mesh[i].CmX;
-		newCell.CmY += mass * mesh[i].CmY;
-		newCell.CmZ += mass * mesh[i].CmZ;
+		nMass += mass;
+		nCM.x += mass * mesh[i].CmX;
+		nCM.y += mass * mesh[i].CmY;
+		nCM.z += mass * mesh[i].CmZ;
 
 		newCell.ChildCount++;
 		newCell.BodyCount += mesh[i].BodyCount;
@@ -561,9 +562,10 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 		mesh[i].ParentID = newIdx;
 	}
 
-	newCell.CmX = newCell.CmX / newCell.Mass;
-	newCell.CmY = newCell.CmY / newCell.Mass;
-	newCell.CmZ = newCell.CmZ / newCell.Mass;
+	newCell.Mass = nMass;
+	newCell.CmX = (nCM.x / nMass);
+	newCell.CmY = (nCM.y / nMass);
+	newCell.CmZ = (nCM.z / nMass);
 
 	mesh[newIdx] = newCell;
 }
@@ -600,7 +602,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 {
 	float3 dir = posA - posB;
-	
+
 #if FASTMATH
 	float dist = dot(dir, dir);
 	float distSqrt = SQRT(dist);

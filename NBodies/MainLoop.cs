@@ -108,7 +108,7 @@ namespace NBodies
 
             set
             {
-                if (value >= 1 & value <= 10)
+                if (value >= 1 & value <= 20)
                 {
                     _meshLevels = value;
                 }
@@ -260,8 +260,8 @@ namespace NBodies
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
         private const float _cullDistance = 6000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
-        private static int _cellSizeExp = 3;
-        private static int _meshLevels = 4;
+        private static int _cellSizeExp = 2;
+        private static int _meshLevels = 10;
         private static int _threadsPBExp = 8;
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
         private static int _targetFPS = 60;
