@@ -250,9 +250,6 @@ __kernel void CompressCount(int len, global int* cellmapIn, global int* cellmapO
 
 	if (gid > 0)
 	{
-		/*for (int b = bid - 1; b >= 0; b--)
-			offset += counts[b];*/
-
 		for (int b = 0; b < gid; b++)
 		{
 			wStart += counts[b];
@@ -278,9 +275,6 @@ __kernel void Count(global long2* morts, int len, global int* cellmap, global in
 	if (gid >= len)
 		return;
 
-	/*volatile __local int* lCount[1];
-	volatile __local int* lMap[256];*/
-
 	volatile __local int lCount;
 	volatile __local int lMap[256];
 
@@ -290,9 +284,10 @@ __kernel void Count(global long2* morts, int len, global int* cellmap, global in
 
 		for (int i = 0; i < 256; i++)
 			lMap[i] = -1;
-
-		//lMap[0] = 0;
 	}
+
+	// The hell doesn't this work?
+	//lMap[tid] = -1;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -306,31 +301,11 @@ __kernel void Count(global long2* morts, int len, global int* cellmap, global in
 	}
 	else
 	{
-
 		if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
 		{
 			atomic_inc(&lCount);
 			lMap[tid] = gid + 1;
 		}
-
-		/*if (tid < 255)
-		{
-			if (morts[gid] != morts[gid + 1])
-			{
-				atomic_inc(&count[0]);
-				lMap[tid] = gid;
-			}
-		}
-		else if (tid == 255)
-		{
-			if (morts[gid] != morts[gid + 1])
-			{
-				atomic_inc(&count[0]);
-				lMap[tid] = gid;
-			}
-
-		}*/
-
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -361,9 +336,6 @@ __kernel void CountMesh(global long* morts, int len, global int* cellmap, global
 	if (gid >= len)
 		return;
 
-	/*volatile __local int* lCount[1];
-	volatile __local int* lMap[256];*/
-
 	volatile __local int lCount;
 	volatile __local int lMap[256];
 
@@ -376,6 +348,9 @@ __kernel void CountMesh(global long* morts, int len, global int* cellmap, global
 
 		//lMap[0] = 0;
 	}
+
+	// The hell doesn't this work?
+	// lMap[tid] = -1;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
