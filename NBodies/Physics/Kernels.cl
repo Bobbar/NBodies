@@ -385,6 +385,7 @@ __kernel void CountMesh(global long* morts, int len, global int* cellmap, global
 		{
 			atomic_inc(&lCount);
 			lMap[0] = 1;
+
 		}
 	}
 	else
@@ -501,162 +502,8 @@ __kernel void ReindexBodies2(global Body* inBodies, int blen, global long2* sort
 }
 
 
-__kernel void ClearGrid(global int* gridIdx, long passStride, long passOffset, global MeshCell* mesh, int meshLen, int topStart)
-{
-	int m = get_global_id(0) + topStart;
 
-	if (m >= meshLen)
-	{
-		return;
-	}
 
-	int idx = mesh[m].GridIdx;
-	idx -= passOffset;
-
-	if (idx >= 0 && idx < passStride)
-	{
-		gridIdx[idx] = -1;
-	}
-}
-
-long GridHash(long x, long y, long z, GridInfo grid)
-{
-	long column = x + grid.OffsetX;
-	long row = y + grid.OffsetY;
-	long layer = z + grid.OffsetZ;
-
-	return ((layer * grid.Rows) * grid.Columns) + (row * grid.Columns) + column;
-}
-
-__kernel void PopGrid(global int* gridIdx, long passStride, long passOffset, global GridInfo* gridInfo, global MeshCell* mesh, int meshLen, int topStart)
-{
-	int m = get_global_id(0);
-	int readM = m + topStart;
-
-	if (readM >= meshLen)
-		return;
-
-	MeshCell cell;
-	cell.IdxX = mesh[readM].IdxX;
-	cell.IdxY = mesh[readM].IdxY;
-	cell.IdxZ = mesh[readM].IdxZ;
-	cell.Level = mesh[readM].Level;
-	cell.GridIdx = 0;
-
-	GridInfo grid;
-	grid.OffsetX = gridInfo[cell.Level].OffsetX;
-	grid.OffsetY = gridInfo[cell.Level].OffsetY;
-	grid.OffsetZ = gridInfo[cell.Level].OffsetZ;
-	grid.Rows = gridInfo[cell.Level].Rows;
-	grid.Columns = gridInfo[cell.Level].Columns;
-	grid.IndexOffset = gridInfo[cell.Level].IndexOffset;
-
-	// Compute bucket index.
-	long bucket = GridHash(cell.IdxX, cell.IdxY, cell.IdxZ, grid);
-
-	// Offset bucket for this level.
-	bucket += grid.IndexOffset;
-
-	// Set cell grid index to the actual bucket location.
-	cell.GridIdx = bucket;
-
-	// Offset bucket index with the pass offset. 
-	// This offset is greater than 0 only when more than 1 pass is needed.
-	bucket -= passOffset;
-
-	// Make sure the bucket fits withing this pass.
-	if (bucket >= 0 && bucket < passStride)
-	{
-		gridIdx[bucket] = readM;
-	}
-
-	//if (bucket >= 0)
-	//{
-	//	if (passStride > 0 && bucket < passStride)
-	//		gridIdx[bucket] = readM;
-	//	else
-	//		gridIdx[bucket] = readM;
-	//}
-
-	mesh[readM].GridIdx = cell.GridIdx;
-}
-
-// Uniform grid based nearest neighbor search.
-__kernel void BuildNeighborsGrid(global MeshCell* mesh, int meshLen, global GridInfo* gridInfo, global int* gridIdx, long passStride, long passOffset, global int* neighborIndex, int topStart)
-{
-	int m = get_global_id(0);
-	int readM = m + topStart;
-
-	if (readM >= meshLen)
-		return;
-
-	long offset = m * 27;
-
-	int cellLevel = mesh[readM].Level;
-	long count = mesh[readM].NeighborCount;
-	int3 Idx = (int3)(mesh[readM].IdxX, mesh[readM].IdxY, mesh[readM].IdxZ);
-
-	GridInfo grid = gridInfo[cellLevel];
-
-#if USELUT
-
-	// Look up table for shifts.
-	// A single loop is faster, and we can better control the order of the shifts if needed.
-	int3 shiftLut[] = { { -1,-1,-1 },{ -1,-1,0 },{ -1,-1,1 },{ -1,0,-1 },{ -1,0,0 },{ -1,0,1 },{ -1,1,-1 },{ -1,1,0 },{ -1,1,1 },{ 0,-1,-1 },{ 0,-1,0 },{ 0,-1,1 },{ 0,0,-1 },{ 0,0,0 },{ 0,0,1 },{ 0,1,-1 },{ 0,1,0 },{ 0,1,1 },{ 1,-1,-1 },{ 1,-1,0 },{ 1,-1,1 },{ 1,0,-1 },{ 1,0,0 },{ 1,0,1 },{ 1,1,-1 },{ 1,1,0 },{ 1,1,1 } };
-
-	// Shift bucket index around the cell and check for populated grid index buckets.
-	for (int s = 0; s < 27; s++)
-	{
-		int3 sIdx = Idx + shiftLut[s];
-		long localIdx = GridHash(sIdx.x, sIdx.y, sIdx.z, grid);
-		if (localIdx >= 0 && localIdx < grid.Size)
-		{
-			long bucket = localIdx + grid.IndexOffset - passOffset;
-			if (bucket >= 0 && bucket < passStride)
-			{
-				long idx = gridIdx[bucket];
-				// Check for populated bucket and poplate neighbor index.
-				if (idx >= 0)
-				{
-					neighborIndex[(offset + count++)] = idx;
-				}
-			}
-		}
-	}
-
-#else
-
-	// Shift bucket index around the cell and check for populated grid index buckets.
-	for (int x = -1; x <= 1; x++)
-	{
-		for (int y = -1; y <= 1; y++)
-		{
-			for (int z = -1; z <= 1; z++)
-			{
-				long localIdx = GridHash(Idx.x + x, Idx.y + y, Idx.z + z, grid);
-				if (localIdx >= 0 && localIdx < grid.Size)
-				{
-					long bucket = localIdx + grid.IndexOffset - passOffset;
-					if (bucket >= 0 && bucket < passStride)
-					{
-						long idx = gridIdx[bucket];
-						// Check for populated bucket and poplate neighbor index.
-						if (idx >= 0)
-						{
-							neighborIndex[(offset + count++)] = idx;
-						}
-					}
-				}
-
-			}
-		}
-	}
-
-#endif
-
-	mesh[readM].NeighborStartIdx = offset;
-	mesh[readM].NeighborCount = count;
-}
 
 // Top-down mesh based nearest neighbor search.
 __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
@@ -724,7 +571,10 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 {
 	int m = get_global_id(0);
 
-	if (m > meshLen)
+	/*if (m > meshLen)
+		return;*/
+
+	if (m >= meshLen)
 		return;
 
 	int firstIdx = 0;
@@ -732,7 +582,7 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 		firstIdx = cellMap[m - 1];
 
 	int lastIdx = cellMap[m];
-	if (m == meshLen)
+	if (m == meshLen - 1)
 		lastIdx = bodyLen;
 
 
@@ -863,7 +713,7 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	//if (m > parentLen)
 	//	return;
 
-	if (m > parentLen)
+	if (m >= parentLen)
 		return;
 
 	int newIdx = m + childsEnd;
@@ -873,7 +723,7 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 		firstIdx += cellMap[m - 1];
 
 	int lastIdx = childsStart + cellMap[m];
-	if (m == parentLen)
+	if (m == parentLen - 1)
 		lastIdx = childsEnd;
 
 
