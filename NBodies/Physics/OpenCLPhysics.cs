@@ -408,6 +408,7 @@ namespace NBodies.Physics
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
 
+            _queue.Finish();
            
 
             // Compute gravity and SPH forces for the near/local field.
@@ -420,6 +421,10 @@ namespace NBodies.Physics
             _forceKernelLocal.SetValueArgument(argi++, _preCalcs);
             _queue.Execute(_forceKernelLocal, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             // _queue.Finish();
+
+
+            _queue.Finish();
+            timer.Print("Force Local");
 
             // Compute gravity forces for the far/distant field.
             argi = 0;
@@ -435,6 +440,9 @@ namespace NBodies.Physics
             _queue.Execute(_forceKernelFar, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
             //_queue.Finish();
 
+            _queue.Finish();
+            timer.Print("Force Far");
+
             // Compute elastic collisions.
             argi = 0;
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
@@ -444,7 +452,10 @@ namespace NBodies.Physics
             _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-          //   _queue.Finish();
+            //   _queue.Finish();
+
+            _queue.Finish();
+            timer.Print("Elast Col");
 
             // Compute SPH forces/collisions.
             argi = 0;
@@ -458,7 +469,10 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-          //  _queue.Finish();
+            //  _queue.Finish();
+
+            _queue.Finish();
+            timer.Print("SPH Col");
 
             isPostNeeded = Convert.ToBoolean(ReadBuffer(_gpuPostNeeded)[0]);
 
@@ -559,15 +573,30 @@ namespace NBodies.Physics
 
             int padLen = ComputePaddedSize(_bodies.Length);
 
-            
+
+            _queue.Finish();
+            timer.Restart();
 
             ComputeMortsGPU(padLen, cellSizeExp);
 
+            _queue.Finish();
+            timer.Print("Morts");
+
             SortByMortGPU(padLen);
+
+            _queue.Finish();
+            timer.Print("Sort");
 
             ReindexBodiesGPU2();
 
+            _queue.Finish();
+            timer.Print("Reindex");
+
             BuildMeshGPU(cellSizeExp);
+
+            _queue.Finish();
+            timer.Print("Mesh");
+
 
 
             //// [Bottom level]
@@ -618,7 +647,11 @@ namespace NBodies.Physics
             // Build Nearest Neighbor List.
             PopNeighborsMeshGPU(_meshLength);
 
-        //   var mesh = ReadBuffer(_gpuMesh, true);
+            _queue.Finish();
+            timer.Print("Ns");
+
+
+            //   var mesh = ReadBuffer(_gpuMesh, true);
 
         }
 
