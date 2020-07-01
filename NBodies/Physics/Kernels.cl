@@ -1,4 +1,4 @@
-
+//#include "SortKernels.cl"
 
 typedef struct Body
 {
@@ -119,6 +119,15 @@ constant int INROCHE = 8;
 #endif
 
 
+#define _BITS 8
+#define _RADIX 256
+#define _GROUPS 128
+#define _ITEMS 4
+#define _TILESIZE 32
+#define KEY_TYPE long
+#define INDEX_TYPE long
+
+long MortonNumber(long x, long y, long z);
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
 long GridHash(long x, long y, long z, GridInfo grid);
 bool IsFar(MeshCell cell, MeshCell testCell);
@@ -174,6 +183,258 @@ bool HasFlagB(Body body, int check)
 }
 
 
+long MortonNumber(long x, long y, long z)
+{
+	x &= 0x1fffff;
+	x = (x | x << 32) & 0x1f00000000ffff;
+	x = (x | x << 16) & 0x1f0000ff0000ff;
+	x = (x | x << 8) & 0x100f00f00f00f00f;
+	x = (x | x << 4) & 0x10c30c30c30c30c3;
+	x = (x | x << 2) & 0x1249249249249249;
+
+	y &= 0x1fffff;
+	y = (y | y << 32) & 0x1f00000000ffff;
+	y = (y | y << 16) & 0x1f0000ff0000ff;
+	y = (y | y << 8) & 0x100f00f00f00f00f;
+	y = (y | y << 4) & 0x10c30c30c30c30c3;
+	y = (y | y << 2) & 0x1249249249249249;
+
+	z &= 0x1fffff;
+	z = (z | z << 32) & 0x1f00000000ffff;
+	z = (z | z << 16) & 0x1f0000ff0000ff;
+	z = (z | z << 8) & 0x100f00f00f00f00f;
+	z = (z | z << 4) & 0x10c30c30c30c30c3;
+	z = (z | z << 2) & 0x1249249249249249;
+
+	return x | (y << 1) | (z << 2);
+}
+
+__kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
+{
+	int gid = get_global_id(0);
+
+	if (gid < len)
+	{
+		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
+		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
+		int idxZ = (int)floor(bodies[gid].PosZ) >> cellSizeExp;
+
+		long morton = MortonNumber(idxX, idxY, idxZ);
+
+		morts[gid].x = morton;
+		morts[gid].y = gid;
+	}
+	else
+	{
+		if (gid < padLen)
+		{
+			// Fill padded region...
+			morts[gid].x = LONG_MAX;
+			morts[gid].y = -1;//gid;
+		}
+	}
+
+}
+
+__kernel void CompressCount(int len, global int* cellmapIn, global int* cellmapOut, global int* counts)
+{
+	int gid = get_global_id(0);
+
+	if (gid >= len)
+		return;
+
+	int rStart = gid * 256;
+	int count = 0;
+	int myLen = counts[gid];
+	int wStart = 0;
+
+	if (gid > 0)
+	{
+		/*for (int b = bid - 1; b >= 0; b--)
+			offset += counts[b];*/
+
+		for (int b = 0; b < gid; b++)
+		{
+			wStart += counts[b];
+		}
+	}
+
+
+	for (int i = 0; i < myLen; i++)
+	{
+		cellmapOut[wStart + i] = cellmapIn[rStart + i];
+	}
+
+
+
+}
+
+__kernel void Count(global long2* morts, int len, global int* cellmap, global int* counts, int blocks)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	/*volatile __local int* lCount[1];
+	volatile __local int* lMap[256];*/
+
+	volatile __local int lCount;
+	volatile __local int lMap[256];
+
+	if (tid == 0)
+	{
+		lCount = 0;
+
+		for (int i = 0; i < 256; i++)
+			lMap[i] = -1;
+
+		//lMap[0] = 0;
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if (gid == 0)
+	{
+		if (morts[0].x != morts[1].x)
+		{
+			atomic_inc(&lCount);
+			lMap[0] = 1;
+		}
+	}
+	else
+	{
+
+		if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
+		{
+			atomic_inc(&lCount);
+			lMap[tid] = gid + 1;
+		}
+
+		/*if (tid < 255)
+		{
+			if (morts[gid] != morts[gid + 1])
+			{
+				atomic_inc(&count[0]);
+				lMap[tid] = gid;
+			}
+		}
+		else if (tid == 255)
+		{
+			if (morts[gid] != morts[gid + 1])
+			{
+				atomic_inc(&count[0]);
+				lMap[tid] = gid;
+			}
+
+		}*/
+
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if (tid == 0)
+	{
+		int n = 0;
+		for (int i = 0; i < 256; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[256 * bid + n++] = val;
+
+			//cellmap[256 * bid + n++] = val;
+		}
+
+		counts[bid] = lCount;
+	}
+}
+
+__kernel void CountMesh(global long* morts, int len, global int* cellmap, global int* counts)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	/*volatile __local int* lCount[1];
+	volatile __local int* lMap[256];*/
+
+	volatile __local int lCount;
+	volatile __local int lMap[256];
+
+	if (tid == 0)
+	{
+		lCount = 0;
+
+		for (int i = 0; i < 256; i++)
+			lMap[i] = -1;
+
+		//lMap[0] = 0;
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if (gid == 0)
+	{
+		if (morts[0] != morts[1])
+		{
+			atomic_inc(&lCount);
+			lMap[0] = 1;
+		}
+	}
+	else
+	{
+
+		if ((gid + 1) < len && morts[gid] != morts[gid + 1])
+		{
+			atomic_inc(&lCount);
+			lMap[tid] = gid + 1;
+		}
+
+		/*if (tid < 255)
+		{
+		if (morts[gid] != morts[gid + 1])
+		{
+		atomic_inc(&count[0]);
+		lMap[tid] = gid;
+		}
+		}
+		else if (tid == 255)
+		{
+		if (morts[gid] != morts[gid + 1])
+		{
+		atomic_inc(&count[0]);
+		lMap[tid] = gid;
+		}
+
+		}*/
+
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if (tid == 0)
+	{
+		int n = 0;
+		for (int i = 0; i < 256; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[256 * bid + n++] = val;
+
+			//cellmap[256 * bid + n++] = val;
+		}
+
+		counts[bid] = lCount;
+	}
+}
+
 __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
 	int i = get_global_id(0);
@@ -224,6 +485,19 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap
 		return;
 
 	outBodies[b] = inBodies[sortMap[b]];
+}
+
+__kernel void ReindexBodies2(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
+{
+	int b = get_global_id(0);
+
+	if (b >= blen)
+		return;
+
+	int newIdx = (int)sortMap[b].y;
+
+	if (newIdx > -1)
+		outBodies[b] = inBodies[newIdx];
 }
 
 
@@ -446,16 +720,89 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborInde
 	mesh[readM].NeighborCount = count;
 }
 
+__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
+{
+	int m = get_global_id(0);
 
-__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellIdx, int cellSizeExp, int cellSize)
+	if (m > meshLen)
+		return;
+
+	int firstIdx = 0;
+	if (m > 0)
+		firstIdx = cellMap[m - 1];
+
+	int lastIdx = cellMap[m];
+	if (m == meshLen)
+		lastIdx = bodyLen;
+
+
+	float fPosX = inBodies[firstIdx].PosX;
+	float fPosY = inBodies[firstIdx].PosY;
+	float fPosZ = inBodies[firstIdx].PosZ;
+	float fMass = inBodies[firstIdx].Mass;
+
+	double3 nCM = (double3)(fMass * fPosX, fMass * fPosY, fMass * fPosZ);
+	double nMass = fMass;
+
+	MeshCell newCell;
+	newCell.ID = m;
+	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
+	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
+	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
+	newCell.Size = cellSize;
+	newCell.BodyStartIdx = firstIdx;
+	newCell.BodyCount = 1;
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
+	newCell.ChildStartIdx = -1;
+	newCell.ChildCount = 0;
+	newCell.ParentID = -1;
+	newCell.Level = 0;
+	newCell.GridIdx = -1;
+
+
+	int idxX = newCell.IdxX >> 1;
+	int idxY = newCell.IdxY >> 1;
+	int idxZ = newCell.IdxZ >> 1;
+	long morton = MortonNumber(idxX, idxY, idxZ);
+	parentMorts[m] = morton;
+
+	inBodies[firstIdx].MeshID = m;
+
+	for (int i = firstIdx + 1; i < lastIdx; i++)
+	{
+		float posX = inBodies[i].PosX;
+		float posY = inBodies[i].PosY;
+		float posZ = inBodies[i].PosZ;
+		float mass = inBodies[i].Mass;
+
+		nMass += mass;
+		nCM.x += mass * posX;
+		nCM.y += mass * posY;
+		nCM.z += mass * posZ;
+
+		newCell.BodyCount++;
+
+		inBodies[i].MeshID = m;
+	}
+
+	newCell.Mass = nMass;
+	newCell.CmX = (nCM.x / nMass);
+	newCell.CmY = (nCM.y / nMass);
+	newCell.CmZ = (nCM.z / nMass);
+
+	mesh[m] = newCell;
+}
+
+__kernel void BuildBottomOG(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellMap, int cellSizeExp, int cellSize)
 {
 	int m = get_global_id(0);
 
 	if (m >= meshLen)
 		return;
 
-	int firstIdx = cellIdx[m];
-	int lastIdx = cellIdx[m + 1];
+	int firstIdx = cellMap[m];
+	int lastIdx = cellMap[m + 1];
 
 	float fPosX = inBodies[firstIdx].PosX;
 	float fPosY = inBodies[firstIdx].PosY;
@@ -509,7 +856,84 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 }
 
 
-__kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int cellSizeExp, int cellSize, int levelOffset, int cellIdxOffset, int level)
+__kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, int childsEnd, global int* cellMap, int cellSize, int level, global long* parentMorts)
+{
+	int m = get_global_id(0);
+
+	//if (m > parentLen)
+	//	return;
+
+	if (m > parentLen)
+		return;
+
+	int newIdx = m + childsEnd;
+
+	int firstIdx = childsStart;
+	if (m > 0)
+		firstIdx += cellMap[m - 1];
+
+	int lastIdx = childsStart + cellMap[m];
+	if (m == parentLen)
+		lastIdx = childsEnd;
+
+
+	double3 nCM;
+	double nMass;
+
+	MeshCell newCell;
+	newCell.ID = newIdx;
+	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
+	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
+	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
+
+	nMass = mesh[firstIdx].Mass;
+	nCM = (double3)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY, nMass * mesh[firstIdx].CmZ);
+
+	newCell.Size = cellSize;
+	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
+	newCell.BodyCount = mesh[firstIdx].BodyCount;
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
+	newCell.ChildStartIdx = firstIdx;
+	newCell.ChildCount = 1;
+	newCell.ParentID = -1;
+	newCell.Level = level;
+	newCell.GridIdx = -1;
+
+	mesh[firstIdx].ParentID = newIdx;
+
+
+	int idxX = newCell.IdxX >> 1;
+	int idxY = newCell.IdxY >> 1;
+	int idxZ = newCell.IdxZ >> 1;
+	long morton = MortonNumber(idxX, idxY, idxZ);
+	parentMorts[m] = morton;
+
+
+	for (int i = firstIdx + 1; i < lastIdx; i++) // < or <=???
+	{
+		float mass = mesh[i].Mass;
+
+		nMass += mass;
+		nCM.x += mass * mesh[i].CmX;
+		nCM.y += mass * mesh[i].CmY;
+		nCM.z += mass * mesh[i].CmZ;
+
+		newCell.ChildCount++;
+		newCell.BodyCount += mesh[i].BodyCount;
+
+		mesh[i].ParentID = newIdx;
+	}
+
+	newCell.Mass = nMass;
+	newCell.CmX = (nCM.x / nMass);
+	newCell.CmY = (nCM.y / nMass);
+	newCell.CmZ = (nCM.z / nMass);
+
+	mesh[newIdx] = newCell;
+}
+
+__kernel void BuildTopOG(global MeshCell* mesh, int len, global int* cellMap, int cellSizeExp, int cellSize, int levelOffset, int cellIdxOffset, int level)
 {
 	int m = get_global_id(0);
 
@@ -519,8 +943,8 @@ __kernel void BuildTop(global MeshCell* mesh, int len, global int* cellIdx, int 
 	int cellIdxOff = m + cellIdxOffset;
 	int newIdx = m + (cellIdxOffset - level);
 
-	int firstIdx = cellIdx[cellIdxOff] + levelOffset;
-	int lastIdx = cellIdx[cellIdxOff + 1] + levelOffset;
+	int firstIdx = cellMap[cellIdxOff] + levelOffset;
+	int lastIdx = cellMap[cellIdxOff + 1] + levelOffset;
 
 	double3 nCM;
 	double nMass;
@@ -1061,6 +1485,8 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		}
 	}
 
+
+
 	// Integrate.
 	outBody.VeloX += sim.DeltaTime * outBody.ForceX / outBody.Mass;
 	outBody.VeloY += sim.DeltaTime * outBody.ForceY / outBody.Mass;
@@ -1148,4 +1574,236 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 	outBody.Mass += bodyB.Mass;
 
 	return outBody;
+}
+
+
+
+
+
+// Sorting kernels...
+
+// Sort kernels
+// EB Jun 2011
+
+
+#define KTYPE long
+
+typedef long2 data_t;
+#define getKey(a) ((a).x)
+#define getValue(a) ((a).y)
+#define makeData(k,v) ((long2)((k),(v)))
+
+// One thread per record
+__kernel void Copy(__global const data_t * in, __global data_t * out)
+{
+	int i = get_global_id(0); // current thread
+	out[i] = in[i]; // copy
+}
+
+//#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b)); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
+//#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(a) == -1); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
+#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(b) == -1); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
+//23232323232323
+
+
+// N/2 threads
+__kernel void ParallelBitonic_B2(__global data_t * data, int inc, int dir)
+{
+	int t = get_global_id(0); // thread index
+	int low = t & (inc - 1); // low order bits (below INC)
+	int i = (t << 1) - low; // insert 0 at position INC
+	bool reverse = ((dir & i) == 0); // asc/desc order
+	data += i; // translate to first value
+
+			   // Load
+	data_t x0 = data[0];
+	data_t x1 = data[inc];
+
+	// Sort
+	ORDER(x0, x1)
+
+		// Store
+		data[0] = x0;
+	data[inc] = x1;
+}
+
+// N/4 threads
+__kernel void ParallelBitonic_B4(__global data_t * data, int inc, int dir)
+{
+	inc >>= 1;
+	int t = get_global_id(0); // thread index
+	int low = t & (inc - 1); // low order bits (below INC)
+	int i = ((t - low) << 2) + low; // insert 00 at position INC
+	bool reverse = ((dir & i) == 0); // asc/desc order
+	data += i; // translate to first value
+
+			   // Load
+	data_t x0 = data[0];
+	data_t x1 = data[inc];
+	data_t x2 = data[2 * inc];
+	data_t x3 = data[3 * inc];
+
+	// Sort
+	ORDER(x0, x2)
+		ORDER(x1, x3)
+		ORDER(x0, x1)
+		ORDER(x2, x3)
+
+		// Store
+		data[0] = x0;
+	data[inc] = x1;
+	data[2 * inc] = x2;
+	data[3 * inc] = x3;
+}
+
+//#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b])); \
+//      data_t auxa = x[a]; data_t auxb = x[b]; \
+//      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
+
+//#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[a]) == -1); \
+//      data_t auxa = x[a]; data_t auxb = x[b]; \
+//      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
+
+#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[b]) == -1); \
+      data_t auxa = x[a]; data_t auxb = x[b]; \
+      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
+
+#define B2V(x,a) { ORDERV(x,a,a+1) }
+#define B4V(x,a) { for (int i4=0;i4<2;i4++) { ORDERV(x,a+i4,a+i4+2) } B2V(x,a) B2V(x,a+2) }
+#define B8V(x,a) { for (int i8=0;i8<4;i8++) { ORDERV(x,a+i8,a+i8+4) } B4V(x,a) B4V(x,a+4) }
+#define B16V(x,a) { for (int i16=0;i16<8;i16++) { ORDERV(x,a+i16,a+i16+8) } B8V(x,a) B8V(x,a+8) }
+
+// N/8 threads
+__kernel void ParallelBitonic_B8(__global data_t * data, int inc, int dir)
+{
+	inc >>= 2;
+	int t = get_global_id(0); // thread index
+	int low = t & (inc - 1); // low order bits (below INC)
+	int i = ((t - low) << 3) + low; // insert 000 at position INC
+	bool reverse = ((dir & i) == 0); // asc/desc order
+	data += i; // translate to first value
+
+			   // Load
+	data_t x[8];
+	for (int k = 0; k < 8; k++) x[k] = data[k*inc];
+
+	// Sort
+	B8V(x, 0)
+
+		// Store
+		for (int k = 0; k < 8; k++) data[k*inc] = x[k];
+}
+
+// N/16 threads
+__kernel void ParallelBitonic_B16(__global data_t * data, int inc, int dir)
+{
+	inc >>= 3;
+	int t = get_global_id(0); // thread index
+	int low = t & (inc - 1); // low order bits (below INC)
+	int i = ((t - low) << 4) + low; // insert 0000 at position INC
+	bool reverse = ((dir & i) == 0); // asc/desc order
+	data += i; // translate to first value
+
+			   // Load
+	data_t x[16];
+	for (int k = 0; k < 16; k++) x[k] = data[k*inc];
+
+	// Sort
+	B16V(x, 0)
+
+		// Store
+		for (int k = 0; k < 16; k++) data[k*inc] = x[k];
+}
+
+
+// N/2 threads, AUX[2*WG]
+__kernel void ParallelBitonic_C2(__global data_t * data, int inc0, int dir, __local data_t * aux)
+{
+	int t = get_global_id(0); // thread index
+	int wgBits = 2 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 2*WG)
+
+	for (int inc = inc0; inc > 0; inc >>= 1)
+	{
+		int low = t & (inc - 1); // low order bits (below INC)
+		int i = (t << 1) - low; // insert 0 at position INC
+		bool reverse = ((dir & i) == 0); // asc/desc order
+		data_t x0, x1;
+
+		// Load
+		if (inc == inc0)
+		{
+			// First iteration: load from global memory
+			x0 = data[i];
+			x1 = data[i + inc];
+		}
+		else
+		{
+			// Other iterations: load from local memory
+			barrier(CLK_LOCAL_MEM_FENCE);
+			x0 = aux[i & wgBits];
+			x1 = aux[(i + inc) & wgBits];
+		}
+
+		// Sort
+		ORDER(x0, x1)
+
+			//	printf("%i : %i \n", x0.x, x0.y);
+
+			// Store
+			if (inc == 1)
+			{
+				// Last iteration: store to global memory
+				data[i] = x0;
+				data[i + inc] = x1;
+			}
+			else
+			{
+				// Other iterations: store to local memory
+				barrier(CLK_LOCAL_MEM_FENCE);
+				aux[i & wgBits] = x0;
+				aux[(i + inc) & wgBits] = x1;
+			}
+	}
+}
+
+__kernel void ParallelBitonic_C4(__global data_t * data, int inc0, int dir, __local data_t * aux)
+{
+	int t = get_global_id(0); // thread index
+	int wgBits = 4 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 4*WG)
+	int inc, low, i;
+	bool reverse;
+	data_t x[4];
+
+	// First iteration, global input, local output
+	inc = inc0 >> 1;
+	low = t & (inc - 1); // low order bits (below INC)
+	i = ((t - low) << 2) + low; // insert 00 at position INC
+	reverse = ((dir & i) == 0); // asc/desc order
+	for (int k = 0; k < 4; k++) x[k] = data[i + k*inc];
+	B4V(x, 0);
+
+	//printf("%i : %i \n", x[0].x, x[0].y);
+
+	for (int k = 0; k < 4; k++) aux[(i + k*inc) & wgBits] = x[k];
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Internal iterations, local input and output
+	for (; inc > 1; inc >>= 2)
+	{
+		low = t & (inc - 1); // low order bits (below INC)
+		i = ((t - low) << 2) + low; // insert 00 at position INC
+		reverse = ((dir & i) == 0); // asc/desc order
+		for (int k = 0; k < 4; k++) x[k] = aux[(i + k*inc) & wgBits];
+		B4V(x, 0);
+		barrier(CLK_LOCAL_MEM_FENCE);
+		for (int k = 0; k < 4; k++) aux[(i + k*inc) & wgBits] = x[k];
+		barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	// Final iteration, local input, global output, INC=1
+	i = t << 2;
+	reverse = ((dir & i) == 0); // asc/desc order
+	for (int k = 0; k < 4; k++) x[k] = aux[(i + k) & wgBits];
+	B4V(x, 0);
+	for (int k = 0; k < 4; k++) data[i + k] = x[k];
 }

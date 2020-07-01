@@ -439,6 +439,8 @@ namespace NBodies
                                     _skipPhysics = true;
                                 }
                             }
+
+                           // _skipPhysics = true;
                         }
                     }
 
@@ -506,6 +508,8 @@ namespace NBodies
                         else
                             FPSLimiter(_pauseFPS);
                     }
+
+                   
                 }
             }
             catch (OperationCanceledException)

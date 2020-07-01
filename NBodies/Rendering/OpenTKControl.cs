@@ -942,6 +942,10 @@ namespace NBodies.Rendering
                     // Offset camera position to keep selected body in view.
                     _camera.Position = _camera.Position - body.PositionVec();
                     _camFollowOffset = _camera.Position;
+
+
+                    body.PrintInfo();
+
                     break;
                 }
             }

@@ -35,7 +35,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release-3D-Heat\</OutputPath>
+    <OutputPath>bin\Release-3D-Heat_Test\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -149,6 +149,7 @@
     <Compile Include="Physics\Structs\Flags.cs" />
     <Compile Include="Physics\Structs\GridInfo.cs" />
     <Compile Include="Physics\Structs\LevelInfo.cs" />
+    <Compile Include="Physics\Structs\Long2.cs" />
     <Compile Include="Physics\Structs\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\Structs\MeshCell.cs" />
@@ -299,6 +300,9 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Physics\Kernels.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\SortKernels.cl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Properties\Settings.settings">
