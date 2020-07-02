@@ -19,7 +19,6 @@ namespace NBodies.Physics
         private int _gpuIndex = 4;
         private int _levels = 4;
         private static int _threadsPerBlock = 256;
-        private int _parallelPartitions = 14;//12;
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
@@ -152,8 +151,6 @@ namespace NBodies.Physics
 
                 if (_useFastMath)
                     options = $@"-cl-std=CL1.2 -cl-fast-relaxed-math -D FASTMATH";
-
-                //options = $@"-cl-std=CL1.2 -I '{Environment.CurrentDirectory}/Physics/' -cl-fast-relaxed-math -D FASTMATH";
                 else
                     options = $"-cl-std=CL1.2";
 
@@ -262,10 +259,6 @@ namespace NBodies.Physics
             _gpuBodyMorts = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuBodyMorts, 1, true);
 
-            //_gpuMortIdsSorted = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            //Allocate(ref _gpuMortIdsSorted, 1, true);
-
-
             _gpuMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMap, 1, true);
 
@@ -337,6 +330,9 @@ namespace NBodies.Physics
             _cellMeshMapKernel.Dispose();
             _compressCellMapKernel.Dispose();
             _computeMortsKernel.Dispose();
+
+            foreach (var kern in _sortKerns)
+                kern.Value.Dispose();
 
             _program.Dispose();
             _context.Dispose();
@@ -684,9 +680,9 @@ namespace NBodies.Physics
 
             int blocks = BlockCount(_bodies.Length);
 
-            Allocate(ref _gpuMap, _bodies.Length, true);
-            Allocate(ref _gpuMapFlat, _bodies.Length, true);
-            Allocate(ref _gpuCounts, blocks, true);
+            Allocate(ref _gpuMap, _bodies.Length, false);
+            Allocate(ref _gpuMapFlat, _bodies.Length, false);
+            Allocate(ref _gpuCounts, blocks, false);
 
             // Build initial map.
             _cellMapKernel.SetMemoryArgument(0, _gpuBodyMorts);
@@ -704,7 +700,7 @@ namespace NBodies.Physics
             _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
 
             // Read the counts computed by each block and compute the total count.
-            var counts = ReadBuffer(_gpuCounts, true);
+            var counts = ReadBuffer(_gpuCounts, 0, blocks, false);  // Should we block here?
 
             int childCount = 0;
             foreach (var c in counts)
@@ -715,7 +711,7 @@ namespace NBodies.Physics
             // Check mesh buffer allocation.
             // Allocate morts for the parent level.
             Allocate(ref _gpuMesh, childCount, false);
-            Allocate(ref _gpuParentMorts, childCount, true);
+            Allocate(ref _gpuParentMorts, childCount, false);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
             _buildBottomKernel.SetMemoryArgument(0, _gpuInBodies);
@@ -753,7 +749,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
 
-                counts = ReadBuffer(_gpuCounts, true);
+                counts = ReadBuffer(_gpuCounts, 0, blocks, false); // Should we block here?
 
                 // Compute parent level cell count;
                 int parentCellCount = 0;
@@ -914,18 +910,18 @@ namespace NBodies.Physics
         {
             T[] buf = new T[buffer.Count];
 
-            _queue.ReadFromBuffer(buffer, ref buf, true, null);
-            if (blocking) _queue.Finish();
+            _queue.ReadFromBuffer(buffer, ref buf, blocking, null);
+            if (blocking) _queue.Finish(); // This is probably redundant...
 
             return buf;
         }
 
-        private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, long offset, long length) where T : struct
+        private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, long offset, long length, bool blocking = false) where T : struct
         {
             T[] buf = new T[length - offset];
 
-            _queue.ReadFromBuffer(buffer, ref buf, true, offset, 0, length - offset, null);
-            _queue.Finish();
+            _queue.ReadFromBuffer(buffer, ref buf, blocking, offset, 0, length - offset, null);
+            if (blocking) _queue.Finish(); // This is probably redundant...
 
             return buf;
         }
