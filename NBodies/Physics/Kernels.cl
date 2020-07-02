@@ -426,8 +426,8 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 
 	// Make sure we don't hit a padded element.
 	// This condition may be safe to remove.
-	if (newIdx > -1)
-		outBodies[b] = inBodies[newIdx];
+	//if (newIdx > -1)
+	outBodies[b] = inBodies[newIdx];
 }
 
 

@@ -72,7 +72,7 @@ namespace NBodies.Rendering
         private Shader _shader;
         private Shader _textShader;
 
-        private float[] _orderDist = new float[0];
+        private int[] _orderDist = new int[0];
         private int[] _orderIdx = new int[0];
 
         private RenderText _text;
@@ -756,25 +756,74 @@ namespace NBodies.Rendering
         {
             if (_orderDist.Length != bodies.Length)
             {
-                _orderDist = new float[bodies.Length];
+                _orderDist = new int[bodies.Length];
                 _orderIdx = new int[bodies.Length];
             }
 
-            for (int i = 0; i < bodies.Length; i++)
+            ParallelForSlim(bodies.Length, 8, (start, len) =>
             {
-                var body = bodies[i];
-                var pos = body.PositionVec();
+                for (int i = start; i < len; i++)
+                {
+                    var body = bodies[i];
+                    var pos = body.PositionVec();
 
-                float dist = Vector3.Distance(pos, _camera.Position);
-                _orderDist[i] = dist;
-                _orderIdx[i] = i;
-            }
+                    float dist = Vector3.DistanceSquared(pos, _camera.Position);
+                    _orderDist[i] = (int)dist;
+                    _orderIdx[i] = i;
+                }
+            });
 
             Array.Sort(_orderDist, _orderIdx);
             Array.Reverse(_orderIdx);
 
             return _orderIdx;
         }
+
+        private ParallelLoopResult ParallelForSlim(int count, int partitions, Action<int, int> body)
+        {
+            int pLen, pRem, pCount;
+            Partition(count, partitions, out pLen, out pRem, out pCount);
+            return Parallel.For(0, pCount, (p) =>
+            {
+                int offset = p * pLen;
+                int len = offset + pLen;
+
+                if (p == pCount - 1)
+                    len += pRem;
+
+                body(offset, len);
+            });
+        }
+
+        /// <summary>
+        /// Computes parameters for partitioning the specified length into the specified number of parts.
+        /// </summary>
+        /// <param name="length">Total number of items to be partitioned.</param>
+        /// <param name="parts">Number of partitions to compute.</param>
+        /// <param name="partLen">Computed length of each part.</param>
+        /// <param name="modulo">Computed modulo or remainder to be added to the last partitions length.</param>
+        /// <param name="count">Computed number of partitions. If parts is greater than length, this will be 1.</param>
+        private void Partition(int length, int parts, out int partLen, out int modulo, out int count)
+        {
+            int outpLen, outMod;
+
+            outpLen = length / parts;
+            outMod = length % parts;
+
+            if (parts >= length || outpLen <= 1)
+            {
+                partLen = length;
+                modulo = 0;
+                count = 1;
+            }
+            else
+            {
+                partLen = outpLen;
+                modulo = outMod;
+                count = parts;
+            }
+        }
+
 
         private Color GetStyleColor(Body body, int index)
         {
