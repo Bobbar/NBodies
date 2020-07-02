@@ -1,4 +1,3 @@
-//#include "SortKernels.cl"
 
 typedef struct Body
 {
@@ -118,7 +117,7 @@ constant int INROCHE = 8;
 
 #endif
 
-
+// Sorting defs.
 #define _BITS 8
 #define _RADIX 256
 #define _GROUPS 128
@@ -126,6 +125,7 @@ constant int INROCHE = 8;
 #define _TILESIZE 32
 #define KEY_TYPE long
 #define INDEX_TYPE long
+#define PADDING_ELEM -1
 
 long MortonNumber(long x, long y, long z);
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
@@ -182,7 +182,6 @@ bool HasFlagB(Body body, int check)
 	return (check & body.Flag) != 0;
 }
 
-
 long MortonNumber(long x, long y, long z)
 {
 	x &= 0x1fffff;
@@ -209,6 +208,7 @@ long MortonNumber(long x, long y, long z)
 	return x | (y << 1) | (z << 2);
 }
 
+
 __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
 {
 	int gid = get_global_id(0);
@@ -230,7 +230,7 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 		{
 			// Fill padded region...
 			morts[gid].x = LONG_MAX;
-			morts[gid].y = -1;//gid;
+			morts[gid].y = PADDING_ELEM;//-1;
 		}
 	}
 
@@ -256,14 +256,10 @@ __kernel void CompressCount(int len, global int* cellmapIn, global int* cellmapO
 		}
 	}
 
-
 	for (int i = 0; i < myLen; i++)
 	{
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
 	}
-
-
-
 }
 
 __kernel void Count(global long2* morts, int len, global int* cellmap, global int* counts, int blocks)
@@ -287,7 +283,7 @@ __kernel void Count(global long2* morts, int len, global int* cellmap, global in
 	}
 
 	// The hell doesn't this work?
-	//lMap[tid] = -1;
+	// lMap[tid] = -1;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -345,8 +341,6 @@ __kernel void CountMesh(global long* morts, int len, global int* cellmap, global
 
 		for (int i = 0; i < 256; i++)
 			lMap[i] = -1;
-
-		//lMap[0] = 0;
 	}
 
 	// The hell doesn't this work?
@@ -360,36 +354,15 @@ __kernel void CountMesh(global long* morts, int len, global int* cellmap, global
 		{
 			atomic_inc(&lCount);
 			lMap[0] = 1;
-
 		}
 	}
 	else
 	{
-
 		if ((gid + 1) < len && morts[gid] != morts[gid + 1])
 		{
 			atomic_inc(&lCount);
 			lMap[tid] = gid + 1;
 		}
-
-		/*if (tid < 255)
-		{
-		if (morts[gid] != morts[gid + 1])
-		{
-		atomic_inc(&count[0]);
-		lMap[tid] = gid;
-		}
-		}
-		else if (tid == 255)
-		{
-		if (morts[gid] != morts[gid + 1])
-		{
-		atomic_inc(&count[0]);
-		lMap[tid] = gid;
-		}
-
-		}*/
-
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -453,17 +426,7 @@ __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* o
 }
 
 
-__kernel void ReindexBodies(global Body* inBodies, int blen, global int* sortMap, global Body* outBodies)
-{
-	int b = get_global_id(0);
-
-	if (b >= blen)
-		return;
-
-	outBodies[b] = inBodies[sortMap[b]];
-}
-
-__kernel void ReindexBodies2(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
+__kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
 {
 	int b = get_global_id(0);
 
@@ -475,9 +438,6 @@ __kernel void ReindexBodies2(global Body* inBodies, int blen, global long2* sort
 	if (newIdx > -1)
 		outBodies[b] = inBodies[newIdx];
 }
-
-
-
 
 
 // Top-down mesh based nearest neighbor search.
@@ -546,9 +506,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 {
 	int m = get_global_id(0);
 
-	/*if (m > meshLen)
-		return;*/
-
 	if (m >= meshLen)
 		return;
 
@@ -560,7 +517,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	if (m == meshLen - 1)
 		lastIdx = bodyLen;
 
-
 	float fPosX = inBodies[firstIdx].PosX;
 	float fPosY = inBodies[firstIdx].PosY;
 	float fPosZ = inBodies[firstIdx].PosZ;
@@ -585,73 +541,12 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.Level = 0;
 	newCell.GridIdx = -1;
 
-
+	// Compute parent level morton numbers.
 	int idxX = newCell.IdxX >> 1;
 	int idxY = newCell.IdxY >> 1;
 	int idxZ = newCell.IdxZ >> 1;
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
-
-	inBodies[firstIdx].MeshID = m;
-
-	for (int i = firstIdx + 1; i < lastIdx; i++)
-	{
-		float posX = inBodies[i].PosX;
-		float posY = inBodies[i].PosY;
-		float posZ = inBodies[i].PosZ;
-		float mass = inBodies[i].Mass;
-
-		nMass += mass;
-		nCM.x += mass * posX;
-		nCM.y += mass * posY;
-		nCM.z += mass * posZ;
-
-		newCell.BodyCount++;
-
-		inBodies[i].MeshID = m;
-	}
-
-	newCell.Mass = nMass;
-	newCell.CmX = (nCM.x / nMass);
-	newCell.CmY = (nCM.y / nMass);
-	newCell.CmZ = (nCM.z / nMass);
-
-	mesh[m] = newCell;
-}
-
-__kernel void BuildBottomOG(global Body* inBodies, global MeshCell* mesh, int meshLen, global int* cellMap, int cellSizeExp, int cellSize)
-{
-	int m = get_global_id(0);
-
-	if (m >= meshLen)
-		return;
-
-	int firstIdx = cellMap[m];
-	int lastIdx = cellMap[m + 1];
-
-	float fPosX = inBodies[firstIdx].PosX;
-	float fPosY = inBodies[firstIdx].PosY;
-	float fPosZ = inBodies[firstIdx].PosZ;
-	float fMass = inBodies[firstIdx].Mass;
-
-	double3 nCM = (double3)(fMass * fPosX, fMass * fPosY, fMass * fPosZ);
-	double nMass = fMass;
-
-	MeshCell newCell;
-	newCell.ID = m;
-	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
-	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
-	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
-	newCell.Size = cellSize;
-	newCell.BodyStartIdx = firstIdx;
-	newCell.BodyCount = 1;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.ChildStartIdx = -1;
-	newCell.ChildCount = 0;
-	newCell.ParentID = -1;
-	newCell.Level = 0;
-	newCell.GridIdx = -1;
 
 	inBodies[firstIdx].MeshID = m;
 
@@ -685,9 +580,6 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 {
 	int m = get_global_id(0);
 
-	//if (m > parentLen)
-	//	return;
-
 	if (m >= parentLen)
 		return;
 
@@ -701,7 +593,6 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	if (m == parentLen - 1)
 		lastIdx = childsEnd;
 
-
 	double3 nCM;
 	double nMass;
 
@@ -727,74 +618,13 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 
 	mesh[firstIdx].ParentID = newIdx;
 
-
+	// Compute parent level morton numbers.
 	int idxX = newCell.IdxX >> 1;
 	int idxY = newCell.IdxY >> 1;
 	int idxZ = newCell.IdxZ >> 1;
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
 
-
-	for (int i = firstIdx + 1; i < lastIdx; i++) // < or <=???
-	{
-		float mass = mesh[i].Mass;
-
-		nMass += mass;
-		nCM.x += mass * mesh[i].CmX;
-		nCM.y += mass * mesh[i].CmY;
-		nCM.z += mass * mesh[i].CmZ;
-
-		newCell.ChildCount++;
-		newCell.BodyCount += mesh[i].BodyCount;
-
-		mesh[i].ParentID = newIdx;
-	}
-
-	newCell.Mass = nMass;
-	newCell.CmX = (nCM.x / nMass);
-	newCell.CmY = (nCM.y / nMass);
-	newCell.CmZ = (nCM.z / nMass);
-
-	mesh[newIdx] = newCell;
-}
-
-__kernel void BuildTopOG(global MeshCell* mesh, int len, global int* cellMap, int cellSizeExp, int cellSize, int levelOffset, int cellIdxOffset, int level)
-{
-	int m = get_global_id(0);
-
-	if (m >= len)
-		return;
-
-	int cellIdxOff = m + cellIdxOffset;
-	int newIdx = m + (cellIdxOffset - level);
-
-	int firstIdx = cellMap[cellIdxOff] + levelOffset;
-	int lastIdx = cellMap[cellIdxOff + 1] + levelOffset;
-
-	double3 nCM;
-	double nMass;
-
-	MeshCell newCell;
-	newCell.ID = newIdx;
-	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
-	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
-	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
-
-	nMass = mesh[firstIdx].Mass;
-	nCM = (double3)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY, nMass * mesh[firstIdx].CmZ);
-
-	newCell.Size = cellSize;
-	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
-	newCell.BodyCount = mesh[firstIdx].BodyCount;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.ChildStartIdx = firstIdx;
-	newCell.ChildCount = 1;
-	newCell.ParentID = -1;
-	newCell.Level = level;
-	newCell.GridIdx = -1;
-
-	mesh[firstIdx].ParentID = newIdx;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -1403,13 +1233,15 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 
 
 
-
-
-// Sorting kernels...
+// *** SORTING KERNELS ***
 
 // Sort kernels
 // EB Jun 2011
-
+//
+// Credit & Thanks to:
+// Eric Bainville - OpenCL Sorting
+// http://www.bealto.com/gpu-sorting_intro.html
+//
 
 #define KTYPE long
 
@@ -1425,10 +1257,8 @@ __kernel void Copy(__global const data_t * in, __global data_t * out)
 	out[i] = in[i]; // copy
 }
 
-//#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b)); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
-//#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(a) == -1); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
-#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(b) == -1); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
-//23232323232323
+// Added 'getValue(b) == PADDING_ELEM' to force padding elements to the end.
+#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(b) == PADDING_ELEM); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
 
 
 // N/2 threads
@@ -1481,15 +1311,8 @@ __kernel void ParallelBitonic_B4(__global data_t * data, int inc, int dir)
 	data[3 * inc] = x3;
 }
 
-//#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b])); \
-//      data_t auxa = x[a]; data_t auxb = x[b]; \
-//      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
-
-//#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[a]) == -1); \
-//      data_t auxa = x[a]; data_t auxb = x[b]; \
-//      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
-
-#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[b]) == -1); \
+// Added 'getValue(b) == PADDING_ELEM' to force padding elements to the end.
+#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[b]) == PADDING_ELEM); \
       data_t auxa = x[a]; data_t auxb = x[b]; \
       x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
 

@@ -51,27 +51,12 @@ namespace NBodies.Physics
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
-
-        private ComputeKernel _buildBottomOGKernel;
-        private ComputeKernel _buildTopOGKernel;
-
         private ComputeKernel _calcCMKernel;
         private ComputeKernel _reindexKernel;
-        private ComputeKernel _reindexKernel2;
-
-
         private ComputeKernel _cellMapKernel;
         private ComputeKernel _cellMeshMapKernel;
-
         private ComputeKernel _compressCellMapKernel;
         private ComputeKernel _computeMortsKernel;
-
-
-        private ComputeKernel _histoKernel;
-        private ComputeKernel _scanKernel;
-        private ComputeKernel _mergeKernel;
-        private ComputeKernel _reorderKernel;
-        private ComputeKernel _transposeKernel;
 
 
         private ComputeBuffer<MeshCell> _gpuMesh;
@@ -82,16 +67,11 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuSortMap;
         private ComputeBuffer<int> _gpuCellIdx;
         private ComputeBuffer<int> _gpuPostNeeded;
-
         private ComputeBuffer<int> _gpuMap;
         private ComputeBuffer<int> _gpuMapFlat;
         private ComputeBuffer<int> _gpuCounts;
         private ComputeBuffer<long> _gpuParentMorts;
-
-
-
         private ComputeBuffer<long2> _gpuBodyMorts;
-        //  private ComputeBuffer<long2> _gpuMortIdsSorted;
 
 
         private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
@@ -201,14 +181,8 @@ namespace NBodies.Physics
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
-
-            _buildBottomOGKernel = _program.CreateKernel("BuildBottomOG");
-            _buildTopOGKernel = _program.CreateKernel("BuildTopOG");
-
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
             _reindexKernel = _program.CreateKernel("ReindexBodies");
-
-            _reindexKernel2 = _program.CreateKernel("ReindexBodies2");
             _cellMapKernel = _program.CreateKernel("Count");
             _cellMeshMapKernel = _program.CreateKernel("CountMesh");
             _compressCellMapKernel = _program.CreateKernel("CompressCount");
@@ -219,7 +193,6 @@ namespace NBodies.Physics
             _sortKerns.Add(9, _program.CreateKernel("ParallelBitonic_B8"));
             _sortKerns.Add(8, _program.CreateKernel("ParallelBitonic_B4"));
             _sortKerns.Add(7, _program.CreateKernel("ParallelBitonic_B2"));
-
 
             InitBuffers();
 
@@ -324,7 +297,7 @@ namespace NBodies.Physics
             _gpuParentMorts.Dispose();
             _gpuMap.Dispose();
             _gpuMapFlat.Dispose();
-
+            _gpuBodyMorts.Dispose();
 
             _mesh = new MeshCell[0];
             _bufferInfo.Clear();
@@ -347,8 +320,7 @@ namespace NBodies.Physics
             _gpuParentMorts.Dispose();
             _gpuMap.Dispose();
             _gpuMapFlat.Dispose();
-
-
+            _gpuBodyMorts.Dispose();
 
 
             _forceKernelLocal.Dispose();
@@ -361,6 +333,10 @@ namespace NBodies.Physics
             _buildTopKernel.Dispose();
             _calcCMKernel.Dispose();
             _reindexKernel.Dispose();
+            _cellMapKernel.Dispose();
+            _cellMeshMapKernel.Dispose();
+            _compressCellMapKernel.Dispose();
+            _computeMortsKernel.Dispose();
 
             _program.Dispose();
             _context.Dispose();
@@ -558,44 +534,6 @@ namespace NBodies.Physics
             // Build each level of the mesh.
             BuildMeshGPU(cellSizeExp);
 
-
-
-            //// [Bottom level]
-            //// Compute cell count, cell index map and sort map.
-            //ComputeBodySpatials(cellSizeExp);
-
-            //// Start reindexing bodies on the GPU.
-            //ReindexBodiesGPU();
-
-            //// [Upper levels]
-            //// Compute cell count and cell index maps for all upper levels.
-            //ComputeUpperSpatials();
-
-            //// Get the total number of mesh cells to be created.
-            //int totCells = 0;
-            //foreach (var lvl in _levelInfo)
-            //    totCells += lvl.CellCount;
-
-            //_meshLength = totCells;
-
-            //// Allocate the mesh buffer on the GPU.
-            //Allocate(ref _gpuMesh, _meshLength, false);
-
-            //// Index to hold the starting indexes for each level within the 1D mesh array.
-
-
-            //// Write the cell index map as one large array to the GPU.
-            //WriteCellIndex(_levelInfo);
-
-            //// Build the first (bottom) level of the mesh.
-            //BuildBottomLevelGPU(_levelInfo[0], cellSizeExp);
-
-            //// Build the remaining (upper) levels of the mesh.
-            //BuildUpperLevelsGPU(_levelInfo, cellSizeExp, _levels);
-
-
-
-
             // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMesh);
             _calcCMKernel.SetMemoryArgument(1, _gpuCM);
@@ -603,121 +541,9 @@ namespace NBodies.Physics
             _calcCMKernel.SetValueArgument(3, _meshLength);
             _queue.ExecuteTask(_calcCMKernel, null);
 
-            // Debug.WriteLine($"MeshLen: {_meshLength}");
-
             // Build Nearest Neighbor List.
             PopNeighborsMeshGPU(_meshLength);
-
-            //   var mesh = ReadBuffer(_gpuMesh, true);
-
         }
-
-        /// <summary>
-        /// Computes spatial info (Morton number, X/Y indexes, mesh cell map and sort map) for all bodies.
-        /// </summary>
-        /// <param name="cellSizeExp">Cell size exponent. "Math.Pow(2, exponent)"</param>
-        private unsafe void ComputeBodySpatials(int cellSizeExp)
-        {
-            // Spatial info to be computed.
-            if (_bSpatials.Length < _bodies.Length)
-                _bSpatials = new SpatialInfo[_bodies.Length];
-
-            // Array of morton numbers used for sorting.
-            // Using a key array when sorting is much faster than sorting an array of objects by a field.
-            if (_mortKeys.Length < _bodies.Length)
-                _mortKeys = new long[_bodies.Length];
-
-            ////   var ids = new long[_bodies.Length];
-
-            // Compute the spatial info in parallel.
-            ParallelForSlim(_bodies.Length, _parallelPartitions, (start, len) =>
-            {
-                for (int b = start; b < len; b++)
-                {
-                    int idxX = (int)Math.Floor(_bodies[b].PosX) >> cellSizeExp;
-                    int idxY = (int)Math.Floor(_bodies[b].PosY) >> cellSizeExp;
-                    int idxZ = (int)Math.Floor(_bodies[b].PosZ) >> cellSizeExp;
-
-                    long morton = MortonNumber(idxX, idxY, idxZ);
-
-                    _bSpatials[b].Set(morton, idxX, idxY, idxZ, b);
-                    _mortKeys[b] = morton;
-                    //  ids[b] = b;
-                }
-            });
-
-            timer.Restart();
-
-            // Sort by morton number to produce a spatially sorted array.
-            Sort.ParallelQuickSort(_mortKeys, _bSpatials, _bodies.Length);
-
-
-            timer.Print("CPU Sort");
-
-
-            // ComputeMortsGPU(cellSizeExp);
-
-            // Compute number of unique morton numbers to determine cell count,
-            // and build the start index of each cell.
-            int count = 0;
-            long val = long.MaxValue;
-
-            // Allocate then map the sort map buffer so we can write to it directly.
-            Allocate(ref _gpuSortMap, _bodies.Length + 100);
-            var sortMapPtr = _queue.Map(_gpuSortMap, true, ComputeMemoryMappingFlags.Write, 0, _gpuSortMap.Count, null);
-            var sortMapNativePtr = (int*)sortMapPtr.ToPointer();
-
-            //var sortMortPtr = _queue.Map(_gpuMortIdsSorted, true, ComputeMemoryMappingFlags.Read, 0, _gpuMortIdsSorted.Count, null);
-            //var sortMortNativePtr = (long2*)sortMortPtr.ToPointer();
-
-
-            timer.Restart();
-
-            // Check cellindex allocation.
-            var cellIdx = _levelInfo[0].CellIndex;
-            if (cellIdx == null || cellIdx.Length < _bodies.Length)
-                cellIdx = new int[_bodies.Length + 100];
-
-            // This loop is a bit faster if we pin the arrays.
-            fixed (long* mortPtr = _mortKeys)
-            fixed (int* cellIdxPtr = cellIdx)
-            fixed (SpatialInfo* spaPtr = _bSpatials)
-            {
-                for (int i = 0; i < _bodies.Length; i++)
-                {
-                    var mort = mortPtr[i];
-                    // var mort = sortMortNativePtr[i].X;
-                    sortMapNativePtr[i] = spaPtr[i].Index;
-
-                    // Find the start of each new morton number and record location to build the cell index map.
-                    if (val != mort)
-                    {
-                        cellIdxPtr[count] = i;
-                        val = mort;
-                        count++;
-                    }
-
-                    //if (mortPtr[i] != mort)
-                    //    Debugger.Break();
-                }
-            }
-
-            // Add the last cell index value;
-            cellIdx[count] = _bodies.Length;
-
-
-            timer.Print("CPU Count");
-
-            //// Unmap the sort map buffer.
-            _queue.Unmap(_gpuSortMap, ref sortMapPtr, null);
-            //  _queue.Unmap(_gpuMortIdsSorted, ref sortMortPtr, null);
-
-            // Set the computed info.
-            _levelInfo[0].CellIndex = cellIdx;
-            _levelInfo[0].Spatials = _bSpatials;
-            _levelInfo[0].CellCount = count;
-        }
-
 
         private int ComputePaddedSize(int len)
         {
@@ -730,23 +556,7 @@ namespace NBodies.Physics
             }
 
             return maxLen;
-
-            //int padSize = 0;
-
-            //int mod = len % 256;
-            //if (mod > 0)
-            //    padSize = len + (256 - mod);
-            //else
-            //    padSize = len;
-
-
-            //while (((padSize / 2) % 256) > 0)
-            //    padSize += 256;
-
-            //return padSize;
-
         }
-
 
         private void ComputeMortsGPU(int padLen, int cellSizeExp)
         {
@@ -762,6 +572,12 @@ namespace NBodies.Physics
 
         private void SortByMortGPU(int padLen)
         {
+            //
+            // Credit & Thanks to:
+            // Eric Bainville - OpenCL Sorting
+            // http://www.bealto.com/gpu-sorting_intro.html
+            //
+
             int n = padLen;
             const int ALLOWB = 14;
 
@@ -807,8 +623,6 @@ namespace NBodies.Physics
                     int nThreads = 0;
                     int d = strategy.First(); strategy.RemoveAt(0);
 
-                    //   Debug.WriteLine($"Kid: {d}");
-
                     switch (d)
                     {
                         case -1:
@@ -845,7 +659,6 @@ namespace NBodies.Physics
                         default:
                             Debugger.Break();
                             break;
-
                     }
 
                     int wg = (int)_device.MaxWorkGroupSize;
@@ -861,12 +674,9 @@ namespace NBodies.Physics
 
                     if (ninc < 0) break; // done
                     inc >>= ninc;
-
                 }
-
             }
         }
-
 
         private void BuildMeshGPU(int cellSizeExp)
         {
@@ -903,9 +713,8 @@ namespace NBodies.Physics
             childCount += 1; // ????
 
             // Check mesh buffer allocation.
-            Allocate(ref _gpuMesh, childCount, false);
-
             // Allocate morts for the parent level.
+            Allocate(ref _gpuMesh, childCount, false);
             Allocate(ref _gpuParentMorts, childCount, true);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
@@ -923,19 +732,16 @@ namespace NBodies.Physics
             for (int level = 1; level <= _levels; level++)
             {
                 // Clear buffers.
-                // Is this really needed?
                 _queue.FillBuffer(_gpuCounts, new int[] { 0 }, 0, blocks, null);
-                _queue.FillBuffer(_gpuMap, new int[] { 0 }, 0, _bodies.Length, null);
-                _queue.FillBuffer(_gpuMapFlat, new int[] { 0 }, 0, _bodies.Length, null);
 
                 blocks = BlockCount(childCount);
 
                 // Record locations of each mesh level.
-                _levelIdx[level] = _levelIdx[level - 1] + childCount; // ????
+                _levelIdx[level] = _levelIdx[level - 1] + childCount;
 
                 // Build initial map from the morts computed at the child level.
                 _cellMeshMapKernel.SetMemoryArgument(0, _gpuParentMorts);
-                _cellMeshMapKernel.SetValueArgument(1, childCount); // ????
+                _cellMeshMapKernel.SetValueArgument(1, childCount);
                 _cellMeshMapKernel.SetMemoryArgument(2, _gpuMap);
                 _cellMeshMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _queue.Execute(_cellMeshMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
@@ -954,16 +760,13 @@ namespace NBodies.Physics
                 foreach (var c in counts)
                     parentCellCount += c;
 
-                parentCellCount += 1; // ????
+                parentCellCount += 1;
 
                 // Record total mesh length.
                 _meshLength = _levelIdx[level] + parentCellCount;
 
                 // Make sure the mesh buffer is large enough.
                 Allocate(ref _gpuMesh, _meshLength, false, true);
-
-                // Really neede?
-                _queue.FillBuffer(_gpuParentMorts, new long[] { 0 }, 0, childCount, null);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
@@ -982,178 +785,12 @@ namespace NBodies.Physics
 
         private void ReindexBodiesGPU()
         {
-            _reindexKernel2.SetMemoryArgument(0, _gpuOutBodies);
-            _reindexKernel2.SetValueArgument(1, _bodies.Length);
-            _reindexKernel2.SetMemoryArgument(2, _gpuBodyMorts);
-            _reindexKernel2.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel2, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
+            _reindexKernel.SetValueArgument(1, _bodies.Length);
+            _reindexKernel.SetMemoryArgument(2, _gpuBodyMorts);
+            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
+            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
-
-        /// <summary>
-        /// Computes spatial info (Morton number, X/Y indexes, mesh cell count) for all top mesh levels.
-        /// </summary>
-        private unsafe void ComputeUpperSpatials()
-        {
-            // Iterate and compute spatial info and cell index map for upper (parent) mesh levels.
-            for (int level = 1; level <= _levels; level++)
-            {
-                // Get child level spatials.
-                LevelInfo childLevel = _levelInfo[level - 1];
-                int childCount = childLevel.CellCount;
-
-                // Allocate spatials buffer for the parent level about to be computed.
-                if (_levelInfo[level].Spatials == null || _levelInfo[level].Spatials.Length < childCount)
-                    _levelInfo[level].Spatials = new SpatialInfo[childCount];
-
-                // Grab a pointer for the spatials.
-                SpatialInfo[] parentSpatials = _levelInfo[level].Spatials;
-
-                // Compute parent spatials in parallel.
-                // We don't need to read every element of the child spatials.
-                // Use the cell index map and count computed for the previous (child) level. 
-                ParallelForSlim(childCount, _parallelPartitions, (start, len) =>
-                {
-                    for (int p = start; p < len; p++)
-                    {
-                        // Read child level spatials at each cell location
-                        // and compute parent spatials.
-                        var spatial = childLevel.Spatials[childLevel.CellIndex[p]];
-                        int idxX = spatial.IdxX >> 1;
-                        int idxY = spatial.IdxY >> 1;
-                        int idxZ = spatial.IdxZ >> 1;
-
-                        long morton = MortonNumber(idxX, idxY, idxZ);
-
-                        parentSpatials[p].Set(morton, idxX, idxY, idxZ, spatial.Index + p);
-                    }
-                });
-
-                // Allocate cell index map buffer for the parent level.
-                if (_levelInfo[level].CellIndex == null || _levelInfo[level].CellIndex.Length < childCount)
-                    _levelInfo[level].CellIndex = new int[childCount + 1000];
-
-                var cellIdx = _levelInfo[level].CellIndex;
-                int count = 0;
-                long val = long.MaxValue;
-
-                // Compute cell index map and count for the parent.
-                // Pin for speed.
-                fixed (int* cellIdxPtr = cellIdx)
-                fixed (SpatialInfo* spaPtr = parentSpatials)
-                {
-                    for (int i = 0; i < childCount; i++)
-                    {
-                        var mort = spaPtr[i].Mort;
-
-                        if (val != mort)
-                        {
-                            cellIdxPtr[count] = i;
-                            val = mort;
-                            count++;
-                        }
-                    }
-                }
-
-                // Add the last cell index value;
-                cellIdx[count] = childCount;
-
-                // Write info for this level.
-                _levelInfo[level].CellIndex = cellIdx;
-                _levelInfo[level].Spatials = parentSpatials;
-                _levelInfo[level].CellCount = count;
-            }
-        }
-
-        private void WriteCellIndex(LevelInfo[] levelInfo)
-        {
-            // Writing the cell index as a single large array
-            // is much faster than chunking it in at each level.
-
-            // Calc total size of cell index.
-            long cellIdxLen = 0;
-            for (int i = 0; i < levelInfo.Length; i++)
-                cellIdxLen += levelInfo[i].CellCount + 1;
-
-            // Build 1D array of cell index.
-            if (_allCellIdx.Length < cellIdxLen)
-                _allCellIdx = new int[cellIdxLen + 1000]; // Add some padding to reduce future reallocations.
-
-            int cellIdxPos = 0;
-
-            // Append cell index from each level into 1D array.
-            for (int i = 0; i < levelInfo.Length; i++)
-            {
-                var cellIndex = levelInfo[i].CellIndex;
-                var count = levelInfo[i].CellCount + 1;
-
-                Array.Copy(cellIndex, 0, _allCellIdx, cellIdxPos, count);
-
-                cellIdxPos += count;
-            }
-
-            // Allocate and write to GPU.
-            Allocate(ref _gpuCellIdx, cellIdxLen);
-            _queue.WriteToBuffer(_allCellIdx, _gpuCellIdx, false, 0, 0, cellIdxLen, null);
-        }
-
-        /// <summary>
-        /// Populates the first (bottom) level of the mesh on the GPU.
-        /// </summary>
-        /// <param name="levelInfo">Level info for bottom.</param>
-        /// <param name="cellSizeExp">Current cell size exponent.</param>
-        /// <remarks>The first level (bottom) cell values are computed from the bodies.</remarks>
-        private void BuildBottomLevelGPU(LevelInfo levelInfo, int cellSizeExp)
-        {
-            int cellCount = levelInfo.CellCount;
-
-            _buildBottomOGKernel.SetMemoryArgument(0, _gpuInBodies);
-            _buildBottomOGKernel.SetMemoryArgument(1, _gpuMesh);
-            _buildBottomOGKernel.SetValueArgument(2, cellCount);
-            _buildBottomOGKernel.SetMemoryArgument(3, _gpuCellIdx);
-            _buildBottomOGKernel.SetValueArgument(4, cellSizeExp);
-            _buildBottomOGKernel.SetValueArgument(5, (int)Math.Pow(2.0f, cellSizeExp));
-
-            _queue.Execute(_buildBottomOGKernel, null, new long[] { BlockCount(cellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-        }
-
-        /// <summary>
-        /// Populates the remaining (top) levels of the mesh on the GPU.
-        /// </summary>
-        /// <param name="levelInfo">Complete collection of level infos.</param>
-        /// <param name="cellSizeExp">Current cell size exponent.</param>
-        /// <param name="levels">Current number of levels.</param>
-        /// <remarks>The top level cell values are computed from the previous level (child) cells.</remarks>
-        private void BuildUpperLevelsGPU(LevelInfo[] levelInfo, int cellSizeExp, int levels)
-        {
-            int cellIdxOffset = 0; // Read offset for cell index map.
-            int levelOffset = 0; // Offset for previous level mesh locations.  ( cellIndex[n] + levelOffset = mesh cells @ level - 1 )
-
-            for (int level = 1; level <= levels; level++)
-            {
-                int cellSizeExpLevel = cellSizeExp + level;
-                LevelInfo parentLevel = levelInfo[level];
-                LevelInfo childLevel = levelInfo[level - 1];
-
-                // Collect mesh level start indices.
-                _levelIdx[level] = _levelIdx[level - 1] + childLevel.CellCount;
-
-                // Get offsets for this level.
-                cellIdxOffset += childLevel.CellCount + 1;
-                levelOffset = _levelIdx[level - 1];
-
-                _buildTopOGKernel.SetMemoryArgument(0, _gpuMesh);
-                _buildTopOGKernel.SetValueArgument(1, parentLevel.CellCount);
-                _buildTopOGKernel.SetMemoryArgument(2, _gpuCellIdx);
-                _buildTopOGKernel.SetValueArgument(3, cellSizeExpLevel);
-                _buildTopOGKernel.SetValueArgument(4, (int)Math.Pow(2.0f, cellSizeExpLevel));
-                _buildTopOGKernel.SetValueArgument(5, levelOffset);
-                _buildTopOGKernel.SetValueArgument(6, cellIdxOffset);
-                _buildTopOGKernel.SetValueArgument(7, level);
-
-                _queue.Execute(_buildTopOGKernel, null, new long[] { BlockCount(parentLevel.CellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-            }
-        }
-
 
         private void PopNeighborsMeshGPU(int meshSize)
         {
@@ -1161,8 +798,6 @@ namespace NBodies.Physics
             // Each cell can have a max of 27 neighbors, including itself.
             int topSize = meshSize - _levelIdx[1];
             int neighborLen = topSize * 27;
-
-            //var mesh = ReadBuffer(_gpuMesh, true);
 
             // Reallocate and resize GPU buffer as needed.
             Allocate(ref _gpuMeshNeighbors, neighborLen);
