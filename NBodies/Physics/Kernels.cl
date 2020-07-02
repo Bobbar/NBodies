@@ -208,182 +208,6 @@ long MortonNumber(long x, long y, long z)
 	return x | (y << 1) | (z << 2);
 }
 
-
-__kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
-{
-	int gid = get_global_id(0);
-
-	if (gid < len)
-	{
-		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
-		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
-		int idxZ = (int)floor(bodies[gid].PosZ) >> cellSizeExp;
-
-		long morton = MortonNumber(idxX, idxY, idxZ);
-
-		morts[gid].x = morton;
-		morts[gid].y = gid;
-	}
-	else
-	{
-		if (gid < padLen)
-		{
-			// Fill padded region...
-			morts[gid].x = LONG_MAX;
-			morts[gid].y = PADDING_ELEM;//-1;
-		}
-	}
-
-}
-
-__kernel void CompressCount(int len, global int* cellmapIn, global int* cellmapOut, global int* counts)
-{
-	int gid = get_global_id(0);
-
-	if (gid >= len)
-		return;
-
-	int rStart = gid * 256;
-	int count = 0;
-	int myLen = counts[gid];
-	int wStart = 0;
-
-	if (gid > 0)
-	{
-		for (int b = 0; b < gid; b++)
-		{
-			wStart += counts[b];
-		}
-	}
-
-	for (int i = 0; i < myLen; i++)
-	{
-		cellmapOut[wStart + i] = cellmapIn[rStart + i];
-	}
-}
-
-__kernel void Count(global long2* morts, int len, global int* cellmap, global int* counts, int blocks)
-{
-	int gid = get_global_id(0);
-	int tid = get_local_id(0);
-	int bid = get_group_id(0);
-
-	if (gid >= len)
-		return;
-
-	volatile __local int lCount;
-	volatile __local int lMap[256];
-
-	if (tid == 0)
-	{
-		lCount = 0;
-
-		for (int i = 0; i < 256; i++)
-			lMap[i] = -1;
-	}
-
-	// The hell doesn't this work?
-	// lMap[tid] = -1;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	if (gid == 0)
-	{
-		if (morts[0].x != morts[1].x)
-		{
-			atomic_inc(&lCount);
-			lMap[0] = 1;
-		}
-	}
-	else
-	{
-		if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
-		{
-			atomic_inc(&lCount);
-			lMap[tid] = gid + 1;
-		}
-	}
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	if (tid == 0)
-	{
-		int n = 0;
-		for (int i = 0; i < 256; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[256 * bid + n++] = val;
-
-			//cellmap[256 * bid + n++] = val;
-		}
-
-		counts[bid] = lCount;
-	}
-}
-
-__kernel void CountMesh(global long* morts, int len, global int* cellmap, global int* counts)
-{
-	int gid = get_global_id(0);
-	int tid = get_local_id(0);
-	int bid = get_group_id(0);
-
-	if (gid >= len)
-		return;
-
-	volatile __local int lCount;
-	volatile __local int lMap[256];
-
-	if (tid == 0)
-	{
-		lCount = 0;
-
-		for (int i = 0; i < 256; i++)
-			lMap[i] = -1;
-	}
-
-	// The hell doesn't this work?
-	// lMap[tid] = -1;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	if (gid == 0)
-	{
-		if (morts[0] != morts[1])
-		{
-			atomic_inc(&lCount);
-			lMap[0] = 1;
-		}
-	}
-	else
-	{
-		if ((gid + 1) < len && morts[gid] != morts[gid + 1])
-		{
-			atomic_inc(&lCount);
-			lMap[tid] = gid + 1;
-		}
-	}
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	if (tid == 0)
-	{
-		int n = 0;
-		for (int i = 0; i < 256; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[256 * bid + n++] = val;
-
-			//cellmap[256 * bid + n++] = val;
-		}
-
-		counts[bid] = lCount;
-	}
-}
-
 __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
 	int i = get_global_id(0);
@@ -426,6 +250,171 @@ __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* o
 }
 
 
+__kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
+{
+	int gid = get_global_id(0);
+
+	if (gid < len)
+	{
+		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
+		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
+		int idxZ = (int)floor(bodies[gid].PosZ) >> cellSizeExp;
+
+		long morton = MortonNumber(idxX, idxY, idxZ);
+
+		morts[gid].x = morton;
+		morts[gid].y = gid;
+	}
+	else
+	{
+		if (gid < padLen)
+		{
+			// Fill padded region...
+			morts[gid].x = LONG_MAX;
+			morts[gid].y = PADDING_ELEM;
+		}
+	}
+}
+
+// Compresses/packs initial cell maps into the beginning of the buffer.
+// N threads = N blocks used in the map kernel.
+__kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts)
+{
+	int gid = get_global_id(0);
+
+	if (gid >= len)
+		return;
+
+	int rStart = gid * 256; // Read location. Offset by block size.
+	int nCount = counts[gid]; // Number of items this thread will copy.
+	int wStart = 0; // Write location into completed map.
+
+	// Find the write location for this thread.
+	if (gid > 0)
+	{
+		for (int b = 0; b < gid; b++)
+			wStart += counts[b];
+	}
+
+	// Copy the indexes to the output at the correct location.
+	for (int i = 0; i < nCount; i++)
+		cellmapOut[wStart + i] = cellmapIn[rStart + i];
+}
+
+
+// Builds initial cell map from sorted body morton number/index buffer (long2*).
+__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, int blocks)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	// Local memory
+	volatile __local int lCount;
+	volatile __local int lMap[256];
+
+	// First thread initializes local memory.
+	if (tid == 0)
+	{
+		lCount = 0;
+
+		for (int i = 0; i < 256; i++)
+			lMap[i] = -1;
+	}
+
+	// The hell doesn't this work?
+	// lMap[tid] = -1;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Compare two morton numbers and record location and increment count if they dont match.
+	// This is where a new cell starts and the previous cell ends.
+	if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
+	{
+		atomic_inc(&lCount);
+		lMap[tid] = gid + 1;
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Finally, the first thread dumps and packs the local memory for the block.
+	if (tid == 0)
+	{
+		// Pack the found indexes for the block into global memory.
+		int n = 0;
+		for (int i = 0; i < 256; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[256 * bid + n++] = val;
+		}
+
+		// Write the cell count for the block to global memory.
+		counts[bid] = lCount;
+	}
+}
+
+// Builds initial cell map from the parent level morton number buffer (long*). 
+__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	// Local memory
+	volatile __local int lCount;
+	volatile __local int lMap[256];
+
+	// First thread initializes local memory.
+	if (tid == 0)
+	{
+		lCount = 0;
+
+		for (int i = 0; i < 256; i++)
+			lMap[i] = -1;
+	}
+
+	// The hell doesn't this work?
+	// lMap[tid] = -1;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Compare two morton numbers and record location and increment count if they dont match.
+	// This is where a new cell starts and the previous cell ends.
+	if ((gid + 1) < len && morts[gid] != morts[gid + 1])
+	{
+		atomic_inc(&lCount);
+		lMap[tid] = gid + 1;
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Finally, the first thread dumps and packs the local memory for the block.
+	if (tid == 0)
+	{
+		// Pack the found indexes for the block into global memory.
+		int n = 0;
+		for (int i = 0; i < 256; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[256 * bid + n++] = val;
+		}
+
+		// Write the cell count for the block to global memory.
+		counts[bid] = lCount;
+	}
+}
+
+// Read indexes from the sorted morton buffer and copy bodies to their sorted location.
 __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
 {
 	int b = get_global_id(0);
@@ -435,72 +424,12 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 
 	int newIdx = (int)sortMap[b].y;
 
+	// Make sure we don't hit a padded element.
+	// This condition may be safe to remove.
 	if (newIdx > -1)
 		outBodies[b] = inBodies[newIdx];
 }
 
-
-// Top-down mesh based nearest neighbor search.
-__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
-{
-	int m = get_global_id(0);
-	int readM = m + start;
-
-	if (readM >= end)
-		return;
-
-	// Write location of the neighbor list.
-	long offset = (readM - botOffset) * 27;
-	int count = 0;
-
-	MeshCell cell = mesh[readM];
-
-	if (level == levels)
-	{
-		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
-		for (int i = start; i < end; i++)
-		{
-			MeshCell check;
-			check.IdxX = mesh[i].IdxX;
-			check.IdxY = mesh[i].IdxY;
-			check.IdxZ = mesh[i].IdxZ;
-
-			if (!IsFar(cell, check))
-			{
-				neighborIndex[(offset + count++)] = i;
-			}
-		}
-	}
-	else
-	{
-		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
-		MeshCell cellParent = mesh[cell.ParentID];
-
-		// Iterate parent cell neighbors.
-		int start = cellParent.NeighborStartIdx;
-		int len = start + cellParent.NeighborCount;
-		for (int nc = start; nc < len; nc++)
-		{
-			// Iterate neighbor child cells.
-			int nId = neighborIndex[(nc)];
-			int childStartIdx = mesh[(nId)].ChildStartIdx;
-			int childLen = childStartIdx + mesh[(nId)].ChildCount;
-			for (int c = childStartIdx; c < childLen; c++)
-			{
-				MeshCell child = mesh[(c)];
-
-				// Check for neighbors and add them to the list.
-				if (!IsFar(cell, child))
-				{
-					neighborIndex[(offset + count++)] = c;
-				}
-			}
-		}
-	}
-
-	mesh[readM].NeighborStartIdx = offset;
-	mesh[readM].NeighborCount = count;
-}
 
 __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
 {
@@ -647,6 +576,69 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	newCell.CmZ = (nCM.z / nMass);
 
 	mesh[newIdx] = newCell;
+}
+
+
+// Top-down mesh based nearest neighbor search.
+__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
+{
+	int m = get_global_id(0);
+	int readM = m + start;
+
+	if (readM >= end)
+		return;
+
+	// Write location of the neighbor list.
+	long offset = (readM - botOffset) * 27;
+	int count = 0;
+
+	MeshCell cell = mesh[readM];
+
+	if (level == levels)
+	{
+		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
+		for (int i = start; i < end; i++)
+		{
+			MeshCell check;
+			check.IdxX = mesh[i].IdxX;
+			check.IdxY = mesh[i].IdxY;
+			check.IdxZ = mesh[i].IdxZ;
+
+			if (!IsFar(cell, check))
+			{
+				neighborIndex[(offset + count++)] = i;
+			}
+		}
+	}
+	else
+	{
+		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
+		MeshCell cellParent = mesh[cell.ParentID];
+
+		// Iterate parent cell neighbors.
+		int start = cellParent.NeighborStartIdx;
+		int len = start + cellParent.NeighborCount;
+		for (int nc = start; nc < len; nc++)
+		{
+			// Iterate neighbor child cells.
+			int nId = neighborIndex[(nc)];
+			int childStartIdx = mesh[(nId)].ChildStartIdx;
+			int childLen = childStartIdx + mesh[(nId)].ChildCount;
+			for (int c = childStartIdx; c < childLen; c++)
+			{
+				MeshCell child = mesh[(c)];
+
+				// Check for neighbors and add them to the list.
+				if (!IsFar(cell, child))
+				{
+					neighborIndex[(offset + count++)] = c;
+				}
+			}
+		}
+	}
+
+	mesh[readM].NeighborStartIdx = offset;
+	mesh[readM].NeighborCount = count;
 }
 
 

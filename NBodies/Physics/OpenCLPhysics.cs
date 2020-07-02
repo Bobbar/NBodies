@@ -180,9 +180,9 @@ namespace NBodies.Physics
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
             _reindexKernel = _program.CreateKernel("ReindexBodies");
-            _cellMapKernel = _program.CreateKernel("Count");
-            _cellMeshMapKernel = _program.CreateKernel("CountMesh");
-            _compressCellMapKernel = _program.CreateKernel("CompressCount");
+            _cellMapKernel = _program.CreateKernel("MapBodies");
+            _cellMeshMapKernel = _program.CreateKernel("MapMesh");
+            _compressCellMapKernel = _program.CreateKernel("CompressMap");
             _computeMortsKernel = _program.CreateKernel("ComputeMorts");
 
             _sortKerns.Add(12, _program.CreateKernel("ParallelBitonic_C4"));
@@ -509,12 +509,9 @@ namespace NBodies.Physics
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
         private void BuildMesh(int cellSizeExp)
         {
-            // Mesh info for each level.
-            if (_levelInfo.Length != (_levels + 1))
-                _levelInfo = new LevelInfo[_levels + 1];
-
+            // Index of mesh level locations.
             _levelIdx = new int[_levels + 1];
-            _levelIdx[0] = 0;
+            _levelIdx[0] = 0; // Bottom level.
 
             // Compute a padded size.
             // The current sort kernel has particular requirements for the input size
