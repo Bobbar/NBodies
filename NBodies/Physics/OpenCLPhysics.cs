@@ -26,14 +26,7 @@ namespace NBodies.Physics
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
         private int _meshLength = 0; // Total length of the 1D mesh array.
-        private GridInfo[] _gridInfo = new GridInfo[0]; // Bounds and offsets for each level of the neighbor list grid.
-        private LevelInfo[] _levelInfo = new LevelInfo[0]; // Spatial info, cell index map and counts for each level.
         private Body[] _bodies = new Body[0]; // Local reference for the current body array.
-
-        // Fields for large allocations.
-        private SpatialInfo[] _bSpatials = new SpatialInfo[0]; // Body spatials.
-        private long[] _mortKeys = new long[0]; // Array of Morton numbers for spatials sorting.
-        private int[] _allCellIdx = new int[0]; // Buffer for completed/flattened cell index map.
 
         private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
 
@@ -42,8 +35,7 @@ namespace NBodies.Physics
         private ComputeDevice _device = null;
         private ComputeProgram _program;
 
-        private ComputeKernel _forceKernelLocal;
-        private ComputeKernel _forceKernelFar;
+        private ComputeKernel _forceKernel;
         private ComputeKernel _collisionSPHKernel;
         private ComputeKernel _collisionElasticKernel;
         private ComputeKernel _buildNeighborsMeshKernel;
@@ -170,8 +162,7 @@ namespace NBodies.Physics
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
-            _forceKernelLocal = _program.CreateKernel("CalcForceLocal");
-            _forceKernelFar = _program.CreateKernel("CalcForceFar");
+            _forceKernel = _program.CreateKernel("CalcForce");
             _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
@@ -316,8 +307,7 @@ namespace NBodies.Physics
             _gpuBodyMorts.Dispose();
 
 
-            _forceKernelLocal.Dispose();
-            _forceKernelFar.Dispose();
+            _forceKernel.Dispose();
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _buildNeighborsMeshKernel.Dispose();
@@ -371,31 +361,27 @@ namespace NBodies.Physics
 
             _currentFrame++;
 
+            // Post process flag.
+            // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
             int[] postNeeded = new int[1] { 0 };
             _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
 
-            // Compute gravity and SPH forces for the near/local field.
-            int argi = 0;
-            _forceKernelLocal.SetMemoryArgument(argi++, _gpuInBodies);
-            _forceKernelLocal.SetValueArgument(argi++, _bodies.Length);
-            _forceKernelLocal.SetMemoryArgument(argi++, _gpuMesh);
-            _forceKernelLocal.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _forceKernelLocal.SetValueArgument(argi++, sim);
-            _forceKernelLocal.SetValueArgument(argi++, _preCalcs);
-            _queue.Execute(_forceKernelLocal, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-
-            // Compute gravity forces for the far/distant field.
-            argi = 0;
+            // Get start and end of top level mesh cells.
             int meshTopStart = _levelIdx[_levels];
             int meshTopEnd = _meshLength;
-            _forceKernelFar.SetMemoryArgument(argi++, _gpuInBodies);
-            _forceKernelFar.SetValueArgument(argi++, _bodies.Length);
-            _forceKernelFar.SetMemoryArgument(argi++, _gpuMesh);
-            _forceKernelFar.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-            _forceKernelFar.SetValueArgument(argi++, meshTopStart);
-            _forceKernelFar.SetValueArgument(argi++, meshTopEnd);
-            _forceKernelFar.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernelFar, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+            // Compute gravity and SPH forces for the near/local field.
+            int argi = 0;
+            _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _forceKernel.SetValueArgument(argi++, _bodies.Length);
+            _forceKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _forceKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _forceKernel.SetValueArgument(argi++, sim);
+            _forceKernel.SetValueArgument(argi++, _preCalcs);
+            _forceKernel.SetValueArgument(argi++, meshTopStart);
+            _forceKernel.SetValueArgument(argi++, meshTopEnd);
+            _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             // Compute elastic collisions.
             argi = 0;
@@ -475,34 +461,6 @@ namespace NBodies.Physics
             return blocks;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long MortonNumber(long x, long y, long z)
-        {
-            x &= 0x1fffff;
-            x = (x | x << 32) & 0x1f00000000ffff;
-            x = (x | x << 16) & 0x1f0000ff0000ff;
-            x = (x | x << 8) & 0x100f00f00f00f00f;
-            x = (x | x << 4) & 0x10c30c30c30c30c3;
-            x = (x | x << 2) & 0x1249249249249249;
-
-            y &= 0x1fffff;
-            y = (y | y << 32) & 0x1f00000000ffff;
-            y = (y | y << 16) & 0x1f0000ff0000ff;
-            y = (y | y << 8) & 0x100f00f00f00f00f;
-            y = (y | y << 4) & 0x10c30c30c30c30c3;
-            y = (y | y << 2) & 0x1249249249249249;
-
-            z &= 0x1fffff;
-            z = (z | z << 32) & 0x1f00000000ffff;
-            z = (z | z << 16) & 0x1f0000ff0000ff;
-            z = (z | z << 8) & 0x100f00f00f00f00f;
-            z = (z | z << 4) & 0x10c30c30c30c30c3;
-            z = (z | z << 2) & 0x1249249249249249;
-
-            return x | (y << 1) | (z << 2);
-        }
-
-
         /// <summary>
         /// Builds the particle mesh and mesh-neighbor index for the current field.
         /// </summary>
@@ -571,9 +529,13 @@ namespace NBodies.Physics
             // http://www.bealto.com/gpu-sorting_intro.html
             //
 
-            int n = padLen;
-            const int ALLOWB = 14;
+            // Allowed sort kernel bit mask.
+            // B2 + B4 + B8 + B16 = 30
+            // Note: B16 may not be compatible with all hardware.
+            const int ALLOWB = 30; //14;
 
+            int sz = Marshal.SizeOf<long2>();
+            int n = padLen;
             for (int length = 1; length < n; length <<= 1)
             {
                 int inc = length;
@@ -610,7 +572,6 @@ namespace NBodies.Physics
                 while (inc > 0)
                 {
                     int ninc = 0;
-                    //int kid = -1;
                     ComputeKernel kid = _sortKerns[12];
                     int doLocal = 0;
                     int nThreads = 0;
@@ -653,16 +614,16 @@ namespace NBodies.Physics
                             Debugger.Break();
                             break;
                     }
-
                     int wg = (int)_device.MaxWorkGroupSize;
                     wg = Math.Min(wg, 256);
                     wg = Math.Min(wg, nThreads);
                     kid.SetMemoryArgument(0, _gpuBodyMorts);
                     kid.SetValueArgument(1, inc);
                     kid.SetValueArgument(2, length << 1);
-                    var sz = Marshal.SizeOf<long2>();
+
                     if (doLocal > 0)
                         kid.SetLocalArgument(3, doLocal * wg * sz);
+
                     _queue.Execute(kid, null, new long[] { nThreads, 1 }, new long[] { wg, 1 }, null);
 
                     if (ninc < 0) break; // done
@@ -673,15 +634,18 @@ namespace NBodies.Physics
 
         private void BuildMeshGPU(int cellSizeExp)
         {
-            // Compute the cell map for the bottom level.
+            // First level map is built from body morts.
+            // Subsequent parent level maps are built from child cell morts.
 
+            // Bottom level block count.
             int blocks = BlockCount(_bodies.Length);
 
+            // Allocate map and count buffers.
             Allocate(ref _gpuMap, _bodies.Length, false);
             Allocate(ref _gpuMapFlat, _bodies.Length, false);
             Allocate(ref _gpuCounts, blocks, false);
 
-            // Build initial map.
+            // Build initial map from sorted body morts.
             _cellMapKernel.SetMemoryArgument(0, _gpuBodyMorts);
             _cellMapKernel.SetValueArgument(1, _bodies.Length);
             _cellMapKernel.SetMemoryArgument(2, _gpuMap);
@@ -689,7 +653,8 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(4, blocks);
             _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
-            // Remove the gaps to compress the cell map.
+            // Remove the gaps to compress the cell map into the beginning of the buffer.
+            // This allows the map to be read properly by the mesh building kernels.
             _compressCellMapKernel.SetValueArgument(0, blocks);
             _compressCellMapKernel.SetMemoryArgument(1, _gpuMap);
             _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
@@ -699,11 +664,9 @@ namespace NBodies.Physics
             // Read the counts computed by each block and compute the total count.
             var counts = ReadBuffer(_gpuCounts, 0, blocks, false);  // Should we block here?
 
-            int childCount = 0;
+            int childCount = 1;
             foreach (var c in counts)
                 childCount += c;
-
-            childCount += 1; // ????
 
             // Check mesh buffer allocation.
             // Allocate morts for the parent level.
@@ -724,9 +687,10 @@ namespace NBodies.Physics
             // Now build the top levels of the mesh.
             for (int level = 1; level <= _levels; level++)
             {
-                // Clear buffers.
+                // Clear count buffer.
                 _queue.FillBuffer(_gpuCounts, new int[] { 0 }, 0, blocks, null);
 
+                // Compute block count from child level cell counts.
                 blocks = BlockCount(childCount);
 
                 // Record locations of each mesh level.
@@ -739,27 +703,26 @@ namespace NBodies.Physics
                 _cellMeshMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _queue.Execute(_cellMeshMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
-                // Remove the gaps to compress the cell map.
+                // Compress the cell map.
                 _compressCellMapKernel.SetValueArgument(0, blocks);
                 _compressCellMapKernel.SetMemoryArgument(1, _gpuMap);
                 _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
                 _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
 
+                // Read and compute parent level cell count;
                 counts = ReadBuffer(_gpuCounts, 0, blocks, false); // Should we block here?
 
-                // Compute parent level cell count;
-                int parentCellCount = 0;
+                int parentCellCount = 1;
                 foreach (var c in counts)
                     parentCellCount += c;
-
-                parentCellCount += 1;
 
                 // Record total mesh length.
                 _meshLength = _levelIdx[level] + parentCellCount;
 
                 // Make sure the mesh buffer is large enough.
-                Allocate(ref _gpuMesh, _meshLength, false, true);
+                // Resize the buffer with the copy flag so that existing data isn't lost. (Hopefully...)
+                Allocate(ref _gpuMesh, _meshLength, exactSize: false, copy: true);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
@@ -772,10 +735,14 @@ namespace NBodies.Physics
                 _buildTopKernel.SetMemoryArgument(7, _gpuParentMorts);
                 _queue.Execute(_buildTopKernel, null, new long[] { BlockCount(parentCellCount) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
+                // Parent level now becomes a child...
                 childCount = parentCellCount;
             }
         }
 
+        /// <summary>
+        /// Reads the sorted mort/index (long2) buffer and copies bodies to their sorted location.
+        /// </summary>
         private void ReindexBodiesGPU()
         {
             _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);

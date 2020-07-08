@@ -29,22 +29,23 @@ typedef struct MeshCell
 	int IdxX;
 	int IdxY;
 	int IdxZ;
+	int NeighborStartIdx;
+	int NeighborCount;
+	int BodyStartIdx;
+	int BodyCount;
+	int ChildCount;
+	int ChildStartIdx;
 	float CmX;
 	float CmY;
 	float CmZ;
 	float Mass;
 	int Size;
-	int BodyStartIdx;
-	int BodyCount;
-	int NeighborStartIdx;
-	int NeighborCount;
-	int ChildStartIdx;
-	int ChildCount;
 	int ParentID;
 	int Level;
 	long GridIdx;
 
 } MeshCell;
+
 
 typedef struct GridInfo
 {
@@ -118,18 +119,10 @@ constant int INROCHE = 8;
 #endif
 
 // Sorting defs.
-#define _BITS 8
-#define _RADIX 256
-#define _GROUPS 128
-#define _ITEMS 4
-#define _TILESIZE 32
-#define KEY_TYPE long
-#define INDEX_TYPE long
 #define PADDING_ELEM -1
 
 long MortonNumber(long x, long y, long z);
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
-long GridHash(long x, long y, long z, GridInfo grid);
 bool IsFar(MeshCell cell, MeshCell testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY, float forceZ);
 int SetFlag(int flags, int flag, bool enabled);
@@ -182,6 +175,10 @@ bool HasFlagB(Body body, int check)
 	return (check & body.Flag) != 0;
 }
 
+// Bit twiddling, magic number, super duper morton computer...
+// Credits: 
+// https://stackoverflow.com/questions/1024754/how-to-compute-a-3d-morton-number-interleave-the-bits-of-3-ints
+// https://graphics.stanford.edu/~seander/bithacks.html
 long MortonNumber(long x, long y, long z)
 {
 	x &= 0x1fffff;
@@ -699,8 +696,7 @@ float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 	return ret;
 }
 
-
-__kernel void CalcForceLocal(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -709,7 +705,6 @@ __kernel void CalcForceLocal(global Body* inBodies, int inBodiesLen, global Mesh
 
 	// Copy current body and mesh cell from memory.
 	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
-	MeshCell bodyCellParent = inMesh[bodyCell.ParentID];
 
 	float3 iPos = (float3)(inBodies[(a)].PosX, inBodies[(a)].PosY, inBodies[(a)].PosZ);
 	float iMass = inBodies[(a)].Mass;
@@ -720,142 +715,91 @@ __kernel void CalcForceLocal(global Body* inBodies, int inBodiesLen, global Mesh
 	// Resting Density.	
 	iDensity = iMass * sph.fDensity;
 
-	// *** Particle 2 Particle & SPH ***
+	// *** Particle 2 Particle/Mesh & SPH ***
 	// Accumulate forces from all bodies within neighboring bottom level (local) cells. [THIS INCLUDES THE BODY'S OWN CELL]
-
-	// Iterate parent cell neighbors.
-	int start = bodyCellParent.NeighborStartIdx;
-	int len = start + bodyCellParent.NeighborCount;
-	for (int nc = start; nc < len; nc++)
+	bool done = false;
+	bool bottom = true;
+	while (!done)
 	{
-		// Iterate neighbor child cells.
-		int nId = meshNeighbors[(nc)];
-		int childStartIdx = inMesh[(nId)].ChildStartIdx;
-		int childLen = childStartIdx + inMesh[(nId)].ChildCount;
-		for (int c = childStartIdx; c < childLen; c++)
-		{
-			MeshCell cell = inMesh[(c)];
-
-			// If the cell is far, compute force from cell.
-			if (IsFar(bodyCell, cell))
-			{
-				float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
-				iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
-			}
-			else // Otherwise compute force from cell bodies.
-			{
-				// Iterate the bodies within the cell.
-				int mbStart = cell.BodyStartIdx;
-				int mbLen = cell.BodyCount + mbStart;
-				for (int mb = mbStart; mb < mbLen; mb++)
-				{
-					// Save us from ourselves.
-					if (mb != a)
-					{
-						float jMass = inBodies[(mb)].Mass;
-						float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
-
-						float3 dir = jPos - iPos;
-
-#if FASTMATH
-						float dist = dot(dir, dir);
-						float distSqrt = SQRT(dist);
-#else
-						float distSqrt = LENGTH(dir);
-						float dist = pow(distSqrt, 2);
-#endif
-
-						// If this body is within collision/SPH distance.
-						if (distSqrt <= sph.kSize)
-						{
-							// Clamp SPH softening distance.
-							dist = max(dist, SPH_SOFTENING);
-
-							// Accumulate iDensity.
-							float diff = sph.kSizeSq - dist;
-							float fac = sph.fDensity * diff * diff * diff;
-							iDensity += iMass * fac;
-						}
-
-						// Clamp gravity softening distance.
-						distSqrt = max(distSqrt, SOFTENING_SQRT);
-
-						// Accumulate body-to-body force.
-#if FASTMATH
-						// Faster but maybe less accurate.
-						// Switch on preprocessor flag.
-						float force = (jMass * iMass) / distSqrt / distSqrt / distSqrt;
-						iForce += dir * force;
-#else
-						float force = jMass * iMass / dist;
-						iForce += (dir * force) / distSqrt;
-#endif
-					}
-				}
-			}
-		}
-	}
-
-	// Calculate pressure from density.
-	iPressure = sim.GasK * iDensity;
-
-	// Write back to memory.
-	inBodies[(a)].ForceX = iForce.x;
-	inBodies[(a)].ForceY = iForce.y;
-	inBodies[(a)].ForceZ = iForce.z;
-	inBodies[(a)].Density = iDensity;
-	inBodies[(a)].Pressure = iPressure;
-}
-
-__kernel void CalcForceFar(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, int meshTopStart, int meshTopEnd, global int* postNeeded)
-{
-	int a = get_global_id(0);
-
-	if (a >= inBodiesLen)
-		return;
-
-	// Copy current body and mesh cell from memory.
-	float3 iPos = (float3)(inBodies[(a)].PosX, inBodies[(a)].PosY, inBodies[(a)].PosZ);
-	float iMass = inBodies[(a)].Mass;
-	float3 iForce = (float3)(inBodies[(a)].ForceX, inBodies[(a)].ForceY, inBodies[(a)].ForceZ);
-
-	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
-	MeshCell bodyCellParent = inMesh[bodyCell.ParentID];
-
-	// Set body cell to parent to move out of (or above?) the local field.
-	bodyCell = bodyCellParent;
-
-	// *** Particle 2 Mesh ***
-	// Accumulate force from neighboring cells at each level.
-	while (bodyCellParent.ParentID != -1)
-	{
-		// Get the next parent cell then iterate its neighbors.
-		bodyCellParent = inMesh[(bodyCellParent.ParentID)];
+		MeshCell bodyCellParent = inMesh[bodyCell.ParentID];
 
 		// Iterate parent cell neighbors.
 		int start = bodyCellParent.NeighborStartIdx;
 		int len = start + bodyCellParent.NeighborCount;
 		for (int nc = start; nc < len; nc++)
 		{
-			// Iterate the child cells of the neighbor.
+			// Iterate neighbor child cells.
 			int nId = meshNeighbors[(nc)];
 			int childStartIdx = inMesh[(nId)].ChildStartIdx;
 			int childLen = childStartIdx + inMesh[(nId)].ChildCount;
 			for (int c = childStartIdx; c < childLen; c++)
 			{
-				// Accumulate force from the cells.
 				MeshCell cell = inMesh[(c)];
 
-				if (IsFar(bodyCell, cell))
+				// If the cell is far, compute force from cell.
+				bool far = IsFar(bodyCell, cell);
+				if (far)
 				{
 					float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
 					iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
 				}
+				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level.
+				{
+					// Iterate the bodies within the cell.
+					int mbStart = cell.BodyStartIdx;
+					int mbLen = cell.BodyCount + mbStart;
+					for (int mb = mbStart; mb < mbLen; mb++)
+					{
+						// Save us from ourselves.
+						if (mb != a)
+						{
+							float jMass = inBodies[(mb)].Mass;
+							float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
+
+							float3 dir = jPos - iPos;
+
+#if FASTMATH
+							float dist = dot(dir, dir);
+							float distSqrt = SQRT(dist);
+#else
+							float distSqrt = LENGTH(dir);
+							float dist = pow(distSqrt, 2);
+#endif
+
+							// If this body is within collision/SPH distance.
+							if (distSqrt <= sph.kSize)
+							{
+								// Clamp SPH softening distance.
+								dist = max(dist, SPH_SOFTENING);
+
+								// Accumulate iDensity.
+								float diff = sph.kSizeSq - dist;
+								float fac = sph.fDensity * diff * diff * diff;
+								iDensity += iMass * fac;
+							}
+
+							// Clamp gravity softening distance.
+							distSqrt = max(distSqrt, SOFTENING_SQRT);
+
+							// Accumulate body-to-body force.
+#if FASTMATH
+							// Faster but maybe less accurate.
+							// Switch on preprocessor flag.
+							float force = (jMass * iMass) / distSqrt / distSqrt / distSqrt;
+							iForce += dir * force;
+#else
+							float force = jMass * iMass / dist;
+							iForce += (dir * force) / distSqrt;
+#endif
+						}
+					}
+				}
 			}
 		}
 
-		// Set body cell to parent in prep for next level.
 		bodyCell = bodyCellParent;
+		done = (bodyCell.ParentID == -1);
+		bottom = false;
 	}
 
 	// *** Particle 2 Mesh ***
@@ -870,6 +814,9 @@ __kernel void CalcForceFar(global Body* inBodies, int inBodiesLen, global MeshCe
 			iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
 		}
 	}
+
+	// Calculate pressure from density.
+	iPressure = sim.GasK * iDensity;
 
 	// Check for the phony roche condition.
 	if (fast_length(iForce) > (iMass * 4.0f))
@@ -888,6 +835,8 @@ __kernel void CalcForceFar(global Body* inBodies, int inBodiesLen, global MeshCe
 	inBodies[(a)].ForceX = iForce.x;
 	inBodies[(a)].ForceY = iForce.y;
 	inBodies[(a)].ForceZ = iForce.z;
+	inBodies[(a)].Density = iDensity;
+	inBodies[(a)].Pressure = iPressure;
 }
 
 
@@ -899,6 +848,7 @@ bool IsFar(MeshCell cell, MeshCell testCell)
 
 	return false;
 }
+
 
 __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
 {
@@ -1006,7 +956,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	if (a >= inBodiesLen)
 		return;
 
-
 	float maxTemp = 10000.0f;//4000.0f
 	double tempDelta = 0;
 
@@ -1055,14 +1004,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							float dist = pow(distSqrt, 2);
 #endif
 
-							/*float distSqrt = DISTANCE(outPos, inPos);
-							float dist = dot(dir, dir);*/
-
-							//// Temp delta from p2p conduction.
-							//float tempK = 0.9f;//0.5f;//2.0f;//1.0f;
-							//float tempDiff = outBody.Temp - inBody.Temp;
-							//tempDelta += (-0.5 * tempK) * (tempDiff / dist);
-
 							// Calc the distance and check for collision.
 							if (distSqrt <= sph.kSize)
 							{
@@ -1102,16 +1043,11 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									outBody.ForceZ += veloDiffZ * viscScalar;
 
 									float velo = veloDiffX * veloDiffX + veloDiffY * veloDiffY + veloDiffZ * veloDiffZ;
-									/*outBody.ForceX += (inBody.VeloX - outBody.VeloX) * viscScalar;
-									outBody.ForceY += (inBody.VeloY - outBody.VeloY) * viscScalar;
-									outBody.ForceZ += (inBody.VeloZ - outBody.VeloZ) * viscScalar;*/
-
 
 									// Temp delta from p2p conduction.
 									float tempK = 0.5f;//0.5f;//2.0f;//1.0f;
 									float tempDiff = outBody.Temp - inBody.Temp;
 									tempDelta += (-0.5 * tempK) * (tempDiff / dist);
-
 
 
 									// Temp delta from p2p friction.
@@ -1120,9 +1056,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									float heatJ = 4.1550f;
 									float heatFac = 1950;
 									tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * (2));
-
-
-
 								}
 							}
 						}
@@ -1131,7 +1064,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 			}
 		}
 	}
-
 
 
 	// Integrate.
@@ -1180,9 +1112,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		double lossD = SBC * pow((double)outBody.Temp, 2.0) * 0.05f;//0.1;//1.0;//0.785;
 		outBody.Temp -= ((lossD / (double)(outBody.Mass * 0.25)) / 4.186) * sim.DeltaTime;
 	}
-
-	//if (outBody.Temp > 0)
-	//	outBody.Temp -= radiationD * dt;
 
 	outBody.Temp = min(outBody.Temp, maxTemp);
 	outBody.Temp = max(outBody.Temp, 1.0f);
