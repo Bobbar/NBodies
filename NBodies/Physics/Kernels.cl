@@ -275,14 +275,14 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
-__kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts)
+__kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts, int threads)
 {
 	int gid = get_global_id(0);
 
 	if (gid >= len)
 		return;
 
-	int rStart = gid * 256; // Read location. Offset by block size.
+	int rStart = gid * threads; // Read location. Offset by block size.
 	int nCount = counts[gid]; // Number of items this thread will copy.
 	int wStart = 0; // Write location into completed map.
 
@@ -300,7 +300,7 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 
 
 // Builds initial cell map from sorted body morton number/index buffer (long2*).
-__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, int blocks)
+__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
@@ -311,14 +311,13 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 
 	// Local memory
 	volatile __local int lCount;
-	volatile __local int lMap[256];
 
 	// First thread initializes local memory.
 	if (tid == 0)
 	{
 		lCount = 0;
 
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < threads; i++)
 			lMap[i] = -1;
 	}
 
@@ -342,12 +341,12 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 	{
 		// Pack the found indexes for the block into global memory.
 		int n = 0;
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < threads; i++)
 		{
 			int val = lMap[i];
 
 			if (val > -1)
-				cellmap[256 * bid + n++] = val;
+				cellmap[threads * bid + n++] = val;
 		}
 
 		// Write the cell count for the block to global memory.
@@ -356,7 +355,7 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 }
 
 // Builds initial cell map from the parent level morton number buffer (long*). 
-__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts)
+__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
@@ -367,14 +366,13 @@ __kernel void MapMesh(global long* morts, int len, global int* cellmap, global i
 
 	// Local memory
 	volatile __local int lCount;
-	volatile __local int lMap[256];
 
 	// First thread initializes local memory.
 	if (tid == 0)
 	{
 		lCount = 0;
 
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < threads; i++)
 			lMap[i] = -1;
 	}
 
@@ -398,12 +396,12 @@ __kernel void MapMesh(global long* morts, int len, global int* cellmap, global i
 	{
 		// Pack the found indexes for the block into global memory.
 		int n = 0;
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < threads; i++)
 		{
 			int val = lMap[i];
 
 			if (val > -1)
-				cellmap[256 * bid + n++] = val;
+				cellmap[threads * bid + n++] = val;
 		}
 
 		// Write the cell count for the block to global memory.

@@ -22,6 +22,7 @@ namespace NBodies.Physics
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
+        private const int SIZEOFINT = 4;
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -650,7 +651,8 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(1, _bodies.Length);
             _cellMapKernel.SetMemoryArgument(2, _gpuMap);
             _cellMapKernel.SetMemoryArgument(3, _gpuCounts);
-            _cellMapKernel.SetValueArgument(4, blocks);
+            _cellMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
+            _cellMapKernel.SetValueArgument(5, _threadsPerBlock);
             _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
@@ -659,6 +661,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(1, _gpuMap);
             _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
             _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
+            _compressCellMapKernel.SetValueArgument(4, _threadsPerBlock);
             _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
 
             // Read the counts computed by each block and compute the total count.
@@ -701,6 +704,8 @@ namespace NBodies.Physics
                 _cellMeshMapKernel.SetValueArgument(1, childCount);
                 _cellMeshMapKernel.SetMemoryArgument(2, _gpuMap);
                 _cellMeshMapKernel.SetMemoryArgument(3, _gpuCounts);
+                _cellMeshMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
+                _cellMeshMapKernel.SetValueArgument(5, _threadsPerBlock);
                 _queue.Execute(_cellMeshMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                 // Compress the cell map.
@@ -708,6 +713,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(1, _gpuMap);
                 _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
                 _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
+                _compressCellMapKernel.SetValueArgument(4, _threadsPerBlock);
                 _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
 
                 // Read and compute parent level cell count;
