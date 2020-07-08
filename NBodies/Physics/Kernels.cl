@@ -1049,13 +1049,13 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 									float tempDiff = outBody.Temp - inBody.Temp;
 									tempDelta += (-0.5 * tempK) * (tempDiff / dist);
 
-
 									// Temp delta from p2p friction.
 									float coeff = 0.0005f;//0.0004f;
 									float adhesion = 0.1f; //viscosity;//0.1f;
-									float heatJ = 4.1550f;
+									float heatJ = 8.31f;
 									float heatFac = 1950;
-									tempDelta += (heatFac * coeff * adhesion * velo) / (heatJ * (2));
+									float factor = 0.0975f;
+									tempDelta += (factor * velo) / heatJ;
 								}
 							}
 						}

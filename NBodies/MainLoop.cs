@@ -471,7 +471,7 @@ namespace NBodies
                         }
                     }
 
-                    if (DrawBodies && _bodiesBuffer.Length > 0)
+                    if (DrawBodies)
                     {
                         // Check if renderer is ready for a new frame.
                         if (_renderReadyWait.IsSet)
