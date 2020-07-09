@@ -662,7 +662,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
             _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
             _compressCellMapKernel.SetValueArgument(4, _threadsPerBlock);
-            _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
+            _queue.Execute(_compressCellMapKernel, null, new long[] { BlockCount(blocks) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Read the counts computed by each block and compute the total count.
             var counts = ReadBuffer(_gpuCounts, 0, blocks, false);  // Should we block here?
@@ -714,7 +714,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
                 _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _compressCellMapKernel.SetValueArgument(4, _threadsPerBlock);
-                _queue.Execute(_compressCellMapKernel, null, new long[] { blocks }, new long[] { 1 }, null);
+                _queue.Execute(_compressCellMapKernel, null, new long[] { BlockCount(blocks) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                 // Read and compute parent level cell count;
                 counts = ReadBuffer(_gpuCounts, 0, blocks, false); // Should we block here?

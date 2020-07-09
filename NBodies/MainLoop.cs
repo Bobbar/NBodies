@@ -412,7 +412,6 @@ namespace NBodies
                             // True if post processing is needed.
                             // GPU kernels set the flag if any bodies need removed/fractured.
                             bool postNeeded = false;
-
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), out postNeeded);
 
@@ -439,8 +438,6 @@ namespace NBodies
                                     _skipPhysics = true;
                                 }
                             }
-
-                           // _skipPhysics = true;
                         }
                     }
 
@@ -508,8 +505,6 @@ namespace NBodies
                         else
                             FPSLimiter(_pauseFPS);
                     }
-
-                   
                 }
             }
             catch (OperationCanceledException)
