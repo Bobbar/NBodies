@@ -56,8 +56,6 @@ namespace NBodies.Physics
         private ComputeBuffer<Body> _gpuInBodies;
         private ComputeBuffer<Body> _gpuOutBodies;
         private ComputeBuffer<Vector3> _gpuCM;
-        private ComputeBuffer<int> _gpuSortMap;
-        private ComputeBuffer<int> _gpuCellIdx;
         private ComputeBuffer<int> _gpuPostNeeded;
         private ComputeBuffer<int> _gpuMap;
         private ComputeBuffer<int> _gpuMapFlat;
@@ -236,12 +234,6 @@ namespace NBodies.Physics
             _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMesh, 0, true);
 
-            _gpuSortMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1);
-            Allocate(ref _gpuSortMap, 0, true);
-
-            _gpuCellIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadOnly, 1);
-            Allocate(ref _gpuCellIdx, 0, true);
-
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
 
@@ -262,7 +254,6 @@ namespace NBodies.Physics
 
             _gpuParentMorts = new ComputeBuffer<long>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuParentMorts, 1, true);
-
         }
 
         public void Flush()
@@ -274,8 +265,6 @@ namespace NBodies.Physics
             _gpuInBodies.Dispose();
             _gpuOutBodies.Dispose();
             _gpuCM.Dispose();
-            _gpuSortMap.Dispose();
-            _gpuCellIdx.Dispose();
             _gpuPostNeeded.Dispose();
 
             _gpuCounts.Dispose();
@@ -298,8 +287,6 @@ namespace NBodies.Physics
             _gpuInBodies.Dispose();
             _gpuOutBodies.Dispose();
             _gpuCM.Dispose();
-            _gpuSortMap.Dispose();
-            _gpuCellIdx.Dispose();
             _gpuPostNeeded.Dispose();
             _gpuCounts.Dispose();
             _gpuParentMorts.Dispose();
