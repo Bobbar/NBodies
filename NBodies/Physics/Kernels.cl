@@ -767,17 +767,15 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 							// If this body is within collision/SPH distance.
 							if (distSqrt <= sph.kSize)
 							{
-								// Clamp SPH softening distance.
-								dist = max(dist, SPH_SOFTENING);
-
 								// Accumulate iDensity.
-								float diff = sph.kSizeSq - dist;
+								float diff = sph.kSizeSq - max(dist, SPH_SOFTENING);
 								float fac = sph.fDensity * diff * diff * diff;
 								iDensity += iMass * fac;
 							}
 
 							// Clamp gravity softening distance.
 							distSqrt = max(distSqrt, SOFTENING_SQRT);
+							dist = max(dist, SOFTENING);
 
 							// Accumulate body-to-body force.
 #if FASTMATH
@@ -956,6 +954,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	float maxTemp = 10000.0f;//4000.0f
 	double tempDelta = 0;
+	int neighbors = 0;
 
 	// Copy current body from memory.
 	Body outBody = inBodies[(a)];
@@ -981,6 +980,9 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 				// Check for close cell.
 				if (!IsFar(bodyCell, cell))
 				{
+					// Record # of neighbors encountered.
+					neighbors++;
+
 					int mbStart = cell.BodyStartIdx;
 					int mbLen = mbStart + cell.BodyCount;
 
@@ -1103,8 +1105,8 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	//double SBC = 0.000000056703;
 	double SBC = 0.056703;
 
-	//if (outBody.Temp > 0 && cols <= 4)
-	if (outBody.Temp > 0 && bodyCell.NeighborCount < 27)
+	// Only apply black body radiation if we have a temp, and we are not inside a clump. ( neighbors < 27 )
+	if (outBody.Temp > 0 && neighbors < 27)
 	{
 		//double lossD = SBC * pow((double)outBody.Temp, 4.0) * 0.5f;//0.1;//1.0;//0.785;
 		double lossD = SBC * pow((double)outBody.Temp, 2.0) * 0.05f;//0.1;//1.0;//0.785;
