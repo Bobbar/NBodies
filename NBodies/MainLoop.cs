@@ -259,7 +259,7 @@ namespace NBodies
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
-        private const float _cullDistance = 6000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
+        private const float _cullDistance = 12000; // Effects the max size of the field. Bodies further than this value from the total center of mass are removed.
         private static int _cellSizeExp = 2;
         private static int _meshLevels = 10;
         private static int _threadsPBExp = 8;

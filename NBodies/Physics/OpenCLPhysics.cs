@@ -145,7 +145,7 @@ namespace NBodies.Physics
                 else
                     options = $"-cl-std=CL1.2";
 
-                _program.Build(null, options, null, IntPtr.Zero);
+                _program.Build(new[] { _device }, options, null, IntPtr.Zero);
             }
             catch (BuildProgramFailureComputeException ex)
             {

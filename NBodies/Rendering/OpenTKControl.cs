@@ -823,9 +823,7 @@ namespace NBodies.Rendering
                     break;
 
                 case DisplayStyle.SpatialOrder:
-                    //bodyColor = RenderBase.GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, index, true);
-
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, _orderIdx[index], true);
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, RenderVars.SortZOrder ? _orderIdx[index] : index, true);
                     _clearColor = Color.Black;
 
                     break;
@@ -1155,6 +1153,9 @@ namespace NBodies.Rendering
 
             if (e.Button == MouseButtons.Right)
                 _lastPos = new Vector2(e.X, e.Y);
+
+            if (e.Button == MouseButtons.Middle)
+                _camera.Fov = 90f;
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
