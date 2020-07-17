@@ -23,6 +23,7 @@ namespace NBodies.Physics
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
         private const int SIZEOFINT = 4;
+        private const float BUF_GROW_FACTOR = 1.4f;
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -62,9 +63,6 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuCounts;
         private ComputeBuffer<long> _gpuParentMorts;
         private ComputeBuffer<long2> _gpuBodyMorts;
-
-
-        private static Dictionary<long, BufferDims> _bufferInfo = new Dictionary<long, BufferDims>();
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
@@ -223,16 +221,16 @@ namespace NBodies.Physics
         private void InitBuffers()
         {
             _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshNeighbors, 0);
+            Allocate(ref _gpuMeshNeighbors, 1);
 
             _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuInBodies, 0, true);
+            Allocate(ref _gpuInBodies, 1, true);
 
             _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuOutBodies, 0, true);
+            Allocate(ref _gpuOutBodies, 1, true);
 
             _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMesh, 0, true);
+            Allocate(ref _gpuMesh, 1, true);
 
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
@@ -274,7 +272,6 @@ namespace NBodies.Physics
             _gpuBodyMorts.Dispose();
 
             _mesh = new MeshCell[0];
-            _bufferInfo.Clear();
             _currentFrame = 0;
             _lastMeshRead = 0;
             InitBuffers();
@@ -499,7 +496,7 @@ namespace NBodies.Physics
 
         private void ComputeMortsGPU(int padLen, int cellSizeExp)
         {
-            Allocate(ref _gpuBodyMorts, padLen, exactSize: true);
+            Allocate(ref _gpuBodyMorts, padLen, exact: true);
 
             _computeMortsKernel.SetMemoryArgument(0, _gpuOutBodies);
             _computeMortsKernel.SetValueArgument(1, _bodies.Length);
@@ -715,7 +712,7 @@ namespace NBodies.Physics
 
                 // Make sure the mesh buffer is large enough.
                 // Resize the buffer with the copy flag so that existing data isn't lost. (Hopefully...)
-                Allocate(ref _gpuMesh, _meshLength, exactSize: false, copy: true);
+                Allocate(ref _gpuMesh, _meshLength, exact: false, copy: true);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
@@ -781,89 +778,76 @@ namespace NBodies.Physics
             }
         }
 
-        private long Allocate<T>(ref ComputeBuffer<T> buffer, long size, bool exactSize = false, bool copy = false) where T : struct
+        /// <summary>
+        /// Allocates the specified buffer to the specified number of elements if needed.
+        /// </summary>
+        /// <typeparam name="T">Buffer type.</typeparam>
+        /// <param name="buffer">The buffer to be reallocated.</param>
+        /// <param name="count">The minimum number of elements the buffer should contain.</param>
+        /// <param name="exact">If true, the buffer will be sized to exactly the specified number of elements.</param>
+        /// <param name="copy">If true, the data from the old buffer will be copied to the new resized buffer.</param>
+        /// <returns>The size in elements of the (potentially new) buffer.</returns>
+        private long Allocate<T>(ref ComputeBuffer<T> buffer, long count, bool exact = false, bool copy = false) where T : struct
         {
+            // Compute the max count based on the max allocation and type sizes.
             long typeSize = Marshal.SizeOf<T>();
-            long maxCap = (_maxBufferSize / typeSize);
-            long handleVal = buffer.Handle.Value.ToInt64();
+            long maxCount = (_maxBufferSize / typeSize);
 
-            BufferDims dims;
-
-            if (!_bufferInfo.TryGetValue(handleVal, out dims))
-            {
-                dims = new BufferDims(handleVal, (int)size, (int)size, exactSize);
-                _bufferInfo.Add(handleVal, dims);
-            }
-
+            // Record the current flags and count.
             var flags = buffer.Flags;
+            long newCount = buffer.Count;
 
-            if (!dims.ExactSize)
+            // If the buffer will need resized.
+            bool resizeNeeded = false;
+
+            if (!exact)
             {
-                if (dims.Capacity < size && dims.Capacity < maxCap)
+                // Check if the buffer needs resized.
+                if (buffer.Count < count && buffer.Count < maxCount)
                 {
-                    long newCapacity = (long)(size * dims.GrowFactor);
+                    resizeNeeded = true;
+
+                    // Compute the new count from the grow factor.
+                    newCount = (long)(count * BUF_GROW_FACTOR);
 
                     // Clamp size to max allowed.
-                    if (newCapacity > maxCap)
-                    {
-                        newCapacity = (int)maxCap;
-                        size = newCapacity;
-                    }
-
-                    if (copy)
-                    {
-                        var tmp = new ComputeBuffer<T>(_context, flags, newCapacity);
-                        _queue.CopyBuffer(buffer, tmp, 0, 0, dims.Capacity, null);
-                        buffer.Dispose();
-                        _bufferInfo.Remove(handleVal);
-                        buffer = tmp;
-                    }
-                    else
-                    {
-                        buffer.Dispose();
-                        _bufferInfo.Remove(handleVal);
-                        buffer = new ComputeBuffer<T>(_context, flags, newCapacity);
-                    }
-
-                    long newHandle = buffer.Handle.Value.ToInt64();
-                    var newDims = new BufferDims(newHandle, (int)newCapacity, (int)size, exactSize);
-                    _bufferInfo.Add(newHandle, newDims);
-
-                    return newCapacity;
+                    newCount = Math.Min(newCount, maxCount);
                 }
             }
             else
             {
-                if (dims.Size != size)
+                // Check if the buffer needs resized.
+                if (buffer.Count != count)
                 {
+                    resizeNeeded = true;
+
                     // Clamp size to max allowed.
-                    if (size * typeSize > _maxBufferSize)
-                        size = maxCap;
-
-                    if (copy)
-                    {
-                        var tmp = new ComputeBuffer<T>(_context, flags, size);
-                        _queue.CopyBuffer(buffer, tmp, 0, 0, dims.Capacity, null);
-                        buffer.Dispose();
-                        _bufferInfo.Remove(handleVal);
-                        buffer = tmp;
-                    }
-                    else
-                    {
-                        buffer.Dispose();
-                        _bufferInfo.Remove(handleVal);
-                        buffer = new ComputeBuffer<T>(_context, flags, size);
-                    }
-
-                    long newHandle = buffer.Handle.Value.ToInt64();
-                    var newDims = new BufferDims(newHandle, (int)size, (int)size, exactSize);
-                    _bufferInfo.Add(newHandle, newDims);
-
-                    return size;
+                    newCount = Math.Min(count, maxCount);
                 }
             }
+            
+            if (resizeNeeded)
+            {
+                if (copy)
+                {
+                    // Create a new buffer then copy the data from the old buffer.
+                    var newBuf = new ComputeBuffer<T>(_context, flags, newCount);
+                    _queue.CopyBuffer(buffer, newBuf, 0, 0, buffer.Count, null);
 
-            return 0;
+                    // Dispose the old buffer then change the reference to the new one.
+                    buffer.Dispose();
+                    buffer = newBuf;
+                }
+                else
+                {
+                    // Just dispose then create a new buffer.
+                    buffer.Dispose();
+                    buffer = new ComputeBuffer<T>(_context, flags, newCount);
+                }
+            }
+           
+
+            return newCount;
         }
 
         private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, bool blocking = false) where T : struct
