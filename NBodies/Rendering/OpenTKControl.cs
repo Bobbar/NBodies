@@ -374,7 +374,6 @@ namespace NBodies.Rendering
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             }
 
-
             _shader.Use();
 
             GL.BindVertexArray(_cubesVAO);
@@ -438,27 +437,30 @@ namespace NBodies.Rendering
                     _cubePositions = new ColoredVertex2[bodies.Length];
 
                 // Set positions, colors and sizes.
-                for (int i = 0; i < bodies.Length; i++)
+                ParallelForSlim(bodies.Length, 8, (start, len) =>
                 {
-                    int idx = RenderVars.SortZOrder ? zOrder[i] : i;
-                    var body = bodies[idx];
-                    var bPos = body.PositionVec();
-
-                    // Position and size.
-                    var cubePos = new Vector4(bPos, body.Size / 2);
-
-                    // Green for following body. Otherwise use style color.
-                    if (body.UID == BodyManager.FollowBodyUID)
+                    for (int i = start; i < len; i++)
                     {
-                        _cubePositions[i] = new ColoredVertex2(cubePos, new Vector3(0f, 1.0f, 0f));
+                        int idx = RenderVars.SortZOrder ? zOrder[i] : i;
+                        var body = bodies[idx];
+                        var bPos = body.PositionVec();
+
+                        // Position and size.
+                        var cubePos = new Vector4(bPos, body.Size / 2);
+
+                        // Green for following body. Otherwise use style color.
+                        if (body.UID == BodyManager.FollowBodyUID)
+                        {
+                            _cubePositions[i] = new ColoredVertex2(cubePos, new Vector3(0f, 1.0f, 0f));
+                        }
+                        else
+                        {
+                            var bColor = GetStyleColor(body, i);
+                            var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
+                            _cubePositions[i] = new ColoredVertex2(cubePos, normColor);
+                        }
                     }
-                    else
-                    {
-                        var bColor = GetStyleColor(body, i);
-                        var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
-                        _cubePositions[i] = new ColoredVertex2(cubePos, normColor);
-                    }
-                }
+                });
 
                 GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
                 GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, IntPtr.Zero, BufferUsageHint.StaticDraw);
@@ -674,35 +676,25 @@ namespace NBodies.Rendering
                 var mesh = BodyManager.Mesh;
 
                 if (_cubePositions.Length < mesh.Length)
-                {
                     _cubePositions = new ColoredVertex2[mesh.Length];
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
-                    GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, _cubePositions, BufferUsageHint.StaticDraw);
-                }
 
-                unsafe
+                for (int i = 0; i < mesh.Length; i++)
                 {
-                    var cubePtr = GL.MapNamedBuffer(_cubePosBufferObject, BufferAccess.WriteOnly);
-                    var cubeNativePtr = (ColoredVertex2*)cubePtr.ToPointer();
+                    var cell = mesh[i];
+                    var pos = cell.PositionVec();
+                    var color = Color.Red;
+                    var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
+                    var cubePos = new Vector4(pos, cell.Size / 2);
 
-                    for (int i = 0; i < mesh.Length; i++)
-                    {
-                        var cell = mesh[i];
-                        var pos = cell.PositionVec();
-                        var color = Color.Red;
-                        var normColor = new Vector3(color.R / 255f, color.G / 255f, color.B / 255f);
-                        var cubePos = new Vector4(pos, cell.Size / 2);
-
-                        cubeNativePtr[i] = new ColoredVertex2(cubePos, normColor);
-                    }
-
-                    GL.UnmapNamedBuffer(_cubePosBufferObject);
+                    _cubePositions[i] = new ColoredVertex2(cubePos, normColor);
                 }
+
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
+                GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, IntPtr.Zero, BufferUsageHint.StaticDraw);
+                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _cubePositions.Length * ColoredVertex2.Size, _cubePositions);
 
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-
                 GL.DrawArraysInstanced(PrimitiveType.Quads, 0, _cubeVerts.Length, mesh.Length);
-
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
             }
         }
