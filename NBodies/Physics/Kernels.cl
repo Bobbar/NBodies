@@ -309,21 +309,17 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 	if (gid >= len)
 		return;
 
-	// Local memory
+	// Local count.
 	volatile __local int lCount;
 
-	// First thread initializes local memory.
+	// First thread initializes local count.
 	if (tid == 0)
-	{
 		lCount = 0;
 
-		for (int i = 0; i < threads; i++)
-			lMap[i] = -1;
-	}
+	// Init local map.
+	lMap[tid] = -1;
 
-	// The hell doesn't this work?
-	// lMap[tid] = -1;
-
+	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Compare two morton numbers and record location and increment count if they dont match.
@@ -334,6 +330,7 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 		lMap[tid] = gid + 1;
 	}
 
+	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Finally, the first thread dumps and packs the local memory for the block.
@@ -364,21 +361,17 @@ __kernel void MapMesh(global long* morts, int len, global int* cellmap, global i
 	if (gid >= len)
 		return;
 
-	// Local memory
+	// Local count.
 	volatile __local int lCount;
 
-	// First thread initializes local memory.
+	// First thread initializes local count.
 	if (tid == 0)
-	{
 		lCount = 0;
+	
+	// Init local map.
+	lMap[tid] = -1;
 
-		for (int i = 0; i < threads; i++)
-			lMap[i] = -1;
-	}
-
-	// The hell doesn't this work?
-	// lMap[tid] = -1;
-
+	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Compare two morton numbers and record location and increment count if they dont match.
@@ -389,6 +382,7 @@ __kernel void MapMesh(global long* morts, int len, global int* cellmap, global i
 		lMap[tid] = gid + 1;
 	}
 
+	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Finally, the first thread dumps and packs the local memory for the block.
@@ -701,11 +695,13 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	if (a >= inBodiesLen)
 		return;
 
-	// Copy current body and mesh cell from memory.
-	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
-
+	// Copy body pos & mass.
 	float3 iPos = (float3)(inBodies[(a)].PosX, inBodies[(a)].PosY, inBodies[(a)].PosZ);
 	float iMass = inBodies[(a)].Mass;
+
+	// Copy body mesh cell.
+	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
+	
 	float3 iForce = (float3)(0.0f, 0.0f, 0.0f);
 	float iDensity = 0.0f;
 	float iPressure = 0.0f;
@@ -714,7 +710,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	iDensity = iMass * sph.fDensity;
 
 	// *** Particle 2 Particle/Mesh & SPH ***
-	// Accumulate forces from all bodies within neighboring bottom level (local) cells. [THIS INCLUDES THE BODY'S OWN CELL]
+	// Walk the mesh tree and accumulate forces from all bodies & cells within the local region. [THIS INCLUDES THE BODY'S OWN CELL]
 	bool done = false;
 	bool bottom = true;
 	while (!done)
@@ -751,9 +747,8 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 						// Save us from ourselves.
 						if (mb != a)
 						{
-							float jMass = inBodies[(mb)].Mass;
 							float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
-
+							float jMass = inBodies[(mb)].Mass;
 							float3 dir = jPos - iPos;
 
 #if FASTMATH
