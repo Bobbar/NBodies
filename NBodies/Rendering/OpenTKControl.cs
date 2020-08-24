@@ -72,6 +72,7 @@ namespace NBodies.Rendering
         private Shader _shader;
         private Shader _textShader;
 
+        private const int MIN_DRAW_DIST = 100; // Bodies closer than this are not drawn.
         private int[] _orderDist = new int[0];
         private int[] _orderIdx = new int[0];
 
@@ -441,12 +442,17 @@ namespace NBodies.Rendering
                 {
                     for (int i = start; i < len; i++)
                     {
+                        // Select the index from z-order idx only if z-ordering is enabled.
                         int idx = RenderVars.SortZOrder ? zOrder[i] : i;
                         var body = bodies[idx];
                         var bPos = body.PositionVec();
 
                         // Position and size.
                         var cubePos = new Vector4(bPos, body.Size / 2);
+
+                        // Don't draw bodies closer than minimun draw distance.
+                        if (_orderDist[i] < MIN_DRAW_DIST)
+                            cubePos.W = 0f; // Hack: Just set the size to zero.
 
                         // Green for following body. Otherwise use style color.
                         if (body.UID == BodyManager.FollowBodyUID)
@@ -728,6 +734,7 @@ namespace NBodies.Rendering
 
             Array.Sort(_orderDist, _orderIdx);
             Array.Reverse(_orderIdx);
+            Array.Reverse(_orderDist);
 
             return _orderIdx;
         }
@@ -931,8 +938,19 @@ namespace NBodies.Rendering
             var mouseRays = MouseRay(mousePos.X, mousePos.Y);
             bool hitFound = false;
 
-            foreach (var body in BodyManager.Bodies)
+            // Reverse z-order indexes.
+            var ordIdxRev = _orderIdx.Reverse().ToArray();
+            var ordDistRev = _orderDist.Reverse().ToArray();
+
+            for (int i = 0; i < BodyManager.Bodies.Length; i++)
             {
+                // Don't check for bodies that are too close/not drawn.
+                if (RenderVars.SortZOrder && ordDistRev[i] < 100)
+                    continue;
+
+                // Select the index from z-order idx only if z-ordering is enabled.
+                int idx = RenderVars.SortZOrder ? ordIdxRev[i] : i;
+                var body = BodyManager.Bodies[idx];
                 bool hit = HitSphere(body, mouseRays.Item1, mouseRays.Item2);
                 if (hit)
                 {
