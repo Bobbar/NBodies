@@ -298,9 +298,8 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
 }
 
-
-// Builds initial cell map from sorted body morton number/index buffer (long2*).
-__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
+// Builds initial cell map from the parent level morton number buffer. 
+__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads, int mortOffset)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
@@ -322,61 +321,15 @@ __kernel void MapBodies(global long2* morts, int len, global int* cellmap, globa
 	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Compare two morton numbers and record location and increment count if they dont match.
-	// This is where a new cell starts and the previous cell ends.
-	if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
-	{
-		atomic_inc(&lCount);
-		lMap[tid] = gid + 1;
-	}
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Finally, the first thread dumps and packs the local memory for the block.
-	if (tid == 0)
-	{
-		// Pack the found indexes for the block into global memory.
-		int n = 0;
-		for (int i = 0; i < threads; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[threads * bid + n++] = val;
-		}
-
-		// Write the cell count for the block to global memory.
-		counts[bid] = lCount;
-	}
-}
-
-// Builds initial cell map from the parent level morton number buffer (long*). 
-__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
-{
-	int gid = get_global_id(0);
-	int tid = get_local_id(0);
-	int bid = get_group_id(0);
-
-	if (gid >= len)
-		return;
-
-	// Local count.
-	volatile __local int lCount;
-
-	// First thread initializes local count.
-	if (tid == 0)
-		lCount = 0;
-	
-	// Init local map.
-	lMap[tid] = -1;
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
+	// Since we pass both long and long2 data types to this kernal,
+	// we need to offset the gid pointer for long2 types to skip over the Y elements.  (long offset = 1, long2 offset = 2)
+	// The Y element contains the index when we are mapping from body morts.
+	// Maybe there's a better way to do this...
+	int gidOffset = gid * mortOffset;
 
 	// Compare two morton numbers and record location and increment count if they dont match.
 	// This is where a new cell starts and the previous cell ends.
-	if ((gid + 1) < len && morts[gid] != morts[gid + 1])
+	if ((gid + 1) < len && morts[gidOffset] != morts[gidOffset + 1])
 	{
 		atomic_inc(&lCount);
 		lMap[tid] = gid + 1;
@@ -701,7 +654,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 
 	// Copy body mesh cell.
 	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
-	
+
 	float3 iForce = (float3)(0.0f, 0.0f, 0.0f);
 	float iDensity = 0.0f;
 	float iPressure = 0.0f;
@@ -957,11 +910,15 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	MeshCell bodyCell = inMesh[outBody.MeshID];
 
-	if (sim.CollisionsOn == 1)
+	if (sim.CollisionsOn == 1 && HasFlagB(outBody, INROCHE))
 	{
 		// Iterate parent cell neighbors.
 		int start = inMesh[bodyCell.ParentID].NeighborStartIdx;
 		int len = start + inMesh[bodyCell.ParentID].NeighborCount;
+
+		// PERF HACK: Mask out the len for bodies at resting density to skip the tree walk?
+		len = len * !((outBody.Mass * sph.fDensity) == outBody.Density);
+
 		for (int nc = start; nc < len; nc++)
 		{
 			// Iterate neighbor child cells.
@@ -1010,48 +967,45 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 								//	outBody.PosZ += (outBody.UID + 1) * SPH_SOFTENING;
 								//}
 
-								// Only do SPH collision if both bodies are in roche.
-								// SPH collision.
-								if (HasFlagB(outBody, INROCHE) && HasFlagB(inBody, INROCHE))
-								{
-									distSqrt = max(distSqrt, SPH_SOFTENING);
-									float kDiff = sph.kSize - distSqrt;
+								// Clamp the dist to the SPH softening value.
+								distSqrt = max(distSqrt, SPH_SOFTENING);
+								float kDiff = sph.kSize - distSqrt;
 
-									// Pressure force
-									float pressScalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
-									float pressGrad = sph.fPressure * kDiff * kDiff / distSqrt;
+								// Pressure force
+								float pressScalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+								float pressGrad = sph.fPressure * kDiff * kDiff / distSqrt;
 
-									outBody.ForceX += (dir.x * pressGrad) * pressScalar;
-									outBody.ForceY += (dir.y * pressGrad) * pressScalar;
-									outBody.ForceZ += (dir.z * pressGrad) * pressScalar;
+								outBody.ForceX += (dir.x * pressGrad) * pressScalar;
+								outBody.ForceY += (dir.y * pressGrad) * pressScalar;
+								outBody.ForceZ += (dir.z * pressGrad) * pressScalar;
 
-									// Viscosity force
-									float viscLaplace = sph.fViscosity * kDiff;
-									float viscScalar = inBody.Mass * viscLaplace * sim.Viscosity / inBody.Density;
+								// Viscosity force
+								float viscLaplace = sph.fViscosity * kDiff;
+								float viscScalar = inBody.Mass * viscLaplace * sim.Viscosity / inBody.Density;
 
-									float veloDiffX = inBody.VeloX - outBody.VeloX;
-									float veloDiffY = inBody.VeloY - outBody.VeloY;
-									float veloDiffZ = inBody.VeloZ - outBody.VeloZ;
+								float veloDiffX = inBody.VeloX - outBody.VeloX;
+								float veloDiffY = inBody.VeloY - outBody.VeloY;
+								float veloDiffZ = inBody.VeloZ - outBody.VeloZ;
 
-									outBody.ForceX += veloDiffX * viscScalar;
-									outBody.ForceY += veloDiffY * viscScalar;
-									outBody.ForceZ += veloDiffZ * viscScalar;
+								outBody.ForceX += veloDiffX * viscScalar;
+								outBody.ForceY += veloDiffY * viscScalar;
+								outBody.ForceZ += veloDiffZ * viscScalar;
 
-									float velo = veloDiffX * veloDiffX + veloDiffY * veloDiffY + veloDiffZ * veloDiffZ;
+								float velo = veloDiffX * veloDiffX + veloDiffY * veloDiffY + veloDiffZ * veloDiffZ;
 
-									// Temp delta from p2p conduction.
-									float tempK = 0.5f;//0.5f;//2.0f;//1.0f;
-									float tempDiff = outBody.Temp - inBody.Temp;
-									tempDelta += (-0.5 * tempK) * (tempDiff / dist);
+								// Temp delta from p2p conduction.
+								float tempK = 0.5f;//0.5f;//2.0f;//1.0f;
+								float tempDiff = outBody.Temp - inBody.Temp;
+								tempDelta += (-0.5 * tempK) * (tempDiff / dist);
 
-									// Temp delta from p2p friction.
-									float coeff = 0.0005f;//0.0004f;
-									float adhesion = 0.1f; //viscosity;//0.1f;
-									float heatJ = 8.31f;
-									float heatFac = 1950;
-									float factor = 0.0975f;
-									tempDelta += (factor * velo) / heatJ;
-								}
+								// Temp delta from p2p friction.
+								float coeff = 0.0005f;//0.0004f;
+								float adhesion = 0.1f; //viscosity;//0.1f;
+								float heatJ = 8.31f;
+								float heatFac = 1950;
+								float factor = 0.0975f;
+								tempDelta += (factor * velo) / heatJ;
+
 							}
 						}
 					}
@@ -1167,7 +1121,7 @@ typedef long2 data_t;
 #define makeData(k,v) ((long2)((k),(v)))
 
 // One thread per record
-__kernel void Copy(__global const data_t * in, __global data_t * out)
+__kernel void Copy(__global const data_t* in, __global data_t* out)
 {
 	int i = get_global_id(0); // current thread
 	out[i] = in[i]; // copy
@@ -1178,7 +1132,7 @@ __kernel void Copy(__global const data_t * in, __global data_t * out)
 
 
 // N/2 threads
-__kernel void ParallelBitonic_B2(__global data_t * data, int inc, int dir)
+__kernel void ParallelBitonic_B2(__global data_t* data, int inc, int dir)
 {
 	int t = get_global_id(0); // thread index
 	int low = t & (inc - 1); // low order bits (below INC)
@@ -1199,7 +1153,7 @@ __kernel void ParallelBitonic_B2(__global data_t * data, int inc, int dir)
 }
 
 // N/4 threads
-__kernel void ParallelBitonic_B4(__global data_t * data, int inc, int dir)
+__kernel void ParallelBitonic_B4(__global data_t* data, int inc, int dir)
 {
 	inc >>= 1;
 	int t = get_global_id(0); // thread index
@@ -1238,7 +1192,7 @@ __kernel void ParallelBitonic_B4(__global data_t * data, int inc, int dir)
 #define B16V(x,a) { for (int i16=0;i16<8;i16++) { ORDERV(x,a+i16,a+i16+8) } B8V(x,a) B8V(x,a+8) }
 
 // N/8 threads
-__kernel void ParallelBitonic_B8(__global data_t * data, int inc, int dir)
+__kernel void ParallelBitonic_B8(__global data_t* data, int inc, int dir)
 {
 	inc >>= 2;
 	int t = get_global_id(0); // thread index
@@ -1249,17 +1203,17 @@ __kernel void ParallelBitonic_B8(__global data_t * data, int inc, int dir)
 
 			   // Load
 	data_t x[8];
-	for (int k = 0; k < 8; k++) x[k] = data[k*inc];
+	for (int k = 0; k < 8; k++) x[k] = data[k * inc];
 
 	// Sort
 	B8V(x, 0)
 
 		// Store
-		for (int k = 0; k < 8; k++) data[k*inc] = x[k];
+		for (int k = 0; k < 8; k++) data[k * inc] = x[k];
 }
 
 // N/16 threads
-__kernel void ParallelBitonic_B16(__global data_t * data, int inc, int dir)
+__kernel void ParallelBitonic_B16(__global data_t* data, int inc, int dir)
 {
 	inc >>= 3;
 	int t = get_global_id(0); // thread index
@@ -1270,18 +1224,18 @@ __kernel void ParallelBitonic_B16(__global data_t * data, int inc, int dir)
 
 			   // Load
 	data_t x[16];
-	for (int k = 0; k < 16; k++) x[k] = data[k*inc];
+	for (int k = 0; k < 16; k++) x[k] = data[k * inc];
 
 	// Sort
 	B16V(x, 0)
 
 		// Store
-		for (int k = 0; k < 16; k++) data[k*inc] = x[k];
+		for (int k = 0; k < 16; k++) data[k * inc] = x[k];
 }
 
 
 // N/2 threads, AUX[2*WG]
-__kernel void ParallelBitonic_C2(__global data_t * data, int inc0, int dir, __local data_t * aux)
+__kernel void ParallelBitonic_C2(__global data_t* data, int inc0, int dir, __local data_t* aux)
 {
 	int t = get_global_id(0); // thread index
 	int wgBits = 2 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 2*WG)
@@ -1330,7 +1284,7 @@ __kernel void ParallelBitonic_C2(__global data_t * data, int inc0, int dir, __lo
 	}
 }
 
-__kernel void ParallelBitonic_C4(__global data_t * data, int inc0, int dir, __local data_t * aux)
+__kernel void ParallelBitonic_C4(__global data_t* data, int inc0, int dir, __local data_t* aux)
 {
 	int t = get_global_id(0); // thread index
 	int wgBits = 4 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 4*WG)
@@ -1343,12 +1297,12 @@ __kernel void ParallelBitonic_C4(__global data_t * data, int inc0, int dir, __lo
 	low = t & (inc - 1); // low order bits (below INC)
 	i = ((t - low) << 2) + low; // insert 00 at position INC
 	reverse = ((dir & i) == 0); // asc/desc order
-	for (int k = 0; k < 4; k++) x[k] = data[i + k*inc];
+	for (int k = 0; k < 4; k++) x[k] = data[i + k * inc];
 	B4V(x, 0);
 
 	//printf("%i : %i \n", x[0].x, x[0].y);
 
-	for (int k = 0; k < 4; k++) aux[(i + k*inc) & wgBits] = x[k];
+	for (int k = 0; k < 4; k++) aux[(i + k * inc) & wgBits] = x[k];
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Internal iterations, local input and output
@@ -1357,10 +1311,10 @@ __kernel void ParallelBitonic_C4(__global data_t * data, int inc0, int dir, __lo
 		low = t & (inc - 1); // low order bits (below INC)
 		i = ((t - low) << 2) + low; // insert 00 at position INC
 		reverse = ((dir & i) == 0); // asc/desc order
-		for (int k = 0; k < 4; k++) x[k] = aux[(i + k*inc) & wgBits];
+		for (int k = 0; k < 4; k++) x[k] = aux[(i + k * inc) & wgBits];
 		B4V(x, 0);
 		barrier(CLK_LOCAL_MEM_FENCE);
-		for (int k = 0; k < 4; k++) aux[(i + k*inc) & wgBits] = x[k];
+		for (int k = 0; k < 4; k++) aux[(i + k * inc) & wgBits] = x[k];
 		barrier(CLK_LOCAL_MEM_FENCE);
 	}
 

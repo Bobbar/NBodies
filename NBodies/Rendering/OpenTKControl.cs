@@ -469,7 +469,7 @@ namespace NBodies.Rendering
                 });
 
                 GL.BindBuffer(BufferTarget.ArrayBuffer, _cubePosBufferObject);
-                GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, IntPtr.Zero, BufferUsageHint.StaticDraw);
+                GL.BufferData(BufferTarget.ArrayBuffer, _cubePositions.Length * ColoredVertex2.Size, IntPtr.Zero, BufferUsageHint.StreamDraw);
                 GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _cubePositions.Length * ColoredVertex2.Size, _cubePositions);
 
                 // Draw.
