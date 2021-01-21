@@ -294,6 +294,7 @@ namespace NBodies
 
         private static Body[] _bodiesBuffer = new Body[0];
         private static SimSettings _settings = new SimSettings();
+        private static Action renderDelegate = null;
 
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
@@ -480,6 +481,7 @@ namespace NBodies
                             {
                                 if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
                                     BodyManager.Bodies = new Body[_bodiesBuffer.Length];
+
                                 Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
 
                                 if (BodyManager.FollowSelected)
@@ -489,8 +491,10 @@ namespace NBodies
                             // Draw the field asynchronously.
                             if (GLRenderer != null && GLRenderer.InvokeRequired)
                             {
-                                var del = new Action(() => GLRenderer.Render(BodyManager.Bodies, _renderReadyWait));
-                                var res = GLRenderer.BeginInvoke(del);
+                                if (renderDelegate == null)
+                                    renderDelegate = new Action(() => GLRenderer.Render(BodyManager.Bodies, _renderReadyWait));
+
+                                var res = GLRenderer.BeginInvoke(renderDelegate);
                             }
                         }
                     }

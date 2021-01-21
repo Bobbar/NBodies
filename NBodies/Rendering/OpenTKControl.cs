@@ -322,6 +322,7 @@ namespace NBodies.Rendering
             }
 
             // Render Bodies
+            SetClearColor(RenderVars.DisplayStyle);
             GL.ClearColor(_clearColor);
             GL.Enable(EnableCap.Blend);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -437,6 +438,8 @@ namespace NBodies.Rendering
                 if (_cubePositions.Length < bodies.Length)
                     _cubePositions = new ColoredVertex2[bodies.Length];
 
+                DisplayStyle style = RenderVars.DisplayStyle;
+
                 // Set positions, colors and sizes.
                 ParallelForSlim(bodies.Length, 8, (start, len) =>
                 {
@@ -461,7 +464,7 @@ namespace NBodies.Rendering
                         }
                         else
                         {
-                            var bColor = GetStyleColor(body, i);
+                            var bColor = GetStyleColor(style, body, i, _orderIdx);
                             var normColor = new Vector3(bColor.R / 255f, bColor.G / 255f, bColor.B / 255f);
                             _cubePositions[i] = new ColoredVertex2(cubePos, normColor);
                         }
@@ -784,83 +787,72 @@ namespace NBodies.Rendering
             }
         }
 
-
-        private Color GetStyleColor(Body body, int index)
+        private void SetClearColor(DisplayStyle style)
         {
-            Color bodyColor = _defaultBodyColor;
+            switch (style)
+            {
+                case DisplayStyle.HighContrast:
+                    _clearColor = Color.White;
+                    break;
+                default:
+                    _clearColor = Color.Black;
+                    break;
+            }
+        }
 
-            switch (RenderVars.DisplayStyle)
+        private static Color GetStyleColor(DisplayStyle style, Body body, int index, int[] orderIdx = null)
+        {
+            Color bodyColor = Color.White;
+                                         
+            switch (style)
             {
                 case DisplayStyle.Normal:
                     bodyColor = Color.FromArgb(RenderVars.BodyAlpha, Color.FromArgb(body.Color));
-                    _clearColor = Color.Black;
-
                     break;
 
                 case DisplayStyle.Pressure:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Pressure, true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Pressure, RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.Density:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Density / body.Mass, true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Density / body.Mass, RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.Velocity:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.AggregateSpeed(), true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.AggregateSpeed(), RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.Index:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.TopUID, body.UID, RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.SpatialOrder:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, RenderVars.SortZOrder ? _orderIdx[index] : index, true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, BodyManager.Bodies.Length, RenderVars.SortZOrder ? orderIdx[index] : index, RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.Force:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, (body.ForceTot / body.Mass), true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, (body.ForceTot / body.Mass), RenderVars.BodyAlpha, true);
                     break;
 
                 case DisplayStyle.HighContrast:
                     bodyColor = Color.Black;
-                    _clearColor = Color.White;
-
                     break;
 
                 case DisplayStyle.Temp:
-                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Temp, true);
-                    _clearColor = Color.Black;
-
+                    bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, RenderVars.StyleScaleMax, body.Temp, RenderVars.BodyAlpha, true);
                     break;
             }
 
             return bodyColor;
         }
 
-        public static Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        public static Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, int alpha, bool translucent = false)
         {
-            const int maxIntensity = 255;
             float intensity = 0;
-            long r1 = 0;
-            long g1 = 0;
-            long b1 = 0;
-            long r2 = 0;
-            long g2 = 0;
-            long b2 = 0;
+            byte r1, g1, b1, r2, g2, b2;
+            float maxHalf = maxValue * 0.5f;
 
-            if (currentValue <= (maxValue / 2f))
+            if (currentValue <= maxHalf)
             {
                 r1 = startColor.R;
                 g1 = startColor.G;
@@ -870,7 +862,7 @@ namespace NBodies.Rendering
                 g2 = midColor.G;
                 b2 = midColor.B;
 
-                maxValue = maxValue / 2f;
+                maxValue = maxHalf;
             }
             else
             {
@@ -882,28 +874,26 @@ namespace NBodies.Rendering
                 g2 = endColor.G;
                 b2 = endColor.B;
 
-                maxValue = maxValue / 2f;
+                maxValue = maxHalf;
                 currentValue = currentValue - maxValue;
             }
 
             if (currentValue > 0)
             {
                 // Compute the intensity of the end color.
-                intensity = (maxIntensity / (maxValue / currentValue));
+                intensity = (currentValue / maxValue);
             }
 
-            // Clamp the intensity within the max.
-            if (intensity > maxIntensity) intensity = maxIntensity;
+            intensity = Math.Min(intensity, 1.0f);
 
-            // Calculate the new RGB values from the intensity.
-            int newR, newG, newB;
-            newR = (int)(r1 + (r2 - r1) / (float)maxIntensity * intensity);
-            newG = (int)(g1 + (g2 - g1) / (float)maxIntensity * intensity);
-            newB = (int)(b1 + (b2 - b1) / (float)maxIntensity * intensity);
+            byte newR, newG, newB;
+            newR = (byte)(r1 + (r2 - r1) * intensity);
+            newG = (byte)(g1 + (g2 - g1) * intensity);
+            newB = (byte)(b1 + (b2 - b1) * intensity);
 
             if (translucent)
             {
-                return Color.FromArgb(RenderVars.BodyAlpha, newR, newG, newB);
+                return Color.FromArgb(alpha, newR, newG, newB);
             }
             else
             {
