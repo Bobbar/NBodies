@@ -133,8 +133,6 @@ namespace NBodies.Physics
         [IgnoreMember]
         public int MeshID;
 
-
-
         [IgnoreMember]
         public bool Culled
         {

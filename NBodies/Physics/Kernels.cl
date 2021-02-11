@@ -1,5 +1,5 @@
 
-typedef struct Body
+typedef struct
 {
 	float PosX;
 	float PosY;
@@ -23,9 +23,8 @@ typedef struct Body
 
 } Body;
 
-typedef struct MeshCell
+typedef struct
 {
-	int ID;
 	int IdxX;
 	int IdxY;
 	int IdxZ;
@@ -33,40 +32,18 @@ typedef struct MeshCell
 	int NeighborCount;
 	int BodyStartIdx;
 	int BodyCount;
-	int ChildCount;
 	int ChildStartIdx;
+	int ChildCount;
 	float CmX;
 	float CmY;
 	float CmZ;
 	float Mass;
 	int Size;
 	int ParentID;
-	int Level;
-	long GridIdx;
-
+	
 } MeshCell;
 
-
-typedef struct GridInfo
-{
-	int OffsetX;
-	int OffsetY;
-	int OffsetZ;
-	int MinX;
-	int MinY;
-	int MinZ;
-	int MaxX;
-	int MaxY;
-	int MaxZ;
-	long Columns;
-	long Rows;
-	long Layers;
-	long Size;
-	long IndexOffset;
-
-} GridInfo;
-
-typedef struct SPHPreCalc
+typedef struct
 {
 	float kSize;
 	float kSizeSq;
@@ -79,7 +56,7 @@ typedef struct SPHPreCalc
 
 } SPHPreCalc;
 
-typedef struct SimSettings
+typedef struct
 {
 	float KernelSize;
 	float DeltaTime;
@@ -397,7 +374,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	double nMass = fMass;
 
 	MeshCell newCell;
-	newCell.ID = m;
 	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
 	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
@@ -409,8 +385,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.ChildStartIdx = -1;
 	newCell.ChildCount = 0;
 	newCell.ParentID = -1;
-	newCell.Level = 0;
-	newCell.GridIdx = -1;
 
 	// Compute parent level morton numbers.
 	int idxX = newCell.IdxX >> 1;
@@ -468,7 +442,6 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	double nMass;
 
 	MeshCell newCell;
-	newCell.ID = newIdx;
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
 	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
@@ -484,8 +457,6 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	newCell.ChildStartIdx = firstIdx;
 	newCell.ChildCount = 1;
 	newCell.ParentID = -1;
-	newCell.Level = level;
-	newCell.GridIdx = -1;
 
 	mesh[firstIdx].ParentID = newIdx;
 

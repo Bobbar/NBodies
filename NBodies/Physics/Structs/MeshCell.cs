@@ -9,7 +9,6 @@ namespace NBodies.Physics
 {
     public struct MeshCell
     {
-        public int ID;
         public int IdxX;
         public int IdxY;
         public int IdxZ;
@@ -17,17 +16,14 @@ namespace NBodies.Physics
         public int NeighborCount;
         public int BodyStartIdx;
         public int BodyCount;
-        public int ChildCount;
         public int ChildStartIdx;
+        public int ChildCount;
         public float CmX;
         public float CmY;
         public float CmZ;
         public float Mass;
         public int Size;
         public int ParentID;
-        public int Level;
-        public long GridIdx;
-
 
         public float LocX
         {

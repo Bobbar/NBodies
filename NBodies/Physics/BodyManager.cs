@@ -589,130 +589,7 @@ namespace NBodies.Physics
             return points;
         }
 
-        /// <summary>
-        /// Calculate the orbital path of the specified body by running a low res (large dt) static simulation against the current field. Accurate, but slow.
-        ///
-        /// This variation tries to calculate a complete orbit instead of just advancing an N amount of steps.
-        /// </summary>
-        ///
-        public static List<PointF> CalcPathCircle(Body body)
-        {
-            if (Mesh.Length < 1)
-                return new List<PointF>();
-
-            var points = new List<PointF>();
-            int steps = 0;
-            int maxSteps = 1000;//5000;
-            float dtStep = 0.200f;
-            bool complete = false;
-            bool apoapsis = false;
-            int start = 0;
-            int end = 0;
-            int meshLevel = 3;
-            int[] levelIndex = PhysicsProvider.PhysicsCalc.LevelIndex;
-
-            if (meshLevel >= levelIndex.Length)
-                meshLevel = levelIndex.Length - 1;
-
-            start = levelIndex[meshLevel];
-            end = (meshLevel + 1 >= levelIndex.Length) ? Mesh.Length : levelIndex[meshLevel + 1];
-
-            PointF speed = new PointF(body.VeloX, body.VeloY);
-            PointF loc = new PointF(body.PosX, body.PosY);
-            PointF startLoc = loc;
-            PointF planeA = new PointF();
-            PointF planeB = new PointF();
-
-            points.Add(loc);
-
-            try
-            {
-                while (!complete)
-                {
-                    float forceX = 0;
-                    float forceY = 0;
-
-                    for (int c = start; c < end; c++)
-                    {
-                        if (end > Mesh.Length)
-                            break;
-
-                        var cell = Mesh[c];
-
-                        if (cell.ID == body.MeshID)
-                            continue;
-
-                        var distX = cell.CmX - loc.X;
-                        var distY = cell.CmY - loc.Y;
-                        var dist = (distX * distX) + (distY * distY);
-                        var distSqrt = (float)Math.Sqrt(dist);
-
-                        if (distSqrt > (cell.Size))
-                        {
-                            var totMass = body.Mass * cell.Mass;
-
-                            var f = totMass / (dist + 0.02f);
-
-                            forceX += (float)(f * distX / distSqrt);
-                            forceY += (float)(f * distY / distSqrt);
-                        }
-
-                    }
-
-                    speed.X += dtStep * forceX / body.Mass;
-                    speed.Y += dtStep * forceY / body.Mass;
-                    loc.X += dtStep * (speed.X);
-                    loc.Y += dtStep * (speed.Y);
-
-                    points.Add(loc);
-
-                    if (steps == 0)
-                    {
-                        // Define a flat "plane" perpendicular to the first 2 points.
-                        var len = 20000;
-                        planeA = TangentPoint(startLoc, points[1], -len);
-                        planeB = TangentPoint(startLoc, points[1], len);
-                    }
-
-                    if (steps > 10)
-                    {
-                        if (!apoapsis)
-                        {
-                            // Test for the first intersection of the plane.  This will be the apoapsis.
-                            if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
-                            {
-                                apoapsis = true;
-                            }
-                        }
-                        else
-                        {
-                            // If we intersect the plane again after the apoapsis, we should now have a complete orbit.
-                            if (PointExtensions.IsIntersecting(points[points.Count - 2], loc, planeA, planeB))
-                            {
-                                complete = true;
-                            }
-                        }
-
-                        // If we haven't found an expected orbit after the maximum steps, end the loop to display what was calculated.
-                        if (steps >= maxSteps)
-                        {
-                            complete = true;
-                        }
-                    }
-
-                    steps++;
-                }
-            }
-            catch
-            {
-                return new List<PointF>();
-            }
-
-
-            return points;
-        }
-
-        private static PointF TangentPoint(PointF a, PointF b, float len)
+             private static PointF TangentPoint(PointF a, PointF b, float len)
         {
             var l1 = a;
             var l2 = b;
@@ -1279,7 +1156,6 @@ namespace NBodies.Physics
 Index: { index }
 UID: { body.UID }
 MeshID: { body.MeshID }
-    GridIdx: { parentCell.GridIdx }
     Start: { parentCell.BodyStartIdx }
     Count: { parentCell.BodyCount }
     Mass: { parentCell.Mass }
