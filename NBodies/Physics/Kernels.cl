@@ -40,7 +40,7 @@ typedef struct
 	float Mass;
 	int Size;
 	int ParentID;
-	
+
 } MeshCell;
 
 typedef struct
@@ -182,6 +182,7 @@ long MortonNumber(long x, long y, long z)
 	return x | (y << 1) | (z << 2);
 }
 
+
 __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
 	int i = get_global_id(0);
@@ -275,8 +276,8 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
 }
 
-// Builds initial cell map from the parent level morton number buffer. 
-__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads, int mortOffset)
+// Builds initial cell map from sorted body morton number/index buffer (long2*).
+__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
@@ -298,15 +299,61 @@ __kernel void MapMesh(global long* morts, int len, global int* cellmap, global i
 	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Since we pass both long and long2 data types to this kernal,
-	// we need to offset the gid pointer for long2 types to skip over the Y elements.  (long offset = 1, long2 offset = 2)
-	// The Y element contains the index when we are mapping from body morts.
-	// Maybe there's a better way to do this...
-	int gidOffset = gid * mortOffset;
+	// Compare two morton numbers and record location and increment count if they dont match.
+	// This is where a new cell starts and the previous cell ends.
+	if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
+	{
+		atomic_inc(&lCount);
+		lMap[tid] = gid + 1;
+	}
+
+	// Sync local threads.
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Finally, the first thread dumps and packs the local memory for the block.
+	if (tid == 0)
+	{
+		// Pack the found indexes for the block into global memory.
+		int n = 0;
+		for (int i = 0; i < threads; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[threads * bid + n++] = val;
+		}
+
+		// Write the cell count for the block to global memory.
+		counts[bid] = lCount;
+	}
+}
+
+// Builds initial cell map from the parent level morton number buffer. 
+__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	// Local count.
+	volatile __local int lCount;
+
+	// First thread initializes local count.
+	if (tid == 0)
+		lCount = 0;
+
+	// Init local map.
+	lMap[tid] = -1;
+
+	// Sync local threads.
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Compare two morton numbers and record location and increment count if they dont match.
 	// This is where a new cell starts and the previous cell ends.
-	if ((gid + 1) < len && morts[gidOffset] != morts[gidOffset + 1])
+	if ((gid + 1) < len && morts[gid] != morts[gid + 1])
 	{
 		atomic_inc(&lCount);
 		lMap[tid] = gid + 1;
@@ -612,6 +659,7 @@ float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 	return ret;
 }
 
+
 __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
 {
 	int a = get_global_id(0);
@@ -863,6 +911,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global M
 	}
 }
 
+
 __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global MeshCell* inMesh, global int* meshNeighbors, global float3* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
@@ -896,6 +945,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 			int nId = meshNeighbors[(nc)];
 			int childStartIdx = inMesh[(nId)].ChildStartIdx;
 			int childLen = childStartIdx + inMesh[(nId)].ChildCount;
+
 			for (int c = childStartIdx; c < childLen; c++)
 			{
 				MeshCell cell = inMesh[(c)];
@@ -985,7 +1035,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		}
 	}
 
-
 	// Integrate.
 	outBody.VeloX += sim.DeltaTime * outBody.ForceX / outBody.Mass;
 	outBody.VeloY += sim.DeltaTime * outBody.ForceY / outBody.Mass;
@@ -1049,6 +1098,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	// Write back to memory.
 	outBodies[(a)] = outBody;
 }
+
 
 Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float forceY, float forceZ)
 {
