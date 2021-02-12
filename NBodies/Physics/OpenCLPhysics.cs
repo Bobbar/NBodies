@@ -47,7 +47,6 @@ namespace NBodies.Physics
         private ComputeKernel _calcCMKernel;
         private ComputeKernel _reindexKernel;
         private ComputeKernel _cellMapKernel;
-        private ComputeKernel _cellMeshMapKernel;
         private ComputeKernel _compressCellMapKernel;
         private ComputeKernel _computeMortsKernel;
 
@@ -168,8 +167,7 @@ namespace NBodies.Physics
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
             _reindexKernel = _program.CreateKernel("ReindexBodies");
-            _cellMapKernel = _program.CreateKernel("MapBodies");
-            _cellMeshMapKernel = _program.CreateKernel("MapMesh");
+            _cellMapKernel = _program.CreateKernel("MapMorts");
             _compressCellMapKernel = _program.CreateKernel("CompressMap");
             _computeMortsKernel = _program.CreateKernel("ComputeMorts");
 
@@ -635,6 +633,7 @@ namespace NBodies.Physics
             _cellMapKernel.SetMemoryArgument(3, _gpuCounts);
             _cellMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
             _cellMapKernel.SetValueArgument(5, _threadsPerBlock);
+            _cellMapKernel.SetValueArgument(6, 2); // Set step size to 2 for long2 input type.
             _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
@@ -682,13 +681,14 @@ namespace NBodies.Physics
                 _levelIdx[level] = _levelIdx[level - 1] + childCount;
 
                 // Build initial map from the morts computed at the child level.
-                _cellMeshMapKernel.SetMemoryArgument(0, _gpuParentMorts);
-                _cellMeshMapKernel.SetValueArgument(1, childCount);
-                _cellMeshMapKernel.SetMemoryArgument(2, _gpuMap);
-                _cellMeshMapKernel.SetMemoryArgument(3, _gpuCounts);
-                _cellMeshMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
-                _cellMeshMapKernel.SetValueArgument(5, _threadsPerBlock);
-                _queue.Execute(_cellMeshMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _cellMapKernel.SetMemoryArgument(0, _gpuParentMorts);
+                _cellMapKernel.SetValueArgument(1, childCount);
+                _cellMapKernel.SetMemoryArgument(2, _gpuMap);
+                _cellMapKernel.SetMemoryArgument(3, _gpuCounts);
+                _cellMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
+                _cellMapKernel.SetValueArgument(5, _threadsPerBlock);
+                _cellMapKernel.SetValueArgument(6, 1); // Set step size to 1 for long input type.
+                _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                 // Compress the cell map.
                 _compressCellMapKernel.SetValueArgument(0, blocks);

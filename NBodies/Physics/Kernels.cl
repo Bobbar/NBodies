@@ -251,6 +251,63 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 	}
 }
 
+
+// Builds initial cell map from storted morton numbers.
+__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads, int step)
+{
+	int gid = get_global_id(0);
+	int tid = get_local_id(0);
+	int bid = get_group_id(0);
+
+	if (gid >= len)
+		return;
+
+	// Local count.
+	volatile __local int lCount;
+
+	// First thread initializes local count.
+	if (tid == 0)
+		lCount = 0;
+
+	// Init local map.
+	lMap[tid] = -1;
+
+	// Sync local threads.
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Apply the step size to the gid.
+	// Step size of 1 for long type, 2 for long2 type inputs.
+	int gidOff = gid * step;
+
+	// Compare two morton numbers, record the location and increment count if they dont match.
+	// This is where a new cell starts and the previous cell ends.
+	if ((gid + 1) < len && morts[gidOff] != morts[gidOff + step])
+	{
+		atomic_inc(&lCount);
+		lMap[tid] = gid + 1;
+	}
+
+	// Sync local threads.
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Finally, the first thread dumps and packs the local memory for the block.
+	if (tid == 0)
+	{
+		// Write the found indexes for this block to its location in global memory.
+		int n = 0;
+		for (int i = 0; i < threads; i++)
+		{
+			int val = lMap[i];
+
+			if (val > -1)
+				cellmap[threads * bid + n++] = val;
+		}
+
+		// Write the cell count for the block to global memory.
+		counts[bid] = lCount;
+	}
+}
+
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
 __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts, int threads)
@@ -276,109 +333,6 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
 }
 
-// Builds initial cell map from sorted body morton number/index buffer (long2*).
-__kernel void MapBodies(global long2* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
-{
-	int gid = get_global_id(0);
-	int tid = get_local_id(0);
-	int bid = get_group_id(0);
-
-	if (gid >= len)
-		return;
-
-	// Local count.
-	volatile __local int lCount;
-
-	// First thread initializes local count.
-	if (tid == 0)
-		lCount = 0;
-
-	// Init local map.
-	lMap[tid] = -1;
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Compare two morton numbers and record location and increment count if they dont match.
-	// This is where a new cell starts and the previous cell ends.
-	if ((gid + 1) < len && morts[gid].x != morts[gid + 1].x)
-	{
-		atomic_inc(&lCount);
-		lMap[tid] = gid + 1;
-	}
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Finally, the first thread dumps and packs the local memory for the block.
-	if (tid == 0)
-	{
-		// Pack the found indexes for the block into global memory.
-		int n = 0;
-		for (int i = 0; i < threads; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[threads * bid + n++] = val;
-		}
-
-		// Write the cell count for the block to global memory.
-		counts[bid] = lCount;
-	}
-}
-
-// Builds initial cell map from the parent level morton number buffer. 
-__kernel void MapMesh(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads)
-{
-	int gid = get_global_id(0);
-	int tid = get_local_id(0);
-	int bid = get_group_id(0);
-
-	if (gid >= len)
-		return;
-
-	// Local count.
-	volatile __local int lCount;
-
-	// First thread initializes local count.
-	if (tid == 0)
-		lCount = 0;
-
-	// Init local map.
-	lMap[tid] = -1;
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Compare two morton numbers and record location and increment count if they dont match.
-	// This is where a new cell starts and the previous cell ends.
-	if ((gid + 1) < len && morts[gid] != morts[gid + 1])
-	{
-		atomic_inc(&lCount);
-		lMap[tid] = gid + 1;
-	}
-
-	// Sync local threads.
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Finally, the first thread dumps and packs the local memory for the block.
-	if (tid == 0)
-	{
-		// Pack the found indexes for the block into global memory.
-		int n = 0;
-		for (int i = 0; i < threads; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[threads * bid + n++] = val;
-		}
-
-		// Write the cell count for the block to global memory.
-		counts[bid] = lCount;
-	}
-}
 
 // Read indexes from the sorted morton buffer and copy bodies to their sorted location.
 __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
