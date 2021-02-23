@@ -360,7 +360,6 @@ namespace NBodies.Rendering
 FPS: {Math.Round(MainLoop.CurrentFPS, 2)} ({Math.Round(MainLoop.PeakFPS, 2)})
 Count: {MainLoop.FrameCount}
 Time: {elapTime.Days} days  {elapTime.Hours} hr  {elapTime.Minutes} min
-Grid Passes: {OpenCLPhysics.GridPasses}
 
 Bodies: {BodyManager.BodyCount}
 Tot Mass: {Math.Round(BodyManager.TotalMass, 2)}

@@ -22,7 +22,9 @@ namespace NBodies.Extensions
 
         public static void Print(this Stopwatch timer, string label = "")
         {
-            Debug.WriteLine($@"[{label}] ms: {timer.ElapsedMilliseconds}  ticks: {timer.Elapsed.Ticks}");
+            var elap = timer.Elapsed;
+
+            Debug.WriteLine($@"[{label}] ms: {elap.TotalMilliseconds}  ticks: {elap.Ticks}");
 
             timer.Restart();
         }

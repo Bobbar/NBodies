@@ -71,15 +71,12 @@ namespace NBodies.UI
                     var threads = selectDevice.MaxThreadsPerBlock;
 
                     PhysicsProvider.InitPhysics(device, threads);
-
                 }
                 else
                 {
                     Application.Exit();
                 }
             }
-
-            //PhysicsProvider.InitPhysics();
 
             MainLoop.Renderer = new D2DRenderer(RenderBox);
 
@@ -197,7 +194,8 @@ namespace NBodies.UI
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                selectBody.PrintInfo();
+                if (System.Diagnostics.Debugger.IsAttached)
+                    selectBody.PrintInfo();
             }
         }
 

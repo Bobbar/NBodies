@@ -622,7 +622,7 @@ namespace NBodies.Physics
 
                         var cell = Mesh[c];
 
-                        if (cell.ID == body.MeshID)
+                        if (c == body.MeshID)
                             continue;
 
                         var distX = cell.CmX - loc.X;
