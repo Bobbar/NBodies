@@ -74,6 +74,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.reloadPhysicsProviderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -144,7 +145,8 @@
             this.allForceVectorsToolStripMenuItem,
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem,
-            this.snapToGridToolStripMenuItem});
+            this.snapToGridToolStripMenuItem,
+            this.reloadPhysicsProviderToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -298,7 +300,7 @@
             this.loadStateToolStripMenuItem,
             this.reloadPreviousToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 18);
+            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 18);
             this.toolsToolStripMenuItem.Text = "Tools";
             // 
             // saveStateToolStripMenuItem
@@ -633,6 +635,13 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
+            // reloadPhysicsProviderToolStripMenuItem
+            // 
+            this.reloadPhysicsProviderToolStripMenuItem.Name = "reloadPhysicsProviderToolStripMenuItem";
+            this.reloadPhysicsProviderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.reloadPhysicsProviderToolStripMenuItem.Text = "Reload Physics Provider";
+            this.reloadPhysicsProviderToolStripMenuItem.Click += new System.EventHandler(this.reloadPhysicsProviderToolStripMenuItem_Click);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -712,6 +721,7 @@
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.ToolStripMenuItem snapToGridToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem syncRendererToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem reloadPhysicsProviderToolStripMenuItem;
     }
 }
 

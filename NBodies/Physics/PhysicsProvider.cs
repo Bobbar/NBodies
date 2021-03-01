@@ -11,6 +11,7 @@ namespace NBodies.Physics
     public static class PhysicsProvider
     {
         public static IPhysicsCalc PhysicsCalc;
+        private static Cloo.ComputeDevice _computeDevice;
 
         public static void InitPhysics()
         {
@@ -21,9 +22,20 @@ namespace NBodies.Physics
 
         public static void InitPhysics(Cloo.ComputeDevice device, int threadsPerBlock)
         {
+            _computeDevice = device;
+
             MainLoop.MaxThreadsPerBlock = threadsPerBlock;
             PhysicsCalc = new OpenCLPhysics(device, MainLoop.MaxThreadsPerBlock);
 
+            PhysicsCalc.Init();
+        }
+
+        public static void Reload()
+        {
+            MainLoop.WaitForPause();
+
+            PhysicsCalc.Dispose();
+            PhysicsCalc = new OpenCLPhysics(_computeDevice, MainLoop.MaxThreadsPerBlock);
             PhysicsCalc.Init();
         }
     }

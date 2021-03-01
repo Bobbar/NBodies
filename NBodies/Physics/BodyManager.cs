@@ -1097,8 +1097,12 @@ namespace NBodies.Physics
             MeshCell mesh = new MeshCell();
             if (body.MeshID != -1 && (body.MeshID <= Mesh.Length - 1))
             {
+                if (Mesh.Length < 1)
+                    return;
+
                 mesh = Mesh[body.MeshID];
             }
+
             int index = Bodies.ToList().IndexOf(body);
             string info = $@"
 Index: { index }

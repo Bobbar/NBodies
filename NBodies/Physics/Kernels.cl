@@ -588,6 +588,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	// Copy body pos & mass.
 	float2 iPos = (float2)(inBodies[(a)].PosX, inBodies[(a)].PosY);
 	float iMass = inBodies[(a)].Mass;
+	float iSize = inBodies[(a)].Size;
 
 	// Copy body mesh cell.
 	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
@@ -690,7 +691,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	iPressure = sim.GasK * iDensity;
 
 	// Check for the phony roche condition.
-	if (fast_length(iForce) > (iMass * 4.0f))
+	if (fabs(fast_length(iForce)) > (iMass * 4.0f) || iSize <= 1.1f)
 	{
 		int iFlags = inBodies[(a)].Flag;
 		int newFlags = SetFlag(iFlags, INROCHE, true);
@@ -959,14 +960,14 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 	outBody.VeloX += colMass * forceX;
 	outBody.VeloY += colMass * forceY;
 
-	//// Don't increase size of black holes.
-	//if (!HasFlagB(outBody, BLACKHOLE))
-	//{
-	//	float a1 = pow((outBody.Size * 0.5f), 2.0f);
-	//	float a2 = pow((bodyB.Size * 0.5f), 2.0f);
-	//	float area = a1 + a2;
-	//	outBody.Size = (float)native_sqrt(area) * 2.0f;
-	//}
+	// Don't increase size of black holes.
+	if (!HasFlagB(outBody, BLACKHOLE))
+	{
+		float a1 = pow((outBody.Size * 0.5f), 2.0f);
+		float a2 = pow((bodyB.Size * 0.5f), 2.0f);
+		float area = a1 + a2;
+		outBody.Size = (float)native_sqrt(area) * 2.0f;
+	}
 
 	outBody.Mass += bodyB.Mass;
 

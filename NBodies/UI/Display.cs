@@ -194,8 +194,8 @@ namespace NBodies.UI
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                if (System.Diagnostics.Debugger.IsAttached)
-                    selectBody.PrintInfo();
+                //if (System.Diagnostics.Debugger.IsAttached)
+                //    selectBody.PrintInfo();
             }
         }
 
@@ -821,6 +821,11 @@ namespace NBodies.UI
         private void syncRendererToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             MainLoop.SyncRenderer = syncRendererToolStripMenuItem.Checked;
+        }
+
+        private void reloadPhysicsProviderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PhysicsProvider.Reload();
         }
     }
 }
