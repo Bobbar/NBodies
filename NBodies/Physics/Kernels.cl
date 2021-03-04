@@ -94,6 +94,7 @@ int SetFlag(int flags, int flag, bool enabled);
 Body SetFlagB(Body body, int flag, bool enabled);
 bool HasFlag(int flags, int check);
 bool HasFlagB(Body body, int check);
+int BlockCount(int len, int threads);
 
 
 int SetFlag(int flags, int flag, bool enabled)
@@ -138,6 +139,17 @@ bool HasFlag(int flags, int check)
 bool HasFlagB(Body body, int check)
 {
 	return (check & body.Flag) != 0;
+}
+
+int BlockCount(int len, int threads)
+{
+	int blocks = len / threads;
+	int mod = len % threads;
+
+	if (mod > 0)
+		blocks += 1;
+
+	return blocks;
 }
 
 // Bit twiddling, magic number, super duper morton computer...
@@ -244,12 +256,15 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 
 
 // Builds initial cell map from storted morton numbers.
-__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step)
+__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
 	int bid = get_group_id(0);
 	int threads = get_local_size(0);
+
+	if (len < 0)
+		len = levelCounts[level - 1];
 
 	if (gid >= len)
 		return;
@@ -302,10 +317,15 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
-__kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts)
+__kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmapOut, global int* counts, global int* levelCounts, global int* levelIdx, int level, int threads)
 {
 	int gid = get_global_id(0);
-	int threads = get_local_size(0);
+	int len = 0;
+
+	if (blocks > 0)
+		len = blocks;
+	else
+		len = BlockCount(levelCounts[level - 1], threads);
 
 	if (gid >= len)
 		return;
@@ -324,6 +344,21 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 	// Copy the indexes to the output at the correct location.
 	for (int i = 0; i < nCount; i++)
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
+
+
+	// Use first thread to accumulate total cell counts
+	// and populate level count & level indexes.
+	if (gid == 0)
+	{
+		int tCount = 1;
+		for (int i = 0; i < len; i++)
+		{
+			tCount += counts[i];
+		}
+
+		levelCounts[level] = tCount;
+		levelIdx[level + 1] = levelIdx[level] + tCount;
+	}
 }
 
 
@@ -341,9 +376,11 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 }
 
 
-__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
+__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
 {
 	int m = get_global_id(0);
+
+	int meshLen = levelCounts[0];
 
 	if (m >= meshLen)
 		return;
@@ -407,20 +444,25 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 }
 
 
-__kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, int childsEnd, global int* cellMap, int cellSize, int level, global long* parentMorts)
+__kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts)
 {
 	int m = get_global_id(0);
+
+	int parentLen = levelCounts[level];
 
 	if (m >= parentLen)
 		return;
 
-	int newIdx = m + childsEnd;
+	int childsStart = levelIdx[level - 1];
+	int childsEnd = levelIdx[level];
 
+	int newIdx = m + childsEnd;
 	int firstIdx = childsStart;
+	int lastIdx = childsStart + cellMap[m];
+
 	if (m > 0)
 		firstIdx += cellMap[m - 1];
 
-	int lastIdx = childsStart + cellMap[m];
 	if (m == parentLen - 1)
 		lastIdx = childsEnd;
 
