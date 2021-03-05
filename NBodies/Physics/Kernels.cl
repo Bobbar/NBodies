@@ -256,7 +256,7 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 
 
 // Builds initial cell map from storted morton numbers.
-__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts)
+__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
@@ -266,7 +266,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (len < 0)
 		len = levelCounts[level - 1];
 
-	if (gid >= len)
+	if (gid >= len || gid >= bufLen)
 		return;
 
 	// Local count.
@@ -376,13 +376,13 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 }
 
 
-__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
+__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
 	int meshLen = levelCounts[0];
 
-	if (m >= meshLen)
+	if (m >= meshLen || m >= bufLen)
 		return;
 
 	int firstIdx = 0;
@@ -444,19 +444,23 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 }
 
 
-__kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts)
+__kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
 	int parentLen = levelCounts[level];
 
-	if (m >= parentLen)
+	if (m >= parentLen || m >= bufLen)
 		return;
 
 	int childsStart = levelIdx[level - 1];
 	int childsEnd = levelIdx[level];
 
 	int newIdx = m + childsEnd;
+
+	if (newIdx >= bufLen)
+		return;
+
 	int firstIdx = childsStart;
 	int lastIdx = childsStart + cellMap[m];
 

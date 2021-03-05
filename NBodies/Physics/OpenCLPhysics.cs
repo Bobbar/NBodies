@@ -69,6 +69,7 @@ namespace NBodies.Physics
 
         private long _currentFrame = 0;
         private long _lastMeshRead = 0;
+        private object _meshLock = new object();
 
         private Dictionary<int, ComputeKernel> _sortKerns = new Dictionary<int, ComputeKernel>();
 
@@ -431,11 +432,14 @@ namespace NBodies.Physics
 
         private void ReadMesh()
         {
-            if (_mesh.Length != _meshLength)
-                _mesh = new MeshCell[_meshLength];
+            lock (_meshLock)
+            {
+                if (_mesh.Length != _meshLength)
+                    _mesh = new MeshCell[_meshLength];
 
-            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-            _queue.Finish();
+                _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
+                _queue.Finish();
+            }
         }
 
         /// <summary>
@@ -640,6 +644,8 @@ namespace NBodies.Physics
             // Allocate level counts & index.
             Allocate(ref _gpuLevelCounts, _levels + 1, true);
             Allocate(ref _gpuLevelIdx, _levels + 2, true);
+            // Clear the level index.
+            _queue.FillBuffer(_gpuLevelIdx, new int[1] { 0 }, 0, _levels + 2, null);
 
             // Allocate map and count buffers.
             Allocate(ref _gpuMap, _bodies.Length, false);
@@ -659,6 +665,7 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(5, 2); // Set step size to 2 for long2 input type.
             _cellMapKernel.SetValueArgument(6, 0);
             _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
+            _cellMapKernel.SetValueArgument(8, _gpuBodyMorts.Count);
             _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
@@ -682,6 +689,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(5, cellSizeExp);
             _buildBottomKernel.SetValueArgument(6, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(7, _gpuParentMorts);
+            _buildBottomKernel.SetValueArgument(8, _gpuMesh.Count);
             _queue.Execute(_buildBottomKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Now build the top levels of the mesh.
@@ -689,17 +697,18 @@ namespace NBodies.Physics
             {
                 // Build initial map from the morts computed at the child level.
                 _cellMapKernel.SetMemoryArgument(0, _gpuParentMorts);
-                _cellMapKernel.SetValueArgument(1, -1);
+                _cellMapKernel.SetValueArgument(1, -1); // We don't know the length, so set it to -1 to make the kernel read it from the level counts buffer.
                 _cellMapKernel.SetMemoryArgument(2, _gpuMap);
                 _cellMapKernel.SetMemoryArgument(3, _gpuCounts);
                 _cellMapKernel.SetLocalArgument(4, SIZEOFINT * _threadsPerBlock);
                 _cellMapKernel.SetValueArgument(5, 1); // Set step size to 1 for long input type.
                 _cellMapKernel.SetValueArgument(6, level);
                 _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
+                _cellMapKernel.SetValueArgument(8, _gpuParentMorts.Count);
                 _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
                 // Compress the cell map.
-                _compressCellMapKernel.SetValueArgument(0, -1);
+                _compressCellMapKernel.SetValueArgument(0, -1); // Same as above. Make the kernel read length from the level counts buffer.
                 _compressCellMapKernel.SetMemoryArgument(1, _gpuMap);
                 _compressCellMapKernel.SetMemoryArgument(2, _gpuMapFlat);
                 _compressCellMapKernel.SetMemoryArgument(3, _gpuCounts);
@@ -717,12 +726,16 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(4, (int)Math.Pow(2.0f, cellSizeExp + level));
                 _buildTopKernel.SetValueArgument(5, level);
                 _buildTopKernel.SetMemoryArgument(6, _gpuParentMorts);
+                _buildTopKernel.SetValueArgument(7, _gpuMesh.Count);
                 _queue.Execute(_buildTopKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
 
-            // Read back the level index and set the total mesh length.
-            _levelIdx = ReadBuffer(_gpuLevelIdx);
-            _meshLength = _levelIdx[_levels + 1];
+            lock (_meshLock)
+            {
+                // Read back the level index and set the total mesh length.
+                _levelIdx = ReadBuffer(_gpuLevelIdx, true);
+                _meshLength = _levelIdx[_levels + 1];
+            }
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
             if (_gpuMesh.Count < _meshLength)
