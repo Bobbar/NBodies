@@ -30,7 +30,7 @@ namespace NBodies.Physics
         private int _meshLength = 0; // Total length of the 1D mesh array.
         private Body[] _bodies = new Body[0]; // Local reference for the current body array.
 
-        private ManualResetEventSlim _meshReadyWait = new ManualResetEventSlim(false);
+        private ManualResetEventSlim _meshRequested = new ManualResetEventSlim(true);
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
@@ -69,7 +69,6 @@ namespace NBodies.Physics
 
         private long _currentFrame = 0;
         private long _lastMeshRead = 0;
-        private object _meshLock = new object();
 
         private Dictionary<int, ComputeKernel> _sortKerns = new Dictionary<int, ComputeKernel>();
 
@@ -80,17 +79,9 @@ namespace NBodies.Physics
                 // Only read mesh from GPU if it has changed.
                 if (_lastMeshRead != _currentFrame)
                 {
-                    // Read it now if it's ready.
-                    if (_meshReadyWait.IsSet)
-                    {
-                        ReadMesh();
-                    }
-                    else
-                    {
-                        // Wait until it's ready then read.
-                        _meshReadyWait.Wait();
-                        ReadMesh();
-                    }
+                    // Block until the mesh gets read at the end of the frame.
+                    _meshRequested.Reset();
+                    _meshRequested.Wait(200);
 
                     _lastMeshRead = _currentFrame;
                 }
@@ -204,87 +195,6 @@ namespace NBodies.Physics
             return devices;
         }
 
-        private void PreCalcSPH(float kernelSize)
-        {
-            var calcs = new SPHPreCalc();
-
-            calcs.kSize = kernelSize;
-            calcs.kSizeSq = (float)Math.Pow(kernelSize, 2);
-            calcs.kSize3 = (float)Math.Pow(kernelSize, 3);
-            calcs.kSize9 = (float)Math.Pow(kernelSize, 9);
-            calcs.kRad6 = (float)Math.Pow((1.0f / 3.0f), 6); //??
-            // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
-
-            calcs.fViscosity = (float)(15.0f / (2.0f * Math.PI * calcs.kSize3)) * (6.0f / calcs.kSize3);
-            calcs.fPressure = (float)(15.0f / (Math.PI * calcs.kRad6)) * 3.0f;
-            calcs.fDensity = (float)(315.0f / (64.0f * Math.PI * calcs.kSize9));
-
-            _preCalcs = calcs;
-        }
-
-        public void Flush()
-        {
-            _meshReadyWait.Reset();
-            _meshLength = 0;
-            _gpuMesh.Dispose();
-            _gpuMeshNeighbors.Dispose();
-            _gpuInBodies.Dispose();
-            _gpuOutBodies.Dispose();
-            _gpuCM.Dispose();
-            _gpuPostNeeded.Dispose();
-
-            _gpuCounts.Dispose();
-            _gpuParentMorts.Dispose();
-            _gpuMap.Dispose();
-            _gpuMapFlat.Dispose();
-            _gpuBodyMorts.Dispose();
-            _gpuLevelCounts.Dispose();
-            _gpuLevelIdx.Dispose();
-
-            _mesh = new MeshCell[0];
-            _currentFrame = 0;
-            _lastMeshRead = 0;
-            InitBuffers();
-        }
-
-        public void Dispose()
-        {
-            _gpuMesh.Dispose();
-            _gpuMeshNeighbors.Dispose();
-            _gpuInBodies.Dispose();
-            _gpuOutBodies.Dispose();
-            _gpuCM.Dispose();
-            _gpuPostNeeded.Dispose();
-            _gpuCounts.Dispose();
-            _gpuParentMorts.Dispose();
-            _gpuMap.Dispose();
-            _gpuMapFlat.Dispose();
-            _gpuBodyMorts.Dispose();
-            _gpuLevelCounts.Dispose();
-            _gpuLevelIdx.Dispose();
-
-            _forceKernel.Dispose();
-            _collisionSPHKernel.Dispose();
-            _collisionElasticKernel.Dispose();
-            _buildNeighborsMeshKernel.Dispose();
-            _fixOverlapKernel.Dispose();
-            _buildBottomKernel.Dispose();
-            _buildTopKernel.Dispose();
-            _calcCMKernel.Dispose();
-            _reindexKernel.Dispose();
-            _cellMapKernel.Dispose();
-            _compressCellMapKernel.Dispose();
-            _computeMortsKernel.Dispose();
-
-            foreach (var kern in _sortKerns)
-                kern.Value.Dispose();
-
-            _program.Dispose();
-            _context.Dispose();
-            _queue.Dispose();
-        }
-
-
         private void InitBuffers()
         {
             _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
@@ -328,6 +238,24 @@ namespace NBodies.Physics
 
         }
 
+        private void PreCalcSPH(float kernelSize)
+        {
+            var calcs = new SPHPreCalc();
+
+            calcs.kSize = kernelSize;
+            calcs.kSizeSq = (float)Math.Pow(kernelSize, 2);
+            calcs.kSize3 = (float)Math.Pow(kernelSize, 3);
+            calcs.kSize9 = (float)Math.Pow(kernelSize, 9);
+            calcs.kRad6 = (float)Math.Pow((1.0f / 3.0f), 6); //??
+            // calcs.kRad6 = (float)Math.Pow(kernelSize, 6);
+
+            calcs.fViscosity = (float)(15.0f / (2.0f * Math.PI * calcs.kSize3)) * (6.0f / calcs.kSize3);
+            calcs.fPressure = (float)(15.0f / (Math.PI * calcs.kRad6)) * 3.0f;
+            calcs.fDensity = (float)(315.0f / (64.0f * Math.PI * calcs.kSize9));
+
+            _preCalcs = calcs;
+        }
+
         public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool isPostNeeded)
         {
             _bodies = bodies;
@@ -349,16 +277,8 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             threadBlocks = BlockCount(_bodies.Length);
 
-            // Block mesh reads until it's finised building.
-            _meshReadyWait.Reset();
-
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
-
-            // Allow mesh read.
-            _meshReadyWait.Set();
-
-            _currentFrame++;
 
             // Post process flag.
             // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
@@ -409,6 +329,15 @@ namespace NBodies.Physics
 
             _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
             _queue.Finish();
+
+            _currentFrame++;
+
+            // Check if we need to read the mesh.
+            if (!_meshRequested.IsSet)
+            {
+                ReadMesh();
+                _meshRequested.Set();
+            }
         }
 
         public void FixOverLaps(ref Body[] bodies)
@@ -432,14 +361,10 @@ namespace NBodies.Physics
 
         private void ReadMesh()
         {
-            lock (_meshLock)
-            {
-                if (_mesh.Length != _meshLength)
-                    _mesh = new MeshCell[_meshLength];
+            if (_mesh.Length != _meshLength)
+                _mesh = new MeshCell[_meshLength];
 
-                _queue.ReadFromBuffer(_gpuMesh, ref _mesh, false, 0, 0, _meshLength, null);
-                _queue.Finish();
-            }
+            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, true, 0, 0, _meshLength, null);
         }
 
         /// <summary>
@@ -522,6 +447,7 @@ namespace NBodies.Physics
             _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMorts);
             _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
+
         private void SortByMortGPU(int padLen)
         {
             //
@@ -633,17 +559,30 @@ namespace NBodies.Physics
             }
         }
 
+        /// <summary>
+        /// Reads the sorted mort/index (long2) buffer and copies bodies to their sorted location.
+        /// </summary>
+        private void ReindexBodiesGPU()
+        {
+            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
+            _reindexKernel.SetValueArgument(1, _bodies.Length);
+            _reindexKernel.SetMemoryArgument(2, _gpuBodyMorts);
+            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
+            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+        }
+
         private void BuildMeshGPU(int cellSizeExp)
         {
             // First level map is built from body morts.
             // Subsequent parent level maps are built from child cell morts.
 
-            // Bottom level block count.
+            // Compute the block count from the # of bodies.
             int blocks = BlockCount(_bodies.Length);
 
             // Allocate level counts & index.
             Allocate(ref _gpuLevelCounts, _levels + 1, true);
             Allocate(ref _gpuLevelIdx, _levels + 2, true);
+
             // Clear the level index.
             _queue.FillBuffer(_gpuLevelIdx, new int[1] { 0 }, 0, _levels + 2, null);
 
@@ -693,6 +632,8 @@ namespace NBodies.Physics
             _queue.Execute(_buildBottomKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
 
             // Now build the top levels of the mesh.
+            // NOTE: We use the same kernel work sizes as the bottom level,
+            // but kernels outside the scope of work will just return and idle.
             for (int level = 1; level <= _levels; level++)
             {
                 // Build initial map from the morts computed at the child level.
@@ -730,33 +671,23 @@ namespace NBodies.Physics
                 _queue.Execute(_buildTopKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
             }
 
-            lock (_meshLock)
-            {
-                // Read back the level index and set the total mesh length.
-                _levelIdx = ReadBuffer(_gpuLevelIdx, true);
-                _meshLength = _levelIdx[_levels + 1];
-            }
+            // Read back the level index and set the total mesh length.
+            _levelIdx = ReadBuffer(_gpuLevelIdx, true);
+            _meshLength = _levelIdx[_levels + 1];
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
+            // This done because we are not reading back counts for each level and reallocating,
+            // so we don't know if we have enough room until a build has completed.
             if (_gpuMesh.Count < _meshLength)
             {
                 Debug.WriteLine($"Mesh reallocated: {_gpuMesh.Count} -> {_meshLength}");
                 Allocate(ref _gpuMesh, _meshLength);
+                Allocate(ref _gpuParentMorts, _meshLength);
                 BuildMeshGPU(cellSizeExp);
             }
         }
 
-        /// <summary>
-        /// Reads the sorted mort/index (long2) buffer and copies bodies to their sorted location.
-        /// </summary>
-        private void ReindexBodiesGPU()
-        {
-            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
-            _reindexKernel.SetValueArgument(1, _bodies.Length);
-            _reindexKernel.SetMemoryArgument(2, _gpuBodyMorts);
-            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
-        }
+       
 
         private void PopNeighborsMeshGPU(int meshSize)
         {
@@ -884,6 +815,68 @@ namespace NBodies.Physics
             if (blocking) _queue.Finish(); // This is probably redundant...
 
             return buf;
+        }
+
+        public void Flush()
+        {
+            _meshRequested.Set();
+            _meshLength = 0;
+            _gpuMesh.Dispose();
+            _gpuMeshNeighbors.Dispose();
+            _gpuInBodies.Dispose();
+            _gpuOutBodies.Dispose();
+            _gpuCM.Dispose();
+            _gpuPostNeeded.Dispose();
+
+            _gpuCounts.Dispose();
+            _gpuParentMorts.Dispose();
+            _gpuMap.Dispose();
+            _gpuMapFlat.Dispose();
+            _gpuBodyMorts.Dispose();
+            _gpuLevelCounts.Dispose();
+            _gpuLevelIdx.Dispose();
+
+            _mesh = new MeshCell[0];
+            _currentFrame = 0;
+            _lastMeshRead = 0;
+            InitBuffers();
+        }
+
+        public void Dispose()
+        {
+            _gpuMesh.Dispose();
+            _gpuMeshNeighbors.Dispose();
+            _gpuInBodies.Dispose();
+            _gpuOutBodies.Dispose();
+            _gpuCM.Dispose();
+            _gpuPostNeeded.Dispose();
+            _gpuCounts.Dispose();
+            _gpuParentMorts.Dispose();
+            _gpuMap.Dispose();
+            _gpuMapFlat.Dispose();
+            _gpuBodyMorts.Dispose();
+            _gpuLevelCounts.Dispose();
+            _gpuLevelIdx.Dispose();
+
+            _forceKernel.Dispose();
+            _collisionSPHKernel.Dispose();
+            _collisionElasticKernel.Dispose();
+            _buildNeighborsMeshKernel.Dispose();
+            _fixOverlapKernel.Dispose();
+            _buildBottomKernel.Dispose();
+            _buildTopKernel.Dispose();
+            _calcCMKernel.Dispose();
+            _reindexKernel.Dispose();
+            _cellMapKernel.Dispose();
+            _compressCellMapKernel.Dispose();
+            _computeMortsKernel.Dispose();
+
+            foreach (var kern in _sortKerns)
+                kern.Value.Dispose();
+
+            _program.Dispose();
+            _context.Dispose();
+            _queue.Dispose();
         }
     }
 }
