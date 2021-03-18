@@ -462,7 +462,7 @@ namespace NBodies
                             }
 
                             // Draw the field asynchronously.
-                            Renderer.DrawBodiesAsync(BodyManager.Bodies, DrawBodies, _renderReadyWait);
+                            Renderer.DrawBodies(BodyManager.Bodies, DrawBodies, _renderReadyWait);
                             _skippedFrames = 0;
                         }
                         else

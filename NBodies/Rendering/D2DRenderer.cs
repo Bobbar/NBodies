@@ -303,6 +303,8 @@ namespace NBodies.Rendering
 
         public override void Destroy()
         {
+            base.Destroy();
+
             _wndRender.Dispose();
 
             _fact.Dispose();

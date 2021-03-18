@@ -247,6 +247,8 @@ namespace NBodies.Rendering
 
         public override void Destroy()
         {
+            base.Destroy();
+
             _buffer.Dispose();
             _currentContext.Dispose();
         }

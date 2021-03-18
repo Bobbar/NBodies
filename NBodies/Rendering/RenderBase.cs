@@ -81,6 +81,13 @@ namespace NBodies.Rendering
 
         private Stopwatch timer = new Stopwatch();
 
+        private Body[] _bodies = new Body[0];
+        private ManualResetEventSlim _renderCompleteCallback = new ManualResetEventSlim(false);
+        private ManualResetEventSlim _renderWait = new ManualResetEventSlim(false);
+        private Task _renderLoopTask;
+        private bool _drawBodies = true;
+        private bool _IsDisposing = false;
+
         protected RenderBase(Control targetControl)
         {
             Init(targetControl);
@@ -95,14 +102,26 @@ namespace NBodies.Rendering
             _styleScales = new float[styleCount];
             for (int i = 0; i < _styleScales.Length; i++)
                 _styleScales[i] = _styleScaleMax;
+
+            _renderLoopTask = new Task(RenderLoop, TaskCreationOptions.LongRunning);
+            _renderLoopTask.Start();
         }
 
-        public async Task DrawBodiesAsync(Body[] bodies, bool drawBodies, ManualResetEventSlim completeCallback)
+        public void DrawBodies(Body[] bodies, bool drawBodies, ManualResetEventSlim completeCallback)
         {
-            completeCallback.Reset();
+            _bodies = bodies;
+            _drawBodies = drawBodies;
+            _renderCompleteCallback = completeCallback;
+            _renderWait.Set();
+        }
 
-            await Task.Run(() =>
+        private void RenderLoop()
+        {
+            while (!_IsDisposing)
             {
+                _renderWait.Wait();
+                _renderCompleteCallback.Reset();
+
                 BodyManager.RebuildUIDIndex();
                 int maxUID = BodyManager.TopUID;
                 bool overlayVisible = OverlaysVisible();
@@ -118,7 +137,7 @@ namespace NBodies.Rendering
                     //     _blurClearHack = false;
                 }
 
-                if (drawBodies && bodies.Length > 0)
+                if (_drawBodies && _bodies.Length > 0)
                 {
                     // If trails are enabled, clear one frame with a slightly 
                     // off-black color to try to hide persistent artifacts
@@ -139,17 +158,17 @@ namespace NBodies.Rendering
 
                     _cullTangle = new RectangleF(0 - finalOffset.X, 0 - finalOffset.Y, _viewPortSize.Width / ViewportOffsets.CurrentScale, _viewPortSize.Height / ViewportOffsets.CurrentScale);
 
-                    // Since the bodies are being sorted by their spatial index
+                    // Since the _bodies are being sorted by their spatial index
                     // we need to sort them (again) by a persistent value; we will use their UIDs.
                     // This is done because the spatial sorting can rapidly change the resulting
-                    // z-order of the bodies, which causes flickering.
+                    // z-order of the _bodies, which causes flickering.
 
-                    // Perform a Bucket Sort with the bodies UIDs.
-                    // We will also cull the bodies outside the viewport.
+                    // Perform a Bucket Sort with the _bodies UIDs.
+                    // We will also cull the _bodies outside the viewport.
 
                     int nVis = 0;
 
-                    if (bodies.Length > 0)
+                    if (_bodies.Length > 0)
                     {
                         if (SortZOrder)
                         {
@@ -159,8 +178,8 @@ namespace NBodies.Rendering
                             if (_buckets.Length < len)
                                 _buckets = new int[len];
 
-                            if (_pointers.Length < bodies.Length)
-                                _pointers = new int[bodies.Length];
+                            if (_pointers.Length < _bodies.Length)
+                                _pointers = new int[_bodies.Length];
 
                             // Clear buckets.
                             for (int i = 0; i < len; i++)
@@ -168,14 +187,14 @@ namespace NBodies.Rendering
                                 _buckets[i] = -1;
                             }
 
-                            // Find bodies inside the viewport and put them in buckets by UID.
+                            // Find _bodies inside the viewport and put them in buckets by UID.
                             int maxVisUID = 0;
-                            for (int i = 0; i < bodies.Length; i++)
+                            for (int i = 0; i < _bodies.Length; i++)
                             {
-                                if (_cullTangle.Contains(bodies[i].PosX, bodies[i].PosY))
+                                if (_cullTangle.Contains(_bodies[i].PosX, _bodies[i].PosY))
                                 {
-                                    _buckets[bodies[i].UID] = i;
-                                    maxVisUID = Math.Max(maxVisUID, bodies[i].UID); // Record max seen UID to save iterations of the following step.
+                                    _buckets[_bodies[i].UID] = i;
+                                    maxVisUID = Math.Max(maxVisUID, _bodies[i].UID); // Record max seen UID to save iterations of the following step.
                                 }
                             }
 
@@ -198,7 +217,7 @@ namespace NBodies.Rendering
                         }
                     }
 
-                    int n = bodies.Length;
+                    int n = _bodies.Length;
 
                     if (SortZOrder)
                         n = nVis;
@@ -209,11 +228,11 @@ namespace NBodies.Rendering
 
                         if (SortZOrder && _pointers.Length > 0)
                         {
-                            body = bodies[_buckets[_pointers[i]]];
+                            body = _bodies[_buckets[_pointers[i]]];
                         }
                         else
                         {
-                            body = bodies[i];
+                            body = _bodies[i];
                         }
 
                         var bodyLoc = new PointF((body.PosX + finalOffset.X), (body.PosY + finalOffset.Y));
@@ -263,8 +282,8 @@ namespace NBodies.Rendering
                                     orderIdx = _buckets[body.UID];
                                 else
                                     orderIdx = i;
-                                
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, bodies.Length, orderIdx, true);
+
+                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, _bodies.Length, orderIdx, true);
 
                                 _clearColor = _defaultClearColor;
 
@@ -292,7 +311,7 @@ namespace NBodies.Rendering
 
                     if (ShowAllForce)
                     {
-                        DrawForceVectors(bodies, finalOffset.X, finalOffset.Y);
+                        DrawForceVectors(_bodies, finalOffset.X, finalOffset.Y);
                     }
 
                     if (BodyManager.FollowSelected)
@@ -345,9 +364,10 @@ namespace NBodies.Rendering
                 DrawStats(GetStats(), Color.FromArgb(255, 0, 192, 0), Color.FromArgb(100, _clearColor));
 
                 EndDraw();
-            });
 
-            completeCallback.Set();
+                _renderWait.Reset();
+                _renderCompleteCallback.Set();
+            }
         }
 
         private string GetStats()
@@ -418,7 +438,13 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
 
         public abstract void EndDraw();
 
-        public abstract void Destroy();
+        public virtual void Destroy()
+        {
+            _IsDisposing = true;
+            _renderWait.Set();
+            _renderLoopTask.Wait();
+            _bodies = null;
+        }
 
         protected internal bool OverlaysVisible()
         {
