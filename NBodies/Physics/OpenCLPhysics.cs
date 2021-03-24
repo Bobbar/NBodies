@@ -463,36 +463,36 @@ namespace NBodies.Physics
 
             int sz = Marshal.SizeOf<long2>();
             int n = padLen;
+            var strategy = new Queue<int>();
+
             for (int length = 1; length < n; length <<= 1)
             {
                 int inc = length;
-                var strategy = new List<int>();
 
                 int ii = inc;
                 while (ii > 0)
                 {
-
                     if (ii == 128 || ii == 32 || ii == 8)
                     {
-                        strategy.Add(-1);
+                        strategy.Enqueue(-1);
                         break;
                     }
 
-                    int d = 1;
                     // default is 1 bit
-                    if (false) d = 1;
+                    int d = 1;
 
                     // Force jump to 128
-                    else if (ii == 256) d = 1;
-                    else if (ii == 512 && Convert.ToBoolean(ALLOWB & 4)) d = 2;
-                    else if (ii == 1024 && Convert.ToBoolean(ALLOWB & 8)) d = 3;
-                    else if (ii == 2048 && Convert.ToBoolean(ALLOWB & 16)) d = 4;
-
-                    else if (ii >= 8 && Convert.ToBoolean(ALLOWB & 16)) d = 4;
-                    else if (ii >= 4 && Convert.ToBoolean(ALLOWB & 8)) d = 3;
-                    else if (ii >= 2 && Convert.ToBoolean(ALLOWB & 4)) d = 2;
+                    if (ii == 256) d = 1;
+                    else if (ii == 512 && ((ALLOWB & 4) > 0)) d = 2;
+                    else if (ii == 1024 && ((ALLOWB & 8) > 0)) d = 3;
+                    else if (ii == 2048 && ((ALLOWB & 16) > 0)) d = 4;
+                  
+                    else if (ii >= 8 && ((ALLOWB & 16) > 0)) d = 4;
+                    else if (ii >= 4 && ((ALLOWB & 8) > 0)) d = 3;
+                    else if (ii >= 2 && ((ALLOWB & 4) > 0)) d = 2;
                     else d = 1;
-                    strategy.Add(d);
+
+                    strategy.Enqueue(d);
                     ii >>= d;
                 }
 
@@ -502,7 +502,7 @@ namespace NBodies.Physics
                     ComputeKernel kid = _sortKerns[12];
                     int doLocal = 0;
                     int nThreads = 0;
-                    int d = strategy.First(); strategy.RemoveAt(0);
+                    int d = strategy.Dequeue();
 
                     switch (d)
                     {
@@ -541,9 +541,11 @@ namespace NBodies.Physics
                             Debugger.Break();
                             break;
                     }
+
                     int wg = (int)_device.MaxWorkGroupSize;
                     wg = Math.Min(wg, 256);
                     wg = Math.Min(wg, nThreads);
+
                     kid.SetMemoryArgument(0, _gpuBodyMorts);
                     kid.SetValueArgument(1, inc);
                     kid.SetValueArgument(2, length << 1);
@@ -576,8 +578,10 @@ namespace NBodies.Physics
             // First level map is built from body morts.
             // Subsequent parent level maps are built from child cell morts.
 
-            // Compute the block count from the # of bodies.
+            // Compute the block count and workgroup sizes from the # of bodies.
             int blocks = BlockCount(_bodies.Length);
+            long[] globalSize = new long[] { blocks * _threadsPerBlock };
+            long[] localSize = new long[] { _threadsPerBlock };
 
             // Allocate level counts & index.
             Allocate(ref _gpuLevelCounts, _levels + 1, true);
@@ -605,7 +609,7 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(6, 0);
             _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
             _cellMapKernel.SetValueArgument(8, _gpuBodyMorts.Count);
-            _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
             // This allows the map to be read properly by the mesh building kernels.
@@ -617,7 +621,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
             _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-            _queue.Execute(_compressCellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_compressCellMapKernel, null, globalSize, localSize, null);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
             _buildBottomKernel.SetMemoryArgument(0, _gpuInBodies);
@@ -629,7 +633,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(6, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(7, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(8, _gpuMesh.Count);
-            _queue.Execute(_buildBottomKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
 
             // Now build the top levels of the mesh.
             // NOTE: We use the same kernel work sizes as the bottom level,
@@ -646,7 +650,7 @@ namespace NBodies.Physics
                 _cellMapKernel.SetValueArgument(6, level);
                 _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
                 _cellMapKernel.SetValueArgument(8, _gpuParentMorts.Count);
-                _queue.Execute(_cellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
 
                 // Compress the cell map.
                 _compressCellMapKernel.SetValueArgument(0, -1); // Same as above. Make the kernel read length from the level counts buffer.
@@ -657,7 +661,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
                 _compressCellMapKernel.SetValueArgument(6, level);
                 _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-                _queue.Execute(_compressCellMapKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_compressCellMapKernel, null, globalSize, localSize, null);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 _buildTopKernel.SetMemoryArgument(0, _gpuMesh);
@@ -668,7 +672,7 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(5, level);
                 _buildTopKernel.SetMemoryArgument(6, _gpuParentMorts);
                 _buildTopKernel.SetValueArgument(7, _gpuMesh.Count);
-                _queue.Execute(_buildTopKernel, null, new long[] { blocks * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_buildTopKernel, null, globalSize, localSize, null);
             }
 
             // Read back the level index and set the total mesh length.

@@ -878,7 +878,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 
 	MeshCell bodyCell = inMesh[outBody.MeshID];
 
-	if (sim.CollisionsOn == 1 && HasFlagB(outBody, INROCHE))
+	if (sim.CollisionsOn == 1 && HasFlagB(outBody, INROCHE) && !HasFlagB(outBody, BLACKHOLE))
 	{
 		// Iterate parent cell neighbors.
 		int start = inMesh[bodyCell.ParentID].NeighborStartIdx;
@@ -1003,12 +1003,15 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 {
 	Body outBody = bodyA;
 
-	outBody.VeloX += colMass * forceX;
-	outBody.VeloY += colMass * forceY;
+	/*outBody.VeloX += colMass * forceX;
+	outBody.VeloY += colMass * forceY;*/
 
 	// Don't increase size of black holes.
 	if (!HasFlagB(outBody, BLACKHOLE))
 	{
+		outBody.VeloX += colMass * forceX;
+		outBody.VeloY += colMass * forceY;
+
 		float a1 = pow((outBody.Size * 0.5f), 2.0f);
 		float a2 = pow((bodyB.Size * 0.5f), 2.0f);
 		float area = a1 + a2;
