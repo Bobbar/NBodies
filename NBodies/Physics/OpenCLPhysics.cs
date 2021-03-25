@@ -68,7 +68,7 @@ namespace NBodies.Physics
         private Stopwatch timer2 = new Stopwatch();
 
         private long _currentFrame = 0;
-        private long _lastMeshRead = 0;
+        private long _lastMeshReadFrame = 0;
 
         private Dictionary<int, ComputeKernel> _sortKerns = new Dictionary<int, ComputeKernel>();
 
@@ -77,13 +77,13 @@ namespace NBodies.Physics
             get
             {
                 // Only read mesh from GPU if it has changed.
-                if (_lastMeshRead != _currentFrame)
+                if (_lastMeshReadFrame != _currentFrame)
                 {
                     // Block until the mesh gets read at the end of the frame.
                     _meshRequested.Reset();
                     _meshRequested.Wait(200);
 
-                    _lastMeshRead = _currentFrame;
+                    _lastMeshReadFrame = _currentFrame;
                 }
 
                 return _mesh;
@@ -126,7 +126,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.OutOfOrderExecution);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -261,33 +261,33 @@ namespace NBodies.Physics
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
-            int threadBlocks = 0;
 
             // Allocate and start writing bodies to the GPU.
             Allocate(ref _gpuInBodies, _bodies.Length);
             Allocate(ref _gpuOutBodies, _bodies.Length);
-            _queue.WriteToBuffer(_bodies, _gpuOutBodies, false, 0, 0, _bodies.Length, null);
+            WriteBuffer(_bodies, _gpuOutBodies, 0, 0, _bodies.Length);
 
+            // Post process flag.
+            // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
+            int[] postNeeded = new int[1] { 0 };
+            WriteBuffer(postNeeded, _gpuPostNeeded, 0, 0, postNeeded.Length);
+
+            // Recompute SPH pre-calcs if needed.
             if (_kernelSize != sim.KernelSize)
             {
                 _kernelSize = sim.KernelSize;
                 PreCalcSPH(_kernelSize);
             }
 
-            // Calc number of thread blocks to fit the dataset.
-            threadBlocks = BlockCount(_bodies.Length);
-
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
-
-            // Post process flag.
-            // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
-            int[] postNeeded = new int[1] { 0 };
-            _queue.WriteToBuffer(postNeeded, _gpuPostNeeded, false, null);
 
             // Get start and end of top level mesh cells.
             int meshTopStart = _levelIdx[_levels];
             int meshTopEnd = _meshLength;
+
+            // Calc number of thread blocks to fit the dataset.
+            int threadBlocks = BlockCount(_bodies.Length);
 
             // Compute gravity and SPH forces for the near/local field.
             int argi = 0;
@@ -325,11 +325,13 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-            isPostNeeded = Convert.ToBoolean(ReadBuffer(_gpuPostNeeded)[0]);
+            // Read back.
+            ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1);
+            isPostNeeded = Convert.ToBoolean(postNeeded[0]);
 
-            _queue.ReadFromBuffer(_gpuOutBodies, ref bodies, true, 0, 0, bodies.Length, null);
-            _queue.Finish();
+            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length);
 
+            // Increment frame count.
             _currentFrame++;
 
             // Check if we need to read the mesh.
@@ -355,7 +357,8 @@ namespace NBodies.Physics
                 _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
                 _queue.Finish();
 
-                bodies = ReadBuffer(outBodies, true);
+                ReadBuffer(outBodies, ref bodies, 0, 0, bodies.Length);
+                _queue.Finish();
             }
         }
 
@@ -364,7 +367,8 @@ namespace NBodies.Physics
             if (_mesh.Length != _meshLength)
                 _mesh = new MeshCell[_meshLength];
 
-            _queue.ReadFromBuffer(_gpuMesh, ref _mesh, true, 0, 0, _meshLength, null);
+            ReadBuffer(_gpuMesh, ref _mesh, 0, 0, _meshLength);
+            _queue.Finish();
         }
 
         /// <summary>
@@ -395,7 +399,7 @@ namespace NBodies.Physics
         private void BuildMesh(int cellSizeExp)
         {
             // Index of mesh level locations.
-            _levelIdx = new int[_levels + 1];
+            _levelIdx = new int[_levels + 2];
             _levelIdx[0] = 0; // Bottom level.
 
             // Compute a padded size.
@@ -486,7 +490,7 @@ namespace NBodies.Physics
                     else if (ii == 512 && ((ALLOWB & 4) > 0)) d = 2;
                     else if (ii == 1024 && ((ALLOWB & 8) > 0)) d = 3;
                     else if (ii == 2048 && ((ALLOWB & 16) > 0)) d = 4;
-                  
+
                     else if (ii >= 8 && ((ALLOWB & 16) > 0)) d = 4;
                     else if (ii >= 4 && ((ALLOWB & 8) > 0)) d = 3;
                     else if (ii >= 2 && ((ALLOWB & 4) > 0)) d = 2;
@@ -676,7 +680,7 @@ namespace NBodies.Physics
             }
 
             // Read back the level index and set the total mesh length.
-            _levelIdx = ReadBuffer(_gpuLevelIdx, true);
+            ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length);
             _meshLength = _levelIdx[_levels + 1];
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
@@ -690,8 +694,6 @@ namespace NBodies.Physics
                 BuildMeshGPU(cellSizeExp);
             }
         }
-
-       
 
         private void PopNeighborsMeshGPU(int meshSize)
         {
@@ -821,6 +823,46 @@ namespace NBodies.Physics
             return buf;
         }
 
+        private void ReadBuffer<T>(ComputeBufferBase<T> source, ref T[] dest, long sourceOffset, long destOffset, long region) where T : struct
+        {
+            var sizeofT = Marshal.SizeOf<T>();
+            GCHandle destinationGCHandle = GCHandle.Alloc(dest, GCHandleType.Pinned);
+            IntPtr destinationOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(dest, (int)destOffset);
+
+            Cloo.Bindings.CL12.EnqueueReadBuffer(
+                _queue.Handle,
+                source.Handle,
+                false,
+                new IntPtr(0 * sizeofT),
+                new IntPtr(dest.Length * sizeofT),
+                destinationOffsetPtr,
+                0,
+                null,
+                null);
+
+            destinationGCHandle.Free();
+        }
+
+        private void WriteBuffer<T>(T[] source, ComputeBufferBase<T> dest, long sourceOffset, long destOffset, long region) where T : struct
+        {
+            var sizeofT = Marshal.SizeOf<T>();
+            GCHandle sourceGCHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
+            IntPtr sourceOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(source, (int)sourceOffset);
+
+            Cloo.Bindings.CL12.EnqueueWriteBuffer(
+                _queue.Handle,
+                dest.Handle,
+                false,
+                new IntPtr(0 * sizeofT),
+                new IntPtr(source.Length * sizeofT),
+                sourceOffsetPtr,
+                0,
+                null,
+                null);
+
+            sourceGCHandle.Free();
+        }
+
         public void Flush()
         {
             _meshRequested.Set();
@@ -842,7 +884,7 @@ namespace NBodies.Physics
 
             _mesh = new MeshCell[0];
             _currentFrame = 0;
-            _lastMeshRead = 0;
+            _lastMeshReadFrame = 0;
             InitBuffers();
         }
 
