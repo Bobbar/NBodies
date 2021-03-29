@@ -266,6 +266,9 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (len < 0)
 		len = levelCounts[level - 1];
 
+	if (gid >= len || gid >= bufLen)
+		return;
+
 	// Local count.
 	volatile __local int lCount;
 
@@ -279,16 +282,13 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	if (gid + 1 >= len || gid >= bufLen)
-		return;
-
 	// Apply the step size to the gid.
 	// Step size of 1 for long type, 2 for long2 type inputs.
 	int gidOff = gid * step;
 
 	// Compare two morton numbers, record the location and increment count if they dont match.
 	// This is where a new cell starts and the previous cell ends.
-	if (morts[gidOff] != morts[gidOff + step])
+	if ((gid + 1) < len && morts[gidOff] != morts[gidOff + step])
 	{
 		atomic_inc(&lCount);
 		lMap[tid] = gid + 1;
