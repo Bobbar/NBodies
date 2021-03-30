@@ -254,7 +254,6 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 	}
 }
 
-
 // Builds initial cell map from storted morton numbers.
 __kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
 {
@@ -266,7 +265,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (len < 0)
 		len = levelCounts[level - 1];
 
-	if (gid >= len || gid >= bufLen)
+	if (gid >= bufLen)
 		return;
 
 	// Local count.
