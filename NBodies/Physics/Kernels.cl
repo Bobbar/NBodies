@@ -268,13 +268,6 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (gid >= bufLen)
 		return;
 
-	// Local count.
-	volatile __local int lCount;
-
-	// First thread initializes local count.
-	if (tid == 0)
-		lCount = 0;
-
 	// Init local map.
 	lMap[tid] = -1;
 
@@ -285,11 +278,10 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// Step size of 1 for long type, 2 for long2 type inputs.
 	int gidOff = gid * step;
 
-	// Compare two morton numbers, record the location and increment count if they dont match.
+	// Compare two morton numbers, and record the location if they dont match.
 	// This is where a new cell starts and the previous cell ends.
 	if ((gid + 1) < len && morts[gidOff] != morts[gidOff + step])
 	{
-		atomic_inc(&lCount);
 		lMap[tid] = gid + 1;
 	}
 
@@ -299,7 +291,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// Finally, the first thread dumps and packs the local memory for the block.
 	if (tid == 0)
 	{
-		// Write the found indexes for this block to its location in global memory.
+		// Write the found indexes for this block to its location in global memory, counting found cells as we go.
 		int n = 0;
 		for (int i = 0; i < threads; i++)
 		{
@@ -310,7 +302,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 		}
 
 		// Write the cell count for the block to global memory.
-		counts[bid] = lCount;
+		counts[bid] = n;
 	}
 }
 
@@ -344,17 +336,10 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 	for (int i = 0; i < nCount; i++)
 		cellmapOut[wStart + i] = cellmapIn[rStart + i];
 
-
-	// Use first thread to accumulate total cell counts
-	// and populate level count & level indexes.
-	if (gid == 0)
+	// Use the last thread to populate level count & level indexes.
+	if (gid == len - 1)
 	{
-		int tCount = 1;
-		for (int i = 0; i < len; i++)
-		{
-			tCount += counts[i];
-		}
-
+		int tCount = wStart + nCount + 1;
 		levelCounts[level] = tCount;
 		levelIdx[level + 1] = levelIdx[level] + tCount;
 	}
