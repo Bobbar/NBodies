@@ -78,6 +78,7 @@ namespace NBodies.Physics
 
         private long _currentFrame = 0;
         private long _lastMeshReadFrame = 0;
+        private long _curBufferVersion = -1;
 
         public MeshCell[] CurrentMesh
         {
@@ -203,7 +204,7 @@ namespace NBodies.Physics
         private void InitBuffers()
         {
             _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshNeighbors, 1);
+            Allocate(ref _gpuMeshNeighbors, 10000);
 
             _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuInBodies, 1, true);
@@ -212,7 +213,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuOutBodies, 1, true);
 
             _gpuMesh = new ComputeBuffer<MeshCell>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMesh, 1, true);
+            Allocate(ref _gpuMesh, 10000, true);
 
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
@@ -227,16 +228,16 @@ namespace NBodies.Physics
             Allocate(ref _gpuBodyMortsB, 1, true);
 
             _gpuMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMap, 1, true);
+            Allocate(ref _gpuMap, 10000, true);
 
             _gpuMapFlat = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMapFlat, 1, true);
+            Allocate(ref _gpuMapFlat, 10000, true);
 
             _gpuCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCounts, 1, true);
 
             _gpuParentMorts = new ComputeBuffer<long>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuParentMorts, 1, true);
+            Allocate(ref _gpuParentMorts, 10000, true);
 
             _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuLevelCounts, 1, true);
@@ -245,13 +246,13 @@ namespace NBodies.Physics
             Allocate(ref _gpuLevelIdx, 1, true);
 
             _gpuHistogram = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuHistogram, 1, true);
+            Allocate(ref _gpuHistogram, 10000, true);
 
             _gpuGlobSum = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuGlobSum, 1, true);
+            Allocate(ref _gpuGlobSum, 10000, true);
 
             _gpuGlobSumTemp = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuGlobSumTemp, 1, true);
+            Allocate(ref _gpuGlobSumTemp, 10000, true);
         }
 
         private void PreCalcSPH(float kernelSize)
@@ -272,7 +273,7 @@ namespace NBodies.Physics
             _preCalcs = calcs;
         }
 
-        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, out bool isPostNeeded)
+        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, out bool isPostNeeded)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
@@ -281,7 +282,13 @@ namespace NBodies.Physics
             // Allocate and start writing bodies to the GPU.
             Allocate(ref _gpuInBodies, _bodies.Length);
             Allocate(ref _gpuOutBodies, _bodies.Length);
-            WriteBuffer(_bodies, _gpuOutBodies, 0, 0, _bodies.Length);
+
+            // Only write the bodies buffer if it has been changed by the host.
+            if (_curBufferVersion != bufferVersion)
+            {
+                WriteBuffer(_bodies, _gpuOutBodies, 0, 0, _bodies.Length);
+                _curBufferVersion = bufferVersion;
+            }
 
             // Post process flag.
             // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
@@ -687,6 +694,8 @@ namespace NBodies.Physics
                 Debug.WriteLine($"Mesh reallocated: {_gpuMesh.Count} -> {_meshLength}");
                 Allocate(ref _gpuMesh, _meshLength);
                 Allocate(ref _gpuParentMorts, _meshLength);
+                Allocate(ref _gpuMap, _meshLength);
+                Allocate(ref _gpuMapFlat, _meshLength);
                 BuildMeshGPU(cellSizeExp);
             }
         }
@@ -861,6 +870,8 @@ namespace NBodies.Physics
 
         public void Flush()
         {
+            _curBufferVersion = int.MaxValue;
+
             _meshRequested.Set();
             _meshLength = 0;
             _gpuMesh.Dispose();

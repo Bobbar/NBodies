@@ -291,6 +291,7 @@ namespace NBodies
         private static double _recSizeLimit = 0;
 
         private static Body[] _bodiesBuffer = new Body[0];
+        private static long _bufferVersion = 0;
         private static SimSettings _settings = new SimSettings();
 
         private static IRecording _recorder = new IO.MessagePackRecorder();
@@ -320,6 +321,7 @@ namespace NBodies
             _renderReadyWait.Wait(5000);
             PhysicsProvider.PhysicsCalc.Flush();
             _peakFPS = 0;
+            _bufferVersion = 0;
         }
 
         public static void End()
@@ -393,7 +395,10 @@ namespace NBodies
                             bool postNeeded = false;
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), out postNeeded);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, out postNeeded);
+
+                            if (postNeeded)
+                                _bufferVersion++;
 
                             // Do some final host-side processing. (Remove culled, roche fractures, etc)
                             BodyManager.PostProcessFrame(ref _bodiesBuffer, RocheLimit, postNeeded);
@@ -496,6 +501,8 @@ namespace NBodies
                 _bodiesBuffer = new Body[BodyManager.Bodies.Length];
 
             Array.Copy(BodyManager.Bodies, 0, _bodiesBuffer, 0, BodyManager.Bodies.Length);
+
+            _bufferVersion++;
         }
 
         public static SimSettings GetSettings()
