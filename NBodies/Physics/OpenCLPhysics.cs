@@ -49,6 +49,10 @@ namespace NBodies.Physics
         private ComputeKernel _cellMapKernel;
         private ComputeKernel _compressCellMapKernel;
         private ComputeKernel _computeMortsKernel;
+        private ComputeKernel _histogramKernel;
+        private ComputeKernel _reorderKernel;
+        private ComputeKernel _scanHistogramsKernel;
+        private ComputeKernel _pastehistogramsKernel;
 
         private ComputeBuffer<MeshCell> _gpuMesh;
         private ComputeBuffer<int> _gpuMeshNeighbors;
@@ -60,17 +64,20 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuMapFlat;
         private ComputeBuffer<int> _gpuCounts;
         private ComputeBuffer<long> _gpuParentMorts;
-        private ComputeBuffer<long2> _gpuBodyMorts;
+        private ComputeBuffer<long2> _gpuBodyMortsA;
+        private ComputeBuffer<long2> _gpuBodyMortsB;
         private ComputeBuffer<int> _gpuLevelCounts;
         private ComputeBuffer<int> _gpuLevelIdx;
+        private ComputeBuffer<int> _gpuHistogram;
+        private ComputeBuffer<int> _gpuGlobSum;
+        private ComputeBuffer<int> _gpuGlobSumTemp;
+
 
         private Stopwatch timer = new Stopwatch();
         private Stopwatch timer2 = new Stopwatch();
 
         private long _currentFrame = 0;
         private long _lastMeshReadFrame = 0;
-
-        private Dictionary<int, ComputeKernel> _sortKerns = new Dictionary<int, ComputeKernel>();
 
         public MeshCell[] CurrentMesh
         {
@@ -168,12 +175,10 @@ namespace NBodies.Physics
             _cellMapKernel = _program.CreateKernel("MapMorts");
             _compressCellMapKernel = _program.CreateKernel("CompressMap");
             _computeMortsKernel = _program.CreateKernel("ComputeMorts");
-
-            _sortKerns.Add(12, _program.CreateKernel("ParallelBitonic_C4"));
-            _sortKerns.Add(10, _program.CreateKernel("ParallelBitonic_B16"));
-            _sortKerns.Add(9, _program.CreateKernel("ParallelBitonic_B8"));
-            _sortKerns.Add(8, _program.CreateKernel("ParallelBitonic_B4"));
-            _sortKerns.Add(7, _program.CreateKernel("ParallelBitonic_B2"));
+            _histogramKernel = _program.CreateKernel("histogram");
+            _reorderKernel = _program.CreateKernel("reorder");
+            _scanHistogramsKernel = _program.CreateKernel("scanhistograms");
+            _pastehistogramsKernel = _program.CreateKernel("pastehistograms");
 
             InitBuffers();
 
@@ -215,8 +220,11 @@ namespace NBodies.Physics
             _gpuCM = new ComputeBuffer<Vector3>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
 
-            _gpuBodyMorts = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuBodyMorts, 1, true);
+            _gpuBodyMortsA = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuBodyMortsA, 1, true);
+
+            _gpuBodyMortsB = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuBodyMortsB, 1, true);
 
             _gpuMap = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMap, 1, true);
@@ -236,6 +244,14 @@ namespace NBodies.Physics
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuLevelIdx, 1, true);
 
+            _gpuHistogram = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuHistogram, 1, true);
+
+            _gpuGlobSum = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuGlobSum, 1, true);
+
+            _gpuGlobSumTemp = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            Allocate(ref _gpuGlobSumTemp, 1, true);
         }
 
         private void PreCalcSPH(float kernelSize)
@@ -442,126 +458,106 @@ namespace NBodies.Physics
 
         private void ComputeMortsGPU(int padLen, int cellSizeExp)
         {
-            Allocate(ref _gpuBodyMorts, padLen, exact: true);
+            Allocate(ref _gpuBodyMortsA, padLen, exact: true);
 
             _computeMortsKernel.SetMemoryArgument(0, _gpuOutBodies);
             _computeMortsKernel.SetValueArgument(1, _bodies.Length);
             _computeMortsKernel.SetValueArgument(2, padLen);
             _computeMortsKernel.SetValueArgument(3, cellSizeExp);
-            _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMorts);
+            _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMortsA);
             _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
 
+        //
+        // Credit: https://github.com/gyatskov/radix-sort
+        // https://github.com/modelflat/OCLRadixSort
+        //
         private void SortByMortGPU(int padLen)
         {
-            //
-            // Credit & Thanks to:
-            // Eric Bainville - OpenCL Sorting
-            // http://www.bealto.com/gpu-sorting_intro.html
-            //
+            // Radix constants.
+            const int _NUM_BITS_PER_RADIX = 8;
+            const int _NUM_ITEMS_PER_GROUP = 8;
+            const int _NUM_GROUPS = 128;
+            const int _RADIX = (1 << _NUM_BITS_PER_RADIX);
+            const int _DATA_SIZE = 8;
+            const int _NUM_HISTOSPLIT = 512;
+            const int _TOTALBITS = _DATA_SIZE << 3;
+            const int _NUM_PASSES = (_TOTALBITS / _NUM_BITS_PER_RADIX);
 
-            // Allowed sort kernel bit mask.
-            // B2 + B4 + B8 + B16 = 30
-            // Note: B16 may not be compatible with all hardware.
-            const int ALLOWB = 30; //14;
+            int numItems = _NUM_ITEMS_PER_GROUP * _NUM_GROUPS;
+            int numLocalItems = _NUM_ITEMS_PER_GROUP;
 
-            int sz = Marshal.SizeOf<long2>();
-            int n = padLen;
-            var strategy = new Queue<int>();
+            Allocate(ref _gpuBodyMortsB, padLen, true);
+            Allocate(ref _gpuHistogram, _RADIX * _NUM_GROUPS * _NUM_ITEMS_PER_GROUP, true);
+            Allocate(ref _gpuGlobSum, _NUM_HISTOSPLIT, true);
+            Allocate(ref _gpuGlobSumTemp, _NUM_HISTOSPLIT, true);
 
-            for (int length = 1; length < n; length <<= 1)
+            for (int pass = 0; pass < _NUM_PASSES; pass++)
             {
-                int inc = length;
+                #region Histogram
+                // Histogram
+                int argi = 0;
+                _histogramKernel.SetMemoryArgument(argi++, _gpuBodyMortsA);
+                _histogramKernel.SetMemoryArgument(argi++, _gpuHistogram);
+                _histogramKernel.SetValueArgument(argi++, pass);
+                _histogramKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
+                _histogramKernel.SetValueArgument(argi++, padLen);
+                _queue.Execute(_histogramKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //
+                #endregion Histogram
 
-                int ii = inc;
-                while (ii > 0)
-                {
-                    if (ii == 128 || ii == 32 || ii == 8)
-                    {
-                        strategy.Enqueue(-1);
-                        break;
-                    }
+                #region Scan
+                // Scan
 
-                    // default is 1 bit
-                    int d = 1;
+                // Pass 1
+                numItems = _RADIX * _NUM_GROUPS * _NUM_ITEMS_PER_GROUP / 2;
+                numLocalItems = numItems / _NUM_HISTOSPLIT;
 
-                    // Force jump to 128
-                    if (ii == 256) d = 1;
-                    else if (ii == 512 && ((ALLOWB & 4) > 0)) d = 2;
-                    else if (ii == 1024 && ((ALLOWB & 8) > 0)) d = 3;
-                    else if (ii == 2048 && ((ALLOWB & 16) > 0)) d = 4;
+                argi = 0;
+                _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuHistogram);
+                _scanHistogramsKernel.SetLocalArgument(argi++, SIZEOFINT * _NUM_HISTOSPLIT);
+                _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuGlobSum);
+                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
 
-                    else if (ii >= 8 && ((ALLOWB & 16) > 0)) d = 4;
-                    else if (ii >= 4 && ((ALLOWB & 8) > 0)) d = 3;
-                    else if (ii >= 2 && ((ALLOWB & 4) > 0)) d = 2;
-                    else d = 1;
+                // Pass 2
+                numItems = _NUM_HISTOSPLIT / 2;
+                numLocalItems = numItems;
 
-                    strategy.Enqueue(d);
-                    ii >>= d;
-                }
+                _scanHistogramsKernel.SetMemoryArgument(0, _gpuGlobSum);
+                _scanHistogramsKernel.SetMemoryArgument(2, _gpuGlobSumTemp);
+                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                #endregion Scan
 
-                while (inc > 0)
-                {
-                    int ninc = 0;
-                    ComputeKernel kid = _sortKerns[12];
-                    int doLocal = 0;
-                    int nThreads = 0;
-                    int d = strategy.Dequeue();
+                #region Merge
+                // Merge Histograms
+                numItems = _RADIX * _NUM_GROUPS * _NUM_ITEMS_PER_GROUP / 2;
+                numLocalItems = numItems / _NUM_HISTOSPLIT;
 
-                    switch (d)
-                    {
-                        case -1:
-                            kid = _sortKerns[12];
-                            ninc = -1; // reduce all bits
-                            doLocal = 4;
-                            nThreads = n >> 2;
-                            break;
+                _pastehistogramsKernel.SetMemoryArgument(0, _gpuHistogram);
+                _pastehistogramsKernel.SetMemoryArgument(1, _gpuGlobSum);
+                _queue.Execute(_pastehistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
 
-                        case 4:
-                            kid = _sortKerns[10];
-                            ninc = 4;
-                            nThreads = n >> ninc;
-                            break;
+                #endregion Merge
 
-                        case 3:
-                            kid = _sortKerns[9];
-                            ninc = 3;
-                            nThreads = n >> ninc;
-                            break;
+                #region Reorder
+                // Reorder
+                numLocalItems = _NUM_ITEMS_PER_GROUP;
+                numItems = _NUM_ITEMS_PER_GROUP * _NUM_GROUPS;
 
-                        case 2:
-                            kid = _sortKerns[8];
-                            ninc = 2;
-                            nThreads = n >> ninc;
-                            break;
+                argi = 0;
+                _reorderKernel.SetMemoryArgument(argi++, _gpuBodyMortsA);
+                _reorderKernel.SetMemoryArgument(argi++, _gpuBodyMortsB);
+                _reorderKernel.SetMemoryArgument(argi++, _gpuHistogram);
+                _reorderKernel.SetValueArgument(argi++, pass);
+                _reorderKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
+                _reorderKernel.SetValueArgument(argi++, padLen);
+                _queue.Execute(_reorderKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                #endregion Reorder
 
-                        case 1:
-                            kid = _sortKerns[7];
-                            ninc = 1;
-                            nThreads = n >> ninc;
-                            break;
-
-                        default:
-                            Debugger.Break();
-                            break;
-                    }
-
-                    int wg = (int)_device.MaxWorkGroupSize;
-                    wg = Math.Min(wg, 256);
-                    wg = Math.Min(wg, nThreads);
-
-                    kid.SetMemoryArgument(0, _gpuBodyMorts);
-                    kid.SetValueArgument(1, inc);
-                    kid.SetValueArgument(2, length << 1);
-
-                    if (doLocal > 0)
-                        kid.SetLocalArgument(3, doLocal * wg * sz);
-
-                    _queue.Execute(kid, null, new long[] { nThreads, 1 }, new long[] { wg, 1 }, null);
-
-                    if (ninc < 0) break; // done
-                    inc >>= ninc;
-                }
+                // Swap keys buffers.
+                ComputeBuffer<long2> temp = _gpuBodyMortsA;
+                _gpuBodyMortsA = _gpuBodyMortsB;
+                _gpuBodyMortsB = temp;
             }
         }
 
@@ -572,7 +568,7 @@ namespace NBodies.Physics
         {
             _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
             _reindexKernel.SetValueArgument(1, _bodies.Length);
-            _reindexKernel.SetMemoryArgument(2, _gpuBodyMorts);
+            _reindexKernel.SetMemoryArgument(2, _gpuBodyMortsA);
             _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
             _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
         }
@@ -604,7 +600,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuParentMorts, _bodies.Length, false);
 
             // Build initial map from sorted body morts.
-            _cellMapKernel.SetMemoryArgument(0, _gpuBodyMorts);
+            _cellMapKernel.SetMemoryArgument(0, _gpuBodyMortsA);
             _cellMapKernel.SetValueArgument(1, _bodies.Length);
             _cellMapKernel.SetMemoryArgument(2, _gpuMap);
             _cellMapKernel.SetMemoryArgument(3, _gpuCounts);
@@ -612,7 +608,7 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(5, 2); // Set step size to 2 for long2 input type.
             _cellMapKernel.SetValueArgument(6, 0);
             _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
-            _cellMapKernel.SetValueArgument(8, _gpuBodyMorts.Count);
+            _cellMapKernel.SetValueArgument(8, _gpuBodyMortsA.Count);
             _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
@@ -878,9 +874,13 @@ namespace NBodies.Physics
             _gpuParentMorts.Dispose();
             _gpuMap.Dispose();
             _gpuMapFlat.Dispose();
-            _gpuBodyMorts.Dispose();
+            _gpuBodyMortsA.Dispose();
+            _gpuBodyMortsB.Dispose();
             _gpuLevelCounts.Dispose();
             _gpuLevelIdx.Dispose();
+            _gpuHistogram.Dispose();
+            _gpuGlobSum.Dispose();
+            _gpuGlobSumTemp.Dispose();
 
             _mesh = new MeshCell[0];
             _currentFrame = 0;
@@ -900,9 +900,14 @@ namespace NBodies.Physics
             _gpuParentMorts.Dispose();
             _gpuMap.Dispose();
             _gpuMapFlat.Dispose();
-            _gpuBodyMorts.Dispose();
+            _gpuBodyMortsA.Dispose();
             _gpuLevelCounts.Dispose();
             _gpuLevelIdx.Dispose();
+
+            _gpuBodyMortsB.Dispose();
+            _gpuHistogram.Dispose();
+            _gpuGlobSum.Dispose();
+            _gpuGlobSumTemp.Dispose();
 
             _forceKernel.Dispose();
             _collisionSPHKernel.Dispose();
@@ -916,9 +921,10 @@ namespace NBodies.Physics
             _cellMapKernel.Dispose();
             _compressCellMapKernel.Dispose();
             _computeMortsKernel.Dispose();
-
-            foreach (var kern in _sortKerns)
-                kern.Value.Dispose();
+            _histogramKernel.Dispose();
+            _reorderKernel.Dispose();
+            _scanHistogramsKernel.Dispose();
+            _pastehistogramsKernel.Dispose();
 
             _program.Dispose();
             _context.Dispose();
