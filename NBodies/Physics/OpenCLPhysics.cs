@@ -452,15 +452,15 @@ namespace NBodies.Physics
 
         private int ComputePaddedSize(int len)
         {
-            const int maxLen = 256 << 14;
+            // Radix sort input length must be divisible by this value.
+            const int radixMulti = 1024;
 
-            for (int n = 64; n < maxLen; n <<= 1)
-            {
-                if (len <= n)
-                    return n;
-            }
+            if (len < radixMulti)
+                return radixMulti;
 
-            return maxLen;
+            int mod = len % radixMulti;
+            int padLen = (len - mod) + radixMulti;
+            return padLen;
         }
 
         private void ComputeMortsGPU(int padLen, int cellSizeExp)
