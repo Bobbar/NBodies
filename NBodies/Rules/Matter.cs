@@ -9,7 +9,7 @@ namespace NBodies.Rules
 {
     public struct MatterType
     {
-        public int Density { get; set; }
+        public float Density { get; set; }
         public Color Color { get; set; }
         /// <summary>
         /// Percentage indicating how often this matter type will be returned with GetRandom().
@@ -17,7 +17,6 @@ namespace NBodies.Rules
         /// All defined types must sum to 100.
         /// </summary>
         public int Occurrence { get; set; }
-
 
         public MatterType(int density, Color color)
         {
@@ -38,7 +37,7 @@ namespace NBodies.Rules
     {
         private static Random _rnd = new Random((int)(DateTime.Now.Ticks % int.MaxValue));
 
-        public static float Density { get; set; } = 5.0f;
+        public static float Density { get; set; } = 1.0f;
 
         public static MatterType[] Types =
         {

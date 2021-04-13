@@ -52,7 +52,7 @@ namespace NBodies
             float innerRadius = float.Parse(InOrbitRadiusTextBox.Text.Trim());
 
             Rules.Matter.Density = float.Parse(DensityTextBox.Text);
-            centerMass *= Rules.Matter.Density * 2;
+            //centerMass *= Rules.Matter.Density * 2;
 
             var ellipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), radius);
             var inEllipse = new Ellipse(ViewportHelpers.ScreenPointToField(ViewportOffsets.ScreenCenter), innerRadius);
@@ -123,7 +123,7 @@ namespace NBodies
                 }
                 else
                 {
-                    newMass = BodyManager.CalcMass(bodySize, matter.Density);
+                    newMass = BodyManager.CalcMass(bodySize, matter.Density * Matter.Density);
                 }
 
                 Color color;
@@ -225,7 +225,7 @@ namespace NBodies
                 }
                 else
                 {
-                    newMass = BodyManager.CalcMass(bodySize, matter.Density);
+                    newMass = BodyManager.CalcMass(bodySize, matter.Density * Matter.Density);
                 }
 
                 Color color;

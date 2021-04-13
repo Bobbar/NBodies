@@ -194,8 +194,8 @@ namespace NBodies.UI
                 MassTextBox.Text = selectBody.Mass.ToString();
                 FlagsTextBox.Text = selectBody.Flag.ToString();
 
-                //if (System.Diagnostics.Debugger.IsAttached)
-                //    selectBody.PrintInfo();
+                if (System.Diagnostics.Debugger.IsAttached)
+                    selectBody.PrintInfo();
             }
         }
 

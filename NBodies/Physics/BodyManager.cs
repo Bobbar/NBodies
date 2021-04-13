@@ -1103,6 +1103,9 @@ namespace NBodies.Physics
                 mesh = Mesh[body.MeshID];
             }
 
+            if (Mesh.Length < 1)
+                return;
+
             int index = Bodies.ToList().IndexOf(body);
             string info = $@"
 Index: { index }
