@@ -254,6 +254,13 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (gid >= bufLen)
 		return;
 
+	// Local count.
+	volatile __local int lCount;
+
+	// First thread initializes local count.
+	if (tid == 0)
+		lCount = 0;
+
 	// Init local map.
 	lMap[tid] = -1;
 
@@ -268,28 +275,19 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// This is where a new cell starts and the previous cell ends.
 	if ((gid + 1) < len && morts[gidOff] != morts[gidOff + step])
 	{
+		atomic_inc(&lCount);
 		lMap[tid] = gid + 1;
 	}
 
 	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Finally, the first thread dumps and packs the local memory for the block.
+	// All threads write their results back to global memory.
+	cellmap[threads * bid + tid] = lMap[tid];
+
+	// Finally, the first thread writes the cell count to global memory.
 	if (tid == 0)
-	{
-		// Write the found indexes for this block to its location in global memory, counting found cells as we go.
-		int n = 0;
-		for (int i = 0; i < threads; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[threads * bid + n++] = val;
-		}
-
-		// Write the cell count for the block to global memory.
-		counts[bid] = n;
-	}
+		counts[bid] = lCount;
 }
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
@@ -318,9 +316,15 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 			wStart += counts[b];
 	}
 
-	// Copy the indexes to the output at the correct location.
-	for (int i = 0; i < nCount; i++)
-		cellmapOut[wStart + i] = cellmapIn[rStart + i];
+	// Write found values to global memory.
+	int n = 0;
+	for (int i = 0; i < threads; i++) 
+	{
+		int inVal = cellmapIn[rStart + i];
+
+		if (inVal > -1)
+			cellmapOut[wStart + n++] = inVal;
+	}
 
 	// Use the last thread to populate level count & level indexes.
 	if (gid == len - 1)
@@ -1014,7 +1018,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 	int items = get_local_size(0);
 
 	// initialize the local histograms to zero
-	for (int ir = 0; ir < _RADIX; ir++) 
+	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		loc_histo[ir * items + it] = 0;
 	}
@@ -1031,7 +1035,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 
 	// compute the index
 	// the computation depends on the transposition
-	for (int j = 0; j < sublist_size; j++) 
+	for (int j = 0; j < sublist_size; j++)
 	{
 		k = j + sublist_start;
 
@@ -1052,7 +1056,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 
 	// copy the local histogram to the global one
 	// in this case the global histo is the group histo.
-	for (int ir = 0; ir < _RADIX; ir++) 
+	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		d_Histograms[items * (ir * groups + gr) + it] = loc_histo[ir * items + it];
 	}
@@ -1076,11 +1080,11 @@ __kernel void scanhistograms(__global int* histo, __local int* temp, __global in
 
 	// parallel prefix sum (algorithm of Blelloch 1990)
 	// This loop runs log2(n) times
-	for (int d = n >> 1; d > 0; d >>= 1) 
+	for (int d = n >> 1; d > 0; d >>= 1)
 	{
 		barrier(CLK_LOCAL_MEM_FENCE);
-		
-		if (it < d) 
+
+		if (it < d)
 		{
 			int ai = decale * ((it << 1) + 1) - 1;
 			int bi = decale * ((it << 1) + 2) - 1;
@@ -1093,7 +1097,7 @@ __kernel void scanhistograms(__global int* histo, __local int* temp, __global in
 	// store the last element in the global sum vector
 	// (maybe used in the next step for constructing the global scan)
 	// clear the last element
-	if (it == 0) 
+	if (it == 0)
 	{
 		globsum[gr] = temp[n - 1];
 		temp[n - 1] = 0;
@@ -1101,12 +1105,12 @@ __kernel void scanhistograms(__global int* histo, __local int* temp, __global in
 
 	// down sweep phase
 	// This loop runs log2(n) times
-	for (int d = 1; d < n; d <<= 1) 
+	for (int d = 1; d < n; d <<= 1)
 	{
 		decale >>= 1;
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		if (it < d) 
+		if (it < d)
 		{
 			int ai = decale * ((it << 1) + 1) - 1;
 			int bi = decale * ((it << 1) + 2) - 1;
