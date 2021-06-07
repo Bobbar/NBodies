@@ -29,9 +29,9 @@ typedef struct
 	int BodyCount;
 	int ChildStartIdx;
 	int ChildCount;
+	float Mass;
 	float CmX;
 	float CmY;
-	float Mass;
 	int Size;
 	int ParentID;
 	int Level;
@@ -377,13 +377,13 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 	MeshCell newCell;
 	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
-	newCell.Size = cellSize;
-	newCell.BodyStartIdx = firstIdx;
-	newCell.BodyCount = 1;
 	newCell.NeighborStartIdx = -1;
 	newCell.NeighborCount = 0;
+	newCell.BodyStartIdx = firstIdx;
+	newCell.BodyCount = 1;
 	newCell.ChildStartIdx = -1;
 	newCell.ChildCount = 0;
+	newCell.Size = cellSize;
 	newCell.ParentID = -1;
 	newCell.Level = 0;
 
@@ -392,8 +392,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 	int idxY = newCell.IdxY >> 1;
 	long morton = MortonNumber(idxX, idxY);
 	parentMorts[m] = morton;
-
-	inBodies[firstIdx].MeshID = m;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -414,6 +412,7 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 	newCell.CmX = (nCM.x / nMass);
 	newCell.CmY = (nCM.y / nMass);
 
+	inBodies[firstIdx].MeshID = m;
 	mesh[m] = newCell;
 }
 
@@ -450,21 +449,19 @@ __kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global in
 	MeshCell newCell;
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
+	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
+	newCell.BodyCount = mesh[firstIdx].BodyCount;
+	newCell.ChildStartIdx = firstIdx;
+	newCell.ChildCount = 1;
 
 	nMass = mesh[firstIdx].Mass;
 	nCM = (double2)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY);
 
 	newCell.Size = cellSize;
-	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
-	newCell.BodyCount = mesh[firstIdx].BodyCount;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.ChildStartIdx = firstIdx;
-	newCell.ChildCount = 1;
 	newCell.ParentID = -1;
 	newCell.Level = level;
-
-	mesh[firstIdx].ParentID = newIdx;
 
 	// Compute parent level morton numbers.
 	int idxX = newCell.IdxX >> 1;
@@ -472,17 +469,15 @@ __kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global in
 	long morton = MortonNumber(idxX, idxY);
 	parentMorts[m] = morton;
 
-
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
-		float mass = mesh[i].Mass;
+		newCell.BodyCount += mesh[i].BodyCount;
+		newCell.ChildCount++;
 
+		float mass = mesh[i].Mass;
 		nMass += mass;
 		nCM.x += mass * mesh[i].CmX;
 		nCM.y += mass * mesh[i].CmY;
-
-		newCell.ChildCount++;
-		newCell.BodyCount += mesh[i].BodyCount;
 
 		mesh[i].ParentID = newIdx;
 	}
@@ -491,6 +486,7 @@ __kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global in
 	newCell.CmX = (nCM.x / nMass);
 	newCell.CmY = (nCM.y / nMass);
 
+	mesh[firstIdx].ParentID = newIdx;
 	mesh[newIdx] = newCell;
 }
 
