@@ -246,7 +246,6 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
 	int bid = get_group_id(0);
-	int threads = get_local_size(0);
 
 	if (len < 0)
 		len = levelCounts[level - 1];
@@ -283,7 +282,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// All threads write their results back to global memory.
-	cellmap[threads * bid + tid] = lMap[tid];
+	cellmap[gid] = lMap[tid];
 
 	// Finally, the first thread writes the cell count to global memory.
 	if (tid == 0)

@@ -573,11 +573,13 @@ namespace NBodies.Physics
         /// </summary>
         private void ReindexBodiesGPU()
         {
+            // This kernel is a bit faster with less threads per block... (Why?)
+            int threads = 8;
             _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
             _reindexKernel.SetValueArgument(1, _bodies.Length);
             _reindexKernel.SetMemoryArgument(2, _gpuBodyMortsA);
             _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
         }
 
         private void BuildMeshGPU(int cellSizeExp)
