@@ -147,9 +147,9 @@ namespace NBodies.Physics
                 string options;
 
                 if (_useFastMath)
-                    options = $@"-cl-std=CL1.2 -cl-fast-relaxed-math -D FASTMATH";
+                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH";
                 else
-                    options = $"-cl-std=CL1.2";
+                    options = $"-cl-std=CL2.0";
 
                 _program.Build(new[] { _device }, options, null, IntPtr.Zero);
             }
@@ -433,7 +433,7 @@ namespace NBodies.Physics
             ComputeMortsGPU(padLen, cellSizeExp);
 
             // Sort by the morton numbers.
-            SortByMortGPU(padLen);
+            SortByMortGPU(padLen); 
             ReindexBodiesGPU();
 
             // Build each level of the mesh.
@@ -483,7 +483,7 @@ namespace NBodies.Physics
         {
             // Radix constants.
             const int _NUM_BITS_PER_RADIX = 8;
-            const int _NUM_ITEMS_PER_GROUP = 8;
+            const int _NUM_ITEMS_PER_GROUP = 4;
             const int _NUM_GROUPS = 128;
             const int _RADIX = (1 << _NUM_BITS_PER_RADIX);
             const int _DATA_SIZE = 8;
