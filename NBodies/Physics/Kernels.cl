@@ -34,10 +34,10 @@ typedef struct
 	int BodyCount;
 	int ChildStartIdx;
 	int ChildCount;
+	float Mass;
 	float CmX;
 	float CmY;
 	float CmZ;
-	float Mass;
 	int Size;
 	int ParentID;
 
@@ -106,7 +106,7 @@ int SetFlag(int flags, int flag, bool enabled);
 Body SetFlagB(Body body, int flag, bool enabled);
 bool HasFlag(int flags, int check);
 bool HasFlagB(Body body, int check);
-
+int BlockCount(int len, int threads);
 
 int SetFlag(int flags, int flag, bool enabled)
 {
@@ -150,6 +150,17 @@ bool HasFlag(int flags, int check)
 bool HasFlagB(Body body, int check)
 {
 	return (check & body.Flag) != 0;
+}
+
+int BlockCount(int len, int threads)
+{
+	int blocks = len / threads;
+	int mod = len % threads;
+
+	if (mod > 0)
+		blocks += 1;
+
+	return blocks;
 }
 
 // Bit twiddling, magic number, super duper morton computer...
@@ -253,13 +264,16 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 
 
 // Builds initial cell map from storted morton numbers.
-__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int threads, int step)
+__kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
 {
 	int gid = get_global_id(0);
 	int tid = get_local_id(0);
 	int bid = get_group_id(0);
 
-	if (gid >= len)
+	if (len < 0)
+		len = levelCounts[level - 1];
+
+	if (gid >= bufLen)
 		return;
 
 	// Local count.
@@ -279,7 +293,7 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// Step size of 1 for long type, 2 for long2 type inputs.
 	int gidOff = gid * step;
 
-	// Compare two morton numbers, record the location and increment count if they dont match.
+	// Compare two morton numbers, and record the location if they dont match.
 	// This is where a new cell starts and the previous cell ends.
 	if ((gid + 1) < len && morts[gidOff] != morts[gidOff + step])
 	{
@@ -290,29 +304,25 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	// Sync local threads.
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Finally, the first thread dumps and packs the local memory for the block.
+	// All threads write their results back to global memory.
+	cellmap[gid] = lMap[tid];
+
+	// Finally, the first thread writes the cell count to global memory.
 	if (tid == 0)
-	{
-		// Write the found indexes for this block to its location in global memory.
-		int n = 0;
-		for (int i = 0; i < threads; i++)
-		{
-			int val = lMap[i];
-
-			if (val > -1)
-				cellmap[threads * bid + n++] = val;
-		}
-
-		// Write the cell count for the block to global memory.
 		counts[bid] = lCount;
-	}
 }
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
-__kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut, global int* counts, int threads)
+__kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmapOut, global int* counts, global int* levelCounts, global int* levelIdx, int level, int threads)
 {
 	int gid = get_global_id(0);
+	int len = 0;
+
+	if (blocks > 0)
+		len = blocks;
+	else
+		len = BlockCount(levelCounts[level - 1], threads);
 
 	if (gid >= len)
 		return;
@@ -328,11 +338,24 @@ __kernel void CompressMap(int len, global int* cellmapIn, global int* cellmapOut
 			wStart += counts[b];
 	}
 
-	// Copy the indexes to the output at the correct location.
-	for (int i = 0; i < nCount; i++)
-		cellmapOut[wStart + i] = cellmapIn[rStart + i];
-}
+	// Write found values to global memory.
+	int n = 0;
+	for (int i = 0; i < threads; i++)
+	{
+		int inVal = cellmapIn[rStart + i];
 
+		if (inVal > -1)
+			cellmapOut[wStart + n++] = inVal;
+	}
+
+	// Use the last thread to populate level count & level indexes.
+	if (gid == len - 1)
+	{
+		int tCount = wStart + nCount + 1;
+		levelCounts[level] = tCount;
+		levelIdx[level + 1] = levelIdx[level] + tCount;
+	}
+}
 
 // Read indexes from the sorted morton buffer and copy bodies to their sorted location.
 __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
@@ -350,12 +373,13 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 	outBodies[b] = inBodies[newIdx];
 }
 
-
-__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int meshLen, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts)
+__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
-	if (m >= meshLen)
+	int meshLen = levelCounts[0];
+
+	if (m >= meshLen || m >= bufLen)
 		return;
 
 	int firstIdx = 0;
@@ -378,13 +402,13 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
 	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
 	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
-	newCell.Size = cellSize;
-	newCell.BodyStartIdx = firstIdx;
-	newCell.BodyCount = 1;
 	newCell.NeighborStartIdx = -1;
 	newCell.NeighborCount = 0;
+	newCell.BodyStartIdx = firstIdx;
+	newCell.BodyCount = 1;
 	newCell.ChildStartIdx = -1;
 	newCell.ChildCount = 0;
+	newCell.Size = cellSize;
 	newCell.ParentID = -1;
 
 	// Compute parent level morton numbers.
@@ -393,8 +417,6 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	int idxZ = newCell.IdxZ >> 1;
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
-
-	inBodies[firstIdx].MeshID = m;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -418,24 +440,34 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, int mesh
 	newCell.CmY = (nCM.y / nMass);
 	newCell.CmZ = (nCM.z / nMass);
 
+	inBodies[firstIdx].MeshID = m;
 	mesh[m] = newCell;
 }
 
 
-__kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, int childsEnd, global int* cellMap, int cellSize, int level, global long* parentMorts)
+__kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
-	if (m >= parentLen)
+	int parentLen = levelCounts[level];
+
+	if (m >= parentLen || m >= bufLen)
 		return;
+
+	int childsStart = levelIdx[level - 1];
+	int childsEnd = levelIdx[level];
 
 	int newIdx = m + childsEnd;
 
+	if (newIdx >= bufLen)
+		return;
+
 	int firstIdx = childsStart;
+	int lastIdx = childsStart + cellMap[m];
+
 	if (m > 0)
 		firstIdx += cellMap[m - 1];
 
-	int lastIdx = childsStart + cellMap[m];
 	if (m == parentLen - 1)
 		lastIdx = childsEnd;
 
@@ -446,20 +478,18 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
 	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
 	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
+	newCell.NeighborStartIdx = -1;
+	newCell.NeighborCount = 0;
+	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
+	newCell.BodyCount = mesh[firstIdx].BodyCount;
+	newCell.ChildStartIdx = firstIdx;
+	newCell.ChildCount = 1;
 
 	nMass = mesh[firstIdx].Mass;
 	nCM = (double3)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY, nMass * mesh[firstIdx].CmZ);
 
 	newCell.Size = cellSize;
-	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
-	newCell.BodyCount = mesh[firstIdx].BodyCount;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.ChildStartIdx = firstIdx;
-	newCell.ChildCount = 1;
 	newCell.ParentID = -1;
-
-	mesh[firstIdx].ParentID = newIdx;
 
 	// Compute parent level morton numbers.
 	int idxX = newCell.IdxX >> 1;
@@ -468,18 +498,16 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
 
-
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
-		float mass = mesh[i].Mass;
+		newCell.BodyCount += mesh[i].BodyCount;
+		newCell.ChildCount++;
 
+		float mass = mesh[i].Mass;
 		nMass += mass;
 		nCM.x += mass * mesh[i].CmX;
 		nCM.y += mass * mesh[i].CmY;
 		nCM.z += mass * mesh[i].CmZ;
-
-		newCell.ChildCount++;
-		newCell.BodyCount += mesh[i].BodyCount;
 
 		mesh[i].ParentID = newIdx;
 	}
@@ -489,6 +517,7 @@ __kernel void BuildTop(global MeshCell* mesh, int parentLen, int childsStart, in
 	newCell.CmY = (nCM.y / nMass);
 	newCell.CmZ = (nCM.z / nMass);
 
+	mesh[firstIdx].ParentID = newIdx;
 	mesh[newIdx] = newCell;
 }
 
@@ -586,29 +615,43 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int s
 
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 {
-	float3 dir = posA - posB;
+//	float3 dir = posA - posB;
+//
+//#if FASTMATH
+//	float dist = dot(dir, dir);
+//	float distSqrt = SQRT(dist);
+//#else
+//	float distSqrt = LENGTH(dir);
+//	float dist = pow(distSqrt, 2);
+//#endif
+//
+//	// Clamp to soften length.
+//	dist = max(dist, SOFTENING);
+//	distSqrt = max(distSqrt, SOFTENING_SQRT);
+//
+//#if FASTMATH
+//	// This math is measurably faster, but its accuracy is questionable,
+//	// so we'll include it in the fast math preprocessor flag.
+//	float force = (massA * massB) / distSqrt / distSqrt / distSqrt;
+//	float3 ret = dir * force;
+//#else
+//	float force = massA * massB / dist;
+//	float3 ret = (dir * force) / distSqrt;
+//#endif
+//
+//	return ret;
 
-#if FASTMATH
+
+	float3 dir = posA - posB;
 	float dist = dot(dir, dir);
 	float distSqrt = SQRT(dist);
-#else
-	float distSqrt = LENGTH(dir);
-	float dist = pow(distSqrt, 2);
-#endif
 
 	// Clamp to soften length.
 	dist = max(dist, SOFTENING);
 	distSqrt = max(distSqrt, SOFTENING_SQRT);
 
-#if FASTMATH
-	// This math is measurably faster, but its accuracy is questionable,
-	// so we'll include it in the fast math preprocessor flag.
-	float force = (massA * massB) / distSqrt / distSqrt / distSqrt;
-	float3 ret = dir * force;
-#else
 	float force = massA * massB / dist;
 	float3 ret = (dir * force) / distSqrt;
-#endif
 
 	return ret;
 }
@@ -657,13 +700,14 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 				MeshCell cell = inMesh[(c)];
 
 				// If the cell is far, compute force from cell.
+				// [ Particle -> Mesh ]
 				bool far = IsFar(bodyCell, cell);
 				if (far)
 				{
 					float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
 					iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
 				}
-				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level.
+				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
 				{
 					// Iterate the bodies within the cell.
 					int mbStart = cell.BodyStartIdx;
@@ -676,16 +720,11 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 							float3 jPos = (float3)(inBodies[(mb)].PosX, inBodies[(mb)].PosY, inBodies[(mb)].PosZ);
 							float jMass = inBodies[(mb)].Mass;
 							float3 dir = jPos - iPos;
-
-#if FASTMATH
 							float dist = dot(dir, dir);
 							float distSqrt = SQRT(dist);
-#else
-							float distSqrt = LENGTH(dir);
-							float dist = pow(distSqrt, 2);
-#endif
 
 							// If this body is within collision/SPH distance.
+							// [ SPH ]
 							if (distSqrt <= sph.kSize)
 							{
 								// Accumulate iDensity.
@@ -699,15 +738,9 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 							dist = max(dist, SOFTENING);
 
 							// Accumulate body-to-body force.
-#if FASTMATH
-							// Faster but maybe less accurate.
-							// Switch on preprocessor flag.
-							float force = (jMass * iMass) / distSqrt / distSqrt / distSqrt;
-							iForce += dir * force;
-#else
+
 							float force = jMass * iMass / dist;
 							iForce += (dir * force) / distSqrt;
-#endif
 						}
 					}
 				}
@@ -1077,226 +1110,189 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 }
 
 
-
+//
 // *** SORTING KERNELS ***
-
-// Sort kernels
-// EB Jun 2011
-//
-// Credit & Thanks to:
-// Eric Bainville - OpenCL Sorting
-// http://www.bealto.com/gpu-sorting_intro.html
+// Credit: https://github.com/gyatskov/radix-sort
+// https://github.com/modelflat/OCLRadixSort
 //
 
-#define KTYPE long
+#define DataType long2
+#define _BITS 8
+#define _RADIX 256
 
-typedef long2 data_t;
-#define getKey(a) ((a).x)
-#define getValue(a) ((a).y)
-#define makeData(k,v) ((long2)((k),(v)))
-
-// One thread per record
-__kernel void Copy(__global const data_t* in, __global data_t* out)
+// compute the histogram for each radix and each virtual processor for the pass
+__kernel void histogram(const __global DataType* restrict d_Keys, __global int* restrict d_Histograms, const int pass, __local int* loc_histo, const int n)
 {
-	int i = get_global_id(0); // current thread
-	out[i] = in[i]; // copy
-}
+	int it = get_local_id(0);  // i local number of the processor
+	int ig = get_global_id(0); // global number = i + g I
+	int gr = get_group_id(0); // gr group number
+	const int groups = get_num_groups(0);
+	int items = get_local_size(0);
 
-// Added 'getValue(b) == PADDING_ELEM' to force padding elements to the end.
-#define ORDER(a,b) { bool swap = reverse ^ (getKey(a)<getKey(b) || getValue(b) == PADDING_ELEM); data_t auxa = a; data_t auxb = b; a = (swap)?auxb:auxa; b = (swap)?auxa:auxb; }
-
-
-// N/2 threads
-__kernel void ParallelBitonic_B2(__global data_t* data, int inc, int dir)
-{
-	int t = get_global_id(0); // thread index
-	int low = t & (inc - 1); // low order bits (below INC)
-	int i = (t << 1) - low; // insert 0 at position INC
-	bool reverse = ((dir & i) == 0); // asc/desc order
-	data += i; // translate to first value
-
-			   // Load
-	data_t x0 = data[0];
-	data_t x1 = data[inc];
-
-	// Sort
-	ORDER(x0, x1)
-
-		// Store
-		data[0] = x0;
-	data[inc] = x1;
-}
-
-// N/4 threads
-__kernel void ParallelBitonic_B4(__global data_t* data, int inc, int dir)
-{
-	inc >>= 1;
-	int t = get_global_id(0); // thread index
-	int low = t & (inc - 1); // low order bits (below INC)
-	int i = ((t - low) << 2) + low; // insert 00 at position INC
-	bool reverse = ((dir & i) == 0); // asc/desc order
-	data += i; // translate to first value
-
-			   // Load
-	data_t x0 = data[0];
-	data_t x1 = data[inc];
-	data_t x2 = data[2 * inc];
-	data_t x3 = data[3 * inc];
-
-	// Sort
-	ORDER(x0, x2)
-		ORDER(x1, x3)
-		ORDER(x0, x1)
-		ORDER(x2, x3)
-
-		// Store
-		data[0] = x0;
-	data[inc] = x1;
-	data[2 * inc] = x2;
-	data[3 * inc] = x3;
-}
-
-// Added 'getValue(b) == PADDING_ELEM' to force padding elements to the end.
-#define ORDERV(x,a,b) { bool swap = reverse ^ (getKey(x[a])<getKey(x[b]) || getValue(x[b]) == PADDING_ELEM); \
-      data_t auxa = x[a]; data_t auxb = x[b]; \
-      x[a] = (swap)?auxb:auxa; x[b] = (swap)?auxa:auxb; }
-
-#define B2V(x,a) { ORDERV(x,a,a+1) }
-#define B4V(x,a) { for (int i4=0;i4<2;i4++) { ORDERV(x,a+i4,a+i4+2) } B2V(x,a) B2V(x,a+2) }
-#define B8V(x,a) { for (int i8=0;i8<4;i8++) { ORDERV(x,a+i8,a+i8+4) } B4V(x,a) B4V(x,a+4) }
-#define B16V(x,a) { for (int i16=0;i16<8;i16++) { ORDERV(x,a+i16,a+i16+8) } B8V(x,a) B8V(x,a+8) }
-
-// N/8 threads
-__kernel void ParallelBitonic_B8(__global data_t* data, int inc, int dir)
-{
-	inc >>= 2;
-	int t = get_global_id(0); // thread index
-	int low = t & (inc - 1); // low order bits (below INC)
-	int i = ((t - low) << 3) + low; // insert 000 at position INC
-	bool reverse = ((dir & i) == 0); // asc/desc order
-	data += i; // translate to first value
-
-			   // Load
-	data_t x[8];
-	for (int k = 0; k < 8; k++) x[k] = data[k * inc];
-
-	// Sort
-	B8V(x, 0)
-
-		// Store
-		for (int k = 0; k < 8; k++) data[k * inc] = x[k];
-}
-
-// N/16 threads
-__kernel void ParallelBitonic_B16(__global data_t* data, int inc, int dir)
-{
-	inc >>= 3;
-	int t = get_global_id(0); // thread index
-	int low = t & (inc - 1); // low order bits (below INC)
-	int i = ((t - low) << 4) + low; // insert 0000 at position INC
-	bool reverse = ((dir & i) == 0); // asc/desc order
-	data += i; // translate to first value
-
-			   // Load
-	data_t x[16];
-	for (int k = 0; k < 16; k++) x[k] = data[k * inc];
-
-	// Sort
-	B16V(x, 0)
-
-		// Store
-		for (int k = 0; k < 16; k++) data[k * inc] = x[k];
-}
-
-
-// N/2 threads, AUX[2*WG]
-__kernel void ParallelBitonic_C2(__global data_t* data, int inc0, int dir, __local data_t* aux)
-{
-	int t = get_global_id(0); // thread index
-	int wgBits = 2 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 2*WG)
-
-	for (int inc = inc0; inc > 0; inc >>= 1)
+	// initialize the local histograms to zero
+	__attribute__((opencl_unroll_hint(_RADIX)));
+	for (int ir = 0; ir < _RADIX; ir++)
 	{
-		int low = t & (inc - 1); // low order bits (below INC)
-		int i = (t << 1) - low; // insert 0 at position INC
-		bool reverse = ((dir & i) == 0); // asc/desc order
-		data_t x0, x1;
-
-		// Load
-		if (inc == inc0)
-		{
-			// First iteration: load from global memory
-			x0 = data[i];
-			x1 = data[i + inc];
-		}
-		else
-		{
-			// Other iterations: load from local memory
-			barrier(CLK_LOCAL_MEM_FENCE);
-			x0 = aux[i & wgBits];
-			x1 = aux[(i + inc) & wgBits];
-		}
-
-		// Sort
-		ORDER(x0, x1)
-
-			//	printf("%i : %i \n", x0.x, x0.y);
-
-			// Store
-			if (inc == 1)
-			{
-				// Last iteration: store to global memory
-				data[i] = x0;
-				data[i + inc] = x1;
-			}
-			else
-			{
-				// Other iterations: store to local memory
-				barrier(CLK_LOCAL_MEM_FENCE);
-				aux[i & wgBits] = x0;
-				aux[(i + inc) & wgBits] = x1;
-			}
+		loc_histo[ir * items + it] = 0;
 	}
-}
 
-__kernel void ParallelBitonic_C4(__global data_t* data, int inc0, int dir, __local data_t* aux)
-{
-	int t = get_global_id(0); // thread index
-	int wgBits = 4 * get_local_size(0) - 1; // bit mask to get index in local memory AUX (size is 4*WG)
-	int inc, low, i;
-	bool reverse;
-	data_t x[4];
-
-	// First iteration, global input, local output
-	inc = inc0 >> 1;
-	low = t & (inc - 1); // low order bits (below INC)
-	i = ((t - low) << 2) + low; // insert 00 at position INC
-	reverse = ((dir & i) == 0); // asc/desc order
-	for (int k = 0; k < 4; k++) x[k] = data[i + k * inc];
-	B4V(x, 0);
-
-	//printf("%i : %i \n", x[0].x, x[0].y);
-
-	for (int k = 0; k < 4; k++) aux[(i + k * inc) & wgBits] = x[k];
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Internal iterations, local input and output
-	for (; inc > 1; inc >>= 2)
+	// range of keys that are analyzed by the work item
+	int sublist_size = n / groups / items; // size of the sub-list
+	int sublist_start = ig * sublist_size; // beginning of the sub-list
+
+	long key;
+	long shortkey;
+	int k;
+
+	// compute the index
+	// the computation depends on the transposition
+	for (int j = 0; j < sublist_size; j++)
 	{
-		low = t & (inc - 1); // low order bits (below INC)
-		i = ((t - low) << 2) + low; // insert 00 at position INC
-		reverse = ((dir & i) == 0); // asc/desc order
-		for (int k = 0; k < 4; k++) x[k] = aux[(i + k * inc) & wgBits];
-		B4V(x, 0);
-		barrier(CLK_LOCAL_MEM_FENCE);
-		for (int k = 0; k < 4; k++) aux[(i + k * inc) & wgBits] = x[k];
-		barrier(CLK_LOCAL_MEM_FENCE);
+		k = j + sublist_start;
+
+		key = d_Keys[k].x;
+
+		// extract the group of _BITS bits of the pass
+		// the result is in the range 0.._RADIX-1
+		// _BITS = size of _RADIX in bits. So basically they
+		// represent both the same. 
+		shortkey = ((key >> (pass * _BITS)) & (_RADIX - 1)); // _RADIX-1 to get #_BITS "ones"
+
+		// increment the local histogram
+		loc_histo[shortkey * items + it]++;
 	}
 
-	// Final iteration, local input, global output, INC=1
-	i = t << 2;
-	reverse = ((dir & i) == 0); // asc/desc order
-	for (int k = 0; k < 4; k++) x[k] = aux[(i + k) & wgBits];
-	B4V(x, 0);
-	for (int k = 0; k < 4; k++) data[i + k] = x[k];
+	// wait for local histogram to finish
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// copy the local histogram to the global one
+	// in this case the global histo is the group histo.
+	__attribute__((opencl_unroll_hint(_RADIX)));
+	for (int ir = 0; ir < _RADIX; ir++)
+	{
+		d_Histograms[items * (ir * groups + gr) + it] = loc_histo[ir * items + it];
+	}
+}
+
+// perform a parallel prefix sum (a scan) on the local histograms
+// (see Blelloch 1990) each workitem worries about two memories
+// see also http://http.developer.nvidia.com/GPUGems3/gpugems3_ch39.html
+__kernel void scanhistograms(__global int* histo, __local int* temp, __global int* globsum)
+{
+	int it = get_local_id(0);
+	int ig = get_global_id(0);
+	int decale = 1;
+	int n = get_local_size(0) << 1;
+	int gr = get_group_id(0);
+
+	// load input into local memory
+	// up sweep phase
+	temp[(it << 1)] = histo[(ig << 1)];
+	temp[(it << 1) + 1] = histo[(ig << 1) + 1];
+
+	// parallel prefix sum (algorithm of Blelloch 1990)
+	// This loop runs log2(n) times
+	for (int d = n >> 1; d > 0; d >>= 1)
+	{
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if (it < d)
+		{
+			int ai = decale * ((it << 1) + 1) - 1;
+			int bi = decale * ((it << 1) + 2) - 1;
+			temp[bi] += temp[ai];
+		}
+
+		decale <<= 1;
+	}
+
+	// store the last element in the global sum vector
+	// (maybe used in the next step for constructing the global scan)
+	// clear the last element
+	if (it == 0)
+	{
+		globsum[gr] = temp[n - 1];
+		temp[n - 1] = 0;
+	}
+
+	// down sweep phase
+	// This loop runs log2(n) times
+	for (int d = 1; d < n; d <<= 1)
+	{
+		decale >>= 1;
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if (it < d)
+		{
+			int ai = decale * ((it << 1) + 1) - 1;
+			int bi = decale * ((it << 1) + 2) - 1;
+
+			int t = temp[ai];
+			temp[ai] = temp[bi];
+			temp[bi] += t;
+		}
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// write results to device memory
+	histo[(ig << 1)] = temp[(it << 1)];
+	histo[(ig << 1) + 1] = temp[(it << 1) + 1];
+}
+
+// use the global sum for updating the local histograms
+// each work item updates two values
+__kernel void pastehistograms(__global int* restrict histo, const __global int* restrict globsum)
+{
+	int ig = get_global_id(0);
+	int gr = get_group_id(0);
+
+	int s = globsum[gr];
+
+	// write results to device memory
+	histo[(ig << 1)] += s;
+	histo[(ig << 1) + 1] += s;
+}
+
+// each virtual processor reorders its data using the scanned histogram
+__kernel void reorder(const __global DataType* restrict d_inKeys, __global DataType* restrict d_outKeys, const __global int* d_Histograms, const int pass, __local  int* loc_histo, const int n)
+{
+	int it = get_local_id(0);  // i local number of the processor
+	int ig = get_global_id(0); // global number = i + g I
+	int gr = get_group_id(0);				// gr group number
+	const int groups = get_num_groups(0);	// G: group count
+	int items = get_local_size(0);			// group size
+
+	int start = ig * (n / groups / items);   // index of first elem this work-item processes
+	int size = n / groups / items;			// count of elements this work-item processes
+
+	// take the histogram in the cache
+	__attribute__((opencl_unroll_hint(_RADIX)));
+	for (int ir = 0; ir < _RADIX; ir++)
+	{
+		loc_histo[ir * items + it] = d_Histograms[items * (ir * groups + gr) + it];
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	int newpos;					// new position of element
+	long2 key;		// key element
+	long shortkey;	// key element within cache (cache line)
+	int k;						// global position within input elements
+
+	for (int j = 0; j < size; j++)
+	{
+		k = j + start;
+		key = d_inKeys[k];
+		shortkey = ((key.x >> (pass * _BITS)) & (_RADIX - 1));	// shift element to relevant bit positions
+
+		newpos = loc_histo[shortkey * items + it];
+
+		d_outKeys[newpos] = key;
+
+		newpos++;
+		loc_histo[shortkey * items + it] = newpos;
+	}
 }

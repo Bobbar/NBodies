@@ -18,10 +18,10 @@ namespace NBodies.Physics
         public int BodyCount;
         public int ChildStartIdx;
         public int ChildCount;
+        public float Mass;
         public float CmX;
         public float CmY;
         public float CmZ;
-        public float Mass;
         public int Size;
         public int ParentID;
 
