@@ -551,6 +551,67 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborInde
 	mesh[readM].NeighborCount = count;
 }
 
+__kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIndex, global int* levelIdx, int len, int botOffset)
+{
+	int gid = get_global_id(0);
+
+	if (gid >= len)
+		return;
+
+	int mOffset = gid + botOffset;
+	int initStart = levelIdx[cell.Level];
+	int initEnd = levelIdx[cell.Level + 1];
+	int start = initStart;
+	int end = initEnd;
+	int nOffset = gid * 9;
+	int count = 0;
+
+	MeshCell cell = mesh[mOffset];
+
+	for (int x = -1; x <= 1; x++) 
+	{
+		for (int y = -1; y <= 1; y++)
+		{
+			// Reset the bounds.
+			start = initStart;
+			end = initEnd;
+
+			// Offset the idx coords.
+			int xO = cell.IdxX + x;
+			int yO = cell.IdxY + y;
+			long key = MortonNumber(xO, yO);
+
+			// Binary search.
+			while (start <= end && count < 9)
+			{
+				int mid = (start + end) / 2;
+
+				int tX = mesh[mid].IdxX;
+				int tY = mesh[mid].IdxY;
+				long testKey = MortonNumber(tX, tY);
+
+				if (key == testKey) 
+				{
+					// We found a neighbor.
+					// Add it and break the loop.
+					neighborIndex[nOffset + count++] = mid;
+					break;
+				}
+				else if (key < testKey) 
+				{
+					end = mid - 1;
+				}
+				else
+				{
+					start = mid + 1;
+				}
+			}
+		}
+	}
+
+	mesh[mOffset].NeighborStartIdx = nOffset;
+	mesh[mOffset].NeighborCount = count;
+}
 
 __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float2* cm, int start, int end)
 {

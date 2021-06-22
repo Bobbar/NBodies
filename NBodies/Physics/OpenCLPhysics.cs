@@ -41,6 +41,7 @@ namespace NBodies.Physics
         private ComputeKernel _collisionSPHKernel;
         private ComputeKernel _collisionElasticKernel;
         private ComputeKernel _buildNeighborsMeshKernel;
+        private ComputeKernel _buildNeighborsBinaryKernel;
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
@@ -168,6 +169,7 @@ namespace NBodies.Physics
             _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
             _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
+            _buildNeighborsBinaryKernel = _program.CreateKernel("BuildNeighborsBinary");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
@@ -433,7 +435,7 @@ namespace NBodies.Physics
             ComputeMortsGPU(padLen, cellSizeExp);
 
             // Sort by the morton numbers.
-            SortByMortGPU(padLen); 
+            SortByMortGPU(padLen);
             ReindexBodiesGPU();
 
             // Build each level of the mesh.
@@ -447,7 +449,8 @@ namespace NBodies.Physics
             _queue.ExecuteTask(_calcCMKernel, null);
 
             // Build Nearest Neighbor List.
-            PopNeighborsMeshGPU(_meshLength);
+            //PopNeighborsMeshGPU(_meshLength);
+            PopNeighborsBinaryGPU(_meshLength);
         }
 
         private int ComputePaddedSize(int len)
@@ -703,6 +706,30 @@ namespace NBodies.Physics
             }
         }
 
+        /// <summary>
+        /// Neighbor search using a binary search strategy.
+        /// </summary>
+        private void PopNeighborsBinaryGPU(int meshSize)
+        {
+            int topSize = meshSize - _levelIdx[1];
+            int neighborLen = topSize * 9;
+
+            Allocate(ref _gpuMeshNeighbors, neighborLen);
+
+            int workSize = BlockCount(topSize) * _threadsPerBlock;
+
+            int argi = 0;
+            _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMesh);
+            _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+            _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
+            _buildNeighborsBinaryKernel.SetValueArgument(argi++, meshSize);
+            _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
+            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+        }
+
+        /// <summary>
+        /// Neighbor search using top-down mesh/tree hierarchy strategy.
+        /// </summary>
         private void PopNeighborsMeshGPU(int meshSize)
         {
             // Calulate total size of 1D mesh neighbor list.
@@ -927,6 +954,7 @@ namespace NBodies.Physics
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
             _buildNeighborsMeshKernel.Dispose();
+            _buildNeighborsBinaryKernel.Dispose();
             _fixOverlapKernel.Dispose();
             _buildBottomKernel.Dispose();
             _buildTopKernel.Dispose();
