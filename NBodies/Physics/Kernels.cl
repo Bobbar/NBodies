@@ -559,6 +559,7 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 		return;
 
 	int mOffset = gid + botOffset;
+	MeshCell cell = mesh[mOffset];
 	int initStart = levelIdx[cell.Level];
 	int initEnd = levelIdx[cell.Level + 1];
 	int start = initStart;
@@ -566,7 +567,6 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 	int nOffset = gid * 9;
 	int count = 0;
 
-	MeshCell cell = mesh[mOffset];
 
 	for (int x = -1; x <= 1; x++) 
 	{
