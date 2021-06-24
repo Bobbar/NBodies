@@ -87,7 +87,7 @@ constant int INROCHE = 8;
 #define PADDING_ELEM -1
 
 long MortonNumber(long x, long y);
-float2 ComputeForce(float2 posA, float2 posB, float massA, float massB);
+float2 CellForce(float2 posA, float2 posB, float massA, float massB);
 bool IsFar(MeshCell cell, MeshCell testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
 int SetFlag(int flags, int flag, bool enabled);
@@ -558,23 +558,22 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 	if (gid >= len)
 		return;
 
-	int mOffset = gid + botOffset;
-	MeshCell cell = mesh[mOffset];
-	int initStart = levelIdx[cell.Level];
-	int initEnd = levelIdx[cell.Level + 1];
-	int start = initStart;
-	int end = initEnd;
-	int nOffset = gid * 9;
+	int meshIdx = gid + botOffset;
+	MeshCell cell = mesh[meshIdx];
+	int initLo = levelIdx[cell.Level];
+	int initHi = levelIdx[cell.Level + 1];
+	int lo = initLo;
+	int hi = initHi;
+	int neighborIdx = gid * 9;
 	int count = 0;
 
-
-	for (int x = -1; x <= 1; x++) 
+	for (int x = -1; x <= 1; x++)
 	{
 		for (int y = -1; y <= 1; y++)
 		{
 			// Reset the bounds.
-			start = initStart;
-			end = initEnd;
+			lo = initLo;
+			hi = initHi;
 
 			// Offset the idx coords.
 			int xO = cell.IdxX + x;
@@ -582,35 +581,32 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 			long key = MortonNumber(xO, yO);
 
 			// Binary search.
-			while (start <= end && count < 9)
+			while (lo <= hi)
 			{
-				int mid = (start + end) / 2;
+				int idx = lo + ((hi - lo) >> 1);
+				long testKey = MortonNumber(mesh[idx].IdxX, mesh[idx].IdxY);
 
-				int tX = mesh[mid].IdxX;
-				int tY = mesh[mid].IdxY;
-				long testKey = MortonNumber(tX, tY);
-
-				if (key == testKey) 
+				if (key == testKey)
 				{
 					// We found a neighbor.
 					// Add it and break the loop.
-					neighborIndex[nOffset + count++] = mid;
+					neighborIndex[neighborIdx + count++] = idx;
 					break;
 				}
-				else if (key < testKey) 
+				else if (key < testKey)
 				{
-					end = mid - 1;
+					hi = idx - 1;
 				}
 				else
 				{
-					start = mid + 1;
+					lo = idx + 1;
 				}
 			}
 		}
 	}
 
-	mesh[mOffset].NeighborStartIdx = nOffset;
-	mesh[mOffset].NeighborCount = count;
+	mesh[meshIdx].NeighborStartIdx = neighborIdx;
+	mesh[meshIdx].NeighborCount = count;
 }
 
 __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float2* cm, int start, int end)
@@ -637,7 +633,7 @@ __kernel void CalcCenterOfMass(global MeshCell* inMesh, global float2* cm, int s
 }
 
 
-float2 ComputeForce(float2 posA, float2 posB, float massA, float massB)
+float2 CellForce(float2 posA, float2 posB, float massA, float massB)
 {
 	float2 dir = posA - posB;
 	float dist = dot(dir, dir);
@@ -703,7 +699,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 				if (far)
 				{
 					float2 cellPos = (float2)(cell.CmX, cell.CmY);
-					iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
+					iForce += CellForce(cellPos, iPos, cell.Mass, iMass);
 				}
 				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
 				{
@@ -759,7 +755,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 		if (IsFar(bodyCell, cell))
 		{
 			float2 cellPos = (float2)(cell.CmX, cell.CmY);
-			iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
+			iForce += CellForce(cellPos, iPos, cell.Mass, iMass);
 		}
 	}
 
