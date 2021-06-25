@@ -722,7 +722,7 @@ namespace NBodies.Physics
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMesh);
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
-            _buildNeighborsBinaryKernel.SetValueArgument(argi++, meshSize);
+            _buildNeighborsBinaryKernel.SetValueArgument(argi++, topSize);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
             _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
         }
