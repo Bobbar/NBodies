@@ -75,6 +75,9 @@ constant int ISEXPLOSION = 2;
 constant int CULLED = 4;
 constant int INROCHE = 8;
 
+// Lookup table for neighbor search.
+constant int2 N_OFFSET_LUT[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 }, { -1,1 }, { 0,1 }, { 1,1 } };
+
 #define DISTANCE(a,b) distance(a,b)
 #define SQRT(a) sqrt(a)
 #define LENGTH(a) length(a)
@@ -317,7 +320,7 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 
 	// Write found values to global memory.
 	int n = 0;
-	for (int i = 0; i < threads; i++) 
+	for (int i = 0; i < threads; i++)
 	{
 		int inVal = cellmapIn[rStart + i];
 
@@ -567,40 +570,41 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 	int neighborIdx = gid * 9;
 	int count = 0;
 
-	for (int x = -1; x <= 1; x++)
+	// Set the first neighbor.
+	neighborIndex[neighborIdx + count++] = meshIdx;
+
+	// Find the remaining neighbors.
+	for (int i = 0; i < 8; i++)
 	{
-		for (int y = -1; y <= 1; y++)
+		// Reset the bounds.
+		lo = initLo;
+		hi = initHi;
+
+		// Offset the idx coords.
+		int x = N_OFFSET_LUT[i].x;
+		int y = N_OFFSET_LUT[i].y;
+		long key = MortonNumber(cell.IdxX + x, cell.IdxY + y);
+
+		// Binary search.
+		while (lo <= hi)
 		{
-			// Reset the bounds.
-			lo = initLo;
-			hi = initHi;
+			int idx = lo + ((hi - lo) >> 1);
+			long testKey = MortonNumber(mesh[idx].IdxX, mesh[idx].IdxY);
 
-			// Offset the idx coords.
-			int xO = cell.IdxX + x;
-			int yO = cell.IdxY + y;
-			long key = MortonNumber(xO, yO);
-
-			// Binary search.
-			while (lo <= hi)
+			if (key == testKey)
 			{
-				int idx = lo + ((hi - lo) >> 1);
-				long testKey = MortonNumber(mesh[idx].IdxX, mesh[idx].IdxY);
-
-				if (key == testKey)
-				{
-					// We found a neighbor.
-					// Add it and break the loop.
-					neighborIndex[neighborIdx + count++] = idx;
-					break;
-				}
-				else if (key < testKey)
-				{
-					hi = idx - 1;
-				}
-				else
-				{
-					lo = idx + 1;
-				}
+				// We found a neighbor.
+				// Add it and break the loop.
+				neighborIndex[neighborIdx + count++] = idx;
+				break;
+			}
+			else if (key < testKey)
+			{
+				hi = idx - 1;
+			}
+			else
+			{
+				lo = idx + 1;
 			}
 		}
 	}
