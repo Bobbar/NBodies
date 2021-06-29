@@ -584,29 +584,28 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 		int x = N_OFFSET_LUT[i].x;
 		int y = N_OFFSET_LUT[i].y;
 		long key = MortonNumber(cell.IdxX + x, cell.IdxY + y);
+		int idx = -1;
+		int foundIdx = -1;
 
 		// Binary search.
 		while (lo <= hi)
 		{
-			int idx = lo + ((hi - lo) >> 1);
+			idx = lo + ((hi - lo) >> 1);
 			long testKey = MortonNumber(mesh[idx].IdxX, mesh[idx].IdxY);
 
 			if (key == testKey)
 			{
 				// We found a neighbor.
-				// Add it and break the loop.
-				neighborIndex[neighborIdx + count++] = idx;
-				break;
+				foundIdx = idx;
 			}
-			else if (key < testKey)
-			{
-				hi = idx - 1;
-			}
-			else
-			{
-				lo = idx + 1;
-			}
+
+			bool right = key < testKey;
+			hi = select(hi, (idx - 1), right);
+			lo = select((idx + 1), lo, right);
 		}
+
+		if (foundIdx > -1)
+			neighborIndex[neighborIdx + count++] = foundIdx;
 	}
 
 	mesh[meshIdx].NeighborStartIdx = neighborIdx;
