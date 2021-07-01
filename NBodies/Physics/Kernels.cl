@@ -564,7 +564,7 @@ __kernel void BuildNeighborsBinary(global MeshCell* mesh, global int* neighborIn
 	int meshIdx = gid + botOffset;
 	MeshCell cell = mesh[meshIdx];
 	int initLo = levelIdx[cell.Level];
-	int initHi = levelIdx[cell.Level + 1];
+	int initHi = levelIdx[cell.Level + 1] - 1;
 	int lo = initLo;
 	int hi = initHi;
 	int neighborIdx = gid * 9;
