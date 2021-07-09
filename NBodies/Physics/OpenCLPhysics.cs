@@ -162,6 +162,9 @@ namespace NBodies.Physics
                 throw;
             }
 
+            var bins = System.Text.Encoding.UTF8.GetString(_program.Binaries[0]);
+            File.WriteAllText(Environment.CurrentDirectory + "/Physics/Kernels.ptx", bins);
+
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
