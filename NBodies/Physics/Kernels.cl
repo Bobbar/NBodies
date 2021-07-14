@@ -354,7 +354,7 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 }
 
 
-__kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global int2* meshNBounds, global float3* meshCMM, global int3* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
+__kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global int2* meshNBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -383,7 +383,7 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 	meshNBounds[m] = (int2)(-1, 0);
 	meshBodyBounds[m] = (int2)(firstIdx, lastIdx - firstIdx);
 	meshChildBounds[m] = (int2)(-1, 0);
-	meshSPL[m] = (int3)(cellSize, -1, 0);
+	meshSPL[m] = (int4)(cellSize, -1, 0, 0);
 
 	// Compute parent level morton numbers.
 	int idxX = meshIdx.x >> 1;
@@ -406,11 +406,11 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 		inBodies[i].MeshID = m;
 	}
 
-	meshCMM[m] = (float3)((nCM.x / nMass), (nCM.y / nMass), nMass);
+	meshCMM[m] = (float4)((nCM.x / nMass), (nCM.y / nMass), nMass, 0);
 }
 
 
-__kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global float3* meshCMM, global int3* meshSPL, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
+__kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -440,7 +440,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 	double nMass;
 
 	int2 firstMIdx = meshIdxs[firstIdx];
-	float3 firstCMM = meshCMM[firstIdx];
+	float4 firstCMM = meshCMM[firstIdx];
 	int2 bodyBounds = meshBodyBounds[firstIdx];
 
 	int2 meshIdx = firstMIdx >> 1;
@@ -450,7 +450,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 	nCM = (double2)(nMass * firstCMM.x, nMass * firstCMM.y);
 
 	meshIdxs[newIdx] = meshIdx;
-	meshSPL[newIdx] = (int3)(cellSize, -1, level);
+	meshSPL[newIdx] = (int4)(cellSize, -1, level, 0);
 
 	// Compute parent level morton numbers.
 	int idxX = meshIdx.x >> 1;
@@ -463,7 +463,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 		bodyBounds.y += meshBodyBounds[i].y;
 		childBounds.y++;
 
-		float3 childCMM = meshCMM[i];
+		float4 childCMM = meshCMM[i];
 		float mass = childCMM.z;
 		nMass += mass;
 		nCM.x += mass * childCMM.x;
@@ -474,7 +474,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 
 	meshChildBounds[newIdx] = childBounds;
 	meshBodyBounds[newIdx] = bodyBounds;
-	meshCMM[newIdx] = (float3)((nCM.x / nMass), (nCM.y / nMass), nMass);
+	meshCMM[newIdx] = (float4)((nCM.x / nMass), (nCM.y / nMass), nMass, 0);
 	meshSPL[firstIdx].y = newIdx;
 }
 
@@ -542,7 +542,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 
 
 
-__kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBounds, global int3* meshSPL, global int* neighborIndex, global int* levelIdx, int len, int botOffset)
+__kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBounds, global int4* meshSPL, global int* neighborIndex, global int* levelIdx, int len, int botOffset)
 {
 	int gid = get_global_id(0);
 
@@ -551,7 +551,7 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 
 	int meshIdx = gid + botOffset;
 	int2 cellIdx = meshIdxs[meshIdx];
-	int3 cellSPL = meshSPL[meshIdx];
+	int4 cellSPL = meshSPL[meshIdx];
 	int initLo = levelIdx[cellSPL.z];
 	int initHi = levelIdx[cellSPL.z + 1] - 1;
 	int lo = initLo;
@@ -601,7 +601,7 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 }
 
 
-__kernel void CalcCenterOfMass(global float3* meshCMM, global float2* cm, int start, int end)
+__kernel void CalcCenterOfMass(global float4* meshCMM, global float2* cm, int start, int end)
 {
 	double cmX = 0;
 	double cmY = 0;
@@ -609,7 +609,7 @@ __kernel void CalcCenterOfMass(global float3* meshCMM, global float2* cm, int st
 
 	for (int i = start; i < end; i++)
 	{
-		float3 cellCMM = meshCMM[i];
+		float4 cellCMM = meshCMM[i];
 
 		mass += cellCMM.z;
 		cmX += cellCMM.z * cellCMM.x;
@@ -641,7 +641,7 @@ float2 CellForce(float2 posA, float2 posB, float massA, float massB)
 }
 
 
-__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* meshIdxs, global int2* meshNBounds, global int2* meshBodyBounds, global int2* meshChildBounds, global float3* meshCMM, global int3* meshSPL, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* meshIdxs, global int2* meshNBounds, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int4* meshSPL, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -691,7 +691,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 				bool far = IsFar(bodyCellIdx, childIdx);
 				if (far)
 				{
-					float3 cellCMM = meshCMM[c];
+					float4 cellCMM = meshCMM[c];
 					iForce += CellForce(cellCMM.xy, iPos, cellCMM.z, iMass);
 				}
 				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
@@ -750,7 +750,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 
 		if (IsFar(bodyCellIdx, topIdx))
 		{
-			float3 topCMM = meshCMM[top];
+			float4 topCMM = meshCMM[top];
 			iForce += CellForce(topCMM.xy, iPos, topCMM.z, iMass);
 		}
 	}
@@ -789,7 +789,7 @@ bool IsFar(int2 cell, int2 testCell)
 }
 
 
-__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global int3* meshSPL, global int2* meshNBounds, global int2* meshBodyBounds, global int* meshNeighbors, int collisions, global int* postNeeded)
+__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global int4* meshSPL, global int2* meshNBounds, global int2* meshBodyBounds, global int* meshNeighbors, int collisions, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -809,7 +809,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global i
 		}
 
 		// Get the current parent cell.
-		int3 parentSPL = meshSPL[outBody.MeshID];
+		int4 parentSPL = meshSPL[outBody.MeshID];
 		int pcellSize = parentSPL.x;
 		int parentID = parentSPL.y;
 
@@ -889,7 +889,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global i
 }
 
 
-__kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global int2* meshNBounds, global int3* meshSPL, global int2* meshChildBounds, global int2* meshIdxs, global int2* meshBodyBounds, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global int2* meshNBounds, global int4* meshSPL, global int2* meshChildBounds, global int2* meshIdxs, global int2* meshBodyBounds, global int* meshNeighbors, global float2* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);

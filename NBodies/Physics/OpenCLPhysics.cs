@@ -75,8 +75,8 @@ namespace NBodies.Physics
         private ComputeBuffer<int2> _gpuMeshNBounds;
         private ComputeBuffer<int2> _gpuMeshBodyBounds;
         private ComputeBuffer<int2> _gpuMeshChildBounds;
-        private ComputeBuffer<float3> _gpuMeshCMM;
-        private ComputeBuffer<int3> _gpuMeshSPL;
+        private ComputeBuffer<float4> _gpuMeshCMM;
+        private ComputeBuffer<int4> _gpuMeshSPL;
 
 
         private Stopwatch timer = new Stopwatch();
@@ -234,10 +234,10 @@ namespace NBodies.Physics
             _gpuMeshChildBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshChildBounds, 10000, true);
 
-            _gpuMeshCMM = new ComputeBuffer<float3>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            _gpuMeshCMM = new ComputeBuffer<float4>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshCMM, 10000, true);
 
-            _gpuMeshSPL = new ComputeBuffer<int3>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            _gpuMeshSPL = new ComputeBuffer<int4>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshSPL, 10000, true);
 
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
@@ -353,7 +353,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
 
             // Compute elastic collisions.
             argi = 0;
@@ -496,7 +496,7 @@ namespace NBodies.Physics
             ReindexBodiesGPU();
 
             // Build each level of the mesh.
-            BuildMeshGPU(cellSizeExp);
+            BuildMeshGPU(cellSizeExp); 
 
             // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMeshCMM);

@@ -25,19 +25,19 @@ namespace NBodies.Physics
         public int Y;
     }
 
-    public struct int3
+    public struct int4
     {
         public int X;
         public int Y;
         public int Z;
-        public int dummy; // Needed because cl_int3 is 16 bytes wide.
+        public int W; // Needed because cl_int3 is 16 bytes wide.
     }
 
-    public struct float3
+    public struct float4
     {
         public float X;
         public float Y;
         public float Z;
-        public float dummy; // Needed because cl_float3 is 16 bytes wide.
+        public float W; // Needed because cl_float3 is 16 bytes wide.
     }
 }
