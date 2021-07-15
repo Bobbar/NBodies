@@ -14,7 +14,7 @@ namespace NBodies.Physics
 
         void Init();
 
-        void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, out bool postNeeded);
+        void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, bool alwaysReadBack, out bool postNeeded);
 
         void FixOverLaps(ref Body[] bodies);
 

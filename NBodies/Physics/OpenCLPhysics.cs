@@ -298,7 +298,7 @@ namespace NBodies.Physics
             _preCalcs = calcs;
         }
 
-        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, out bool isPostNeeded)
+        public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, bool alwaysReadBack, out bool isPostNeeded)
         {
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
@@ -312,7 +312,6 @@ namespace NBodies.Physics
             if (_curBufferVersion != bufferVersion)
             {
                 WriteBuffer(_bodies, _gpuOutBodies, 0, 0, _bodies.Length);
-                _curBufferVersion = bufferVersion;
             }
 
             // Post process flag.
@@ -353,7 +352,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             // Compute elastic collisions.
             argi = 0;
@@ -384,14 +383,17 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
-            // Read back.
+            // Read back post needed bool.
             ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1);
             isPostNeeded = Convert.ToBoolean(postNeeded[0]);
 
-            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length);
+            // Read back bodies as needed.
+            if (isPostNeeded || alwaysReadBack || _curBufferVersion != bufferVersion)
+                ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length);
 
             // Increment frame count.
             _currentFrame++;
+            _curBufferVersion = bufferVersion;
 
             // Check if we need to read the mesh.
             if (!_meshRequested.IsSet)
@@ -496,7 +498,7 @@ namespace NBodies.Physics
             ReindexBodiesGPU();
 
             // Build each level of the mesh.
-            BuildMeshGPU(cellSizeExp); 
+            BuildMeshGPU(cellSizeExp);
 
             // Calc center of mass on GPU from top-most level.
             _calcCMKernel.SetMemoryArgument(0, _gpuMeshCMM);
@@ -714,7 +716,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
             _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
 
-           
+
             // Now build the top levels of the mesh.
             // NOTE: We use the same kernel work sizes as the bottom level,
             // but kernels outside the scope of work will just return and idle.
@@ -796,7 +798,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuMeshNeighbors, neighborLen);
 
             int workSize = BlockCount(topSize) * _threadsPerBlock;
-       
+
             int argi = 0;
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuMeshNBounds);
@@ -805,7 +807,7 @@ namespace NBodies.Physics
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, topSize);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
-            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null); 
+            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
         }
 
         ///// <summary>

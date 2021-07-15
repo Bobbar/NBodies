@@ -270,7 +270,7 @@ namespace NBodies
         private static Int64 _frameCount = 0;
         private static double _totalTime = 0;
         private static int _skippedFrames = 0;
-      
+
         private static Average _avgFPS = new Average(40);
         private static ManualResetEventSlim _pausePhysicsWait = new ManualResetEventSlim(true);
         private static ManualResetEventSlim _stopLoopWait = new ManualResetEventSlim(true);
@@ -395,7 +395,7 @@ namespace NBodies
                             bool postNeeded = false;
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, out postNeeded);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, DrawBodies, out postNeeded);
 
                             if (postNeeded)
                                 _bufferVersion++;
@@ -451,10 +451,19 @@ namespace NBodies
                         }
                     }
 
-                    if (DrawBodies)
+                    // Check if renderer is ready for a new frame.
+                    if (_renderReadyWait.IsSet)
                     {
-                        // Check if renderer is ready for a new frame.
-                        if (_renderReadyWait.IsSet)
+                        // If not drawing bodies, only render every 20 frames to keep stats updated.
+                        if (!DrawBodies && _frameCount % 20 == 0)
+                        {
+                            _renderReadyWait.Reset();
+
+                            // Draw the field asynchronously.
+                            Renderer.DrawBodies(BodyManager.Bodies, DrawBodies, _renderReadyWait);
+                            _skippedFrames = 0;
+                        }
+                        else if (DrawBodies) // Otherwise draw normally.
                         {
                             _renderReadyWait.Reset();
 
@@ -470,10 +479,10 @@ namespace NBodies
                             Renderer.DrawBodies(BodyManager.Bodies, DrawBodies, _renderReadyWait);
                             _skippedFrames = 0;
                         }
-                        else
-                        {
-                            _skippedFrames++;
-                        }
+                    }
+                    else
+                    {
+                        _skippedFrames++;
                     }
 
                     // Fixed FPS limit while paused.
