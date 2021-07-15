@@ -90,6 +90,7 @@ constant int2 N_OFFSET_LUT[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 
 #define PADDING_ELEM -1
 
 long MortonNumber(long x, long y);
+long MortonNumberInt2(int2 idx);
 float2 CellForce(float2 posA, float2 posB, float massA, float massB);
 bool IsFar(int2 cell, int2 testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
@@ -178,6 +179,27 @@ long MortonNumber(long x, long y)
 	return x | (y << 1);
 }
 
+long MortonNumberInt2(int2 idx)
+{
+	long x = idx.x;
+	long y = idx.y;
+
+	x &= 0x1fffff;
+	x = (x | x << 32) & 0x1f00000000ffff;
+	x = (x | x << 16) & 0x1f0000ff0000ff;
+	x = (x | x << 8) & 0x100f00f00f00f00f;
+	x = (x | x << 4) & 0x10c30c30c30c30c3;
+	x = (x | x << 2) & 0x1249249249249249;
+
+	y &= 0x1fffff;
+	y = (y | y << 32) & 0x1f00000000ffff;
+	y = (y | y << 16) & 0x1f0000ff0000ff;
+	y = (y | y << 8) & 0x100f00f00f00f00f;
+	y = (y | y << 4) & 0x10c30c30c30c30c3;
+	y = (y | y << 2) & 0x1249249249249249;
+
+	return x | (y << 1);
+}
 
 __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* outBodies)
 {
@@ -226,7 +248,6 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 	{
 		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
 		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
-
 		long morton = MortonNumber(idxX, idxY);
 
 		morts[gid].x = morton;
@@ -570,7 +591,7 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 
 		// Offset the idx coords.
 		int2 offsetIdx = cellIdx + N_OFFSET_LUT[i];
-		long key = MortonNumber(offsetIdx.x, offsetIdx.y);
+		long key = MortonNumberInt2(offsetIdx);
 		int idx = -1;
 		int foundIdx = -1;
 
@@ -578,7 +599,7 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 		while (lo <= hi)
 		{
 			idx = lo + ((hi - lo) >> 1);
-			long testKey = MortonNumber(meshIdxs[idx].x, meshIdxs[idx].y);
+			long testKey = MortonNumberInt2(meshIdxs[idx]);
 
 			if (key == testKey)
 			{
