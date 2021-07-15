@@ -140,7 +140,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.OutOfOrderExecution);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -703,8 +703,6 @@ namespace NBodies.Physics
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuInBodies);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshBodyBounds);
-            _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshChildBounds);
-            _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshNBounds);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshCMM);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshSPL);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuLevelCounts);
@@ -716,7 +714,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
             _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
 
-
+           
             // Now build the top levels of the mesh.
             // NOTE: We use the same kernel work sizes as the bottom level,
             // but kernels outside the scope of work will just return and idle.

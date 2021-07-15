@@ -354,7 +354,7 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 }
 
 
-__kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global int2* meshNBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
+__kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -380,9 +380,7 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 
 	int2 meshIdx = (int2)((int)floor(fPosX) >> cellSizeExp, (int)floor(fPosY) >> cellSizeExp);
 	meshIdxs[m] = meshIdx;
-	meshNBounds[m] = (int2)(-1, 0);
 	meshBodyBounds[m] = (int2)(firstIdx, lastIdx - firstIdx);
-	meshChildBounds[m] = (int2)(-1, 0);
 	meshSPL[m] = (int4)(cellSize, -1, 0, 0);
 
 	// Compute parent level morton numbers.
@@ -449,14 +447,13 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 	nMass = (double)firstCMM.z;
 	nCM = (double2)(nMass * firstCMM.x, nMass * firstCMM.y);
 
-	meshIdxs[newIdx] = meshIdx;
-	meshSPL[newIdx] = (int4)(cellSize, -1, level, 0);
-
 	// Compute parent level morton numbers.
 	int idxX = meshIdx.x >> 1;
 	int idxY = meshIdx.y >> 1;
 	long morton = MortonNumber(idxX, idxY);
 	parentMorts[m] = morton;
+
+	meshSPL[firstIdx].y = newIdx;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -472,10 +469,11 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 		meshSPL[i].y = newIdx;
 	}
 
+	meshIdxs[newIdx] = meshIdx;
+	meshSPL[newIdx] = (int4)(cellSize, -1, level, 0);
 	meshChildBounds[newIdx] = childBounds;
 	meshBodyBounds[newIdx] = bodyBounds;
 	meshCMM[newIdx] = (float4)((nCM.x / nMass), (nCM.y / nMass), nMass, 0);
-	meshSPL[firstIdx].y = newIdx;
 }
 
 //
