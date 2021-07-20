@@ -699,26 +699,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 		{
 			// Iterate neighbor child cells.
 			int nId = meshNeighbors[(nc)];
-
-			// ***Perf Hack***
-			// Check if the neighbor cell is sufficiently far to just use the parent cell without iterating the childs.
-			int2 nbIdx = meshIdxs[nId];
-			nbIdx <<= 1; // Shift the cell idx to move it into the child grid space.
-
-			// Offset according to the quadrant.
-			nbIdx.x = select(nbIdx.x, (nbIdx.x + 1), (nbIdx.x == bodyCellIdx.x));
-			nbIdx.y = select(nbIdx.y, (nbIdx.y + 1), (nbIdx.y == bodyCellIdx.y));
-
-			// Check the distance.
-			uint2 diff = abs_diff(bodyCellIdx, nbIdx);
-			if (diff.x > 2 || diff.y > 2)
-			{
-				float4 cellCMM = meshCMM[nId];
-				iForce += CellForce(cellCMM.xy, iPos, cellCMM.z, iMass);
-				continue;
-			}
-
-			int childStartIdx = meshChildBounds[nId].x;
+			int childStartIdx = meshChildBounds[nId].x; 
 			int childLen = childStartIdx + meshChildBounds[nId].y;
 			for (int c = childStartIdx; c < childLen; c++)
 			{
