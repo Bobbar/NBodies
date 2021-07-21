@@ -18,4 +18,26 @@ namespace NBodies.Physics
             return $"{X}, {Y}";
         }
     }
+
+    public struct int2
+    {
+        public int X;
+        public int Y;
+    }
+
+    public struct int4
+    {
+        public int X;
+        public int Y;
+        public int Z;
+        public int W;
+    }
+
+    public struct float4
+    {
+        public float X;
+        public float Y;
+        public float Z;
+        public float W; 
+    }
 }

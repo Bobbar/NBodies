@@ -100,7 +100,7 @@ constant int INROCHE = 8;
 
 long MortonNumber(long x, long y, long z);
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
-bool IsFar(MeshCell cell, MeshCell testCell);
+bool IsFar(int4 cell, int4 testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY, float forceZ);
 int SetFlag(int flags, int flag, bool enabled);
 Body SetFlagB(Body body, int flag, bool enabled);
@@ -357,6 +357,7 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 	}
 }
 
+
 // Read indexes from the sorted morton buffer and copy bodies to their sorted location.
 __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
 {
@@ -373,7 +374,8 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 	outBodies[b] = inBodies[newIdx];
 }
 
-__kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
+
+__kernel void BuildBottom(global Body* inBodies, global int4* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int2* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -398,25 +400,19 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 	double3 nCM = (double3)(fMass * fPosX, fMass * fPosY, fMass * fPosZ);
 	double nMass = fMass;
 
-	MeshCell newCell;
-	newCell.IdxX = (int)floor(fPosX) >> cellSizeExp;
-	newCell.IdxY = (int)floor(fPosY) >> cellSizeExp;
-	newCell.IdxZ = (int)floor(fPosZ) >> cellSizeExp;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.BodyStartIdx = firstIdx;
-	newCell.BodyCount = 1;
-	newCell.ChildStartIdx = -1;
-	newCell.ChildCount = 0;
-	newCell.Size = cellSize;
-	newCell.ParentID = -1;
+	int4 meshIdx = (int4)((int)floor(fPosX) >> cellSizeExp, (int)floor(fPosY) >> cellSizeExp, (int)floor(fPosZ) >> cellSizeExp, 0);
+	meshIdxs[m] = meshIdx;
+	meshBodyBounds[m] = (int2)(firstIdx, lastIdx - firstIdx);
+	meshSPL[m] = (int2)(cellSize, -1);
 
 	// Compute parent level morton numbers.
-	int idxX = newCell.IdxX >> 1;
-	int idxY = newCell.IdxY >> 1;
-	int idxZ = newCell.IdxZ >> 1;
+	int idxX = meshIdx.x >> 1;
+	int idxY = meshIdx.y >> 1;
+	int idxZ = meshIdx.z >> 1;
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
+
+	inBodies[firstIdx].MeshID = m;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
@@ -430,22 +426,14 @@ __kernel void BuildBottom(global Body* inBodies, global MeshCell* mesh, global i
 		nCM.y += mass * posY;
 		nCM.z += mass * posZ;
 
-		newCell.BodyCount++;
-
 		inBodies[i].MeshID = m;
 	}
 
-	newCell.Mass = nMass;
-	newCell.CmX = (nCM.x / nMass);
-	newCell.CmY = (nCM.y / nMass);
-	newCell.CmZ = (nCM.z / nMass);
-
-	inBodies[firstIdx].MeshID = m;
-	mesh[m] = newCell;
+	meshCMM[m] = (float4)((nCM.x / nMass), (nCM.y / nMass), (nCM.z / nMass), nMass);
 }
 
 
-__kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
+__kernel void BuildTop(global int4* meshIdxs, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int2* meshSPL, global int* levelCounts, global int* levelIdx, global int* cellMap, int cellSize, int level, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -474,56 +462,50 @@ __kernel void BuildTop(global MeshCell* mesh, global int* levelCounts, global in
 	double3 nCM;
 	double nMass;
 
-	MeshCell newCell;
-	newCell.IdxX = mesh[firstIdx].IdxX >> 1;
-	newCell.IdxY = mesh[firstIdx].IdxY >> 1;
-	newCell.IdxZ = mesh[firstIdx].IdxZ >> 1;
-	newCell.NeighborStartIdx = -1;
-	newCell.NeighborCount = 0;
-	newCell.BodyStartIdx = mesh[firstIdx].BodyStartIdx;
-	newCell.BodyCount = mesh[firstIdx].BodyCount;
-	newCell.ChildStartIdx = firstIdx;
-	newCell.ChildCount = 1;
+	int4 firstMIdx = meshIdxs[firstIdx];
+	float4 firstCMM = meshCMM[firstIdx];
+	int2 bodyBounds = meshBodyBounds[firstIdx];
 
-	nMass = mesh[firstIdx].Mass;
-	nCM = (double3)(nMass * mesh[firstIdx].CmX, nMass * mesh[firstIdx].CmY, nMass * mesh[firstIdx].CmZ);
+	int4 meshIdx = firstMIdx >> 1;
+	int2 childBounds = (int2)(firstIdx, 1);
 
-	newCell.Size = cellSize;
-	newCell.ParentID = -1;
+	nMass = (double)firstCMM.w;
+	nCM = (double3)(nMass * firstCMM.x, nMass * firstCMM.y, nMass * firstCMM.z);
 
 	// Compute parent level morton numbers.
-	int idxX = newCell.IdxX >> 1;
-	int idxY = newCell.IdxY >> 1;
-	int idxZ = newCell.IdxZ >> 1;
+	int idxX = meshIdx.x >> 1;
+	int idxY = meshIdx.y >> 1;
+	int idxZ = meshIdx.z >> 1;
 	long morton = MortonNumber(idxX, idxY, idxZ);
 	parentMorts[m] = morton;
 
+	meshSPL[firstIdx].y = newIdx;
+
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
-		newCell.BodyCount += mesh[i].BodyCount;
-		newCell.ChildCount++;
+		bodyBounds.y += meshBodyBounds[i].y;
+		childBounds.y++;
 
-		float mass = mesh[i].Mass;
+		float4 childCMM = meshCMM[i];
+		float mass = childCMM.w;
 		nMass += mass;
-		nCM.x += mass * mesh[i].CmX;
-		nCM.y += mass * mesh[i].CmY;
-		nCM.z += mass * mesh[i].CmZ;
+		nCM.x += mass * childCMM.x;
+		nCM.y += mass * childCMM.y;
+		nCM.z += mass * childCMM.z;
 
-		mesh[i].ParentID = newIdx;
+		meshSPL[i].y = newIdx;
 	}
 
-	newCell.Mass = nMass;
-	newCell.CmX = (nCM.x / nMass);
-	newCell.CmY = (nCM.y / nMass);
-	newCell.CmZ = (nCM.z / nMass);
-
-	mesh[firstIdx].ParentID = newIdx;
-	mesh[newIdx] = newCell;
+	meshIdxs[newIdx] = meshIdx;
+	meshSPL[newIdx] = (int2)(cellSize, -1);
+	meshChildBounds[newIdx] = childBounds;
+	meshBodyBounds[newIdx] = bodyBounds;
+	meshCMM[newIdx] = (float4)((nCM.x / nMass), (nCM.y / nMass), (nCM.z / nMass), nMass);
 }
 
 
 // Top-down mesh based nearest neighbor search.
-__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
+__kernel void BuildNeighborsMesh(global int4* meshIdxs, global int2* meshSPL, global int2* meshNBounds, global int2* meshChildBounds, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
 {
 	int m = get_global_id(0);
 	int readM = m + start;
@@ -535,19 +517,17 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborInde
 	long offset = (readM - botOffset) * 27;
 	int count = 0;
 
-	MeshCell cell = mesh[readM];
+	int4 cellIdxs = meshIdxs[readM];
+	int2 cellSPL = meshSPL[readM];
 
 	if (level == levels)
 	{
 		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
 		for (int i = start; i < end; i++)
 		{
-			MeshCell check;
-			check.IdxX = mesh[i].IdxX;
-			check.IdxY = mesh[i].IdxY;
-			check.IdxZ = mesh[i].IdxZ;
+			int4 checkIdxs = meshIdxs[i];
 
-			if (!IsFar(cell, check))
+			if (!IsFar(cellIdxs, checkIdxs))
 			{
 				neighborIndex[(offset + count++)] = i;
 			}
@@ -556,23 +536,25 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborInde
 	else
 	{
 		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
-		MeshCell cellParent = mesh[cell.ParentID];
+		int2 parentNBounds = meshNBounds[cellSPL.y];
 
 		// Iterate parent cell neighbors.
-		int start = cellParent.NeighborStartIdx;
-		int len = start + cellParent.NeighborCount;
+		int start = parentNBounds.x;
+		int len = start + parentNBounds.y;
 		for (int nc = start; nc < len; nc++)
 		{
 			// Iterate neighbor child cells.
 			int nId = neighborIndex[(nc)];
-			int childStartIdx = mesh[(nId)].ChildStartIdx;
-			int childLen = childStartIdx + mesh[(nId)].ChildCount;
+			int2 childBounds = meshChildBounds[nId];
+
+			int childStartIdx = childBounds.x;
+			int childLen = childStartIdx + childBounds.y;
 			for (int c = childStartIdx; c < childLen; c++)
 			{
-				MeshCell child = mesh[(c)];
+				int4 childIdxs = meshIdxs[c];
 
 				// Check for neighbors and add them to the list.
-				if (!IsFar(cell, child))
+				if (!IsFar(cellIdxs, childIdxs))
 				{
 					neighborIndex[(offset + count++)] = c;
 				}
@@ -580,27 +562,25 @@ __kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborInde
 		}
 	}
 
-	mesh[readM].NeighborStartIdx = offset;
-	mesh[readM].NeighborCount = count;
+	meshNBounds[readM] = (int2)(offset, count);
 }
 
 
-__kernel void CalcCenterOfMass(global MeshCell* inMesh, global float3* cm, int start, int end)
+__kernel void CalcCenterOfMass(global float4* meshCMM, global float3* cm, int start, int end)
 {
 	double cmX = 0;
 	double cmY = 0;
 	double cmZ = 0;
-
 	double mass = 0;
 
 	for (int i = start; i < end; i++)
 	{
-		MeshCell cell = inMesh[i];
+		float4 cellCMM = meshCMM[i];
 
-		mass += cell.Mass;
-		cmX += cell.Mass * cell.CmX;
-		cmY += cell.Mass * cell.CmY;
-		cmZ += cell.Mass * cell.CmZ;
+		mass += cellCMM.w;
+		cmX += cellCMM.w * cellCMM.x;
+		cmY += cellCMM.w * cellCMM.y;
+		cmZ += cellCMM.w * cellCMM.z;
 
 	}
 
@@ -657,7 +637,7 @@ float3 ComputeForce(float3 posA, float3 posB, float massA, float massB)
 }
 
 
-__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int4* meshIdxs, global int2* meshNBounds, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int2* meshSPL, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -669,7 +649,9 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	float iMass = inBodies[(a)].Mass;
 
 	// Copy body mesh cell.
-	MeshCell bodyCell = inMesh[(inBodies[(a)].MeshID)];
+	int bodyMeshId = inBodies[(a)].MeshID;
+	int bodyCellParentID = meshSPL[bodyMeshId].y;
+	int4 bodyCellIdx = meshIdxs[bodyMeshId];
 
 	float3 iForce = (float3)(0.0f, 0.0f, 0.0f);
 	float iDensity = 0.0f;
@@ -684,34 +666,36 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	bool bottom = true;
 	while (!done)
 	{
-		MeshCell bodyCellParent = inMesh[bodyCell.ParentID];
+		int2 bodyCellParentNB = meshNBounds[bodyCellParentID];
 
 		// Iterate parent cell neighbors.
-		int start = bodyCellParent.NeighborStartIdx;
-		int len = start + bodyCellParent.NeighborCount;
+		int start = bodyCellParentNB.x;
+		int len = start + bodyCellParentNB.y;
 		for (int nc = start; nc < len; nc++)
 		{
 			// Iterate neighbor child cells.
 			int nId = meshNeighbors[(nc)];
-			int childStartIdx = inMesh[(nId)].ChildStartIdx;
-			int childLen = childStartIdx + inMesh[(nId)].ChildCount;
+
+			int childStartIdx = meshChildBounds[nId].x;
+			int childLen = childStartIdx + meshChildBounds[nId].y;
 			for (int c = childStartIdx; c < childLen; c++)
 			{
-				MeshCell cell = inMesh[(c)];
+				int4 childIdx = meshIdxs[c];
 
 				// If the cell is far, compute force from cell.
 				// [ Particle -> Mesh ]
-				bool far = IsFar(bodyCell, cell);
+				bool far = IsFar(bodyCellIdx, childIdx);
 				if (far)
 				{
-					float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
-					iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
+					float4 cellCMM = meshCMM[c];
+					iForce += ComputeForce(cellCMM.xyz, iPos, cellCMM.w, iMass);
 				}
 				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
 				{
 					// Iterate the bodies within the cell.
-					int mbStart = cell.BodyStartIdx;
-					int mbLen = cell.BodyCount + mbStart;
+					int2 cellBodyBounds = meshBodyBounds[c];
+					int mbStart = cellBodyBounds.x;
+					int mbLen = cellBodyBounds.y + mbStart;
 					for (int mb = mbStart; mb < mbLen; mb++)
 					{
 						// Save us from ourselves.
@@ -747,8 +731,10 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 			}
 		}
 
-		bodyCell = bodyCellParent;
-		done = (bodyCell.ParentID == -1);
+		bodyCellIdx = meshIdxs[bodyCellParentID];
+		bodyCellParentID = meshSPL[bodyCellParentID].y;
+
+		done = (bodyCellParentID == -1);
 		bottom = false;
 	}
 
@@ -756,12 +742,12 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 	// Accumulate force from remaining distant cells at the top-most level.
 	for (int top = meshTopStart; top < meshTopEnd; top++)
 	{
-		MeshCell cell = inMesh[(top)];
+		int4 topIdx = meshIdxs[top];
 
-		if (IsFar(bodyCell, cell))
+		if (IsFar(bodyCellIdx, topIdx))
 		{
-			float3 cellPos = (float3)(cell.CmX, cell.CmY, cell.CmZ);
-			iForce += ComputeForce(cellPos, iPos, cell.Mass, iMass);
+			float4 topCMM = meshCMM[top];
+			iForce += ComputeForce(topCMM.xyz, iPos, topCMM.w, iMass);
 		}
 	}
 
@@ -791,16 +777,16 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global MeshCell*
 
 
 // Is the specified cell a neighbor of the test cell?
-bool IsFar(MeshCell cell, MeshCell testCell)
+bool IsFar(int4 cell, int4 testCell)
 {
-	if (abs(cell.IdxX - testCell.IdxX) > 1 || abs(cell.IdxY - testCell.IdxY) > 1 || abs(cell.IdxZ - testCell.IdxZ) > 1)
+	if (abs(cell.x - testCell.x) > 1 || abs(cell.y - testCell.y) > 1 || abs(cell.z - testCell.z) > 1)
 		return true;
 
 	return false;
 }
 
 
-__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global MeshCell* inMesh, global int* meshNeighbors, int collisions, global int* postNeeded)
+__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global int2* meshSPL, global int2* meshNBounds, global int2* meshBodyBounds, global int* meshNeighbors, int collisions, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -820,31 +806,35 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global M
 		}
 
 		// Get the current parent cell.
-		MeshCell parentCell = inMesh[outBody.MeshID];
-		int pcellSize = parentCell.Size;
+		int2 parentSPL = meshSPL[outBody.MeshID];
+		int pcellSize = parentSPL.x;
+		int parentID = parentSPL.y;
 
 		// Move up through parent cells until we find one
 		// whose size is atleast as big as the target body.
 		while (pcellSize < outBody.Size)
 		{
 			// Stop if we reach the top-most level.
-			if (parentCell.ParentID == -1)
+			if (parentID == -1)
 				break;
 
-			parentCell = inMesh[parentCell.ParentID];
-			pcellSize = parentCell.Size;
+			parentID = parentSPL.y;
+			parentSPL = meshSPL[parentID];
+			pcellSize = parentSPL.x;
 		}
 
 		// Itereate the neighboring cells of the selected parent.
-		for (int i = parentCell.NeighborStartIdx; i < parentCell.NeighborStartIdx + parentCell.NeighborCount; i++)
+		int2 parentNBounds = meshNBounds[parentID];
+
+		for (int i = parentNBounds.x; i < parentNBounds.x + parentNBounds.y; i++)
 		{
 			// Get the neighbor cell from the index.
 			int nId = meshNeighbors[i];
-			MeshCell nCell = inMesh[nId];
+			int2 nCellBodyBounds = meshBodyBounds[nId];
 
 			// Iterate all the bodies within each neighboring cell.
-			int mbStart = nCell.BodyStartIdx;
-			int mbLen = nCell.BodyCount + mbStart;
+			int mbStart = nCellBodyBounds.x;
+			int mbLen = nCellBodyBounds.y + mbStart;
 			for (int mb = mbStart; mb < mbLen; mb++)
 			{
 				// Save us from ourselves.
@@ -899,7 +889,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global M
 }
 
 
-__kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global MeshCell* inMesh, global int* meshNeighbors, global float3* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
+__kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body* outBodies, global int2* meshNBounds, global int2* meshSPL, global int2* meshChildBounds, global int4* meshIdxs, global int2* meshBodyBounds, global int* meshNeighbors, global float3* centerMass, const SimSettings sim, const SPHPreCalc sph, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -915,13 +905,16 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 	Body outBody = inBodies[(a)];
 	float3 outPos = (float3)(outBody.PosX, outBody.PosY, outBody.PosZ);
 
-	MeshCell bodyCell = inMesh[outBody.MeshID];
+	int bodyCellParentID = meshSPL[outBody.MeshID].y;
+	int4 bodyCellIdx = meshIdxs[outBody.MeshID];
 
 	if (sim.CollisionsOn == 1 && HasFlagB(outBody, INROCHE))
 	{
 		// Iterate parent cell neighbors.
-		int start = inMesh[bodyCell.ParentID].NeighborStartIdx;
-		int len = start + inMesh[bodyCell.ParentID].NeighborCount;
+		int2 parentNBounds = meshNBounds[bodyCellParentID];
+
+		int start = parentNBounds.x;
+		int len = start + parentNBounds.y;
 
 		// PERF HACK: Mask out the len for bodies at resting density to skip the tree walk?
 		len = len * !((outBody.Mass * sph.fDensity) == outBody.Density);
@@ -930,21 +923,24 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		{
 			// Iterate neighbor child cells.
 			int nId = meshNeighbors[(nc)];
-			int childStartIdx = inMesh[(nId)].ChildStartIdx;
-			int childLen = childStartIdx + inMesh[(nId)].ChildCount;
+
+			int2 childBounds = meshChildBounds[nId];
+			int childStartIdx = childBounds.x;
+			int childLen = childStartIdx + childBounds.y;
 
 			for (int c = childStartIdx; c < childLen; c++)
 			{
-				MeshCell cell = inMesh[(c)];
+				int4 cellIdx = meshIdxs[c];
 
 				// Check for close cell.
-				if (!IsFar(bodyCell, cell))
+				if (!IsFar(bodyCellIdx, cellIdx))
 				{
 					// Record # of neighbors encountered.
 					neighbors++;
 
-					int mbStart = cell.BodyStartIdx;
-					int mbLen = mbStart + cell.BodyCount;
+					int2 cellBodyBounds = meshBodyBounds[c];
+					int mbStart = cellBodyBounds.x;
+					int mbLen = mbStart + cellBodyBounds.y;
 
 					// Iterate the neighbor cell bodies.
 					for (int mb = mbStart; mb < mbLen; mb++)
