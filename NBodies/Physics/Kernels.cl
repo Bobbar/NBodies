@@ -539,9 +539,9 @@ __kernel void BuildNeighborsMesh(global int4* meshIdxs, global int2* meshSPL, gl
 		int2 parentNBounds = meshNBounds[cellSPL.y];
 
 		// Iterate parent cell neighbors.
-		int start = parentNBounds.x;
-		int len = start + parentNBounds.y;
-		for (int nc = start; nc < len; nc++)
+		int pstart = parentNBounds.x;
+		int plen = pstart + parentNBounds.y;
+		for (int nc = pstart; nc < plen; nc++)
 		{
 			// Iterate neighbor child cells.
 			int nId = neighborIndex[(nc)];
