@@ -779,7 +779,8 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int4* mes
 // Is the specified cell a neighbor of the test cell?
 bool IsFar(int4 cell, int4 testCell)
 {
-	if (abs(cell.x - testCell.x) > 1 || abs(cell.y - testCell.y) > 1 || abs(cell.z - testCell.z) > 1)
+	uint4 diff = abs_diff(cell, testCell);
+	if (diff.x > 1 || diff.y > 1 || diff.z > 1)
 		return true;
 
 	return false;
