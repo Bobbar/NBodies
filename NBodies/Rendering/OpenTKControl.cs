@@ -193,8 +193,12 @@ namespace NBodies.Rendering
 
             GL.Enable(EnableCap.DepthTest);
 
+            this.LostFocus += OpenTKControl_LostFocus;
+
             _ready = true;
         }
+
+      
 
         private void InitBloomBuffers()
         {
@@ -1233,6 +1237,11 @@ namespace NBodies.Rendering
                     BodyManager.Bodies[BodyManager.UIDToIndex(_newBodyId)] = nb;
                 }
             }
+        }
+
+        private void OpenTKControl_LostFocus(object sender, EventArgs e)
+        {
+            InputHandler.ResetKeys();
         }
 
         private void InitializeComponent()

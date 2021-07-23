@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using OpenTK;
+using System.Linq;
 
 namespace NBodies.UI
 {
@@ -15,6 +16,14 @@ namespace NBodies.UI
 
         public static Dictionary<Keys, bool> KeyDownStates = new Dictionary<Keys, bool>();
 
+        public static void ResetKeys()
+        {
+            var keys = KeyDownStates.Keys.ToArray();
+            for (int i = 0; i < keys.Length; i++)
+            {
+                KeyDownStates[keys[i]] = false;
+            }
+        }
 
         public static void AddKeyAction(KeyAction keyaction)
         {
