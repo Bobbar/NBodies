@@ -639,7 +639,7 @@ namespace NBodies.Rendering
             var proj = Matrix4.CreateOrthographicOffCenter(0, ClientSize.Width, 0, ClientSize.Height, -100f, 400f);
             GL.UniformMatrix4(20, false, ref proj);
 
-            float lineHeight = 20f;
+            float lineHeight = 15f;
             float yPos = ClientSize.Height - 20f;
 
             foreach (var stat in stats)
@@ -944,6 +944,8 @@ namespace NBodies.Rendering
 
                 // Select the index from z-order idx only if z-ordering is enabled.
                 int idx = RenderVars.SortZOrder ? ordIdxRev[i] : i;
+                if (idx < 0 || idx >= BodyManager.Bodies.Length)
+                    return;
                 var body = BodyManager.Bodies[idx];
                 bool hit = HitSphere(body, mouseRays.Item1, mouseRays.Item2);
                 if (hit)
