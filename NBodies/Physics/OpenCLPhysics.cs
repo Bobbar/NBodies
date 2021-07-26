@@ -22,8 +22,10 @@ namespace NBodies.Physics
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
-        private const int SIZEOFINT = 4;
-        private const float BUF_GROW_FACTOR = 1.4f;
+
+        private const int SIZEOFINT = 4; // Size of 32-bit integer in bytes.
+        private const float BUF_GROW_FACTOR = 1.4f; // Reallocated buffers will increase in size by this multiple.
+        private const int MESH_SIZE_NS_CUTOFF = 100000; // Mesh sizes greater than this will use the mesh-based neighbor search instead of binary.
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -40,7 +42,7 @@ namespace NBodies.Physics
         private ComputeKernel _forceKernel;
         private ComputeKernel _collisionSPHKernel;
         private ComputeKernel _collisionElasticKernel;
-        //private ComputeKernel _buildNeighborsMeshKernel;
+        private ComputeKernel _buildNeighborsMeshKernel;
         private ComputeKernel _buildNeighborsBinaryKernel;
         private ComputeKernel _fixOverlapKernel;
         private ComputeKernel _buildBottomKernel;
@@ -176,7 +178,7 @@ namespace NBodies.Physics
             _forceKernel = _program.CreateKernel("CalcForce");
             _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
             _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
-            //_buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
+            _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
             _buildNeighborsBinaryKernel = _program.CreateKernel("BuildNeighborsBinary");
             _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
@@ -508,8 +510,10 @@ namespace NBodies.Physics
             _queue.ExecuteTask(_calcCMKernel, null);
 
             // Build Nearest Neighbor List.
-            //PopNeighborsMeshGPU(_meshLength);
-            PopNeighborsBinaryGPU(_meshLength);
+            if (_meshLength > MESH_SIZE_NS_CUTOFF)
+                PopNeighborsMeshGPU(_meshLength);
+            else
+                PopNeighborsBinaryGPU(_meshLength);
         }
 
         private int ComputePaddedSize(int len)
@@ -788,7 +792,7 @@ namespace NBodies.Physics
         }
 
         /// <summary>
-        /// Neighbor search using a binary search strategy.
+        /// Neighbor search using a binary search strategy. Faster with smaller mesh cell count.
         /// </summary>
         private void PopNeighborsBinaryGPU(int meshSize)
         {
@@ -810,44 +814,47 @@ namespace NBodies.Physics
             _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
         }
 
-        ///// <summary>
-        ///// Neighbor search using top-down mesh/tree hierarchy strategy.
-        ///// </summary>
-        //private void PopNeighborsMeshGPU(int meshSize)
-        //{
-        //    // Calulate total size of 1D mesh neighbor list.
-        //    // Each cell can have a max of 9 neighbors, including itself.
-        //    int topSize = meshSize - _levelIdx[1];
-        //    int neighborLen = topSize * 9;
+        /// <summary>
+        /// Neighbor search using top-down mesh/tree hierarchy strategy. Faster with larger mesh cell count.
+        /// </summary>
+        private void PopNeighborsMeshGPU(int meshSize)
+        {
+            // Calulate total size of 1D mesh neighbor list.
+            // Each cell can have a max of 9 neighbors, including itself.
+            int topSize = meshSize - _levelIdx[1];
+            int neighborLen = topSize * 9;
 
-        //    // Reallocate and resize GPU buffer as needed.
-        //    Allocate(ref _gpuMeshNeighbors, neighborLen);
+            // Reallocate and resize GPU buffer as needed.
+            Allocate(ref _gpuMeshNeighbors, neighborLen);
 
-        //    // Start at the top level and move down.
-        //    for (int level = _levels; level >= 1; level--)
-        //    {
-        //        // Compute the bounds and size of this invocation.
-        //        int start = _levelIdx[level];
-        //        int end = meshSize;
+            // Start at the top level and move down.
+            for (int level = _levels; level >= 1; level--)
+            {
+                // Compute the bounds and size of this invocation.
+                int start = _levelIdx[level];
+                int end = meshSize;
 
-        //        if (level < _levels)
-        //            end = _levelIdx[level + 1];
+                if (level < _levels)
+                    end = _levelIdx[level + 1];
 
-        //        int cellCount = end - start;
-        //        int workSize = BlockCount(cellCount) * _threadsPerBlock;
+                int cellCount = end - start;
+                int workSize = BlockCount(cellCount) * _threadsPerBlock;
 
-        //        // Populate the neighbor list for this level.
-        //        int argi = 0;
-        //        _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMesh);
-        //        _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
-        //        _buildNeighborsMeshKernel.SetValueArgument(argi++, _levelIdx[1]);
-        //        _buildNeighborsMeshKernel.SetValueArgument(argi++, _levels);
-        //        _buildNeighborsMeshKernel.SetValueArgument(argi++, level);
-        //        _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
-        //        _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
-        //        _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-        //    }
-        //}
+                // Populate the neighbor list for this level.
+                int argi = 0;
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshSPL);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshNBounds);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshChildBounds);
+                _buildNeighborsMeshKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, _levelIdx[1]);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, _levels);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, level);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
+                _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
+                _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+            }
+        }
 
         /// <summary>
         /// Allocates the specified buffer to the specified number of elements if needed.
@@ -1047,7 +1054,7 @@ namespace NBodies.Physics
             _forceKernel.Dispose();
             _collisionSPHKernel.Dispose();
             _collisionElasticKernel.Dispose();
-            //_buildNeighborsMeshKernel.Dispose();
+            _buildNeighborsMeshKernel.Dispose();
             _buildNeighborsBinaryKernel.Dispose();
             _fixOverlapKernel.Dispose();
             _buildBottomKernel.Dispose();

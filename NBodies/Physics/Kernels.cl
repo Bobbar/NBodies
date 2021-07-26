@@ -497,70 +497,70 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 	meshCMM[newIdx] = (float4)((nCM.x / nMass), (nCM.y / nMass), nMass, 0);
 }
 
-//
-//// Top-down mesh based nearest neighbor search.
-//__kernel void BuildNeighborsMesh(global MeshCell* mesh, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
-//{
-//	int m = get_global_id(0);
-//	int readM = m + start;
-//
-//	if (readM >= end)
-//		return;
-//
-//	// Write location of the neighbor list.
-//	long offset = (readM - botOffset) * 9;
-//	int count = 0;
-//
-//	MeshCell cell = mesh[readM];
-//
-//	if (level == levels)
-//	{
-//		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
-//		for (int i = start; i < end; i++)
-//		{
-//			MeshCell check;
-//			check.IdxX = mesh[i].IdxX;
-//			check.IdxY = mesh[i].IdxY;
-//
-//			if (!IsFar(cell, check))
-//			{
-//				neighborIndex[(offset + count++)] = i;
-//			}
-//		}
-//	}
-//	else
-//	{
-//		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
-//		MeshCell cellParent = mesh[cell.ParentID];
-//
-//		// Iterate parent cell neighbors.
-//		int start = cellParent.NeighborStartIdx;
-//		int len = start + cellParent.NeighborCount;
-//		for (int nc = start; nc < len; nc++)
-//		{
-//			// Iterate neighbor child cells.
-//			int nId = neighborIndex[(nc)];
-//			int childStartIdx = mesh[(nId)].ChildStartIdx;
-//			int childLen = childStartIdx + mesh[(nId)].ChildCount;
-//			for (int c = childStartIdx; c < childLen; c++)
-//			{
-//				MeshCell child = mesh[(c)];
-//
-//				// Check for neighbors and add them to the list.
-//				if (!IsFar(cell, child))
-//				{
-//					neighborIndex[(offset + count++)] = c;
-//				}
-//			}
-//		}
-//	}
-//
-//	mesh[readM].NeighborStartIdx = offset;
-//	mesh[readM].NeighborCount = count;
-//}
+
+// Top-down mesh based nearest neighbor search.
+__kernel void BuildNeighborsMesh(global int2* meshIdxs, global int4* meshSPL, global int2* meshNBounds, global int2* meshChildBounds, global int* neighborIndex, int botOffset, int levels, int level, int start, int end)
+{
+	int m = get_global_id(0);
+	int readM = m + start;
+
+	if (readM >= end)
+		return;
+
+	// Write location of the neighbor list.
+	long offset = (readM - botOffset) * 9;
+	int count = 0;
+
+	int2 cellIdxs = meshIdxs[readM];
+	int4 cellSPL = meshSPL[readM];
+
+	if (level == levels)
+	{
+		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
+		for (int i = start; i < end; i++)
+		{
+			int2 checkIdxs = meshIdxs[i];
+
+			if (!IsFar(cellIdxs, checkIdxs))
+			{
+				neighborIndex[(offset + count++)] = i;
+			}
+		}
+	}
+	else
+	{
+		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
+		int2 parentNBounds = meshNBounds[cellSPL.y];
+
+		// Iterate parent cell neighbors.
+		int pstart = parentNBounds.x;
+		int plen = pstart + parentNBounds.y;
+		for (int nc = pstart; nc < plen; nc++)
+		{
+			// Iterate neighbor child cells.
+			int nId = neighborIndex[(nc)];
+			int2 childBounds = meshChildBounds[nId];
+
+			int childStartIdx = childBounds.x;
+			int childLen = childStartIdx + childBounds.y;
+			for (int c = childStartIdx; c < childLen; c++)
+			{
+				int2 childIdxs = meshIdxs[c];
+
+				// Check for neighbors and add them to the list.
+				if (!IsFar(cellIdxs, childIdxs))
+				{
+					neighborIndex[(offset + count++)] = c;
+				}
+			}
+		}
+	}
+
+	meshNBounds[readM] = (int2)(offset, count);
+}
 
 
-
+// All at once binary nearest neighbor search.
 __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBounds, global int4* meshSPL, global int* neighborIndex, global int* levelIdx, int len, int botOffset)
 {
 	int gid = get_global_id(0);
