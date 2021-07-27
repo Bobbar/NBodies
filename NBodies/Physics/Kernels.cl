@@ -91,6 +91,7 @@ constant int2 N_OFFSET_LUT[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 
 
 long MortonNumber(long x, long y);
 long MortonNumberInt2(int2 idx);
+int BinarySearch(global int2* meshIdxs, int2 cellIdx, int start, int end);
 float2 CellForce(float2 posA, float2 posB, float massA, float massB);
 bool IsFar(int2 cell, int2 testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY);
@@ -512,25 +513,46 @@ __kernel void BuildNeighborsMesh(global int2* meshIdxs, global int4* meshSPL, gl
 	int count = 0;
 
 	int2 cellIdxs = meshIdxs[readM];
-	int4 cellSPL = meshSPL[readM];
+	int cellParent = meshSPL[readM].y;
 
 	if (level == levels)
 	{
-		// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
-		for (int i = start; i < end; i++)
+		// If there is a large number of top level cells, use a binary search strategy.
+		if ((end - start) > 1000)
 		{
-			int2 checkIdxs = meshIdxs[i];
+			// Set the first neighbor.
+			neighborIndex[offset + count++] = readM;
 
-			if (!IsFar(cellIdxs, checkIdxs))
+			// Find the remaining neighbors.
+#pragma unroll 8
+			for (int i = 0; i < 8; i++)
 			{
-				neighborIndex[(offset + count++)] = i;
+				// Perform a binary search.
+				int2 offsetIdx = cellIdxs + N_OFFSET_LUT[i];
+				int foundIdx = BinarySearch(meshIdxs, offsetIdx, start, end);
+
+				if (foundIdx > -1)
+					neighborIndex[offset + count++] = foundIdx;
+			}
+		}
+		else // Otherwise just brute force all of them.
+		{
+			// For the first pass, iterate all top-level cells and brute force the neighbors. (There won't be many, so this is fast.)
+			for (int i = start; i < end; i++)
+			{
+				int2 checkIdxs = meshIdxs[i];
+
+				if (!IsFar(cellIdxs, checkIdxs))
+				{
+					neighborIndex[(offset + count++)] = i;
+				}
 			}
 		}
 	}
 	else
 	{
 		// Use the mesh tree hierarchy & neighbors found for parent level to narrow down the search area significantly.
-		int2 parentNBounds = meshNBounds[cellSPL.y];
+		int2 parentNBounds = meshNBounds[cellParent];
 
 		// Iterate parent cell neighbors.
 		int pstart = parentNBounds.x;
@@ -570,11 +592,9 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 
 	int meshIdx = gid + botOffset;
 	int2 cellIdx = meshIdxs[meshIdx];
-	int4 cellSPL = meshSPL[meshIdx];
-	int initLo = levelIdx[cellSPL.z];
-	int initHi = levelIdx[cellSPL.z + 1] - 1;
-	int lo = initLo;
-	int hi = initHi;
+	int cellLevel = meshSPL[meshIdx].z;
+	int start = levelIdx[cellLevel];
+	int end = levelIdx[cellLevel + 1] - 1;
 	int neighborIdx = gid * 9;
 	int count = 0;
 
@@ -585,38 +605,42 @@ __kernel void BuildNeighborsBinary(global int2* meshIdxs, global int2* meshNBoun
 #pragma unroll 8
 	for (int i = 0; i < 8; i++)
 	{
-		// Reset the bounds.
-		lo = initLo;
-		hi = initHi;
-
-		// Offset the idx coords.
 		int2 offsetIdx = cellIdx + N_OFFSET_LUT[i];
-		long key = MortonNumberInt2(offsetIdx);
-		int idx = -1;
-		int foundIdx = -1;
-
-		// Binary search.
-		while (lo <= hi)
-		{
-			idx = lo + ((hi - lo) >> 1);
-			long testKey = MortonNumberInt2(meshIdxs[idx]);
-
-			if (key == testKey)
-			{
-				// We found a neighbor.
-				foundIdx = idx;
-			}
-
-			bool right = key < testKey;
-			hi = select(hi, (idx - 1), right);
-			lo = select((idx + 1), lo, right);
-		}
+		int foundIdx = BinarySearch(meshIdxs, offsetIdx, start, end);
 
 		if (foundIdx > -1)
 			neighborIndex[neighborIdx + count++] = foundIdx;
 	}
 
 	meshNBounds[meshIdx] = (int2)(neighborIdx, count);
+}
+
+
+int BinarySearch(global int2* meshIdxs, int2 cellIdx, int start, int end)
+{
+	int lo = start;
+	int hi = end;
+
+	long key = MortonNumberInt2(cellIdx);
+	int idx = -1;
+	int foundIdx = -1;
+
+	while (lo <= hi)
+	{
+		idx = lo + ((hi - lo) >> 1);
+		long testKey = MortonNumberInt2(meshIdxs[idx]);
+
+		if (key == testKey)
+		{
+			foundIdx = idx;
+		}
+
+		bool right = key < testKey;
+		hi = select(hi, (idx - 1), right);
+		lo = select((idx + 1), lo, right);
+	}
+
+	return foundIdx;
 }
 
 
@@ -699,7 +723,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 		{
 			// Iterate neighbor child cells.
 			int nId = meshNeighbors[(nc)];
-			int childStartIdx = meshChildBounds[nId].x; 
+			int childStartIdx = meshChildBounds[nId].x;
 			int childLen = childStartIdx + meshChildBounds[nId].y;
 			for (int c = childStartIdx; c < childLen; c++)
 			{

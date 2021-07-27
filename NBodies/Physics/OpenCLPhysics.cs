@@ -25,7 +25,7 @@ namespace NBodies.Physics
 
         private const int SIZEOFINT = 4; // Size of 32-bit integer in bytes.
         private const float BUF_GROW_FACTOR = 1.4f; // Reallocated buffers will increase in size by this multiple.
-        private const int MESH_SIZE_NS_CUTOFF = 100000; // Mesh sizes greater than this will use the mesh-based neighbor search instead of binary.
+        private const int MESH_SIZE_NS_CUTOFF = 120000; // Mesh sizes greater than this will use the mesh-based neighbor search instead of binary.
 
         private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
@@ -142,7 +142,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.OutOfOrderExecution);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.Profiling);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
