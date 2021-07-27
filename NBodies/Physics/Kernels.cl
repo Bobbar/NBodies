@@ -89,7 +89,6 @@ constant int2 N_OFFSET_LUT[] = { { -1,-1 }, { 0,-1 }, { 1,-1 }, { -1,0 }, { 1,0 
 // Padding element for sorting.
 #define PADDING_ELEM -1
 
-long MortonNumber(long x, long y);
 long MortonNumberInt2(int2 idx);
 int BinarySearch(global int2* meshIdxs, int2 cellIdx, int start, int end);
 float2 CellForce(float2 posA, float2 posB, float massA, float massB);
@@ -161,25 +160,6 @@ int BlockCount(int len, int threads)
 // Credits: 
 // https://stackoverflow.com/questions/1024754/how-to-compute-a-3d-morton-number-interleave-the-bits-of-3-ints
 // https://graphics.stanford.edu/~seander/bithacks.html
-long MortonNumber(long x, long y)
-{
-	x &= 0x1fffff;
-	x = (x | x << 32) & 0x1f00000000ffff;
-	x = (x | x << 16) & 0x1f0000ff0000ff;
-	x = (x | x << 8) & 0x100f00f00f00f00f;
-	x = (x | x << 4) & 0x10c30c30c30c30c3;
-	x = (x | x << 2) & 0x1249249249249249;
-
-	y &= 0x1fffff;
-	y = (y | y << 32) & 0x1f00000000ffff;
-	y = (y | y << 16) & 0x1f0000ff0000ff;
-	y = (y | y << 8) & 0x100f00f00f00f00f;
-	y = (y | y << 4) & 0x10c30c30c30c30c3;
-	y = (y | y << 2) & 0x1249249249249249;
-
-	return x | (y << 1);
-}
-
 long MortonNumberInt2(int2 idx)
 {
 	long x = idx.x;
@@ -247,9 +227,8 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 
 	if (gid < len)
 	{
-		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
-		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
-		long morton = MortonNumber(idxX, idxY);
+		int2 idx = (int2)((int)floor(bodies[gid].PosX), (int)floor(bodies[gid].PosY));
+		long morton = MortonNumberInt2(idx >> cellSizeExp);
 
 		morts[gid].x = morton;
 		morts[gid].y = gid;
@@ -406,9 +385,7 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 	meshSPL[m] = (int4)(cellSize, -1, 0, 0);
 
 	// Compute parent level morton numbers.
-	int idxX = meshIdx.x >> 1;
-	int idxY = meshIdx.y >> 1;
-	long morton = MortonNumber(idxX, idxY);
+	long morton = MortonNumberInt2(meshIdx >> 1);
 	parentMorts[m] = morton;
 
 	inBodies[firstIdx].MeshID = m;
@@ -470,9 +447,7 @@ __kernel void BuildTop(global int2* meshIdxs, global int2* meshBodyBounds, globa
 	nCM = (double2)(nMass * firstCMM.x, nMass * firstCMM.y);
 
 	// Compute parent level morton numbers.
-	int idxX = meshIdx.x >> 1;
-	int idxY = meshIdx.y >> 1;
-	long morton = MortonNumber(idxX, idxY);
+	long morton = MortonNumberInt2(meshIdx >> 1);
 	parentMorts[m] = morton;
 
 	meshSPL[firstIdx].y = newIdx;
