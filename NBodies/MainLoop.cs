@@ -389,7 +389,7 @@ namespace NBodies
                     {
                         if (_bodiesBuffer.Length > 1)
                         {
-                           
+
                             if (Shooting)
                             {
                                 // Insert bullet
@@ -604,24 +604,31 @@ namespace NBodies
         private static void FPSLimiter(int targetFPS)
         {
             long ticksPerSecond = TimeSpan.TicksPerSecond;
-            float targetFrameTime = ticksPerSecond / (float)targetFPS;
+            long targetFrameTime = ticksPerSecond / targetFPS;
             long waitTime = 0;
 
             if (_fpsTimer.IsRunning)
             {
                 long elapTime = _fpsTimer.Elapsed.Ticks;
 
-                if (elapTime <= targetFrameTime)
+                if (elapTime < targetFrameTime)
                 {
-                    waitTime = (long)(targetFrameTime - elapTime);
-
-                    if (waitTime > 0)
+                    // # More accurate, high CPU usage. #
+                    while (_fpsTimer.Elapsed.Ticks < targetFrameTime && !_loopTask.IsCompleted)
                     {
-                        Thread.Sleep(new TimeSpan(waitTime));
+                        Thread.SpinWait(10000);
                     }
+                    elapTime = _fpsTimer.Elapsed.Ticks;
+                
+                    // # Less accurate, less CPU usage. #
+                    //waitTime = (long)(targetFrameTime - elapTime);
+                    //if (waitTime > 0)
+                    //{
+                    //    Thread.Sleep(new TimeSpan(waitTime));
+                    //}
                 }
 
-                float fps = ticksPerSecond / (elapTime + waitTime);
+                float fps = (float)Math.Ceiling(ticksPerSecond / (double)(elapTime + waitTime));
 
                 _avgFPS.Add(fps);
 
