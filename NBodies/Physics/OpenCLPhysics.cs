@@ -22,6 +22,7 @@ namespace NBodies.Physics
         private long _maxBufferSize = 0;
         private float _kernelSize = 1.0f;
         private SPHPreCalc _preCalcs;
+        private bool _hasUnifiedMemory = false;
 
         private const int SIZEOFINT = 4; // Size of 32-bit integer in bytes.
         private const float BUF_GROW_FACTOR = 1.4f; // Reallocated buffers will increase in size by this multiple.
@@ -137,6 +138,8 @@ namespace NBodies.Physics
 
             if (_device == null)
                 _device = devices[_gpuIndex];
+
+            _hasUnifiedMemory = _device.HostUnifiedMemory;
 
             var platform = _device.Platform;
 
@@ -932,6 +935,9 @@ namespace NBodies.Physics
         {
             T[] buf = new T[buffer.Count];
 
+            if (_hasUnifiedMemory) 
+                blocking = true;
+
             _queue.ReadFromBuffer(buffer, ref buf, blocking, null);
             if (blocking) _queue.Finish(); // This is probably redundant...
 
@@ -941,6 +947,9 @@ namespace NBodies.Physics
         private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, long offset, long length, bool blocking = false) where T : struct
         {
             T[] buf = new T[length - offset];
+
+            if (_hasUnifiedMemory)
+                blocking = true;
 
             _queue.ReadFromBuffer(buffer, ref buf, blocking, offset, 0, length - offset, null);
             if (blocking) _queue.Finish(); // This is probably redundant...
@@ -954,10 +963,14 @@ namespace NBodies.Physics
             GCHandle destinationGCHandle = GCHandle.Alloc(dest, GCHandleType.Pinned);
             IntPtr destinationOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(dest, (int)destOffset);
 
+            bool blocking = false;
+            if (_hasUnifiedMemory)
+                blocking = true;
+
             Cloo.Bindings.CL12.EnqueueReadBuffer(
                 _queue.Handle,
                 source.Handle,
-                false,
+                blocking,
                 new IntPtr(0 * sizeofT),
                 new IntPtr(dest.Length * sizeofT),
                 destinationOffsetPtr,
@@ -974,10 +987,14 @@ namespace NBodies.Physics
             GCHandle sourceGCHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
             IntPtr sourceOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(source, (int)sourceOffset);
 
+            bool blocking = false;
+            if (_hasUnifiedMemory)
+                blocking = true;
+
             Cloo.Bindings.CL12.EnqueueWriteBuffer(
                 _queue.Handle,
                 dest.Handle,
-                false,
+                blocking,
                 new IntPtr(0 * sizeofT),
                 new IntPtr(source.Length * sizeofT),
                 sourceOffsetPtr,
