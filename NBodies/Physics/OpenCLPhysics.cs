@@ -704,7 +704,6 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
-            _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
             _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
@@ -749,7 +748,6 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
                 _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
                 _compressCellMapKernel.SetValueArgument(6, level);
-                _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
                 _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
                 // Build the parent level. Also computes morts for the parents parent level.

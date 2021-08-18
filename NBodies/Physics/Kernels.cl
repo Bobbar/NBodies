@@ -297,9 +297,10 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
-__kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmapOut, global int* counts, global int* levelCounts, global int* levelIdx, int level, int threads)
+__kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmapOut, global int* counts, global int* levelCounts, global int* levelIdx, int level)
 {
 	int gid = get_global_id(0);
+	int threads = get_local_size(0);
 	int len = 0;
 
 	if (blocks > 0)
