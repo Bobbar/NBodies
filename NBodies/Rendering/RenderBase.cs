@@ -122,7 +122,9 @@ namespace NBodies.Rendering
                 _renderWait.Wait();
                 _renderCompleteCallback.Reset();
 
-                BodyManager.RebuildUIDIndex();
+                if (BodyManager.FollowSelected)
+                    BodyManager.RebuildUIDIndex();
+
                 int maxUID = BodyManager.TopUID;
                 bool overlayVisible = OverlaysVisible();
                 var finalOffset = CalcFinalOffset();
@@ -206,7 +208,7 @@ namespace NBodies.Rendering
                                     _pointers[nVis] = i;
                                     nVis++;
                                 }
-                            }
+                            } 
                         }
                         else if (!SortZOrder && _buckets.Length > 0)
                         {
@@ -305,6 +307,7 @@ namespace NBodies.Rendering
                         //Draw body.
                         DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
                     }
+
 
                     //if (Trails && !overlayVisible)
                     //    DrawBlur(Color.FromArgb(10, _clearColor));
