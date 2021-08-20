@@ -790,6 +790,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 		}
 	}
 
+
 	// Write back to memory.
 	inBodies[(a)].ForceX = iForce.x;
 	inBodies[(a)].ForceY = iForce.y;

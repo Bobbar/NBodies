@@ -341,12 +341,36 @@ namespace NBodies.Physics
             // Calc number of thread blocks to fit the dataset.
             int threadBlocks = BlockCount(_bodies.Length);
 
+
+            //var sz = Marshal.SizeOf(typeof(Cloo.Bindings.CLMemoryHandle));
+
+
             // Compute gravity and SPH forces for the near/local field.
             int argi = 0;
-            _forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
-            _forceKernel.SetValueArgument(argi++, _bodies.Length);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
-            _forceKernel.SetMemoryArgument(argi++, _gpuMeshNBounds);
+            MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuInBodies);
+            MyOCLBinding.SetValueArgument(_forceKernel.Handle, argi++, _bodies.Length);
+            //_forceKernel.SetValueArgument(argi++, _bodies.Length);
+            MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshIdxs);
+            MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshNBounds);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshBodyBounds);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshChildBounds);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshCMM);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshSPL);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuMeshNeighbors);
+            //MyOCLBinding.SetValueArgument(_forceKernel.Handle, argi++, sim);
+            //MyOCLBinding.SetValueArgument(_forceKernel.Handle, argi++, _preCalcs);
+            //MyOCLBinding.SetValueArgument(_forceKernel.Handle, argi++, meshTopStart);
+            //MyOCLBinding.SetValueArgument(_forceKernel.Handle, argi++, meshTopEnd);
+            //MyOCLBinding.SetMemoryArgument(_forceKernel.Handle, argi++, _gpuPostNeeded);
+
+            //MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _forceKernel.Handle, 1, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, 0, null, null);
+
+
+
+            //_forceKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            //_forceKernel.SetValueArgument(argi++, _bodies.Length);
+            //_forceKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
+            //_forceKernel.SetMemoryArgument(argi++, _gpuMeshNBounds);
             _forceKernel.SetMemoryArgument(argi++, _gpuMeshBodyBounds);
             _forceKernel.SetMemoryArgument(argi++, _gpuMeshChildBounds);
             _forceKernel.SetMemoryArgument(argi++, _gpuMeshCMM);
@@ -359,6 +383,31 @@ namespace NBodies.Physics
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
+
+
+            //var bods = ReadBuffer(_gpuInBodies);
+
+            //var b = bods[5276];
+            //Debug.WriteLine($"[Host] Dens: {bods[5276].Density}  Press: {bods[5276].Pressure}");
+
+            //_queue.Finish();
+            //timer.Restart();
+
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    //_queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+
+            //    MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _forceKernel.Handle, 1, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, 0, null, null);
+
+            //    //MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _forceKernel.Handle, 1, null, OCTools.ConvertArray(new long[] { threadBlocks * threadsPerBlock }), OCTools.ConvertArray(new long[] { threadsPerBlock }), 0, null, null);
+
+
+            //}
+
+
+            ////_queue.Finish();
+            //timer.Print("Force");
+
             // Compute elastic collisions.
             argi = 0;
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuInBodies);
@@ -369,8 +418,9 @@ namespace NBodies.Physics
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-
+            //_queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _collisionElasticKernel.Handle, 1, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, 0, null, null);
+           
             // Compute SPH forces/collisions.
             argi = 0;
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuInBodies);
@@ -386,7 +436,8 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, sim);
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            //_queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _collisionSPHKernel.Handle, 1, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, 0, null, null);
 
             // Read back post needed bool.
             ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1);
@@ -541,7 +592,8 @@ namespace NBodies.Physics
             _computeMortsKernel.SetValueArgument(2, padLen);
             _computeMortsKernel.SetValueArgument(3, cellSizeExp);
             _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMortsA);
-            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            //_queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _computeMortsKernel.Handle, 1, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, 0, null, null);
         }
 
         //
@@ -578,7 +630,9 @@ namespace NBodies.Physics
                 _histogramKernel.SetValueArgument(argi++, pass);
                 _histogramKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
                 _histogramKernel.SetValueArgument(argi++, padLen);
-                _queue.Execute(_histogramKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //_queue.Execute(_histogramKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _histogramKernel.Handle, 1, null, new long[] { numItems }, new long[] { numLocalItems }, 0, null, null);
+
                 //
                 #endregion Histogram
 
@@ -593,7 +647,8 @@ namespace NBodies.Physics
                 _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuHistogram);
                 _scanHistogramsKernel.SetLocalArgument(argi++, SIZEOFINT * _NUM_HISTOSPLIT);
                 _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuGlobSum);
-                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //_queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _scanHistogramsKernel.Handle, 1, null, new long[] { numItems }, new long[] { numLocalItems }, 0, null, null);
 
                 // Pass 2
                 numItems = _NUM_HISTOSPLIT / 2;
@@ -601,7 +656,9 @@ namespace NBodies.Physics
 
                 _scanHistogramsKernel.SetMemoryArgument(0, _gpuGlobSum);
                 _scanHistogramsKernel.SetMemoryArgument(2, _gpuGlobSumTemp);
-                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //_queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _scanHistogramsKernel.Handle, 1, null, new long[] { numItems }, new long[] { numLocalItems }, 0, null, null);
+
                 #endregion Scan
 
                 #region Merge
@@ -611,7 +668,8 @@ namespace NBodies.Physics
 
                 _pastehistogramsKernel.SetMemoryArgument(0, _gpuHistogram);
                 _pastehistogramsKernel.SetMemoryArgument(1, _gpuGlobSum);
-                _queue.Execute(_pastehistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //_queue.Execute(_pastehistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _pastehistogramsKernel.Handle, 1, null, new long[] { numItems }, new long[] { numLocalItems }, 0, null, null);
 
                 #endregion Merge
 
@@ -627,7 +685,9 @@ namespace NBodies.Physics
                 _reorderKernel.SetValueArgument(argi++, pass);
                 _reorderKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
                 _reorderKernel.SetValueArgument(argi++, padLen);
-                _queue.Execute(_reorderKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                //_queue.Execute(_reorderKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _reorderKernel.Handle, 1, null, new long[] { numItems }, new long[] { numLocalItems }, 0, null, null);
+
                 #endregion Reorder
 
                 // Swap keys buffers.
@@ -648,7 +708,9 @@ namespace NBodies.Physics
             _reindexKernel.SetValueArgument(1, _bodies.Length);
             _reindexKernel.SetMemoryArgument(2, _gpuBodyMortsA);
             _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
+            //_queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _reindexKernel.Handle, 1, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, 0, null, null);
+
         }
 
         private void BuildMeshGPU(int cellSizeExp)
@@ -693,7 +755,8 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(6, 0);
             _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
             _cellMapKernel.SetValueArgument(8, _gpuBodyMortsA.Count);
-            _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+            //_queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _cellMapKernel.Handle, 1, null, globalSize, localSize, 0, null, null);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
             // This allows the map to be read properly by the mesh building kernels.
@@ -704,7 +767,8 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
-            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+            //_queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _compressCellMapKernel.Handle, 1, null, globalSizeComp, localSize, 0, null, null);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
             int argi = 0;
@@ -720,7 +784,8 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
-            _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
+            //_queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _buildBottomKernel.Handle, 1, null, globalSize, localSize, 0, null, null);
 
 
             // Now build the top levels of the mesh.
@@ -738,7 +803,8 @@ namespace NBodies.Physics
                 _cellMapKernel.SetValueArgument(6, level);
                 _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
                 _cellMapKernel.SetValueArgument(8, _gpuParentMorts.Count);
-                _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+                //_queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _cellMapKernel.Handle, 1, null, globalSize, localSize, 0, null, null);
 
                 // Compress the cell map.
                 _compressCellMapKernel.SetValueArgument(0, -1); // Same as above. Make the kernel read length from the level counts buffer.
@@ -748,7 +814,8 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
                 _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
                 _compressCellMapKernel.SetValueArgument(6, level);
-                _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+                //_queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _compressCellMapKernel.Handle, 1, null, globalSizeComp, localSize, 0, null, null);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 argi = 0;
@@ -764,7 +831,9 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(argi++, level);
                 _buildTopKernel.SetMemoryArgument(argi++, _gpuParentMorts);
                 _buildTopKernel.SetValueArgument(argi++, bufLen);
-                _queue.Execute(_buildTopKernel, null, globalSize, localSize, null);
+                //_queue.Execute(_buildTopKernel, null, globalSize, localSize, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _buildTopKernel.Handle, 1, null, globalSize, localSize, 0, null, null);
+
             }
 
             // Read back the level index and set the total mesh length.
@@ -812,7 +881,9 @@ namespace NBodies.Physics
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, topSize);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
-            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+            //_queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+            MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _buildNeighborsBinaryKernel.Handle, 1, null, new long[] { workSize }, new long[] { _threadsPerBlock }, 0, null, null);
+
         }
 
         /// <summary>
@@ -853,7 +924,9 @@ namespace NBodies.Physics
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, level);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
-                _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+                //_queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+                MyOCLBinding.EnqueueNDRangeKernel(_queue.Handle, _buildNeighborsMeshKernel.Handle, 1, null, new long[] { workSize }, new long[] { _threadsPerBlock }, 0, null, null);
+
             }
         }
 
@@ -965,8 +1038,7 @@ namespace NBodies.Physics
             if (_hasUnifiedMemory)
                 blocking = true;
 
-            Cloo.Bindings.CL12.EnqueueReadBuffer(
-                _queue.Handle,
+            MyOCLBinding.EnqueueReadBuffer(_queue.Handle,
                 source.Handle,
                 blocking,
                 new IntPtr(0 * sizeofT),
@@ -975,6 +1047,17 @@ namespace NBodies.Physics
                 0,
                 null,
                 null);
+          
+                //Cloo.Bindings.CL12.EnqueueReadBuffer(
+                //_queue.Handle,
+                //source.Handle,
+                //blocking,
+                //new IntPtr(0 * sizeofT),
+                //new IntPtr(dest.Length * sizeofT),
+                //destinationOffsetPtr,
+                //0,
+                //null,
+                //null);
 
             destinationGCHandle.Free();
         }
