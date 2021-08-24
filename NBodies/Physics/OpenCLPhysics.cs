@@ -27,11 +27,10 @@ namespace NBodies.Physics
         private const int SIZEOFINT = 4; // Size of 32-bit integer in bytes.
         private const float BUF_GROW_FACTOR = 1.4f; // Reallocated buffers will increase in size by this multiple.
         private const int MESH_SIZE_NS_CUTOFF = 120000; // Mesh sizes greater than this will use the mesh-based neighbor search instead of binary.
-
-        private int[] _levelIdx = new int[0]; // Locations of each level within the 1D mesh array.
+        private int[] _levelIdx = new int[1]; // Locations of each level within the 1D mesh array.
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
         private int _meshLength = 0; // Total length of the 1D mesh array.
-        private Body[] _bodies = new Body[0]; // Local reference for the current body array.
+        private Body[] _bodies = new Body[1]; // Local reference for the current body array.
 
         private ManualResetEventSlim _meshRequested = new ManualResetEventSlim(true);
 
@@ -81,9 +80,7 @@ namespace NBodies.Physics
         private ComputeBuffer<float4> _gpuMeshCMM;
         private ComputeBuffer<int4> _gpuMeshSPL;
 
-
         private Stopwatch timer = new Stopwatch();
-        private Stopwatch timer2 = new Stopwatch();
 
         private long _currentFrame = 0;
         private long _lastMeshReadFrame = 0;
@@ -145,7 +142,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.Profiling);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -221,11 +218,8 @@ namespace NBodies.Physics
             _gpuMeshNeighbors = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshNeighbors, 10000);
 
-            _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuInBodies, 1, true);
-
-            _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuOutBodies, 1, true);
+            _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
+            _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
 
             _gpuMeshIdxs = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuMeshIdxs, 10000, true);
@@ -272,8 +266,7 @@ namespace NBodies.Physics
             _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuLevelCounts, 1, true);
 
-            _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuLevelIdx, 1, true);
+            _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _levelIdx);
 
             _gpuHistogram = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuHistogram, 10000, true);
@@ -309,14 +302,11 @@ namespace NBodies.Physics
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
 
-            // Allocate and start writing bodies to the GPU.
-            Allocate(ref _gpuInBodies, _bodies.Length);
-            Allocate(ref _gpuOutBodies, _bodies.Length);
-
             // Only write the bodies buffer if it has been changed by the host.
             if (_curBufferVersion != bufferVersion)
             {
-                WriteBuffer(_bodies, _gpuOutBodies, 0, 0, _bodies.Length);
+                Allocate(ref _gpuInBodies, _bodies);
+                Allocate(ref _gpuOutBodies, _bodies); 
             }
 
             // Post process flag.
@@ -487,9 +477,15 @@ namespace NBodies.Physics
         /// <param name="cellSizeExp">Cell size exponent. 2 ^ exponent = cell size.</param>
         private void BuildMesh(int cellSizeExp)
         {
-            // Index of mesh level locations.
-            _levelIdx = new int[_levels + 2];
-            _levelIdx[0] = 0; // Bottom level.
+            // Realloc level index and buffer as needed.
+            if (_levelIdx.Length != _levels + 2)
+            {
+                // Index of mesh level locations.
+                _levelIdx = new int[_levels + 2];
+                _levelIdx[0] = 0; // Bottom level.
+
+                Allocate(ref _gpuLevelIdx, _levelIdx);
+            }
 
             // Compute a padded size.
             // The current sort kernel has particular requirements for the input size
@@ -662,12 +658,8 @@ namespace NBodies.Physics
             long[] globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
             long[] localSize = new long[] { _threadsPerBlock };
 
-            // Allocate level counts & index.
+            // Allocate level counts.
             Allocate(ref _gpuLevelCounts, _levels + 1, true);
-            Allocate(ref _gpuLevelIdx, _levels + 2, true);
-
-            // Clear the level index.
-            _queue.FillBuffer(_gpuLevelIdx, new int[1] { 0 }, 0, _levels + 2, null);
 
             // Allocate map and count buffers.
             Allocate(ref _gpuMap, _bodies.Length, false);
@@ -768,7 +760,7 @@ namespace NBodies.Physics
             }
 
             // Read back the level index and set the total mesh length.
-            ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length);
+            ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length, true);
             _meshLength = _levelIdx[_levels + 1];
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
@@ -928,12 +920,22 @@ namespace NBodies.Physics
             return newCount;
         }
 
+        private long Allocate<T>(ref ComputeBuffer<T> buffer, T[] data) where T : struct
+        {
+            // Record the current flags.
+            var flags = buffer.Flags;
+
+            buffer.Dispose();
+            buffer = new ComputeBuffer<T>(_context, flags, data);
+
+            return buffer.Count;
+        }
 
         private T[] ReadBuffer<T>(ComputeBuffer<T> buffer, bool blocking = false) where T : struct
         {
             T[] buf = new T[buffer.Count];
 
-            if (_hasUnifiedMemory) 
+            if (_hasUnifiedMemory)
                 blocking = true;
 
             _queue.ReadFromBuffer(buffer, ref buf, blocking, null);
@@ -955,13 +957,12 @@ namespace NBodies.Physics
             return buf;
         }
 
-        private void ReadBuffer<T>(ComputeBufferBase<T> source, ref T[] dest, long sourceOffset, long destOffset, long region) where T : struct
+        private void ReadBuffer<T>(ComputeBufferBase<T> source, ref T[] dest, long sourceOffset, long destOffset, long region, bool blocking = false) where T : struct
         {
             var sizeofT = Marshal.SizeOf<T>();
             GCHandle destinationGCHandle = GCHandle.Alloc(dest, GCHandleType.Pinned);
             IntPtr destinationOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(dest, (int)destOffset);
 
-            bool blocking = false;
             if (_hasUnifiedMemory)
                 blocking = true;
 
