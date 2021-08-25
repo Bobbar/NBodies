@@ -58,7 +58,7 @@ namespace NBodies.IO
                 }
             }
 
-           // MainLoop.ResumePhysics();
+            PhysicsProvider.Reload();
         }
 
         public static void ReadState(string fileName)

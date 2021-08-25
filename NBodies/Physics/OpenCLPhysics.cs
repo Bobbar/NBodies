@@ -73,12 +73,23 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuHistogram;
         private ComputeBuffer<int> _gpuGlobSum;
         private ComputeBuffer<int> _gpuGlobSumTemp;
+
+        // GPU mesh buffers.
         private ComputeBuffer<int2> _gpuMeshIdxs;
         private ComputeBuffer<int2> _gpuMeshNBounds;
         private ComputeBuffer<int2> _gpuMeshBodyBounds;
         private ComputeBuffer<int2> _gpuMeshChildBounds;
         private ComputeBuffer<float4> _gpuMeshCMM;
         private ComputeBuffer<int4> _gpuMeshSPL;
+
+        // Host mesh buffers.
+        private int2[] _meshIdxs = new int2[1];
+        private int2[] _meshNBounds = new int2[1];
+        private int2[] _meshBodyBounds = new int2[1];
+        private int2[] _meshChildBounds = new int2[1];
+        private float4[] _meshCMM = new float4[1];
+        private int4[] _meshSPL = new int4[1];
+
 
         private Stopwatch timer = new Stopwatch();
 
@@ -142,7 +153,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.Profiling);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
             string clSource = streamReader.ReadToEnd();
@@ -221,23 +232,12 @@ namespace NBodies.Physics
             _gpuInBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
             _gpuOutBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _bodies);
 
-            _gpuMeshIdxs = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshIdxs, 10000, true);
-
-            _gpuMeshNBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshNBounds, 10000, true);
-
-            _gpuMeshBodyBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshBodyBounds, 10000, true);
-
-            _gpuMeshChildBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshChildBounds, 10000, true);
-
-            _gpuMeshCMM = new ComputeBuffer<float4>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshCMM, 10000, true);
-
-            _gpuMeshSPL = new ComputeBuffer<int4>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuMeshSPL, 10000, true);
+            _gpuMeshIdxs = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshIdxs);
+            _gpuMeshNBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshNBounds);
+            _gpuMeshBodyBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshBodyBounds);
+            _gpuMeshChildBounds = new ComputeBuffer<int2>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshChildBounds);
+            _gpuMeshCMM = new ComputeBuffer<float4>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshCMM);
+            _gpuMeshSPL = new ComputeBuffer<int4>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _meshSPL);
 
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
@@ -306,7 +306,7 @@ namespace NBodies.Physics
             if (_curBufferVersion != bufferVersion)
             {
                 Allocate(ref _gpuInBodies, _bodies);
-                Allocate(ref _gpuOutBodies, _bodies); 
+                Allocate(ref _gpuOutBodies, _bodies);
             }
 
             // Post process flag.
@@ -422,32 +422,32 @@ namespace NBodies.Physics
         {
             if (_mesh.Length != _meshLength)
                 _mesh = new MeshCell[_meshLength];
-
-            var meshIdxs = ReadBuffer(_gpuMeshIdxs);
-            var meshNBounds = ReadBuffer(_gpuMeshNBounds);
-            var meshBodyBounds = ReadBuffer(_gpuMeshBodyBounds);
-            var meshChildBounds = ReadBuffer(_gpuMeshChildBounds);
-            var meshCMM = ReadBuffer(_gpuMeshCMM);
-            var meshSPL = ReadBuffer(_gpuMeshSPL);
+       
+            ReadBuffer(_gpuMeshIdxs, ref _meshIdxs, 0, 0, _meshLength);
+            ReadBuffer(_gpuMeshNBounds, ref _meshNBounds, 0, 0, _meshLength);
+            ReadBuffer(_gpuMeshBodyBounds, ref _meshBodyBounds, 0, 0, _meshLength);
+            ReadBuffer(_gpuMeshChildBounds, ref _meshChildBounds, 0, 0, _meshLength);
+            ReadBuffer(_gpuMeshCMM, ref _meshCMM, 0, 0, _meshLength);
+            ReadBuffer(_gpuMeshSPL, ref _meshSPL, 0, 0, _meshLength);
+            _queue.Finish();
 
             for (int i = 0; i < _meshLength; i++)
             {
-                _mesh[i].IdxX = meshIdxs[i].X;
-                _mesh[i].IdxY = meshIdxs[i].Y;
-                _mesh[i].NeighborStartIdx = meshNBounds[i].X;
-                _mesh[i].NeighborCount = meshNBounds[i].Y;
-                _mesh[i].BodyStartIdx = meshBodyBounds[i].X;
-                _mesh[i].BodyCount = meshBodyBounds[i].Y;
-                _mesh[i].ChildStartIdx = meshChildBounds[i].X;
-                _mesh[i].ChildCount = meshChildBounds[i].Y;
-                _mesh[i].Mass = meshCMM[i].Z;
-                _mesh[i].CmX = meshCMM[i].X;
-                _mesh[i].CmY = meshCMM[i].Y;
-                _mesh[i].Size = meshSPL[i].X;
-                _mesh[i].ParentID = meshSPL[i].Y;
-                _mesh[i].Level = meshSPL[i].Z;
-
-            }
+                _mesh[i].IdxX = _meshIdxs[i].X;
+                _mesh[i].IdxY = _meshIdxs[i].Y;
+                _mesh[i].NeighborStartIdx = _meshNBounds[i].X;
+                _mesh[i].NeighborCount = _meshNBounds[i].Y;
+                _mesh[i].BodyStartIdx = _meshBodyBounds[i].X;
+                _mesh[i].BodyCount = _meshBodyBounds[i].Y;
+                _mesh[i].ChildStartIdx = _meshChildBounds[i].X;
+                _mesh[i].ChildCount = _meshChildBounds[i].Y;
+                _mesh[i].Mass = _meshCMM[i].Z;
+                _mesh[i].CmX = _meshCMM[i].X;
+                _mesh[i].CmY = _meshCMM[i].Y;
+                _mesh[i].Size = _meshSPL[i].X;
+                _mesh[i].ParentID = _meshSPL[i].Y;
+                _mesh[i].Level = _meshSPL[i].Z;
+            } 
         }
 
         /// <summary>
@@ -667,12 +667,7 @@ namespace NBodies.Physics
             Allocate(ref _gpuCounts, blocks, false);
 
             // Allocate mesh and morts buffers to body count.
-            long bufLen = Allocate(ref _gpuMeshIdxs, _bodies.Length, false);
-            Allocate(ref _gpuMeshNBounds, _bodies.Length, false);
-            Allocate(ref _gpuMeshBodyBounds, _bodies.Length, false);
-            Allocate(ref _gpuMeshChildBounds, _bodies.Length, false);
-            Allocate(ref _gpuMeshCMM, _bodies.Length, false);
-            Allocate(ref _gpuMeshSPL, _bodies.Length, false);
+            long bufLen = AllocateMesh(_bodies.Length);
             Allocate(ref _gpuParentMorts, _bodies.Length, false);
 
             // Build initial map from sorted body morts.
@@ -769,19 +764,37 @@ namespace NBodies.Physics
             if (bufLen < _meshLength)
             {
                 Debug.WriteLine($"Mesh reallocated: {bufLen} -> {_meshLength}");
-
-                Allocate(ref _gpuMeshIdxs, _meshLength);
-                Allocate(ref _gpuMeshNBounds, _meshLength);
-                Allocate(ref _gpuMeshBodyBounds, _meshLength);
-                Allocate(ref _gpuMeshChildBounds, _meshLength);
-                Allocate(ref _gpuMeshCMM, _meshLength);
-                Allocate(ref _gpuMeshSPL, _meshLength);
+                AllocateMesh(_meshLength);
                 Allocate(ref _gpuParentMorts, _meshLength);
                 Allocate(ref _gpuMap, _meshLength);
                 Allocate(ref _gpuMapFlat, _meshLength);
 
                 BuildMeshGPU(cellSizeExp);
             }
+        }
+
+        private long AllocateMesh(int length)
+        {
+            if (_meshIdxs.Length < length)
+            {
+                _meshIdxs = new int2[length];
+                _meshNBounds = new int2[length];
+                _meshBodyBounds = new int2[length];
+                _meshChildBounds = new int2[length];
+                _meshCMM = new float4[length];
+                _meshSPL = new int4[length];
+
+                long bufLen = Allocate(ref _gpuMeshIdxs, _meshIdxs);
+                Allocate(ref _gpuMeshNBounds, _meshNBounds);
+                Allocate(ref _gpuMeshBodyBounds, _meshBodyBounds);
+                Allocate(ref _gpuMeshChildBounds, _meshChildBounds);
+                Allocate(ref _gpuMeshCMM, _meshCMM);
+                Allocate(ref _gpuMeshSPL, _meshSPL);
+
+                return bufLen;
+            }
+
+            return _gpuMeshIdxs.Count;
         }
 
         /// <summary>
