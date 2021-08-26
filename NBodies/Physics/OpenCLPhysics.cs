@@ -384,7 +384,7 @@ namespace NBodies.Physics
 
             // Read back bodies as needed.
             if (isPostNeeded || alwaysReadBack || _curBufferVersion != bufferVersion)
-                ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length);
+                ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length, true);
 
             // Increment frame count.
             _currentFrame++;
