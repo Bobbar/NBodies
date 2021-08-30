@@ -32,6 +32,9 @@ namespace NBodies.Physics
         private int _meshLength = 0; // Total length of the 1D mesh array.
         private Body[] _bodies = new Body[1]; // Local reference for the current body array.
 
+        private int[] _prevLevelCounts = new int[1];
+        private int _prevCellSize = -1;
+
         private ManualResetEventSlim _meshRequested = new ManualResetEventSlim(true);
 
         private ComputeContext _context;
@@ -422,7 +425,7 @@ namespace NBodies.Physics
         {
             if (_mesh.Length != _meshLength)
                 _mesh = new MeshCell[_meshLength];
-       
+
             ReadBuffer(_gpuMeshIdxs, ref _meshIdxs, 0, 0, _meshLength);
             ReadBuffer(_gpuMeshNBounds, ref _meshNBounds, 0, 0, _meshLength);
             ReadBuffer(_gpuMeshBodyBounds, ref _meshBodyBounds, 0, 0, _meshLength);
@@ -447,7 +450,7 @@ namespace NBodies.Physics
                 _mesh[i].Size = _meshSPL[i].X;
                 _mesh[i].ParentID = _meshSPL[i].Y;
                 _mesh[i].Level = _meshSPL[i].Z;
-            } 
+            }
         }
 
         /// <summary>
@@ -713,8 +716,20 @@ namespace NBodies.Physics
             // Now build the top levels of the mesh.
             // NOTE: We use the same kernel work sizes as the bottom level,
             // but kernels outside the scope of work will just return and idle.
+            // Unless the previous frame has matching level counts & cell size
+            // as the current frame. Then we use the computed level counts
+            // to determine much more accurate (hopefully) work sizes.
             for (int level = 1; level <= _levels; level++)
             {
+                // Compute workgroup sizes from the level counts of the previous frame if applicable.
+                if (_prevLevelCounts.Length == _levels + 1 && _prevCellSize == cellSizeExp)
+                {
+                    var prevChildCount = _prevLevelCounts[level - 1] + 1000; // Add some padding just in case. Too many threads is better than not enough...
+                    blocks = BlockCount(prevChildCount);
+                    globalSize = new long[] { blocks * _threadsPerBlock };
+                    globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
+                }
+
                 // Build initial map from the morts computed at the child level.
                 _cellMapKernel.SetMemoryArgument(0, _gpuParentMorts);
                 _cellMapKernel.SetValueArgument(1, -1); // We don't know the length, so set it to -1 to make the kernel read it from the level counts buffer.
@@ -757,6 +772,29 @@ namespace NBodies.Physics
             // Read back the level index and set the total mesh length.
             ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length, true);
             _meshLength = _levelIdx[_levels + 1];
+
+            // Here we are going to try to compute the level counts
+            // from the level index so we do not have to read them back
+            // every frame & level. The level counts are used to determine
+            // the workgroup sizes for the top level mesh building kernels.
+
+            // Compute the level counts from the level index.
+            // These counts will be used in the next frame 
+            // to control the workgroup sizes of the mesh
+            // building kernels to improve their performance.
+            if (_prevLevelCounts.Length != _levels + 1)
+                _prevLevelCounts = new int[_levels + 1];
+
+            for (int i = 0; i < _levels + 1; i++)
+            {
+                _prevLevelCounts[i] = _levelIdx[i + 1] - _levelIdx[i];
+            }
+
+            // Record the cell size.
+            // If the cell size differs on the next frame
+            // the level counts above will not be used
+            // until a following frame matches.
+            _prevCellSize = cellSizeExp;
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
             // This done because we are not reading back counts for each level and reallocating,
