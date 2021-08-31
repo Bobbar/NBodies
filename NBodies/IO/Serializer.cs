@@ -77,7 +77,11 @@ namespace NBodies.IO
         public static void LoadPreviousState()
         {
             if (!string.IsNullOrEmpty(_previousFile))
+            {
+                MainLoop.WaitForPause();
                 ReadState(_previousFile);
+                PhysicsProvider.Reload();
+            }
         }
 
         private static void LoadStateStream(Stream stateStream)
