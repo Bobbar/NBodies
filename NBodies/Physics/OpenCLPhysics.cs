@@ -31,9 +31,7 @@ namespace NBodies.Physics
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
         private int _meshLength = 0; // Total length of the 1D mesh array.
         private Body[] _bodies = new Body[1]; // Local reference for the current body array.
-
-        private int[] _prevLevelCounts = new int[1];
-        private int _prevCellSize = -1;
+        private int[] _levelCounts = new int[1];
 
         private ManualResetEventSlim _meshRequested = new ManualResetEventSlim(true);
 
@@ -266,9 +264,7 @@ namespace NBodies.Physics
             _gpuParentMorts = new ComputeBuffer<long>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuParentMorts, 10000, true);
 
-            _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuLevelCounts, 1, true);
-
+            _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _levelCounts);
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _levelIdx);
 
             _gpuHistogram = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
@@ -662,7 +658,11 @@ namespace NBodies.Physics
             long[] localSize = new long[] { _threadsPerBlock };
 
             // Allocate level counts.
-            Allocate(ref _gpuLevelCounts, _levels + 1, true);
+            if (_levelCounts.Length != _levels + 1)
+            {
+                _levelCounts = new int[_levels + 1];
+                Allocate(ref _gpuLevelCounts, _levelCounts);
+            }
 
             // Allocate map and count buffers.
             Allocate(ref _gpuMap, _bodies.Length, false);
@@ -712,24 +712,17 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
             _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
 
+            // Read counts from the bottom level and compute new work sizes for the parent levels.
+            int[] childCounts = new int[1];
+            _queue.ReadFromBuffer(_gpuLevelCounts, ref childCounts, true, 0, 0, 1, null);
+
+            blocks = BlockCount(childCounts[0]);
+            globalSize = new long[] { blocks * _threadsPerBlock };
+            globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
 
             // Now build the top levels of the mesh.
-            // NOTE: We use the same kernel work sizes as the bottom level,
-            // but kernels outside the scope of work will just return and idle.
-            // Unless the previous frame has matching level counts & cell size
-            // as the current frame. Then we use the computed level counts
-            // to determine much more accurate (hopefully) work sizes.
             for (int level = 1; level <= _levels; level++)
             {
-                // Compute workgroup sizes from the level counts of the previous frame if applicable.
-                if (_prevLevelCounts.Length == _levels + 1 && _prevCellSize == cellSizeExp)
-                {
-                    var prevChildCount = _prevLevelCounts[level - 1] + 1000; // Add some padding just in case. Too many threads is better than not enough...
-                    blocks = BlockCount(prevChildCount);
-                    globalSize = new long[] { blocks * _threadsPerBlock };
-                    globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
-                }
-
                 // Build initial map from the morts computed at the child level.
                 _cellMapKernel.SetMemoryArgument(0, _gpuParentMorts);
                 _cellMapKernel.SetValueArgument(1, -1); // We don't know the length, so set it to -1 to make the kernel read it from the level counts buffer.
@@ -772,29 +765,6 @@ namespace NBodies.Physics
             // Read back the level index and set the total mesh length.
             ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length, true);
             _meshLength = _levelIdx[_levels + 1];
-
-            // Here we are going to try to compute the level counts
-            // from the level index so we do not have to read them back
-            // every frame & level. The level counts are used to determine
-            // the workgroup sizes for the top level mesh building kernels.
-
-            // Compute the level counts from the level index.
-            // These counts will be used in the next frame 
-            // to control the workgroup sizes of the mesh
-            // building kernels to improve their performance.
-            if (_prevLevelCounts.Length != _levels + 1)
-                _prevLevelCounts = new int[_levels + 1];
-
-            for (int i = 0; i < _levels + 1; i++)
-            {
-                _prevLevelCounts[i] = _levelIdx[i + 1] - _levelIdx[i];
-            }
-
-            // Record the cell size.
-            // If the cell size differs on the next frame
-            // the level counts above will not be used
-            // until a following frame matches.
-            _prevCellSize = cellSizeExp;
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
             // This done because we are not reading back counts for each level and reallocating,
