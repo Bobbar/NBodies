@@ -447,6 +447,88 @@ namespace NBodies.Physics
                 _mesh[i].ParentID = _meshSPL[i].Y;
                 _mesh[i].Level = _meshSPL[i].Z;
             }
+
+            // var meshTree = BuildMeshTree();
+        }
+
+        private List<MeshCell> BuildMeshTree()
+        {
+            var meshTree = new List<MeshCell>();
+
+            // Pop the root node.
+            for (int i = _levelIdx[_levels]; i < _meshLength; i++)
+            {
+                var cell = new MeshCell();
+
+                cell.IdxX = _meshIdxs[i].X;
+                cell.IdxY = _meshIdxs[i].Y;
+                cell.NeighborStartIdx = _meshNBounds[i].X;
+                cell.NeighborCount = _meshNBounds[i].Y;
+                cell.BodyStartIdx = _meshBodyBounds[i].X;
+                cell.BodyCount = _meshBodyBounds[i].Y;
+                cell.ChildStartIdx = _meshChildBounds[i].X;
+                cell.ChildCount = _meshChildBounds[i].Y;
+                cell.Mass = _meshCMM[i].Z;
+                cell.CmX = _meshCMM[i].X;
+                cell.CmY = _meshCMM[i].Y;
+                cell.Size = _meshSPL[i].X;
+                cell.ParentID = _meshSPL[i].Y;
+                cell.Level = _meshSPL[i].Z;
+
+                meshTree.Add(cell);
+            }
+
+            // Pop all child nodes.
+            var ns = ReadBuffer(_gpuMeshNeighbors);
+            PopMeshTree(meshTree, _mesh, ns);
+
+            return meshTree;
+        }
+
+        private void PopMeshTree(List<MeshCell> tree, MeshCell[] mesh, int[] neighbors)
+        {
+            for (int i = 0; i < tree.Count; i++)
+            {
+                var cell = tree[i];
+
+                if (cell.ParentID != -1)
+                {
+                    cell.Parent = new List<MeshCell>() { mesh[cell.ParentID] };
+                }
+
+                if (cell.NeighborCount > 0)
+                {
+                    cell.Neighbors = new List<MeshCell>();
+                    for (int n = cell.NeighborStartIdx; n < cell.NeighborStartIdx + cell.NeighborCount; n++)
+                    {
+                        cell.Neighbors.Add(mesh[neighbors[n]]);
+                    }
+                }
+
+                if (cell.BodyCount > 0)
+                {
+                    cell.Bodies = new List<Body>();
+                    for (int b = cell.BodyStartIdx; b < cell.BodyStartIdx + cell.BodyCount; b++)
+                    {
+                        cell.Bodies.Add(_bodies[b]);
+                    }
+                }
+
+                if (cell.ChildCount > 0)
+                {
+                    cell.Childs = new List<MeshCell>();
+                    for (int c = cell.ChildStartIdx; c < cell.ChildStartIdx + cell.ChildCount; c++)
+                    {
+                        cell.Childs.Add(mesh[c]);
+                    }
+                }
+
+                tree[i] = cell;
+
+                // Recurse with child nodes.
+                if (tree[i].Childs != null && tree[i].Childs.Count > 0)
+                    PopMeshTree(tree[i].Childs, mesh, neighbors);
+            }
         }
 
         /// <summary>

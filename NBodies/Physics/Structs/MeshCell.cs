@@ -40,5 +40,10 @@ namespace NBodies.Physics
                 return (IdxY << exp) + (Size * 0.5f);
             }
         }
+
+        public List<MeshCell> Parent { get; set; }
+        public List<MeshCell> Neighbors { get; set; }
+        public List<Body> Bodies { get; set; }
+        public List<MeshCell> Childs { get; set; }
     }
 }
