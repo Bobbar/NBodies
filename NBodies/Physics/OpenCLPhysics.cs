@@ -29,6 +29,7 @@ namespace NBodies.Physics
         private MeshCell[] _mesh = new MeshCell[0]; // 1D array of mesh cells. (Populated on GPU, and read for UI display only.)
         private int _meshLength = 0; // Total length of the 1D mesh array.
         private Body[] _bodies = new Body[1]; // Local reference for the current body array.
+        private int[] _levelCounts = new int[1];
 
         private ManualResetEventSlim _meshRequested = new ManualResetEventSlim(true);
 
@@ -269,9 +270,8 @@ namespace NBodies.Physics
             _gpuParentMorts = new ComputeBuffer<long>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuParentMorts, 10000, true);
 
-            _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
-            Allocate(ref _gpuLevelCounts, 1, true);
 
+            _gpuLevelCounts = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _levelCounts);
             _gpuLevelIdx = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite | ComputeMemoryFlags.UseHostPointer, _levelIdx);
 
             _gpuHistogram = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
@@ -619,10 +619,15 @@ namespace NBodies.Physics
             // Compute the block count and workgroup sizes from the # of bodies.
             int blocks = BlockCount(_bodies.Length);
             long[] globalSize = new long[] { blocks * _threadsPerBlock };
+            long[] globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
             long[] localSize = new long[] { _threadsPerBlock };
 
             // Allocate level counts.
-            Allocate(ref _gpuLevelCounts, _levels + 1, true);
+            if (_levelCounts.Length != _levels + 1)
+            {
+                _levelCounts = new int[_levels + 1];
+                Allocate(ref _gpuLevelCounts, _levelCounts);
+            }
 
             // Allocate map and count buffers.
             Allocate(ref _gpuMap, _bodies.Length, false);
@@ -660,7 +665,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
             _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-            _queue.Execute(_compressCellMapKernel, null, globalSize, localSize, null);
+            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
             // Build the bottom mesh level. Also computes morts for the parent level.
             int argi = 0;
@@ -677,6 +682,14 @@ namespace NBodies.Physics
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
             _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
+
+            // Read counts from the bottom level and compute new work sizes for the parent levels.
+            int[] childCounts = new int[1];
+            _queue.ReadFromBuffer(_gpuLevelCounts, ref childCounts, true, 0, 0, 1, null);
+
+            blocks = BlockCount(childCounts[0]);
+            globalSize = new long[] { blocks * _threadsPerBlock };
+            globalSizeComp = new long[] { BlockCount(blocks) * _threadsPerBlock };
 
             // Now build the top levels of the mesh.
             // NOTE: We use the same kernel work sizes as the bottom level,
@@ -704,7 +717,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
                 _compressCellMapKernel.SetValueArgument(6, level);
                 _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-                _queue.Execute(_compressCellMapKernel, null, globalSize, localSize, null);
+                _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 argi = 0;
