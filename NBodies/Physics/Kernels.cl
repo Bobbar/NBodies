@@ -244,6 +244,24 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 	}
 }
 
+__kernel void ComputeMortsTest(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
+{
+	int gsz = get_global_size(0);
+	int lsz = get_local_size(0);
+
+	if (get_global_id(0) == 0)
+	{
+		ndrange_t ndrange = ndrange_1D(gsz, lsz);
+		queue_t queue = get_default_queue();
+
+		void(^ compute_morts_blk)(void) =
+			^ { ComputeMorts(bodies, len, padLen, cellSizeExp, morts); };
+
+		int res = enqueue_kernel(queue, CLK_ENQUEUE_FLAGS_NO_WAIT, ndrange, compute_morts_blk);
+		//printf("Res: %i \n", res);
+	}
+}
+
 
 // Builds initial cell map from storted morton numbers.
 __kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
@@ -258,7 +276,14 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 	if (gid >= bufLen)
 		return;
 
-	// Local count.
+	//int gsz = get_global_size(0);
+	//int lsz = get_local_size(0);
+
+	//if (gid == 0)
+	//	printf("MAP Lvl: %i GSZ: %i  LSZ: %i  Len: %i \n", level, gsz, lsz, len);
+
+
+  // Local count.
 	volatile __local int lCount;
 
 	// First thread initializes local count.
@@ -294,6 +319,24 @@ __kernel void MapMorts(global long* morts, int len, global int* cellmap, global 
 		counts[bid] = lCount;
 }
 
+__kernel void MapMortsTest(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
+{
+	if (len < 0)
+		len = levelCounts[level - 1];
+
+	int lsz = 256;
+	int blocks = BlockCount(len, lsz);
+	int gsz = blocks * lsz;
+
+	ndrange_t ndrange = ndrange_1D(gsz, lsz);
+	queue_t queue = get_default_queue();
+
+	void(^ map_morts_blk)(local void*) =
+		^ (local void* lMap) { MapMorts(morts, len, cellmap, counts, (local int*)lMap, step, level, levelCounts, bufLen); };
+
+	int res = enqueue_kernel(queue, CLK_ENQUEUE_FLAGS_NO_WAIT, ndrange, map_morts_blk, lsz * 4);
+}
+
 
 // Compresses/packs initial cell maps into the beginning of the buffer.
 // N threads = N blocks used in the map kernel.
@@ -302,11 +345,18 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 	int gid = get_global_id(0);
 	int threads = get_local_size(0);
 	int len = 0;
+	//len = blocks;
 
 	if (blocks > 0)
 		len = blocks;
 	else
 		len = BlockCount(levelCounts[level - 1], threads);
+
+	/*int gsz = get_global_size(0);
+	int lsz = get_local_size(0);
+
+	if (gid == 0)
+		printf("COMP Lvl: %i GSZ: %i  LSZ: %i  Blks: %i  Tpb: %i  Len: %i \n", level, gsz, lsz, blocks, threads, len);*/
 
 	if (gid >= len)
 		return;
@@ -339,6 +389,32 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 		levelCounts[level] = tCount;
 		levelIdx[level + 1] = levelIdx[level] + tCount;
 	}
+}
+
+
+__kernel void CompressMapTest(int blocks, global int* cellmapIn, global int* cellmapOut, global int* counts, global int* levelCounts, global int* levelIdx, int level)
+{
+	int len = 0;
+	int threads = 256;
+
+	if (blocks > 0)
+		len = blocks;
+	else
+		len = BlockCount(levelCounts[level - 1], threads);
+
+	if (blocks < 0)
+		blocks = BlockCount(len, threads);
+
+	int lsz = threads;
+	int gsz = blocks * lsz;
+
+	ndrange_t ndrange = ndrange_1D(gsz, lsz);
+	queue_t queue = get_default_queue();
+
+	void(^ comp_map_blk)(void) =
+		^ { CompressMap(len, cellmapIn, cellmapOut, counts, levelCounts, levelIdx, level); };
+
+	int res = enqueue_kernel(queue, CLK_ENQUEUE_FLAGS_NO_WAIT, ndrange, comp_map_blk);
 }
 
 
