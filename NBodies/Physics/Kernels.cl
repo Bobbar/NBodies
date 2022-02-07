@@ -688,6 +688,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 	// Walk the mesh tree and accumulate forces from all bodies & cells within the local region. [THIS INCLUDES THE BODY'S OWN CELL]
 	bool done = false;
 	bool bottom = true;
+
 	while (!done)
 	{
 		int2 bodyCellParentNB = meshNBounds[bodyCellParentID];
@@ -1082,7 +1083,7 @@ Body CollideBodies(Body bodyA, Body bodyB, float colMass, float forceX, float fo
 
 #define DataType long2
 #define _BITS 8
-#define _RADIX 256
+#define _RADIX (1 << _BITS)
 
 // compute the histogram for each radix and each virtual processor for the pass
 __kernel void histogram(const __global DataType* restrict d_Keys, __global int* restrict d_Histograms, const int pass, __local int* loc_histo, const int n)

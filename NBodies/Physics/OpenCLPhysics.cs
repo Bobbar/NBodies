@@ -346,7 +346,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
 
             // Compute elastic collisions.
             argi = 0;
@@ -629,8 +629,8 @@ namespace NBodies.Physics
         {
             // Radix constants.
             const int _NUM_BITS_PER_RADIX = 8;
-            const int _NUM_ITEMS_PER_GROUP = 4;
-            const int _NUM_GROUPS = 128;
+            const int _NUM_ITEMS_PER_GROUP = 16;
+            const int _NUM_GROUPS = 32;
             const int _RADIX = (1 << _NUM_BITS_PER_RADIX);
             const int _DATA_SIZE = 8;
             const int _NUM_HISTOSPLIT = 512;
@@ -907,7 +907,7 @@ namespace NBodies.Physics
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, topSize);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
-            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null); 
         }
 
         /// <summary>
@@ -949,7 +949,7 @@ namespace NBodies.Physics
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
                 _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-            }
+            } 
         }
 
         /// <summary>
