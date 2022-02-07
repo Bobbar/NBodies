@@ -108,7 +108,7 @@ namespace NBodies
 
             set
             {
-                if (value >= 1 & value <= 10)
+                if (value >= 1 & value <= 20)
                 {
                     _meshLevels = value;
                 }
@@ -259,9 +259,9 @@ namespace NBodies
         private static float _kernelSize = 1.0f;
         private static float _viscosity = 15.0f;
         private static float _gasK = 0.3f;
-        private const float _cullDistance = 6000; // Ultimately determines max grid index and mesh size, which ultimately determines a large portion of the GPU RAM usage. Increase with caution.
-        private static int _cellSizeExp = 3;
-        private static int _meshLevels = 4;
+        private const float _cullDistance = 12000; // Effects the max size of the field. Bodies further than this value from the total center of mass are removed.
+        private static int _cellSizeExp = 2;
+        private static int _meshLevels = 10;
         private static int _threadsPBExp = 8;
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
         private static int _targetFPS = 60;
@@ -293,7 +293,9 @@ namespace NBodies
         private static double _recSizeLimit = 0;
 
         private static Body[] _bodiesBuffer = new Body[0];
+        private static long _bufferVersion = 0;
         private static SimSettings _settings = new SimSettings();
+        private static Action renderDelegate = null;
 
         private static IRecording _recorder = new IO.MessagePackRecorder();
 
@@ -322,6 +324,7 @@ namespace NBodies
             _renderReadyWait.Wait(5000);
             PhysicsProvider.PhysicsCalc.Flush();
             _peakFPS = 0;
+            _bufferVersion = 0;
         }
 
         public static void End()
@@ -386,7 +389,7 @@ namespace NBodies
                     {
                         if (_bodiesBuffer.Length > 1)
                         {
-                           
+
                             if (Shooting)
                             {
                                 // Insert bullet
@@ -412,9 +415,11 @@ namespace NBodies
                             // True if post processing is needed.
                             // GPU kernels set the flag if any bodies need removed/fractured.
                             bool postNeeded = false;
-
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), out postNeeded);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, out postNeeded);
+
+                            if (postNeeded)
+                                _bufferVersion++;
 
                             // Do some final host-side processing. (Remove culled, roche fractures, etc)
                             BodyManager.PostProcessFrame(ref _bodiesBuffer, RocheLimit, postNeeded);
@@ -469,7 +474,7 @@ namespace NBodies
                         }
                     }
 
-                    if (DrawBodies && _bodiesBuffer.Length > 0)
+                    if (DrawBodies)
                     {
                         // Check if renderer is ready for a new frame.
                         if (_renderReadyWait.IsSet)
@@ -481,6 +486,7 @@ namespace NBodies
                             {
                                 if (BodyManager.Bodies.Length != _bodiesBuffer.Length)
                                     BodyManager.Bodies = new Body[_bodiesBuffer.Length];
+
                                 Array.Copy(_bodiesBuffer, 0, BodyManager.Bodies, 0, _bodiesBuffer.Length);
 
                                 if (BodyManager.FollowSelected)
@@ -490,8 +496,10 @@ namespace NBodies
                             // Draw the field asynchronously.
                             if (GLRenderer != null && GLRenderer.InvokeRequired)
                             {
-                                var del = new Action(() => GLRenderer.Render(BodyManager.Bodies, _renderReadyWait));
-                                var res = GLRenderer.BeginInvoke(del);
+                                if (renderDelegate == null)
+                                    renderDelegate = new Action(() => GLRenderer.Render(BodyManager.Bodies, _renderReadyWait));
+
+                                var res = GLRenderer.BeginInvoke(renderDelegate);
                             }
                         }
                     }
@@ -526,6 +534,8 @@ namespace NBodies
                 _bodiesBuffer = new Body[BodyManager.Bodies.Length];
 
             Array.Copy(BodyManager.Bodies, 0, _bodiesBuffer, 0, BodyManager.Bodies.Length);
+
+            _bufferVersion++;
         }
 
         public static SimSettings GetSettings()
@@ -594,24 +604,31 @@ namespace NBodies
         private static void FPSLimiter(int targetFPS)
         {
             long ticksPerSecond = TimeSpan.TicksPerSecond;
-            float targetFrameTime = ticksPerSecond / (float)targetFPS;
+            long targetFrameTime = ticksPerSecond / targetFPS;
             long waitTime = 0;
 
             if (_fpsTimer.IsRunning)
             {
                 long elapTime = _fpsTimer.Elapsed.Ticks;
 
-                if (elapTime <= targetFrameTime)
+                if (elapTime < targetFrameTime)
                 {
-                    waitTime = (long)(targetFrameTime - elapTime);
-
-                    if (waitTime > 0)
+                    // # More accurate, high CPU usage. #
+                    while (_fpsTimer.Elapsed.Ticks < targetFrameTime && !_loopTask.IsCompleted)
                     {
-                        Thread.Sleep(new TimeSpan(waitTime));
+                        Thread.SpinWait(10000);
                     }
+                    elapTime = _fpsTimer.Elapsed.Ticks;
+                
+                    // # Less accurate, less CPU usage. #
+                    //waitTime = (long)(targetFrameTime - elapTime);
+                    //if (waitTime > 0)
+                    //{
+                    //    Thread.Sleep(new TimeSpan(waitTime));
+                    //}
                 }
 
-                float fps = ticksPerSecond / (elapTime + waitTime);
+                float fps = (float)Math.Ceiling(ticksPerSecond / (double)(elapTime + waitTime));
 
                 _avgFPS.Add(fps);
 

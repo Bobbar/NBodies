@@ -15,6 +15,8 @@ namespace NBodies.Rendering
         Index,
         SpatialOrder,
         Force,
+        Temp,
         HighContrast
+        
     }
 }

@@ -78,6 +78,7 @@ namespace NBodies.UI
                 }
             }
 
+            Application.DoEvents();
             glControl.Init();
 
             glControl.KeyDown += GlControl_KeyDown;

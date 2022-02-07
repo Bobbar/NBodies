@@ -42,7 +42,7 @@ namespace NBodies.UI
 
             if (float.TryParse(TimeStepTextBox.Text, out _timeStep))
             {
-                if (_timeStep < 0 || _timeStep > 1.0f)
+                if (_timeStep < 0)
                     _timeStep = MainLoop.RecordTimeStep;
             }
 

@@ -123,13 +123,15 @@ namespace NBodies.Physics
         [Key(15)]
         public float Pressure;
 
+        [ProtoMember(20)]
+        [Key(19)]
+        public float Temp;
+
         [IgnoreMember]
         public float Lifetime;
 
         [IgnoreMember]
         public int MeshID;
-
-
 
         [IgnoreMember]
         public bool Culled
