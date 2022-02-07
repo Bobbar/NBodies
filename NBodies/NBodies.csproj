@@ -257,7 +257,16 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Physics\Kernels.cl">
+    <None Include="Physics\Kernels\Helpers.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Mesh.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Physics.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Sorting.cl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Properties\Settings.settings">
@@ -276,6 +285,12 @@
   <ItemGroup>
     <Analyzer Include="..\packages\MessagePackAnalyzer.2.0.323\analyzers\cs\MessagePackAnalyzer.dll" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Physics\Kernels\Global.h">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

@@ -156,7 +156,7 @@ namespace NBodies.Physics
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
 
-            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
+            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + $@"\Physics\Kernels\Physics.cl");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -167,9 +167,9 @@ namespace NBodies.Physics
                 string options;
 
                 if (_useFastMath)
-                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH";
+                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH  -I {Environment.CurrentDirectory}\Physics\Kernels\";
                 else
-                    options = $"-cl-std=CL2.0";
+                    options = $@"-cl-std=CL2.0 -I {Environment.CurrentDirectory}\Physics\";
 
                 _program.Build(new[] { _device }, options, null, IntPtr.Zero);
             }
@@ -853,8 +853,8 @@ namespace NBodies.Physics
             // so we don't know if we have enough room until a build has completed.
             if (bufLen < _meshLength)
             {
-                Debug.WriteLine($"Mesh reallocated: {bufLen} -> {_meshLength}");
-                AllocateMesh(_meshLength);
+                var newLen = AllocateMesh(_meshLength);
+                Debug.WriteLine($"Mesh reallocated: {bufLen} -> {newLen}");
                 Allocate(ref _gpuParentMorts, _meshLength);
                 Allocate(ref _gpuMap, _meshLength);
                 Allocate(ref _gpuMapFlat, _meshLength);
@@ -867,12 +867,13 @@ namespace NBodies.Physics
         {
             if (_meshIdxs.Length < length)
             {
-                _meshIdxs = new int2[length];
-                _meshNBounds = new int2[length];
-                _meshBodyBounds = new int2[length];
-                _meshChildBounds = new int2[length];
-                _meshCMM = new float4[length];
-                _meshSPL = new int4[length];
+                int newLen = (int)(length * BUF_GROW_FACTOR);
+                _meshIdxs = new int2[newLen];
+                _meshNBounds = new int2[newLen];
+                _meshBodyBounds = new int2[newLen];
+                _meshChildBounds = new int2[newLen];
+                _meshCMM = new float4[newLen];
+                _meshSPL = new int4[newLen];
 
                 long bufLen = Allocate(ref _gpuMeshIdxs, _meshIdxs);
                 Allocate(ref _gpuMeshNBounds, _meshNBounds);
