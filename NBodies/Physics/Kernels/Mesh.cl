@@ -50,19 +50,6 @@ __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSiz
 	}
 }
 
-// Read indexes from the sorted morton buffer and copy bodies to their sorted location.
-__kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortMap, global Body* outBodies)
-{
-	int b = get_global_id(0);
-
-	if (b >= blen)
-		return;
-
-	int newIdx = (int)sortMap[b].y;
-
-	outBodies[b] = inBodies[newIdx];
-}
-
 // Builds initial cell map from storted morton numbers.
 __kernel void MapMorts(global long* morts, int len, global int* cellmap, global int* counts, volatile __local int* lMap, int step, int level, global int* levelCounts, long bufLen)
 {
@@ -159,7 +146,7 @@ __kernel void CompressMap(int blocks, global int* cellmapIn, global int* cellmap
 	}
 }
 
-__kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
+__kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global long2* sortMap, global int2* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int4* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
 
@@ -176,9 +163,14 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 	if (m == meshLen - 1)
 		lastIdx = bodyLen;
 
-	float fPosX = inBodies[firstIdx].PosX;
-	float fPosY = inBodies[firstIdx].PosY;
-	float fMass = inBodies[firstIdx].Mass;
+	// Get the first body from the unsorted location.
+	Body firstBod = inBodies[sortMap[firstIdx].y];
+	float fPosX = firstBod.PosX;
+	float fPosY = firstBod.PosY;
+	float fMass = firstBod.Mass;
+
+	// Set the mesh ID.
+	firstBod.MeshID = m;
 
 	double2 nCM = (double2)(fMass * fPosX, fMass * fPosY);
 	double nMass = (double)fMass;
@@ -192,19 +184,27 @@ __kernel void BuildBottom(global Body* inBodies, global int2* meshIdxs, global i
 	long morton = MortonNumberInt2(meshIdx >> 1);
 	parentMorts[m] = morton;
 
-	inBodies[firstIdx].MeshID = m;
+	// Copy the body to its sorted location.
+	outBodies[firstIdx] = firstBod;
 
 	for (int i = firstIdx + 1; i < lastIdx; i++)
 	{
-		float posX = inBodies[i].PosX;
-		float posY = inBodies[i].PosY;
-		float mass = inBodies[i].Mass;
+		// Get the child body from the unsorted location.
+		Body childBod = inBodies[sortMap[i].y];
+
+		// Accum center mass & set mesh ID.
+		float posX = childBod.PosX;
+		float posY = childBod.PosY;
+		float mass = childBod.Mass;
 
 		nMass += mass;
 		nCM.x += mass * posX;
 		nCM.y += mass * posY;
 
-		inBodies[i].MeshID = m;
+		childBod.MeshID = m;
+
+		// Copy the child body to its sorted location.
+		outBodies[i] = childBod;
 	}
 
 	meshCMM[m] = (float4)((nCM.x / nMass), (nCM.y / nMass), nMass, 0);

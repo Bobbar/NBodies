@@ -49,7 +49,6 @@ namespace NBodies.Physics
         private ComputeKernel _buildBottomKernel;
         private ComputeKernel _buildTopKernel;
         private ComputeKernel _calcCMKernel;
-        private ComputeKernel _reindexKernel;
         private ComputeKernel _cellMapKernel;
         private ComputeKernel _compressCellMapKernel;
         private ComputeKernel _computeMortsKernel;
@@ -154,7 +153,7 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.Profiling);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + $@"\Physics\Kernels\Physics.cl");
             string clSource = streamReader.ReadToEnd();
@@ -196,7 +195,6 @@ namespace NBodies.Physics
             _buildBottomKernel = _program.CreateKernel("BuildBottom");
             _buildTopKernel = _program.CreateKernel("BuildTop");
             _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
-            _reindexKernel = _program.CreateKernel("ReindexBodies");
             _cellMapKernel = _program.CreateKernel("MapMorts");
             _compressCellMapKernel = _program.CreateKernel("CompressMap");
             _computeMortsKernel = _program.CreateKernel("ComputeMorts");
@@ -346,7 +344,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
 
             // Compute elastic collisions.
             argi = 0;
@@ -575,9 +573,8 @@ namespace NBodies.Physics
             // Compute Z-Order morton numbers for bodies.
             ComputeMortsGPU(padLen, cellSizeExp);
 
-            // Sort by the morton numbers.
+            // Sort the body morton numbers/index by the morton numbers.
             SortByMortGPU(padLen);
-            ReindexBodiesGPU();
 
             // Build each level of the mesh.
             BuildMeshGPU(cellSizeExp);
@@ -714,20 +711,6 @@ namespace NBodies.Physics
             }
         }
 
-        /// <summary>
-        /// Reads the sorted mort/index (long2) buffer and copies bodies to their sorted location.
-        /// </summary>
-        private void ReindexBodiesGPU()
-        {
-            // This kernel is a bit faster with less threads per block... (Why?)
-            int threads = 8;
-            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
-            _reindexKernel.SetValueArgument(1, _bodies.Length);
-            _reindexKernel.SetMemoryArgument(2, _gpuBodyMortsA);
-            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
-        }
-
         private void BuildMeshGPU(int cellSizeExp)
         {
             // First level map is built from body morts.
@@ -778,9 +761,12 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetValueArgument(6, 0);
             _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
-            // Build the bottom mesh level. Also computes morts for the parent level.
+            // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
+            int threads = 8; // Runs much faster with smaller block sizes.
             int argi = 0;
+            _buildBottomKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _buildBottomKernel.SetMemoryArgument(argi++, _gpuBodyMortsA);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshBodyBounds);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshCMM);
@@ -792,7 +778,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
-            _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
+            _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
 
             // Read counts from the bottom level and compute new work sizes for the parent levels.
             int[] childCounts = new int[1];
@@ -908,7 +894,7 @@ namespace NBodies.Physics
             _buildNeighborsBinaryKernel.SetMemoryArgument(argi++, _gpuLevelIdx);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, topSize);
             _buildNeighborsBinaryKernel.SetValueArgument(argi++, _levelIdx[1]);
-            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null); 
+            _queue.Execute(_buildNeighborsBinaryKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
         }
 
         /// <summary>
@@ -950,7 +936,7 @@ namespace NBodies.Physics
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
                 _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
-            } 
+            }
         }
 
         /// <summary>
@@ -1180,7 +1166,6 @@ namespace NBodies.Physics
             _buildBottomKernel.Dispose();
             _buildTopKernel.Dispose();
             _calcCMKernel.Dispose();
-            _reindexKernel.Dispose();
             _cellMapKernel.Dispose();
             _compressCellMapKernel.Dispose();
             _computeMortsKernel.Dispose();
