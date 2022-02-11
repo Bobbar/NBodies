@@ -107,7 +107,18 @@ namespace NBodies.Physics
 
         [ProtoMember(16)]
         [Key(15)]
-        public float Pressure;
+        public float Pressure
+        {
+            get
+            {
+                return MainLoop.GasK * Density;
+            }
+
+            set
+            {
+                var dummy = value;
+            }
+        }
 
         [IgnoreMember]
         public float Lifetime;
@@ -115,8 +126,6 @@ namespace NBodies.Physics
         [IgnoreMember]
         public int MeshID;
 
-
-       
         [IgnoreMember]
         public bool Culled
         {

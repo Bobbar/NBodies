@@ -79,7 +79,6 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 
 	float2 iForce = (float2)(0.0f, 0.0f);
 	float iDensity = 0.0f;
-	float iPressure = 0.0f;
 
 	// Resting Density.	
 	iDensity = iMass * sph.fDensity;
@@ -175,9 +174,6 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 		}
 	}
 
-	// Calculate pressure from density.
-	iPressure = sim.GasK * iDensity;
-
 	// Check for the phony roche condition.
 	if (fabs(fast_length(iForce)) > (iMass * 4.0f) || iSize <= 1.1f)
 	{
@@ -195,7 +191,6 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 	inBodies[(a)].ForceX = iForce.x;
 	inBodies[(a)].ForceY = iForce.y;
 	inBodies[(a)].Density = iDensity;
-	inBodies[(a)].Pressure = iPressure;
 }
 
 
@@ -325,6 +320,9 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 		// PERF HACK: Mask out the len for bodies at resting density to skip the tree walk?
 		len = len * !((outBody.Mass * sph.fDensity) == outBody.Density);
 
+		// Compute pressure from density.
+		float oPress = sim.GasK * outBody.Density;
+
 		for (int nc = start; nc < len; nc++)
 		{
 			// Iterate neighbor child cells.
@@ -373,7 +371,8 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 								float kDiff = sph.kSize - distSqrt;
 
 								// Pressure force
-								float pressScalar = outBody.Mass * (outBody.Pressure + inBody.Pressure) / (2.0f * outBody.Density);
+								float iPress = sim.GasK * inBody.Density; // Compute pressure from density.
+								float pressScalar = outBody.Mass * (oPress + iPress) / (2.0f * outBody.Density);
 								float pressGrad = sph.fPressure * kDiff * kDiff / distSqrt;
 
 								outBody.ForceX += (dir.x * pressGrad) * pressScalar;

@@ -12,7 +12,6 @@ typedef struct
 	int Flag;
 	int UID;
 	float Density;
-	float Pressure;
 	float Lifetime;
 	int MeshID;
 
