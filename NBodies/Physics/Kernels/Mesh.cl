@@ -3,8 +3,12 @@
 // Credits: 
 // https://stackoverflow.com/questions/1024754/how-to-compute-a-3d-morton-number-interleave-the-bits-of-3-ints
 // https://graphics.stanford.edu/~seander/bithacks.html
-long MortonNumber(long x, long y, long z)
+long MortonNumber(int4 idx)
 {
+	long x = idx.x;
+	long y = idx.y;
+	long z = idx.x;
+
 	x &= 0x1fffff;
 	x = (x | x << 32) & 0x1f00000000ffff;
 	x = (x | x << 16) & 0x1f0000ff0000ff;
@@ -29,19 +33,14 @@ long MortonNumber(long x, long y, long z)
 	return x | (y << 1) | (z << 2);
 }
 
-
-
 __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)
 {
 	int gid = get_global_id(0);
 
 	if (gid < len)
 	{
-		int idxX = (int)floor(bodies[gid].PosX) >> cellSizeExp;
-		int idxY = (int)floor(bodies[gid].PosY) >> cellSizeExp;
-		int idxZ = (int)floor(bodies[gid].PosZ) >> cellSizeExp;
-
-		long morton = MortonNumber(idxX, idxY, idxZ);
+		int4 idx = (int4)((int)floor(bodies[gid].PosX), (int)floor(bodies[gid].PosY), (int)floor(bodies[gid].PosZ), 0);
+		long morton = MortonNumber(idx >> cellSizeExp);
 
 		morts[gid].x = morton;
 		morts[gid].y = gid;
@@ -170,62 +169,6 @@ __kernel void ReindexBodies(global Body* inBodies, int blen, global long2* sortM
 }
 
 
-//__kernel void BuildBottom(global Body* inBodies, global int4* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int2* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
-//{
-//	int m = get_global_id(0);
-//
-//	int meshLen = levelCounts[0];
-//
-//	if (m >= meshLen || m >= bufLen)
-//		return;
-//
-//	int firstIdx = 0;
-//	if (m > 0)
-//		firstIdx = cellMap[m - 1];
-//
-//	int lastIdx = cellMap[m];
-//	if (m == meshLen - 1)
-//		lastIdx = bodyLen;
-//
-//	float fPosX = inBodies[firstIdx].PosX;
-//	float fPosY = inBodies[firstIdx].PosY;
-//	float fPosZ = inBodies[firstIdx].PosZ;
-//	float fMass = inBodies[firstIdx].Mass;
-//
-//	double3 nCM = (double3)(fMass * fPosX, fMass * fPosY, fMass * fPosZ);
-//	double nMass = fMass;
-//
-//	int4 meshIdx = (int4)((int)floor(fPosX) >> cellSizeExp, (int)floor(fPosY) >> cellSizeExp, (int)floor(fPosZ) >> cellSizeExp, 0);
-//	meshIdxs[m] = meshIdx;
-//	meshBodyBounds[m] = (int2)(firstIdx, lastIdx - firstIdx);
-//	meshSPL[m] = (int2)(cellSize, -1);
-//
-//	// Compute parent level morton numbers.
-//	int idxX = meshIdx.x >> 1;
-//	int idxY = meshIdx.y >> 1;
-//	int idxZ = meshIdx.z >> 1;
-//	long morton = MortonNumber(idxX, idxY, idxZ);
-//	parentMorts[m] = morton;
-//
-//	inBodies[firstIdx].MeshID = m;
-//
-//	for (int i = firstIdx + 1; i < lastIdx; i++)
-//	{
-//		float posX = inBodies[i].PosX;
-//		float posY = inBodies[i].PosY;
-//		float posZ = inBodies[i].PosZ;
-//		float mass = inBodies[i].Mass;
-//
-//		nMass += mass;
-//		nCM.x += mass * posX;
-//		nCM.y += mass * posY;
-//		nCM.z += mass * posZ;
-//
-//		inBodies[i].MeshID = m;
-//	}
-//
-//	meshCMM[m] = (float4)((nCM.x / nMass), (nCM.y / nMass), (nCM.z / nMass), nMass);
-//}
 __kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global long2* sortMap, global int4* meshIdxs, global int2* meshBodyBounds, global float4* meshCMM, global int2* meshSPL, global int* levelCounts, int bodyLen, global int* cellMap, int cellSizeExp, int cellSize, global long* parentMorts, long bufLen)
 {
 	int m = get_global_id(0);
@@ -262,10 +205,7 @@ __kernel void BuildBottom(global Body* inBodies, global Body* outBodies, global 
 	meshSPL[m] = (int2)(cellSize, -1);
 
 	// Compute parent level morton numbers.
-	int idxX = meshIdx.x >> 1;
-	int idxY = meshIdx.y >> 1;
-	int idxZ = meshIdx.z >> 1;
-	long morton = MortonNumber(idxX, idxY, idxZ);
+	long morton = MortonNumber(meshIdx >> 1);
 	parentMorts[m] = morton;
 
 	// Copy the body to its sorted location.
@@ -335,10 +275,7 @@ __kernel void BuildTop(global int4* meshIdxs, global int2* meshBodyBounds, globa
 	nCM = (double3)(nMass * firstCMM.x, nMass * firstCMM.y, nMass * firstCMM.z);
 
 	// Compute parent level morton numbers.
-	int idxX = meshIdx.x >> 1;
-	int idxY = meshIdx.y >> 1;
-	int idxZ = meshIdx.z >> 1;
-	long morton = MortonNumber(idxX, idxY, idxZ);
+	long morton = MortonNumber(meshIdx >> 1);
 	parentMorts[m] = morton;
 
 	meshSPL[firstIdx].y = newIdx;

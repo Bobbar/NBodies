@@ -76,7 +76,7 @@ constant int INROCHE = 8;
 // Sorting defs.
 #define PADDING_ELEM -1
 
-long MortonNumber(long x, long y, long z);
+long MortonNumber(int4 idx);
 float3 ComputeForce(float3 posA, float3 posB, float massA, float massB);
 bool IsFar(int4 cell, int4 testCell);
 Body CollideBodies(Body master, Body slave, float colMass, float forceX, float forceY, float forceZ);
