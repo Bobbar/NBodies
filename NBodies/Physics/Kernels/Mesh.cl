@@ -7,7 +7,7 @@ long MortonNumber(int4 idx)
 {
 	long x = idx.x;
 	long y = idx.y;
-	long z = idx.x;
+	long z = idx.z;
 
 	x &= 0x1fffff;
 	x = (x | x << 32) & 0x1f00000000ffff;
