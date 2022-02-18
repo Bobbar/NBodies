@@ -1,4 +1,5 @@
 ﻿using Cloo;
+using Cloo.Bindings;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,6 +16,7 @@ namespace NBodies.Physics
 {
     public class OpenCLPhysics : IPhysicsCalc, IDisposable
     {
+        private bool _profile = false;
         private bool _useFastMath = true;
         private int _gpuIndex = 4;
         private int _levels = 4;
@@ -80,7 +82,8 @@ namespace NBodies.Physics
         private ComputeBuffer<int2> _gpuMeshSPL;
 
         private Stopwatch timer = new Stopwatch();
-        private Stopwatch timer2 = new Stopwatch();
+        private ComputeEventList _events = null;
+        private float _bestProfileElap = float.MaxValue;
 
         private long _currentFrame = 0;
         private long _lastMeshReadFrame = 0;
@@ -132,7 +135,12 @@ namespace NBodies.Physics
 
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
-            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
+           
+            var flag = ComputeCommandQueueFlags.None;
+            if (_profile)
+                flag = ComputeCommandQueueFlags.Profiling;
+
+            _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.Profiling);
 
             StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + $@"\Physics\Kernels\Physics.cl");
             string clSource = streamReader.ReadToEnd();
@@ -286,6 +294,9 @@ namespace NBodies.Physics
 
         public void CalcMovement(ref Body[] bodies, SimSettings sim, int threadsPerBlock, long bufferVersion, out bool isPostNeeded)
         {
+            if (_profile)
+                _events = new ComputeEventList();
+
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
@@ -300,7 +311,7 @@ namespace NBodies.Physics
             // Post process flag.
             // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
             int[] postNeeded = new int[1] { 0 };
-            WriteBuffer(postNeeded, _gpuPostNeeded, 0, 0, postNeeded.Length);
+            WriteBuffer(postNeeded, _gpuPostNeeded, 0, 0, postNeeded.Length, _events);
 
             if (_kernelSize != sim.KernelSize)
             {
@@ -334,7 +345,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events); 
 
             // Compute elastic collisions.
             argi = 0;
@@ -346,7 +357,7 @@ namespace NBodies.Physics
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshNeighbors);
             _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
 
             // Compute SPH forces/collisions.
             argi = 0;
@@ -363,12 +374,35 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, sim);
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
           
-            ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1);
+            ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1, _events, false);
             isPostNeeded = Convert.ToBoolean(postNeeded[0]);
 
-            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length, true); 
+            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length, _events, true);
+
+
+            if (_profile)
+            {
+                _queue.Finish();
+
+                ulong tot = 0;
+                for (int i = 0; i < _events.Count; i++)
+                {
+                    var evt = _events[i];
+                    var elap = evt.FinishTime - evt.StartTime;
+                    tot += elap;
+
+                    var elapMS = (float)elap / 1000000.0f;
+                    var idxStr = i.ToString("00");
+                    Debug.WriteLine("{0} - [{3}] - Elap: {1} ns  {2} ms", idxStr, elap, elapMS, evt.Type.ToString());
+                    evt.Dispose();
+                }
+
+                var ms = tot / 1000000.0f;
+                _bestProfileElap = Math.Min(_bestProfileElap, ms);
+                Debug.WriteLine("Elapsed ({2}): {0} ns  {1} ms", tot, ms, _bestProfileElap);
+            }
 
             // Increment frame count.
             _currentFrame++;
@@ -387,14 +421,14 @@ namespace NBodies.Physics
             using (var inBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length))
             using (var outBodies = new ComputeBuffer<Body>(_context, ComputeMemoryFlags.ReadWrite, bodies.Length))
             {
-                _queue.WriteToBuffer(bodies, inBodies, true, null);
+                _queue.WriteToBuffer(bodies, inBodies, true, _events);
                 _queue.Finish();
 
                 _fixOverlapKernel.SetMemoryArgument(0, inBodies);
                 _fixOverlapKernel.SetValueArgument(1, bodies.Length);
                 _fixOverlapKernel.SetMemoryArgument(2, outBodies);
 
-                _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_fixOverlapKernel, null, new long[] { BlockCount(bodies.Length) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events);
                 _queue.Finish();
 
                 bodies = ReadBuffer(outBodies, true);
@@ -486,7 +520,7 @@ namespace NBodies.Physics
             _calcCMKernel.SetMemoryArgument(1, _gpuCM);
             _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
             _calcCMKernel.SetValueArgument(3, _meshLength);
-            _queue.ExecuteTask(_calcCMKernel, null);
+            _queue.ExecuteTask(_calcCMKernel, _events);
 
             // Build Nearest Neighbor List.
             PopNeighborsMeshGPU(_meshLength);
@@ -514,7 +548,7 @@ namespace NBodies.Physics
             _computeMortsKernel.SetValueArgument(2, padLen);
             _computeMortsKernel.SetValueArgument(3, cellSizeExp);
             _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMortsA);
-            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, null);
+            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events);
         }
 
         //
@@ -551,7 +585,7 @@ namespace NBodies.Physics
                 _histogramKernel.SetValueArgument(argi++, pass);
                 _histogramKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
                 _histogramKernel.SetValueArgument(argi++, padLen);
-                _queue.Execute(_histogramKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                _queue.Execute(_histogramKernel, null, new long[] { numItems }, new long[] { numLocalItems }, _events);
                 //
                 #endregion Histogram
 
@@ -566,7 +600,7 @@ namespace NBodies.Physics
                 _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuHistogram);
                 _scanHistogramsKernel.SetLocalArgument(argi++, SIZEOFINT * _NUM_HISTOSPLIT);
                 _scanHistogramsKernel.SetMemoryArgument(argi++, _gpuGlobSum);
-                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, _events);
 
                 // Pass 2
                 numItems = _NUM_HISTOSPLIT / 2;
@@ -574,7 +608,7 @@ namespace NBodies.Physics
 
                 _scanHistogramsKernel.SetMemoryArgument(0, _gpuGlobSum);
                 _scanHistogramsKernel.SetMemoryArgument(2, _gpuGlobSumTemp);
-                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                _queue.Execute(_scanHistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, _events);
                 #endregion Scan
 
                 #region Merge
@@ -584,7 +618,7 @@ namespace NBodies.Physics
 
                 _pastehistogramsKernel.SetMemoryArgument(0, _gpuHistogram);
                 _pastehistogramsKernel.SetMemoryArgument(1, _gpuGlobSum);
-                _queue.Execute(_pastehistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                _queue.Execute(_pastehistogramsKernel, null, new long[] { numItems }, new long[] { numLocalItems }, _events);
 
                 #endregion Merge
 
@@ -600,7 +634,7 @@ namespace NBodies.Physics
                 _reorderKernel.SetValueArgument(argi++, pass);
                 _reorderKernel.SetLocalArgument(argi++, SIZEOFINT * _RADIX * _NUM_ITEMS_PER_GROUP);
                 _reorderKernel.SetValueArgument(argi++, padLen);
-                _queue.Execute(_reorderKernel, null, new long[] { numItems }, new long[] { numLocalItems }, null);
+                _queue.Execute(_reorderKernel, null, new long[] { numItems }, new long[] { numLocalItems }, _events);
                 #endregion Reorder
 
                 // Swap keys buffers.
@@ -652,7 +686,7 @@ namespace NBodies.Physics
             _cellMapKernel.SetValueArgument(6, 0);
             _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
             _cellMapKernel.SetValueArgument(8, _gpuBodyMortsA.Count);
-            _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+            _queue.Execute(_cellMapKernel, null, globalSize, localSize, _events);
 
             // Remove the gaps to compress the cell map into the beginning of the buffer.
             // This allows the map to be read properly by the mesh building kernels.
@@ -664,10 +698,10 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
             _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events);
 
             // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
-            int threads = 8; // Runs much faster with smaller block sizes.
+            int threads = 16; // Runs much faster with smaller block sizes.
             int argi = 0;
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuInBodies);
@@ -683,11 +717,11 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
-            _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
+            _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, _events);
 
             // Read counts from the bottom level and compute new work sizes for the parent levels.
             int[] childCounts = new int[1];
-            _queue.ReadFromBuffer(_gpuLevelCounts, ref childCounts, true, 0, 0, 1, null);
+            _queue.ReadFromBuffer(_gpuLevelCounts, ref childCounts, true, 0, 0, 1, _events);
 
             blocks = BlockCount(childCounts[0]);
             globalSize = new long[] { blocks * _threadsPerBlock };
@@ -708,7 +742,7 @@ namespace NBodies.Physics
                 _cellMapKernel.SetValueArgument(6, level);
                 _cellMapKernel.SetMemoryArgument(7, _gpuLevelCounts);
                 _cellMapKernel.SetValueArgument(8, _gpuParentMorts.Count);
-                _queue.Execute(_cellMapKernel, null, globalSize, localSize, null);
+                _queue.Execute(_cellMapKernel, null, globalSize, localSize, _events);
 
                 // Compress the cell map.
                 _compressCellMapKernel.SetValueArgument(0, -1); // Same as above. Make the kernel read length from the level counts buffer.
@@ -719,7 +753,7 @@ namespace NBodies.Physics
                 _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
                 _compressCellMapKernel.SetValueArgument(6, level);
                 _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
-                _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
+                _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events);
 
                 // Build the parent level. Also computes morts for the parents parent level.
                 argi = 0;
@@ -735,11 +769,11 @@ namespace NBodies.Physics
                 _buildTopKernel.SetValueArgument(argi++, level);
                 _buildTopKernel.SetMemoryArgument(argi++, _gpuParentMorts);
                 _buildTopKernel.SetValueArgument(argi++, bufLen);
-                _queue.Execute(_buildTopKernel, null, globalSize, localSize, null);
+                _queue.Execute(_buildTopKernel, null, globalSize, localSize, _events);
             }
 
             // Read back the level index and set the total mesh length.
-            ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length, true);
+            ReadBuffer(_gpuLevelIdx, ref _levelIdx, 0, 0, _levelIdx.Length, _events, true);
             _meshLength = _levelIdx[_levels + 1];
 
             // If the mesh buffer was too small, reallocate and rebuild it again.
@@ -798,7 +832,7 @@ namespace NBodies.Physics
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, level);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, start);
                 _buildNeighborsMeshKernel.SetValueArgument(argi++, end);
-                _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, null);
+                _queue.Execute(_buildNeighborsMeshKernel, null, new long[] { workSize }, new long[] { _threadsPerBlock }, _events);
             }
         }
 
@@ -856,7 +890,7 @@ namespace NBodies.Physics
                 {
                     // Create a new buffer then copy the data from the old buffer.
                     var newBuf = new ComputeBuffer<T>(_context, flags, newCount);
-                    _queue.CopyBuffer(buffer, newBuf, 0, 0, buffer.Count, null);
+                    _queue.CopyBuffer(buffer, newBuf, 0, 0, buffer.Count, _events);
 
                     // Dispose the old buffer then change the reference to the new one.
                     buffer.Dispose();
@@ -888,7 +922,7 @@ namespace NBodies.Physics
         {
             T[] buf = new T[buffer.Count];
 
-            _queue.ReadFromBuffer(buffer, ref buf, blocking, null);
+            _queue.ReadFromBuffer(buffer, ref buf, blocking, _events);
             if (blocking) _queue.Finish(); // This is probably redundant...
 
             return buf;
@@ -898,48 +932,105 @@ namespace NBodies.Physics
         {
             T[] buf = new T[length - offset];
 
-            _queue.ReadFromBuffer(buffer, ref buf, blocking, offset, 0, length - offset, null);
+            _queue.ReadFromBuffer(buffer, ref buf, blocking, offset, 0, length - offset, _events);
             if (blocking) _queue.Finish(); // This is probably redundant...
 
             return buf;
         }
 
-        private void ReadBuffer<T>(ComputeBufferBase<T> source, ref T[] dest, long sourceOffset, long destOffset, long region, bool blocking = false) where T : struct
+        private void ReadBuffer<T>(ComputeBufferBase<T> source, ref T[] dest, long sourceOffset, long destOffset, long region, ComputeEventList events, bool blocking = false) where T : struct
         {
             var sizeofT = Marshal.SizeOf<T>();
             GCHandle destinationGCHandle = GCHandle.Alloc(dest, GCHandleType.Pinned);
             IntPtr destinationOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(dest, (int)destOffset);
 
-            Cloo.Bindings.CL12.EnqueueReadBuffer(
-                _queue.Handle,
-                source.Handle,
-                blocking,
-                new IntPtr(0 * sizeofT),
-                new IntPtr(dest.Length * sizeofT),
-                destinationOffsetPtr,
-                0,
-                null,
-                null);
+            if (_profile)
+            {
+                CLEventHandle[] eventHandles = ComputeTools.ExtractHandles(events, out var eventWaitListSize);
+                bool eventsWritable = events != null && !events.IsReadOnly;
+                CLEventHandle[] newEventHandle = eventsWritable ? new CLEventHandle[1] : null;
+
+                Cloo.Bindings.CL12.EnqueueReadBuffer(
+                   _queue.Handle,
+                   source.Handle,
+                   blocking,
+                   new IntPtr(0 * sizeofT),
+                   new IntPtr(dest.Length * sizeofT),
+                   destinationOffsetPtr,
+                   eventWaitListSize,
+                   eventHandles,
+                   newEventHandle);
+
+                if (eventsWritable)
+                    events.Add(new MyComputeEvent(newEventHandle[0], _queue));
+            }
+            else
+            {
+                Cloo.Bindings.CL12.EnqueueReadBuffer(
+                   _queue.Handle,
+                   source.Handle,
+                   blocking,
+                   new IntPtr(0 * sizeofT),
+                   new IntPtr(dest.Length * sizeofT),
+                   destinationOffsetPtr,
+                   0,
+                   null,
+                   null);
+            }
 
             destinationGCHandle.Free();
         }
 
-        private void WriteBuffer<T>(T[] source, ComputeBufferBase<T> dest, long sourceOffset, long destOffset, long region) where T : struct
+        private void WriteBuffer<T>(T[] source, ComputeBufferBase<T> dest, long sourceOffset, long destOffset, long region, ComputeEventList events) where T : struct
         {
             var sizeofT = Marshal.SizeOf<T>();
             GCHandle sourceGCHandle = GCHandle.Alloc(source, GCHandleType.Pinned);
             IntPtr sourceOffsetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(source, (int)sourceOffset);
 
-            Cloo.Bindings.CL12.EnqueueWriteBuffer(
-                _queue.Handle,
-                dest.Handle,
-                false,
-                new IntPtr(0 * sizeofT),
-                new IntPtr(source.Length * sizeofT),
-                sourceOffsetPtr,
-                0,
-                null,
-                null);
+            if (_profile)
+            {
+                CLEventHandle[] eventHandles = ComputeTools.ExtractHandles(events, out var eventWaitListSize);
+                bool eventsWritable = events != null && !events.IsReadOnly;
+                CLEventHandle[] newEventHandle = eventsWritable ? new CLEventHandle[1] : null;
+
+                Cloo.Bindings.CL12.EnqueueWriteBuffer(
+                    _queue.Handle,
+                    dest.Handle,
+                    false,
+                    new IntPtr(0 * sizeofT),
+                    new IntPtr(source.Length * sizeofT),
+                    sourceOffsetPtr,
+                    eventWaitListSize,
+                    eventHandles,
+                    newEventHandle);
+
+                if (eventsWritable)
+                    events.Add(new MyComputeEvent(newEventHandle[0], _queue));
+            }
+            else
+            {
+                Cloo.Bindings.CL12.EnqueueWriteBuffer(
+                   _queue.Handle,
+                   dest.Handle,
+                   false,
+                   new IntPtr(0 * sizeofT),
+                   new IntPtr(source.Length * sizeofT),
+                   sourceOffsetPtr,
+                   0,
+                   null,
+                   null);
+            }
+
+            //Cloo.Bindings.CL12.EnqueueWriteBuffer(
+            //    _queue.Handle,
+            //    dest.Handle,
+            //    false,
+            //    new IntPtr(0 * sizeofT),
+            //    new IntPtr(source.Length * sizeofT),
+            //    sourceOffsetPtr,
+            //    0,
+            //    null,
+            //    null);
 
             sourceGCHandle.Free();
         }
