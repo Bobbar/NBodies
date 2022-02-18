@@ -134,7 +134,7 @@ namespace NBodies.Physics
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
             _queue = new ComputeCommandQueue(_context, _device, ComputeCommandQueueFlags.None);
 
-            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + "/Physics/Kernels.cl");
+            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + $@"\Physics\Kernels\Physics.cl");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -145,9 +145,9 @@ namespace NBodies.Physics
                 string options;
 
                 if (_useFastMath)
-                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH";
+                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH -I {Environment.CurrentDirectory}\Physics\Kernels\";
                 else
-                    options = $"-cl-std=CL2.0";
+                    options = $@"-cl-std=CL2.0 -I {Environment.CurrentDirectory}\Physics\Kernels\";
 
                 _program.Build(new[] { _device }, options, null, IntPtr.Zero);
             }
@@ -334,7 +334,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null); 
 
             // Compute elastic collisions.
             argi = 0;
@@ -364,11 +364,11 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, null);
-
+          
             ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1);
             isPostNeeded = Convert.ToBoolean(postNeeded[0]);
 
-            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length, true);
+            ReadBuffer(_gpuOutBodies, ref bodies, 0, 0, bodies.Length, true); 
 
             // Increment frame count.
             _currentFrame++;
@@ -475,9 +475,8 @@ namespace NBodies.Physics
             // Compute Z-Order morton numbers for bodies.
             ComputeMortsGPU(padLen, cellSizeExp);
 
-            // Sort by the morton numbers.
+            // Sort the body morton numbers/index by the morton numbers.
             SortByMortGPU(padLen);
-            ReindexBodiesGPU();
 
             // Build each level of the mesh.
             BuildMeshGPU(cellSizeExp);
@@ -526,8 +525,8 @@ namespace NBodies.Physics
         {
             // Radix constants.
             const int _NUM_BITS_PER_RADIX = 8;
-            const int _NUM_ITEMS_PER_GROUP = 4;
-            const int _NUM_GROUPS = 128;
+            const int _NUM_ITEMS_PER_GROUP = 16;
+            const int _NUM_GROUPS = 32;
             const int _RADIX = (1 << _NUM_BITS_PER_RADIX);
             const int _DATA_SIZE = 8;
             const int _NUM_HISTOSPLIT = 512;
@@ -608,7 +607,7 @@ namespace NBodies.Physics
                 ComputeBuffer<long2> temp = _gpuBodyMortsA;
                 _gpuBodyMortsA = _gpuBodyMortsB;
                 _gpuBodyMortsB = temp;
-            }
+            } 
         }
 
         private void BuildMeshGPU(int cellSizeExp)
@@ -667,9 +666,12 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetValueArgument(7, _threadsPerBlock);
             _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, null);
 
-            // Build the bottom mesh level. Also computes morts for the parent level.
+            // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
+            int threads = 8; // Runs much faster with smaller block sizes.
             int argi = 0;
+            _buildBottomKernel.SetMemoryArgument(argi++, _gpuOutBodies);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuInBodies);
+            _buildBottomKernel.SetMemoryArgument(argi++, _gpuBodyMortsA);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshIdxs);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshBodyBounds);
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuMeshCMM);
@@ -681,7 +683,7 @@ namespace NBodies.Physics
             _buildBottomKernel.SetValueArgument(argi++, (int)Math.Pow(2.0f, cellSizeExp));
             _buildBottomKernel.SetMemoryArgument(argi++, _gpuParentMorts);
             _buildBottomKernel.SetValueArgument(argi++, bufLen);
-            _queue.Execute(_buildBottomKernel, null, globalSize, localSize, null);
+            _queue.Execute(_buildBottomKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
 
             // Read counts from the bottom level and compute new work sizes for the parent levels.
             int[] childCounts = new int[1];
@@ -745,9 +747,7 @@ namespace NBodies.Physics
             // so we don't know if we have enough room until a build has completed.
             if (bufLen < _meshLength)
             {
-                Debug.WriteLine($"Mesh reallocated: {bufLen} -> {_meshLength}");
-
-                Allocate(ref _gpuMeshIdxs, _meshLength);
+                long newLen = Allocate(ref _gpuMeshIdxs, _meshLength);
                 Allocate(ref _gpuMeshNBounds, _meshLength);
                 Allocate(ref _gpuMeshBodyBounds, _meshLength);
                 Allocate(ref _gpuMeshChildBounds, _meshLength);
@@ -757,22 +757,10 @@ namespace NBodies.Physics
                 Allocate(ref _gpuMap, _meshLength);
                 Allocate(ref _gpuMapFlat, _meshLength);
 
+                Debug.WriteLine($"Mesh reallocated: {newLen} -> {_meshLength}");
+
                 BuildMeshGPU(cellSizeExp);
             }
-        }
-
-        /// <summary>
-        /// Reads the sorted mort/index (long2) buffer and copies bodies to their sorted location.
-        /// </summary>
-        private void ReindexBodiesGPU()
-        {
-            // This kernel is a bit faster with less threads per block... (Why?)
-            const int threads = 8;
-            _reindexKernel.SetMemoryArgument(0, _gpuOutBodies);
-            _reindexKernel.SetValueArgument(1, _bodies.Length);
-            _reindexKernel.SetMemoryArgument(2, _gpuBodyMortsA);
-            _reindexKernel.SetMemoryArgument(3, _gpuInBodies);
-            _queue.Execute(_reindexKernel, null, new long[] { BlockCount(_bodies.Length, threads) * threads }, new long[] { threads }, null);
         }
 
         private void PopNeighborsMeshGPU(int meshSize)

@@ -254,6 +254,9 @@
     <Compile Include="UI\RecordSettings.Designer.cs">
       <DependentUpon>RecordSettings.cs</DependentUpon>
     </Compile>
+    <Content Include="Physics\Kernels\Global.h">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Rendering\Textures\circle.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -310,7 +313,16 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Physics\Kernels.cl">
+    <None Include="Physics\Kernels\Helpers.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Mesh.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Physics.cl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Physics\Kernels\Sorting.cl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Properties\Settings.settings">

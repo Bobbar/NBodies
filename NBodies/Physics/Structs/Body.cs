@@ -121,7 +121,18 @@ namespace NBodies.Physics
 
         [ProtoMember(16)]
         [Key(15)]
-        public float Pressure;
+        public float Pressure
+        {
+            get
+            {
+                return MainLoop.GasK * Density;
+            }
+
+            set
+            {
+                var dummy = value;
+            }
+        }
 
         [ProtoMember(20)]
         [Key(19)]
