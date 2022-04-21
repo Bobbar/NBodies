@@ -796,7 +796,6 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetValueArgument(6, 0);
             _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events);
 
-
             // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
             int threads = 8; // Runs much faster with smaller block sizes.
             int argi = 0;
@@ -1102,8 +1101,8 @@ namespace NBodies.Physics
                    _queue.Handle,
                    source.Handle,
                    blocking,
-                   new IntPtr(0 * sizeofT),
-                   new IntPtr(dest.Length * sizeofT),
+                   new IntPtr(sourceOffset * sizeofT),
+                   new IntPtr(region * sizeofT),
                    destinationOffsetPtr,
                    eventWaitListSize,
                    eventHandles,
@@ -1118,8 +1117,8 @@ namespace NBodies.Physics
                    _queue.Handle,
                    source.Handle,
                    blocking,
-                   new IntPtr(0 * sizeofT),
-                   new IntPtr(dest.Length * sizeofT),
+                   new IntPtr(sourceOffset * sizeofT),
+                   new IntPtr(region * sizeofT),
                    destinationOffsetPtr,
                    0,
                    null,
@@ -1149,8 +1148,8 @@ namespace NBodies.Physics
                     _queue.Handle,
                     dest.Handle,
                     blocking,
-                    new IntPtr(0 * sizeofT),
-                    new IntPtr(source.Length * sizeofT),
+                    new IntPtr(destOffset * sizeofT),
+                    new IntPtr(region * sizeofT),
                     sourceOffsetPtr,
                     eventWaitListSize,
                     eventHandles,
@@ -1165,8 +1164,8 @@ namespace NBodies.Physics
                    _queue.Handle,
                    dest.Handle,
                    blocking,
-                   new IntPtr(0 * sizeofT),
-                   new IntPtr(source.Length * sizeofT),
+                   new IntPtr(destOffset * sizeofT),
+                   new IntPtr(region * sizeofT),
                    sourceOffsetPtr,
                    0,
                    null,
