@@ -222,11 +222,12 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global i
 		// whose size is atleast as big as the target body.
 		while (pcellSize < outBody.Size)
 		{
+			parentID = parentSPL.y;
+
 			// Stop if we reach the top-most level.
 			if (parentID == -1)
 				break;
 
-			parentID = parentSPL.y;
 			parentSPL = meshSPL[parentID];
 			pcellSize = parentSPL.x;
 		}
