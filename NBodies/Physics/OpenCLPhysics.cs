@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Threading;
@@ -62,7 +61,7 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuMeshNeighbors;
         private ComputeBuffer<Body> _gpuInBodies;
         private ComputeBuffer<Body> _gpuOutBodies;
-        private ComputeBuffer<Vector3> _gpuCM;
+        private ComputeBuffer<float2> _gpuCM;
         private ComputeBuffer<int> _gpuPostNeeded;
         private ComputeBuffer<int> _gpuMap;
         private ComputeBuffer<int> _gpuMapFlat;
@@ -250,7 +249,7 @@ namespace NBodies.Physics
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
 
-            _gpuCM = new ComputeBuffer<Vector3>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            _gpuCM = new ComputeBuffer<float2>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
 
             _gpuBodyMortsA = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);

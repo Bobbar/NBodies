@@ -30,7 +30,13 @@ namespace NBodies.Physics
         public int X;
         public int Y;
         public int Z;
-        public int W; // Needed because cl_int3 is 16 bytes wide.
+        public int W;
+    }
+
+    public struct float2
+    {
+        public float X;
+        public float Y;
     }
 
     public struct float4
@@ -38,6 +44,6 @@ namespace NBodies.Physics
         public float X;
         public float Y;
         public float Z;
-        public float W; // Needed because cl_float3 is 16 bytes wide.
+        public float W;
     }
 }
