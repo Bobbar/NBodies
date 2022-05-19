@@ -45,8 +45,7 @@ typedef struct
 
 // Grav/SPH consts.
 constant float SPH_SOFTENING = 0.00001f;
-constant float SOFTENING = 0.04f;
-constant float SOFTENING_SQRT = 0.2f;
+constant float SOFTENING = 0.004f;
 
 // Flags
 constant int BLACKHOLE = 1;

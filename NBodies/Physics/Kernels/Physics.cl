@@ -46,12 +46,8 @@ __kernel void FixOverlaps(global Body* inBodies, int inBodiesLen, global Body* o
 float2 CellForce(float2 posA, float2 posB, float massA, float massB)
 {
 	float2 dir = posA - posB;
-	float dist = dot(dir, dir);
+	float dist = dot(dir, dir) + SOFTENING;
 	float distSqrt = SQRT(dist);
-
-	// Clamp to soften length.
-	dist = max(dist, SOFTENING);
-	distSqrt = max(distSqrt, SOFTENING_SQRT);
 
 	float force = massA * massB / dist;
 	float2 ret = (dir * force) / distSqrt;
@@ -127,22 +123,18 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 							float2 jPos = (float2)(inBodies[(mb)].PosX, inBodies[(mb)].PosY);
 							float jMass = inBodies[(mb)].Mass;
 							float2 dir = jPos - iPos;
-							float dist = dot(dir, dir);
+							float dist = dot(dir, dir) + SOFTENING;
 							float distSqrt = SQRT(dist);
 
 							// If this body is within collision/SPH distance.
 							// [ SPH ]
 							if (distSqrt <= sph.kSize)
 							{
-								// Accumulate iDensity.
-								float diff = sph.kSizeSq - max(dist, SPH_SOFTENING);
+								// Accumulate density.
+								float diff = sph.kSizeSq - dist;
 								float fac = sph.fDensity * diff * diff * diff;
 								iDensity += iMass * fac;
 							}
-
-							// Clamp gravity softening distance.
-							distSqrt = max(distSqrt, SOFTENING_SQRT);
-							dist = max(dist, SOFTENING);
 
 							// Accumulate body-to-body force.
 							float force = jMass * iMass / dist;
@@ -256,7 +248,7 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global i
 					float distY = outBody.PosY - inBody.PosY;
 
 					float dist = distX * distX + distY * distY;
-					float distSqrt = (float)SQRT(dist);
+					float distSqrt = SQRT(dist);
 
 					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
 					if (distSqrt <= colDist)
@@ -353,7 +345,7 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 							Body inBody = inBodies[(mb)];
 							float2 inPos = (float2)(inBody.PosX, inBody.PosY);
 							float2 dir = outPos - inPos;
-							float dist = dot(dir, dir);
+							float dist = dot(dir, dir) + SPH_SOFTENING;
 							float distSqrt = SQRT(dist);
 
 							// Calc the distance and check for collision.
@@ -367,8 +359,6 @@ __kernel void SPHCollisions(global Body* inBodies, int inBodiesLen, global Body*
 								//	outBody.PosZ += (outBody.UID + 1) * SPH_SOFTENING;
 								//}
 
-								// Clamp the dist to the SPH softening value.
-								distSqrt = max(distSqrt, SPH_SOFTENING);
 								float kDiff = sph.kSize - distSqrt;
 
 								// Pressure force
