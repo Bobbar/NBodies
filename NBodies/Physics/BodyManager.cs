@@ -113,12 +113,12 @@ namespace NBodies.Physics
         /// <summary>
         /// Culls invisible bodies, processes roche factures, rebuilds UID index.
         /// </summary>
-        public static void PostProcessFrame(ref Body[] bodies, bool processRoche, bool postNeeded)
+        public static bool PostProcessFrame(ref Body[] bodies, bool processRoche, bool postNeeded)
         {
-            if (bodies.Length < 1) return;
+            if (bodies.Length < 1) return false;
 
             if (!postNeeded && !FollowSelected)
-                return;
+                return false;
 
             bool realloc = false;
             int position = 0;
@@ -212,6 +212,8 @@ namespace NBodies.Physics
                 Array.Copy(_cullStore, 0, bodies, 0, newSize);
                 Array.Copy(fractures.ToArray(), 0, bodies, newSize, fractures.Count);
             }
+
+            return realloc;
         }
 
         public static void CullDistant()

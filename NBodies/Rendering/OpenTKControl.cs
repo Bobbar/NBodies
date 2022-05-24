@@ -198,7 +198,7 @@ namespace NBodies.Rendering
             _ready = true;
         }
 
-      
+
 
         private void InitBloomBuffers()
         {
@@ -807,7 +807,7 @@ namespace NBodies.Rendering
         private static Color GetStyleColor(DisplayStyle style, Body body, int index, int[] orderIdx = null)
         {
             Color bodyColor = Color.White;
-                                         
+
             switch (style)
             {
                 case DisplayStyle.Normal:
@@ -957,8 +957,8 @@ namespace NBodies.Rendering
                     _camera.Position = _camera.Position - body.PositionVec();
                     _camFollowOffset = _camera.Position;
 
-
-                    body.PrintInfo();
+                    if (System.Diagnostics.Debugger.IsAttached)
+                        body.PrintInfo();
 
                     break;
                 }

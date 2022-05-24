@@ -418,11 +418,9 @@ namespace NBodies
                             // Calc all physics and movements.
                             PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, out postNeeded);
 
-                            if (postNeeded)
-                                _bufferVersion++;
-
                             // Do some final host-side processing. (Remove culled, roche fractures, etc)
-                            BodyManager.PostProcessFrame(ref _bodiesBuffer, RocheLimit, postNeeded);
+                            if (BodyManager.PostProcessFrame(ref _bodiesBuffer, RocheLimit, postNeeded))
+                                _bufferVersion++; // Increment buffer version if changes were made to the bodies array.
 
                             // Increment physics frame count.
                             _frameCount++;

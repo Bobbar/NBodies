@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Threading;
@@ -61,7 +60,7 @@ namespace NBodies.Physics
         private ComputeBuffer<int> _gpuMeshNeighbors;
         private ComputeBuffer<Body> _gpuInBodies;
         private ComputeBuffer<Body> _gpuOutBodies;
-        private ComputeBuffer<Vector3> _gpuCM;
+        private ComputeBuffer<float4> _gpuCM;
         private ComputeBuffer<int> _gpuPostNeeded;
         private ComputeBuffer<int> _gpuMap;
         private ComputeBuffer<int> _gpuMapFlat;
@@ -257,7 +256,7 @@ namespace NBodies.Physics
             _gpuPostNeeded = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuPostNeeded, 1, true);
 
-            _gpuCM = new ComputeBuffer<Vector3>(_context, ComputeMemoryFlags.ReadWrite, 1);
+            _gpuCM = new ComputeBuffer<float4>(_context, ComputeMemoryFlags.ReadWrite, 1);
             Allocate(ref _gpuCM, 1, true);
 
             _gpuBodyMortsA = new ComputeBuffer<long2>(_context, ComputeMemoryFlags.ReadWrite, 1);
@@ -300,7 +299,7 @@ namespace NBodies.Physics
             _bodies = bodies;
             _threadsPerBlock = threadsPerBlock;
             _levels = sim.MeshLevels;
-
+                
             // Only write the bodies buffer if it has been changed by the host.
             if (_curBufferVersion != bufferVersion)
             {
@@ -345,7 +344,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events); 
+            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
 
             // Compute elastic collisions.
             argi = 0;
