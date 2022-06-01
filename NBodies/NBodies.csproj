@@ -152,6 +152,7 @@
     <Compile Include="Physics\Structs\GridInfo.cs" />
     <Compile Include="Physics\Structs\LevelInfo.cs" />
     <Compile Include="Physics\Structs\CL_Structs.cs" />
+    <Compile Include="Physics\Structs\MeshBuffers.cs" />
     <Compile Include="Physics\Structs\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\Structs\MeshCell.cs" />
