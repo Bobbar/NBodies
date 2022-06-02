@@ -317,9 +317,6 @@ namespace NBodies.Physics
                 PreCalcSPH(_kernelSize);
             }
 
-            _queue.Finish();
-            timer.Restart();
-
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
 
@@ -376,10 +373,6 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
-
-
-            _queue.Finish();
-            timer.Print("Elap");
 
             // Read back post needed bool.
             ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1, _events);
