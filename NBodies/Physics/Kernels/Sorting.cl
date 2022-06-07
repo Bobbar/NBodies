@@ -37,6 +37,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 
 	// compute the index
 	// the computation depends on the transposition
+#pragma unroll(_RADIX)
 	for (int j = 0; j < sublist_size; j++)
 	{
 		k = j + sublist_start;
@@ -58,6 +59,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 
 	// copy the local histogram to the global one
 	// in this case the global histo is the group histo.
+#pragma unroll(_RADIX)
 	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		d_Histograms[items * (ir * groups + gr) + it] = loc_histo[ir * items + it];
@@ -157,6 +159,7 @@ __kernel void reorder(const __global DataType* restrict d_inKeys, __global DataT
 	int size = n / groups / items;			// count of elements this work-item processes
 
 	// take the histogram in the cache
+#pragma unroll(_RADIX)
 	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		loc_histo[ir * items + it] = d_Histograms[items * (ir * groups + gr) + it];
