@@ -132,6 +132,15 @@ namespace NBodies.Physics
                 _threadsPerBlock = threadsperblock;
         }
 
+        public OpenCLPhysics(ComputeDevice device, int threadsperblock, bool fastMath)
+        {
+            _device = device;
+            _useFastMath = fastMath;
+
+            if (threadsperblock != -1)
+                _threadsPerBlock = threadsperblock;
+        }
+
         public void Init()
         {
             var devices = GetDevices();
@@ -152,7 +161,9 @@ namespace NBodies.Physics
 
             _queue = new ComputeCommandQueue(_context, _device, flag);
 
-            StreamReader streamReader = new StreamReader(Environment.CurrentDirectory + $@"\Physics\Kernels\Physics.cl");
+            var kernelPath = $@"{Environment.CurrentDirectory}\Physics\Kernels\";
+
+            StreamReader streamReader = new StreamReader($@"{kernelPath}\Physics.cl");
             string clSource = streamReader.ReadToEnd();
             streamReader.Close();
 
@@ -160,12 +171,10 @@ namespace NBodies.Physics
 
             try
             {
-                string options;
+                string options = $@"-cl-std=CL2.0 -I {kernelPath} ";
 
                 if (_useFastMath)
-                    options = $@"-cl-std=CL2.0 -cl-fast-relaxed-math -D FASTMATH  -I {Environment.CurrentDirectory}\Physics\Kernels\";
-                else
-                    options = $@"-cl-std=CL2.0 -I {Environment.CurrentDirectory}\Physics\";
+                    options += "-cl-fast-relaxed-math";
 
                 _program.Build(new[] { _device }, options, null, IntPtr.Zero);
             }
@@ -183,25 +192,8 @@ namespace NBodies.Physics
             Console.WriteLine(_program.GetBuildLog(_device));
             System.IO.File.WriteAllText("build_log.txt", _program.GetBuildLog(_device));
 
-            _forceKernel = _program.CreateKernel("CalcForce");
-            _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
-            _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
-            _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
-            _buildNeighborsBinaryKernel = _program.CreateKernel("BuildNeighborsBinary");
-            _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
-            _buildBottomKernel = _program.CreateKernel("BuildBottom");
-            _buildTopKernel = _program.CreateKernel("BuildTop");
-            _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
-            _cellMapKernel = _program.CreateKernel("MapMorts");
-            _compressCellMapKernel = _program.CreateKernel("CompressMap");
-            _computeMortsKernel = _program.CreateKernel("ComputeMorts");
-            _histogramKernel = _program.CreateKernel("histogram");
-            _reorderKernel = _program.CreateKernel("reorder");
-            _scanHistogramsKernel = _program.CreateKernel("scanhistograms");
-            _pastehistogramsKernel = _program.CreateKernel("pastehistograms");
-
+            InitKernels();
             InitBuffers();
-
             PreCalcSPH(_kernelSize);
         }
 
@@ -218,6 +210,26 @@ namespace NBodies.Physics
             }
 
             return devices;
+        }
+
+        private void InitKernels()
+        {
+            _forceKernel = _program.CreateKernel("CalcForce");
+            _collisionSPHKernel = _program.CreateKernel("SPHCollisions");
+            _collisionElasticKernel = _program.CreateKernel("ElasticCollisions");
+            _buildNeighborsMeshKernel = _program.CreateKernel("BuildNeighborsMesh");
+            _buildNeighborsBinaryKernel = _program.CreateKernel("BuildNeighborsBinary");
+            _fixOverlapKernel = _program.CreateKernel("FixOverlaps");
+            _buildBottomKernel = _program.CreateKernel("BuildBottom");
+            _buildTopKernel = _program.CreateKernel("BuildTop");
+            _calcCMKernel = _program.CreateKernel("CalcCenterOfMass");
+            _cellMapKernel = _program.CreateKernel("MapMorts");
+            _compressCellMapKernel = _program.CreateKernel("CompressMap");
+            _computeMortsKernel = _program.CreateKernel("ComputeMorts");
+            _histogramKernel = _program.CreateKernel("histogram");
+            _reorderKernel = _program.CreateKernel("reorder");
+            _scanHistogramsKernel = _program.CreateKernel("scanhistograms");
+            _pastehistogramsKernel = _program.CreateKernel("pastehistograms");
         }
 
         private void InitBuffers()

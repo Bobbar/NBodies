@@ -15,6 +15,7 @@ namespace NBodies.UI
     {
         public Cloo.ComputeDevice SelectedDevice;
         public int MaxThreadsPerBlock = 0;
+        public bool FastMath = true;
 
         private List<Cloo.ComputeDevice> _devices = new List<Cloo.ComputeDevice>();
 
@@ -52,6 +53,8 @@ namespace NBodies.UI
             if (int.TryParse(threadsTextBox.Text.Trim(), out tpb))
             {
                 MaxThreadsPerBlock = tpb;
+                FastMath = fastMathCheckBox.Checked;
+
                 this.DialogResult = DialogResult.OK;
             }
         }

@@ -58,7 +58,7 @@ namespace NBodies.IO
                 }
             }
 
-            PhysicsProvider.Reload();
+            PhysicsProvider.PhysicsCalc.Flush();
         }
 
         public static void ReadState(string fileName)
@@ -80,7 +80,7 @@ namespace NBodies.IO
             {
                 MainLoop.WaitForPause();
                 ReadState(_previousFile);
-                PhysicsProvider.Reload();
+                PhysicsProvider.PhysicsCalc.Flush();
             }
         }
 
