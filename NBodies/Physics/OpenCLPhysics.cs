@@ -338,6 +338,8 @@ namespace NBodies.Physics
 
             // Calc number of thread blocks to fit the dataset.
             int threadBlocks = BlockCount(_bodies.Length);
+            long[] globalWorkSize = new long[] { threadBlocks * threadsPerBlock };
+            long[] localWorkSize = new long[] { threadsPerBlock };
 
             // Compute gravity and SPH forces for the near/local field.
             int argi = 0;
@@ -355,7 +357,7 @@ namespace NBodies.Physics
             _forceKernel.SetValueArgument(argi++, meshTopStart);
             _forceKernel.SetValueArgument(argi++, meshTopEnd);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_forceKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
+            _queue.Execute(_forceKernel, null, globalWorkSize, localWorkSize, _events);
 
             // Compute elastic collisions.
             argi = 0;
@@ -367,7 +369,7 @@ namespace NBodies.Physics
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.Neighbors);
             _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
             _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionElasticKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
+            _queue.Execute(_collisionElasticKernel, null, globalWorkSize, localWorkSize, _events);
 
             // Compute SPH forces/collisions.
             argi = 0;
@@ -384,7 +386,7 @@ namespace NBodies.Physics
             _collisionSPHKernel.SetValueArgument(argi++, sim);
             _collisionSPHKernel.SetValueArgument(argi++, _preCalcs);
             _collisionSPHKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionSPHKernel, null, new long[] { threadBlocks * threadsPerBlock }, new long[] { threadsPerBlock }, _events);
+            _queue.Execute(_collisionSPHKernel, null, globalWorkSize, localWorkSize, _events);
 
             // Read back post needed bool.
             ReadBuffer(_gpuPostNeeded, ref postNeeded, 0, 0, 1, _events);
@@ -649,7 +651,7 @@ namespace NBodies.Physics
             _computeMortsKernel.SetValueArgument(2, padLen);
             _computeMortsKernel.SetValueArgument(3, cellSizeExp);
             _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMorts[0]);
-            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events);
+            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events); 
         }
 
         //
@@ -793,7 +795,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
-            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events);
+            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events); 
 
             // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
             int threads = 8; // Runs much faster with smaller block sizes.
