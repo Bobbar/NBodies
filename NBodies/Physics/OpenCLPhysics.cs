@@ -38,6 +38,7 @@ namespace NBodies.Physics
 
         private ComputeContext _context;
         private ComputeCommandQueue _queue;
+        private ComputeCommandQueue _queue2;
         private ComputeDevice _device = null;
         private ComputeProgram _program;
 
@@ -155,11 +156,12 @@ namespace NBodies.Physics
             _maxBufferSize = _device.MaxMemoryAllocationSize;
             _context = new ComputeContext(new[] { _device }, new ComputeContextPropertyList(platform), null, IntPtr.Zero);
 
-            var flag = ComputeCommandQueueFlags.None;
+            var flag = ComputeCommandQueueFlags.OutOfOrderExecution;
             if (_profile)
-                flag = ComputeCommandQueueFlags.Profiling;
+                flag |= ComputeCommandQueueFlags.Profiling;
 
             _queue = new ComputeCommandQueue(_context, _device, flag);
+            _queue2 = new ComputeCommandQueue(_context, _device, flag);
 
             var kernelPath = $@"{Environment.CurrentDirectory}\Physics\Kernels\";
 
@@ -320,8 +322,8 @@ namespace NBodies.Physics
             // Post process flag.
             // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
             int[] postNeeded = new int[1] { 0 };
-            WriteBuffer(postNeeded, _gpuPostNeeded, 0, 0, postNeeded.Length, _events);
-
+            _queue2.FillBuffer(_gpuPostNeeded, postNeeded, 0, 1, _events);
+         
             // Recompute SPH pre-calcs if needed.
             if (_kernelSize != sim.KernelSize)
             {
@@ -620,13 +622,13 @@ namespace NBodies.Physics
             _calcCMKernel.SetMemoryArgument(1, _gpuCM);
             _calcCMKernel.SetValueArgument(2, _levelIdx[_levels]);
             _calcCMKernel.SetValueArgument(3, _meshLength);
-            _queue.ExecuteTask(_calcCMKernel, _events);
+            _queue2.ExecuteTask(_calcCMKernel, _events);
 
             // Build Nearest Neighbor List.
             if (_meshLength > MESH_SIZE_NS_CUTOFF)
                 PopNeighborsMeshGPU(_meshLength);
             else
-                PopNeighborsBinaryGPU(_meshLength);
+                PopNeighborsBinaryGPU(_meshLength); 
         }
 
         private int ComputePaddedSize(int len)
@@ -1259,6 +1261,7 @@ namespace NBodies.Physics
             _program.Dispose();
             _context.Dispose();
             _queue.Dispose();
+            _queue2.Dispose();
         }
     }
 }

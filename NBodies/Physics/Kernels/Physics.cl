@@ -81,10 +81,71 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 
 	// *** Particle 2 Particle/Mesh & SPH ***
 	// Walk the mesh tree and accumulate forces from all bodies & cells within the local region. [THIS INCLUDES THE BODY'S OWN CELL]
-	bool done = false;
-	bool bottom = true;
+	int2 bodyCellParentNB = meshNBounds[bodyCellParentID];
 
-	while (!done)
+	// Iterate parent cell neighbors.
+	int start = bodyCellParentNB.x;
+	int len = start + bodyCellParentNB.y;
+	for (int nc = start; nc < len; nc++)
+	{
+		// Iterate neighbor child cells.
+		int nId = meshNeighbors[(nc)];
+		int childStartIdx = meshChildBounds[nId].x;
+		int childLen = childStartIdx + meshChildBounds[nId].y;
+		for (int c = childStartIdx; c < childLen; c++)
+		{
+			int2 childIdx = meshIdxs[c];
+
+			// If the cell is far, compute force from cell.
+			// [ Particle -> Mesh ]
+			bool far = IsFar(bodyCellIdx, childIdx);
+			if (far)
+			{
+				float4 cellCMM = meshCMM[c];
+				iForce += CellForce(cellCMM.xy, iPos, cellCMM.z, iMass);
+			}
+			else // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
+			{
+				// Iterate the bodies within the cell.
+				int2 cellBodyBounds = meshBodyBounds[c];
+				int mbStart = cellBodyBounds.x;
+				int mbLen = cellBodyBounds.y + mbStart;
+				for (int mb = mbStart; mb < mbLen; mb++)
+				{
+					// Save us from ourselves.
+					if (mb != a)
+					{
+						float2 jPos = (float2)(inBodies[(mb)].PosX, inBodies[(mb)].PosY);
+						float jMass = inBodies[(mb)].Mass;
+						float2 dir = jPos - iPos;
+						float dist = dot(dir, dir) + SOFTENING;
+						float distSqrt = SQRT(dist);
+
+						// If this body is within collision/SPH distance.
+						// [ SPH ]
+						if (distSqrt <= sph.kSize)
+						{
+							// Accumulate density.
+							float diff = sph.kSizeSq - dist;
+							float fac = sph.fDensity * diff * diff * diff;
+							iDensity += iMass * fac;
+						}
+
+						// Accumulate body-to-body force.
+						float force = jMass * iMass / dist;
+						iForce += (dir * force) / distSqrt;
+					}
+				}
+			}
+		}
+	}
+
+	// Move to next parent level.
+	bodyCellIdx = meshIdxs[bodyCellParentID];
+	bodyCellParentID = meshSPL[bodyCellParentID].y;
+
+	// *** Particle 2 Mesh ***
+	while (bodyCellParentID != -1)
 	{
 		int2 bodyCellParentNB = meshNBounds[bodyCellParentID];
 
@@ -109,48 +170,12 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 					float4 cellCMM = meshCMM[c];
 					iForce += CellForce(cellCMM.xy, iPos, cellCMM.z, iMass);
 				}
-				else if (bottom && !far) // Otherwise compute force from cell bodies if we are on the bottom level. [ Particle -> Particle ]
-				{
-					// Iterate the bodies within the cell.
-					int2 cellBodyBounds = meshBodyBounds[c];
-					int mbStart = cellBodyBounds.x;
-					int mbLen = cellBodyBounds.y + mbStart;
-					for (int mb = mbStart; mb < mbLen; mb++)
-					{
-						// Save us from ourselves.
-						if (mb != a)
-						{
-							float2 jPos = (float2)(inBodies[(mb)].PosX, inBodies[(mb)].PosY);
-							float jMass = inBodies[(mb)].Mass;
-							float2 dir = jPos - iPos;
-							float dist = dot(dir, dir) + SOFTENING;
-							float distSqrt = SQRT(dist);
-
-							// If this body is within collision/SPH distance.
-							// [ SPH ]
-							if (distSqrt <= sph.kSize)
-							{
-								// Accumulate density.
-								float diff = sph.kSizeSq - dist;
-								float fac = sph.fDensity * diff * diff * diff;
-								iDensity += iMass * fac;
-							}
-
-							// Accumulate body-to-body force.
-							float force = jMass * iMass / dist;
-							iForce += (dir * force) / distSqrt;
-						}
-					}
-				}
 			}
 		}
 
 		// Move to next parent level.
 		bodyCellIdx = meshIdxs[bodyCellParentID];
 		bodyCellParentID = meshSPL[bodyCellParentID].y;
-
-		done = (bodyCellParentID == -1);
-		bottom = false;
 	}
 
 	// *** Particle 2 Mesh ***
