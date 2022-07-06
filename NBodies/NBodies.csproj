@@ -145,19 +145,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Physics\MyComputeEvent.cs" />
-    <Compile Include="Physics\Sort.cs" />
     <Compile Include="Physics\StateRewinder.cs" />
-    <Compile Include="Physics\Structs\BufferDims.cs" />
     <Compile Include="Physics\Structs\Flags.cs" />
-    <Compile Include="Physics\Structs\GridInfo.cs" />
-    <Compile Include="Physics\Structs\LevelInfo.cs" />
     <Compile Include="Physics\Structs\CL_Structs.cs" />
     <Compile Include="Physics\Structs\MeshBuffers.cs" />
     <Compile Include="Physics\Structs\MinMax.cs" />
     <Compile Include="Physics\OpenCLPhysics.cs" />
     <Compile Include="Physics\Structs\MeshCell.cs" />
     <Compile Include="Physics\Structs\SimSettings.cs" />
-    <Compile Include="Physics\Structs\SpatialInfo.cs" />
     <Compile Include="Physics\Structs\SPHPreCalc.cs" />
     <Compile Include="Rendering\D2DRenderer.cs" />
     <Compile Include="Rendering\GDIRenderer.cs" />
