@@ -210,6 +210,7 @@ namespace NBodies
                 if (value >= 4 && value <= Math.Log(MaxThreadsPerBlock, 2))
                 {
                     _threadsPBExp = value;
+                    _threadsPerBlock = (int)Math.Pow(2, _threadsPBExp);
                 }
             }
         }
@@ -261,6 +262,7 @@ namespace NBodies
         private static int _cellSizeExp = 1;
         private static int _meshLevels = 6;
         private static int _threadsPBExp = 8;
+        private static int _threadsPerBlock = (int)Math.Pow(2, _threadsPBExp);
         private static int _maxThreadsPB = DefaultThreadsPerBlock;
         private static int _targetFPS = 60;
         private static int _pauseFPS = 60;
@@ -395,7 +397,7 @@ namespace NBodies
                             bool postNeeded = false;
 
                             // Calc all physics and movements.
-                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), (int)Math.Pow(2, _threadsPBExp), _bufferVersion, DrawBodies, out postNeeded);
+                            PhysicsProvider.PhysicsCalc.CalcMovement(ref _bodiesBuffer, GetSettings(), _threadsPerBlock, _bufferVersion, DrawBodies, out postNeeded);
 
                             if (postNeeded)
                                 _bufferVersion++;
