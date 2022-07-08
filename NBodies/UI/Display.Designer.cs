@@ -49,6 +49,7 @@
             this.showFollowBodyForce = new System.Windows.Forms.ToolStripMenuItem();
             this.showPredictOrbit = new System.Windows.Forms.ToolStripMenuItem();
             this.snapToGridToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.reloadPhysicsProviderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadStateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -74,7 +75,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.RenderBox = new System.Windows.Forms.PictureBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.reloadPhysicsProviderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.gaussianColorScaleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.RootLayoutTable.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -146,7 +147,8 @@
             this.displayToolStripMenuItem,
             this.followingBodyToolStripMenuItem,
             this.snapToGridToolStripMenuItem,
-            this.reloadPhysicsProviderToolStripMenuItem});
+            this.reloadPhysicsProviderToolStripMenuItem,
+            this.gaussianColorScaleToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 18);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -292,6 +294,13 @@
             this.snapToGridToolStripMenuItem.Name = "snapToGridToolStripMenuItem";
             this.snapToGridToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.snapToGridToolStripMenuItem.Text = "Snap To Grid";
+            // 
+            // reloadPhysicsProviderToolStripMenuItem
+            // 
+            this.reloadPhysicsProviderToolStripMenuItem.Name = "reloadPhysicsProviderToolStripMenuItem";
+            this.reloadPhysicsProviderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.reloadPhysicsProviderToolStripMenuItem.Text = "Reload Physics Provider";
+            this.reloadPhysicsProviderToolStripMenuItem.Click += new System.EventHandler(this.reloadPhysicsProviderToolStripMenuItem_Click);
             // 
             // toolsToolStripMenuItem
             // 
@@ -635,12 +644,15 @@
             this.RenderBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.RenderBox_MouseUp);
             this.RenderBox.Resize += new System.EventHandler(this.RenderBox_Resize);
             // 
-            // reloadPhysicsProviderToolStripMenuItem
+            // gaussianColorScaleToolStripMenuItem
             // 
-            this.reloadPhysicsProviderToolStripMenuItem.Name = "reloadPhysicsProviderToolStripMenuItem";
-            this.reloadPhysicsProviderToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
-            this.reloadPhysicsProviderToolStripMenuItem.Text = "Reload Physics Provider";
-            this.reloadPhysicsProviderToolStripMenuItem.Click += new System.EventHandler(this.reloadPhysicsProviderToolStripMenuItem_Click);
+            this.gaussianColorScaleToolStripMenuItem.Checked = true;
+            this.gaussianColorScaleToolStripMenuItem.CheckOnClick = true;
+            this.gaussianColorScaleToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.gaussianColorScaleToolStripMenuItem.Name = "gaussianColorScaleToolStripMenuItem";
+            this.gaussianColorScaleToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.gaussianColorScaleToolStripMenuItem.Text = "Gaussian Color Scale";
+            this.gaussianColorScaleToolStripMenuItem.CheckedChanged += new System.EventHandler(this.gaussianColorScaleToolStripMenuItem_CheckedChanged);
             // 
             // DisplayForm
             // 
@@ -722,6 +734,7 @@
         private System.Windows.Forms.ToolStripMenuItem snapToGridToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem syncRendererToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem reloadPhysicsProviderToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem gaussianColorScaleToolStripMenuItem;
     }
 }
 

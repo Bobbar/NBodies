@@ -24,6 +24,7 @@ namespace NBodies.Rendering
         public static bool ShowMesh = false;
         public static bool SortZOrder = true;
         public static bool FastPrimitives = true;
+        public static bool GaussianColors = true;
         public static DisplayStyle DisplayStyle = DisplayStyle.Normal;
 
         public static float StyleScaleMax
@@ -82,6 +83,11 @@ namespace NBodies.Rendering
         private Stopwatch timer = new Stopwatch();
 
         private Body[] _bodies = new Body[0];
+        private Color[] _bodyColors = new Color[0];
+        private Color[] _gaussianColors = new Color[] { Color.Blue, Color.LimeGreen, Color.Yellow, Color.Orange, Color.Red, Color.BlueViolet };
+        private const double _gaussianSigma_2 = 0.035;
+        private double _gaussianSigma = Math.Sqrt(2.0 * Math.PI * _gaussianSigma_2);
+
         private ManualResetEventSlim _renderCompleteCallback = new ManualResetEventSlim(false);
         private ManualResetEventSlim _renderWait = new ManualResetEventSlim(false);
         private Task _renderLoopTask;
@@ -130,6 +136,18 @@ namespace NBodies.Rendering
                 var finalOffset = CalcFinalOffset();
 
                 CheckScale();
+
+                // Set the clear color for the current style.
+                switch (DisplayStyle)
+                {
+                    case DisplayStyle.HighContrast:
+                        _clearColor = Color.White;
+                        break;
+
+                    default:
+                        _clearColor = _defaultClearColor;
+                        break;
+                }
 
                 BeginDraw();
 
@@ -208,7 +226,7 @@ namespace NBodies.Rendering
                                     _pointers[nVis] = i;
                                     nVis++;
                                 }
-                            } 
+                            }
                         }
                         else if (!SortZOrder && _buckets.Length > 0)
                         {
@@ -223,6 +241,9 @@ namespace NBodies.Rendering
 
                     if (SortZOrder)
                         n = nVis;
+
+                    // Compute all body style colors in parallel.
+                    ComputeColors(n, maxUID);
 
                     for (int i = 0; i < n; i++)
                     {
@@ -244,70 +265,11 @@ namespace NBodies.Rendering
                             if (!_cullTangle.Contains(body.PosX, body.PosY)) continue;
                         }
 
-                        Color bodyColor = Color.White;
-
-                        switch (DisplayStyle)
-                        {
-                            case DisplayStyle.Normal:
-                                bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Pressure:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Pressure, true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Density:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.Density / body.Mass, true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Velocity:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, body.AggregateSpeed(), true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Index:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, maxUID, body.UID, true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.SpatialOrder:
-                                int orderIdx = 0;
-                                if (SortZOrder)
-                                    orderIdx = _buckets[body.UID];
-                                else
-                                    orderIdx = i;
-
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, _bodies.Length, orderIdx, true);
-
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.Force:
-                                bodyColor = GetVariableColor(Color.Blue, Color.Red, Color.Yellow, StyleScaleMax, (body.ForceTot / body.Mass), true);
-                                _clearColor = _defaultClearColor;
-
-                                break;
-
-                            case DisplayStyle.HighContrast:
-                                bodyColor = Color.Black;
-                                _clearColor = Color.White;
-
-                                break;
-                        }
+                        Color bodyColor = _bodyColors[i];
 
                         //Draw body.
                         DrawBody(bodyColor, bodyLoc.X, bodyLoc.Y, body.Size, body.IsBlackHole);
                     }
-
 
                     //if (Trails && !overlayVisible)
                     //    DrawBlur(Color.FromArgb(10, _clearColor));
@@ -528,46 +490,83 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
             });
         }
 
-        internal Color GetVariableColor(Color startColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        internal void ComputeColors(int n, int maxUid)
         {
-            const int maxIntensity = 255;
-            float intensity = 0;
-            long r1, g1, b1, r2, g2, b2;
+            if (_bodyColors.Length < n)
+                _bodyColors = new Color[n];
 
-            r1 = startColor.R;
-            g1 = startColor.G;
-            b1 = startColor.B;
-
-            r2 = endColor.R;
-            g2 = endColor.G;
-            b2 = endColor.B;
-
-            if (currentValue > 0)
+            ParallelHelpers.ParallelForSlim(n, 8, (start, len) =>
             {
-                // Compute the intensity of the end color.
-                intensity = (maxIntensity / (maxValue / currentValue));
-            }
+                for (int i = start; i < len; i++)
+                {
+                    Body body;
+                    if (SortZOrder && _pointers.Length > 0)
+                        body = _bodies[_buckets[_pointers[i]]];
+                    else
+                        body = _bodies[i];
 
-            // Clamp the intensity within the max.
-            if (intensity > maxIntensity) intensity = maxIntensity;
+                    Color bodyColor = Color.White;
 
-            // Calculate the new RGB values from the intensity.
-            int newR, newG, newB;
-            newR = (int)(r1 + (r2 - r1) / (float)maxIntensity * intensity);
-            newG = (int)(g1 + (g2 - g1) / (float)maxIntensity * intensity);
-            newB = (int)(b1 + (b2 - b1) / (float)maxIntensity * intensity);
+                    switch (DisplayStyle)
+                    {
+                        case DisplayStyle.Normal:
+                            bodyColor = Color.FromArgb(BodyAlpha, Color.FromArgb(body.Color));
+                            break;
 
-            if (translucent)
+                        case DisplayStyle.Pressure:
+                            bodyColor = GetStyleColor(GaussianColors, StyleScaleMax, body.Pressure, true);
+                            break;
+
+                        case DisplayStyle.Density:
+                            bodyColor = GetStyleColor(GaussianColors, StyleScaleMax, body.Density / body.Mass, true);
+                            break;
+
+                        case DisplayStyle.Velocity:
+                            bodyColor = GetStyleColor(GaussianColors, StyleScaleMax, body.AggregateSpeed(), true);
+                            break;
+
+                        case DisplayStyle.Index:
+                            bodyColor = GetStyleColor(GaussianColors, maxUid, body.UID, true);
+                            break;
+
+                        case DisplayStyle.SpatialOrder:
+                            int orderIdx = 0;
+                            if (SortZOrder)
+                                orderIdx = _buckets[body.UID];
+                            else
+                                orderIdx = i;
+
+                            bodyColor = GetStyleColor(GaussianColors, _bodies.Length, orderIdx, true);
+                            break;
+
+                        case DisplayStyle.Force:
+                            bodyColor = GetStyleColor(GaussianColors, StyleScaleMax, (body.ForceTot / body.Mass), true);
+                            break;
+
+                        case DisplayStyle.HighContrast:
+                            bodyColor = Color.Black;
+                            break;
+                    }
+
+                    _bodyColors[i] = bodyColor;
+                }
+            });
+        }
+
+        internal Color GetStyleColor(bool gaussian, float maxValue, float currentValue, bool translucent = false)
+        {
+            if (gaussian)
             {
-                return Color.FromArgb(BodyAlpha, newR, newG, newB);
+                var norm = Math.Min(1.0f, currentValue / maxValue);
+                return InterpolateColorGaussian(_gaussianColors, norm);
             }
             else
             {
-                return Color.FromArgb(newR, newG, newB);
+                return InterpolateColorLinear(Color.Blue, Color.Red, Color.Yellow, maxValue, currentValue, translucent);
             }
         }
 
-        internal Color GetVariableColor(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
+        internal Color InterpolateColorLinear(Color startColor, Color midColor, Color endColor, float maxValue, float currentValue, bool translucent = false)
         {
             const int maxIntensity = 255;
             float intensity = 0;
@@ -627,6 +626,34 @@ Rec Size (MB): {Math.Round((MainLoop.RecordedSize() / (float)1000000), 2)}";
             {
                 return Color.FromArgb(newR, newG, newB);
             }
+        }
+
+        internal Color InterpolateColorGaussian(Color[] colors, double x)
+        {
+            double r = 0.0, g = 0.0, b = 0.0;
+            double total = 0.0;
+            double step = 1.0 / (double)(colors.Length - 1);
+            double mu = 0.0;
+
+            for (int i = 0; i < colors.Length; i++)
+            {
+                total += Math.Exp(-(x - mu) * (x - mu) / (2.0 * _gaussianSigma_2)) / _gaussianSigma;
+                mu += step;
+            }
+
+            mu = 0.0;
+            for (int i = 0; i < colors.Length; i++)
+            {
+                var color = colors[i];
+                double percent = Math.Exp(-(x - mu) * (x - mu) / (2.0 * _gaussianSigma_2)) / _gaussianSigma;
+                mu += step;
+
+                r += color.R * percent / total;
+                g += color.G * percent / total;
+                b += color.B * percent / total;
+            }
+
+            return Color.FromArgb(BodyAlpha, (int)r, (int)g, (int)b);
         }
 
         public static void AddOverlay(OverlayGraphic overlay)

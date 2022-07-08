@@ -809,6 +809,11 @@ namespace NBodies.UI
             RenderBase.FastPrimitives = fastPrimitivesToolStripMenuItem.Checked;
         }
 
+        private void gaussianColorScaleToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RenderBase.GaussianColors = gaussianColorScaleToolStripMenuItem.Checked;
+        }
+
         private void rewindBufferToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             MainLoop.RewindBuffer = rewindBufferToolStripMenuItem.Checked;
