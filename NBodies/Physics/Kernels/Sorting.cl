@@ -19,7 +19,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 	int items = get_local_size(0);
 
 	// initialize the local histograms to zero
-	__attribute__((opencl_unroll_hint(_RADIX)));
+#pragma unroll(_RADIX)
 	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		loc_histo[ir * items + it] = 0;
@@ -58,7 +58,7 @@ __kernel void histogram(const __global DataType* restrict d_Keys, __global int* 
 
 	// copy the local histogram to the global one
 	// in this case the global histo is the group histo.
-	__attribute__((opencl_unroll_hint(_RADIX)));
+#pragma unroll(_RADIX)
 	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		d_Histograms[items * (ir * groups + gr) + it] = loc_histo[ir * items + it];
@@ -158,7 +158,7 @@ __kernel void reorder(const __global DataType* restrict d_inKeys, __global DataT
 	int size = n / groups / items;			// count of elements this work-item processes
 
 	// take the histogram in the cache
-	__attribute__((opencl_unroll_hint(_RADIX)));
+#pragma unroll(_RADIX)
 	for (int ir = 0; ir < _RADIX; ir++)
 	{
 		loc_histo[ir * items + it] = d_Histograms[items * (ir * groups + gr) + it];
