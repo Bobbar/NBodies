@@ -5,26 +5,17 @@
 // https://graphics.stanford.edu/~seander/bithacks.html
 long MortonNumberInt2(int2 idx)
 {
-	long x = idx.x;
-	long y = idx.y;
+	long2 mort = convert_long2(idx);
 
-	x &= 0x1fffff;
-	x = (x | x << 32) & 0x1f00000000ffff;
-	x = (x | x << 16) & 0x1f0000ff0000ff;
-	x = (x | x << 8) & 0x100f00f00f00f00f;
-	x = (x | x << 4) & 0x10c30c30c30c30c3;
-	x = (x | x << 2) & 0x1249249249249249;
+	mort &= 0x1fffff;
+	mort = (mort | mort << 32) & 0x1f00000000ffff;
+	mort = (mort | mort << 16) & 0x1f0000ff0000ff;
+	mort = (mort | mort << 8) & 0x100f00f00f00f00f;
+	mort = (mort | mort << 4) & 0x10c30c30c30c30c3;
+	mort = (mort | mort << 2) & 0x1249249249249249;
 
-	y &= 0x1fffff;
-	y = (y | y << 32) & 0x1f00000000ffff;
-	y = (y | y << 16) & 0x1f0000ff0000ff;
-	y = (y | y << 8) & 0x100f00f00f00f00f;
-	y = (y | y << 4) & 0x10c30c30c30c30c3;
-	y = (y | y << 2) & 0x1249249249249249;
-
-	return x | (y << 1);
+	return mort.x | (mort.y << 1);
 }
-
 
 // Computes the morton numbers from body positions.
 __kernel void ComputeMorts(global Body* bodies, int len, int padLen, int cellSizeExp, global long2* morts)

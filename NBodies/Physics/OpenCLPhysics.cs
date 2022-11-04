@@ -85,6 +85,8 @@ namespace NBodies.Physics
         private Stopwatch timer = new Stopwatch();
         private ComputeEventList _events = null;
         private float _bestProfileElap = float.MaxValue;
+        private float _avgProfileElap = 0.0f;
+        private int _avgProfileCnt = 0;
 
         private long _currentFrame = 0;
         private long _lastMeshReadFrame = 0;
@@ -323,7 +325,7 @@ namespace NBodies.Physics
             // Set by kernels when host side post processing is needed. (Culled and/or fractured bodies present)
             int[] postNeeded = new int[1] { 0 };
             _queue2.FillBuffer(_gpuPostNeeded, postNeeded, 0, 1, _events);
-         
+
             // Recompute SPH pre-calcs if needed.
             if (_kernelSize != sim.KernelSize)
             {
@@ -417,8 +419,23 @@ namespace NBodies.Physics
                 }
 
                 var ms = tot / 1000000.0f;
-                _bestProfileElap = Math.Min(_bestProfileElap, ms);
-                Debug.WriteLine("Elapsed ({2}): {0} ns  {1} ms", tot, ms, _bestProfileElap);
+                var newBest = Math.Min(_bestProfileElap, ms);
+
+                if (newBest != _bestProfileElap)
+                {
+                    _bestProfileElap = newBest;
+                    _avgProfileElap = ms;
+                    _avgProfileCnt = 1;
+                }
+                else
+                {
+                    _avgProfileElap += ms;
+                    _avgProfileCnt++;
+                }
+
+                var avg = _avgProfileElap / (float)_avgProfileCnt;
+
+                Debug.WriteLine("Elapsed ({2} / {3}): {0} ns  {1} ms", tot, ms, _bestProfileElap, avg);
             }
 
             // Increment frame count.
@@ -628,7 +645,7 @@ namespace NBodies.Physics
             if (_meshLength > MESH_SIZE_NS_CUTOFF)
                 PopNeighborsMeshGPU(_meshLength);
             else
-                PopNeighborsBinaryGPU(_meshLength); 
+                PopNeighborsBinaryGPU(_meshLength);
         }
 
         private int ComputePaddedSize(int len)
@@ -653,7 +670,7 @@ namespace NBodies.Physics
             _computeMortsKernel.SetValueArgument(2, padLen);
             _computeMortsKernel.SetValueArgument(3, cellSizeExp);
             _computeMortsKernel.SetMemoryArgument(4, _gpuBodyMorts[0]);
-            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events); 
+            _queue.Execute(_computeMortsKernel, null, new long[] { BlockCount(padLen) * _threadsPerBlock }, new long[] { _threadsPerBlock }, _events);
         }
 
         //
@@ -797,7 +814,7 @@ namespace NBodies.Physics
             _compressCellMapKernel.SetMemoryArgument(4, _gpuLevelCounts);
             _compressCellMapKernel.SetMemoryArgument(5, _gpuLevelIdx);
             _compressCellMapKernel.SetValueArgument(6, 0);
-            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events); 
+            _queue.Execute(_compressCellMapKernel, null, globalSizeComp, localSize, _events);
 
             // Build the bottom mesh level, re-index bodies and compute morts for the parent level.
             int threads = 8; // Runs much faster with smaller block sizes.
