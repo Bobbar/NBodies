@@ -336,9 +336,10 @@ namespace NBodies.Physics
             // Build the particle mesh, mesh index, and mesh neighbors index.
             BuildMesh(sim.CellSizeExponent);
 
-            // Get start and end of top level mesh cells.
+            // Get start and end of top level (root) mesh cells.
             int meshTopStart = _levelIdx[_levels];
             int meshTopEnd = _meshLength;
+            int2 meshRootBounds = new int2 { X = meshTopStart, Y = meshTopEnd };
 
             // Calc number of thread blocks to fit the dataset.
             int threadBlocks = BlockCount(_bodies.Length);
@@ -358,22 +359,23 @@ namespace NBodies.Physics
             _forceKernel.SetMemoryArgument(argi++, _gpuMeshBufs.Neighbors);
             _forceKernel.SetValueArgument(argi++, sim);
             _forceKernel.SetValueArgument(argi++, _preCalcs);
-            _forceKernel.SetValueArgument(argi++, meshTopStart);
-            _forceKernel.SetValueArgument(argi++, meshTopEnd);
+			_forceKernel.SetValueArgument(argi++, meshRootBounds);
             _forceKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
             _queue.Execute(_forceKernel, null, globalWorkSize, localWorkSize, _events);
 
             // Compute elastic collisions.
-            argi = 0;
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuBodies[0]);
-            _collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.SizeParentLevel);
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.NeighborBounds);
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.BodyBounds);
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.Neighbors);
-            _collisionElasticKernel.SetValueArgument(argi++, Convert.ToInt32(sim.CollisionsOn));
-            _collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
-            _queue.Execute(_collisionElasticKernel, null, globalWorkSize, localWorkSize, _events);
+            if (sim.CollisionsOn == 1)
+            {
+				argi = 0;
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuBodies[0]);
+				_collisionElasticKernel.SetValueArgument(argi++, _bodies.Length);
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.SizeParentLevel);
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.NeighborBounds);
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.BodyBounds);
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuMeshBufs.Neighbors);
+				_collisionElasticKernel.SetMemoryArgument(argi++, _gpuPostNeeded);
+				_queue.Execute(_collisionElasticKernel, null, globalWorkSize, localWorkSize, _events);
+			}
 
             // Compute SPH forces/collisions.
             argi = 0;

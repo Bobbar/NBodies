@@ -56,7 +56,7 @@ float2 CellForce(float2 posA, float2 posB, float massA, float massB)
 }
 
 
-__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* meshIdxs, global int2* meshNBounds, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int4* meshSPL, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, int meshTopStart, int meshTopEnd, global int* postNeeded)
+__kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* meshIdxs, global int2* meshNBounds, global int2* meshBodyBounds, global int2* meshChildBounds, global float4* meshCMM, global int4* meshSPL, global int* meshNeighbors, const SimSettings sim, const SPHPreCalc sph, const int2 meshRootBounds, global int* postNeeded)
 {
 	int a = get_global_id(0);
 
@@ -180,7 +180,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 
 	// *** Particle 2 Mesh ***
 	// Accumulate force from remaining distant cells at the top-most level.
-	for (int top = meshTopStart; top < meshTopEnd; top++)
+	for (int top = meshRootBounds.x; top < meshRootBounds.y; top++)
 	{
 		int2 topIdx = meshIdxs[top];
 
@@ -211,7 +211,7 @@ __kernel void CalcForce(global Body* inBodies, int inBodiesLen, global int2* mes
 }
 
 
-__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global int4* meshSPL, global int2* meshNBounds, global int2* meshBodyBounds, global int* meshNeighbors, int collisions, global int* postNeeded)
+__kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global int4* meshSPL, global int2* meshNBounds, global int2* meshBodyBounds, global int* meshNeighbors, global int* postNeeded)
 {
 	// Get index for the current body.
 	int a = get_global_id(0);
@@ -222,87 +222,84 @@ __kernel void ElasticCollisions(global Body* inBodies, int inBodiesLen, global i
 	// Copy current body from memory.
 	Body outBody = inBodies[a];
 
-	if (collisions == 1)
+	// Only proceed for bodies larger than 1 unit.
+	if (outBody.Size <= 1.0f)
 	{
-		// Only proceed for bodies larger than 1 unit.
-		if (outBody.Size <= 1.0f)
+		return;
+	}
+
+	// Get the current parent cell.
+	int4 parentSPL = meshSPL[outBody.MeshID];
+	int pcellSize = parentSPL.x;
+	int parentID = parentSPL.y;
+
+	// Move up through parent cells until we find one
+	// whose size is atleast as big as the target body.
+	while (pcellSize < outBody.Size)
+	{
+		parentID = parentSPL.y;
+
+		// Stop if we reach the top-most level.
+		if (parentID == -1)
+			break;
+
+		parentSPL = meshSPL[parentID];
+		pcellSize = parentSPL.x;
+	}
+
+	// Itereate the neighboring cells of the selected parent.
+	int2 parentNBounds = meshNBounds[parentID];
+
+	for (int i = parentNBounds.x; i < parentNBounds.x + parentNBounds.y; i++)
+	{
+		// Get the neighbor cell from the index.
+		int nId = meshNeighbors[i];
+		int2 nCellBodyBounds = meshBodyBounds[nId];
+
+		// Iterate all the bodies within each neighboring cell.
+		int mbStart = nCellBodyBounds.x;
+		int mbLen = nCellBodyBounds.y + mbStart;
+		for (int mb = mbStart; mb < mbLen; mb++)
 		{
-			return;
-		}
-
-		// Get the current parent cell.
-		int4 parentSPL = meshSPL[outBody.MeshID];
-		int pcellSize = parentSPL.x;
-		int parentID = parentSPL.y;
-
-		// Move up through parent cells until we find one
-		// whose size is atleast as big as the target body.
-		while (pcellSize < outBody.Size)
-		{
-			parentID = parentSPL.y;
-
-			// Stop if we reach the top-most level.
-			if (parentID == -1)
-				break;
-
-			parentSPL = meshSPL[parentID];
-			pcellSize = parentSPL.x;
-		}
-
-		// Itereate the neighboring cells of the selected parent.
-		int2 parentNBounds = meshNBounds[parentID];
-
-		for (int i = parentNBounds.x; i < parentNBounds.x + parentNBounds.y; i++)
-		{
-			// Get the neighbor cell from the index.
-			int nId = meshNeighbors[i];
-			int2 nCellBodyBounds = meshBodyBounds[nId];
-
-			// Iterate all the bodies within each neighboring cell.
-			int mbStart = nCellBodyBounds.x;
-			int mbLen = nCellBodyBounds.y + mbStart;
-			for (int mb = mbStart; mb < mbLen; mb++)
+			// Save us from ourselves.
+			if (mb != a)
 			{
-				// Save us from ourselves.
-				if (mb != a)
+				Body inBody = inBodies[mb];
+
+				// Calc the distance and check for collision.
+				float distX = outBody.PosX - inBody.PosX;
+				float distY = outBody.PosY - inBody.PosY;
+
+				float dist = distX * distX + distY * distY;
+				float distSqrt = SQRT(dist);
+
+				float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
+				if (distSqrt <= colDist)
 				{
-					Body inBody = inBodies[mb];
+					// Calculate elastic collision forces.
+					float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
+					float forceX = distX * colScale;
+					float forceY = distY * colScale;
+					float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
 
-					// Calc the distance and check for collision.
-					float distX = outBody.PosX - inBody.PosX;
-					float distY = outBody.PosY - inBody.PosY;
-
-					float dist = distX * distX + distY * distY;
-					float distSqrt = SQRT(dist);
-
-					float colDist = outBody.Size * 0.5f + inBody.Size * 0.5f;
-					if (distSqrt <= colDist)
+					// If we're the bigger one, eat the other guy.
+					if (outBody.Mass > inBody.Mass)
 					{
-						// Calculate elastic collision forces.
-						float colScale = (distX * (inBody.VeloX - outBody.VeloX) + distY * (inBody.VeloY - outBody.VeloY)) / dist;
-						float forceX = distX * colScale;
-						float forceY = distY * colScale;
-						float colMass = inBody.Mass / (inBody.Mass + outBody.Mass);
+						outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
+						inBodies[a] = outBody;
+						inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
+						postNeeded[0] = 1;
 
-						// If we're the bigger one, eat the other guy.
-						if (outBody.Mass > inBody.Mass)
+					}
+					else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
+					{
+						// Our UID is more gooder, eat the other guy.
+						if (outBody.UID > inBody.UID)
 						{
 							outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
 							inBodies[a] = outBody;
 							inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
 							postNeeded[0] = 1;
-
-						}
-						else if (outBody.Mass == inBody.Mass) // If we are the same size, use a different metric.
-						{
-							// Our UID is more gooder, eat the other guy.
-							if (outBody.UID > inBody.UID)
-							{
-								outBody = CollideBodies(outBody, inBody, colMass, forceX, forceY);
-								inBodies[a] = outBody;
-								inBodies[mb] = SetFlagB(inBodies[mb], CULLED, true);
-								postNeeded[0] = 1;
-							}
 						}
 					}
 				}
