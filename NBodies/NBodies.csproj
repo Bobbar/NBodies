@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\ParallelHelpers.cs" />
+    <Compile Include="Helpers\WaitableTimer.cs" />
     <Compile Include="Physics\MyComputeEvent.cs" />
     <Compile Include="Physics\StateRewinder.cs" />
     <Compile Include="Physics\Structs\Flags.cs" />
